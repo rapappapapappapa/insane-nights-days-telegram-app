@@ -1,0 +1,22 @@
+{
+  "name": "Insane Nights & Days",
+  "short_name": "Insane",
+  "description": "Plateforme d'événements musique avec blockchain TON",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

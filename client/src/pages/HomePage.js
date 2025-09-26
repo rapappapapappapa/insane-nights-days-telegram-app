@@ -17,6 +17,7 @@ const HomePage = () => {
       // Simulation d'une adresse wallet TON
       const walletAddress = `EQ${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
       const username = `User_${walletAddress.slice(-6)}`;
+      console.log('Debug: walletAddress généré:', walletAddress); // TODO: Supprimer ce log en prod
       
       // Appel à l'API backend
       const response = await fetch('http://172.20.10.7:5000/api/wallet/connect', {

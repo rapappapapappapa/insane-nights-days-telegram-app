@@ -4,6 +4,7 @@ import './App.css';
 
 // Intégration Telegram
 import { initTelegramApp } from './telegram-web-app';
+// TODO: Vérifier si l'import est correct
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -22,8 +23,10 @@ function App() {
     // Initialiser Telegram Web App
     try {
       initTelegramApp();
+      console.log('Telegram Web App initialized'); // Debug log
     } catch (error) {
       console.log('Pas dans Telegram, mode développement');
+      // FIXME: Gérer mieux les erreurs d'initialisation
     }
   }, []);
 

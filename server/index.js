@@ -31,10 +31,11 @@ const defaultEvents = [
     image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
     djs: ['Kevin-Alexandre', 'DJ Luna'],
     description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground'
+    // TODO: Vérifier si "explosive" est le bon adjectif
   },
   {
     id: '2',
-    title: 'Bass Revolution - Drum & Bass',
+    title: 'Bass Revolution - Drum & Bass', // TODO: Vérifier l'orthographe de "Revolution"
     date: '20 Janvier 2024',
     time: '21:00',
     location: 'Warehouse Underground, Lyon',
@@ -43,8 +44,9 @@ const defaultEvents = [
     sold: 78,
     genre: 'Drum & Bass',
     image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['DJ Phoenix', 'Kevin-Alexandre'],
+    djs: ['DJ Phoenix', 'Kevin-Alexandre'], // TODO: Vérifier l'orthographe des noms de DJ
     description: 'Une révolution sonore avec les meilleurs artistes drum & bass'
+    // HACK: Parfois la description ne s'affiche pas correctement
   }
 ];
 
@@ -78,6 +80,7 @@ app.post('/api/wallet/connect', async (req, res) => {
       
       users.push(user);
       console.log(`Nouvel utilisateur créé: ${user.username}`);
+      console.log('Debug: User data:', JSON.stringify(user, null, 2)); // TODO: Remove debug log
     }
     
     // Générer un token de session simple
@@ -94,6 +97,7 @@ app.post('/api/wallet/connect', async (req, res) => {
         sbtActive: user.sbtActive
       },
       sessionToken
+      // FIXME: Vérifier la sécurité du sessionToken
     });
     
   } catch (error) {
@@ -171,6 +175,7 @@ app.post('/api/tickets/buy', async (req, res) => {
     
     // Calculer le nouveau niveau
     user.level = Math.floor(user.score / 200) + 1;
+    console.log(`User ${user.username} level updated to: ${user.level}`); // Debug log
     
     res.json({
       success: true,
@@ -252,6 +257,7 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
     usersCount: users.length,
     eventsCount: events.length
+    // TODO: Ajouter plus de stats de debug
   });
 });
 
@@ -261,4 +267,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 ${users.length} utilisateurs, ${events.length} événements chargés`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   console.log(`🔗 Test réseau: http://172.20.10.7:${PORT}/api/test`);
+  console.log('Debug: Server started successfully'); // TODO: Remove this debug log
 });

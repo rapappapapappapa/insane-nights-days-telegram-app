@@ -13,14 +13,17 @@ const EventsPage = () => {
 
   const fetchEvents = async () => {
     try {
+      console.log('Fetching events...'); // Debug log
       const response = await fetch('http://172.20.10.7:5000/api/events');
       const data = await response.json();
       
       if (data.success) {
         setEvents(data.events);
+        console.log('Events loaded:', data.events.length); // TODO: Remove in production
       }
     } catch (error) {
       console.error('Erreur récupération événements:', error);
+      // FIXME: Ajouter un message d'erreur pour l'utilisateur
     } finally {
       setLoading(false);
     }
@@ -64,6 +67,7 @@ const EventsPage = () => {
           <p className="text-insane-white/70 text-sm">
             Découvrez tous les événements Insane Nights & Days
           </p>
+          {/* TODO: Corriger la grammaire - "événements" ou "évènements" ? */}
         </div>
 
         {/* Filtres et Recherche */}
@@ -144,6 +148,7 @@ const EventsPage = () => {
                     <div className="flex items-center text-insane-white/80">
                       <span className="mr-2">🎤</span>
                       {event.djs.join(', ')}
+                      {/* HACK: Parfois les DJs ne s'affichent pas correctement */}
                     </div>
                   </div>
 

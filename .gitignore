@@ -5,8 +5,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Production builds
-build/
-dist/
+/client/build
+/dist
 
 # Environment variables
 .env
@@ -32,7 +32,6 @@ coverage/
 .nyc_output
 
 # Dependency directories
-node_modules/
 jspm_packages/
 
 # Optional npm cache directory
@@ -67,9 +66,14 @@ ehthumbs.db
 Thumbs.db
 
 # Temporary files
-tmp/
-temp/
+*.tmp
+*.temp
 
-# React specific
-client/build/
-client/.env
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads
+uploads/
+public/uploads/

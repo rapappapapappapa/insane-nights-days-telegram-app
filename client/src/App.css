@@ -1,7 +1,9 @@
 /* Styles personnalisés pour Insane Nights & Days */
+/* TODO: Vérifier si tous les styles sont cohérents */
 
 .btn-primary {
   @apply bg-insane-orange hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
+  /* FIXME: Le hover:scale-105 peut causer des problèmes sur mobile */
 }
 
 .btn-secondary {
@@ -14,4 +16,5 @@
 
 .input-field {
   @apply bg-insane-gray border border-insane-orange text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-insane-orange focus:border-transparent;
+  /* HACK: Parfois le focus ne fonctionne pas sur certains navigateurs */
 }

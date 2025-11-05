@@ -39,7 +39,7 @@
 
 ```
 insane-nights-days-app/
-├── client/                 # Frontend React
+├── client/                 # Frontend React Web
 │   ├── src/
 │   │   ├── components/    # Composants réutilisables
 │   │   ├── pages/        # Pages de l'application
@@ -49,16 +49,25 @@ insane-nights-days-app/
 ├── server/                # Backend Express
 │   ├── index.js          # Serveur principal
 │   └── package.json      # Dépendances backend
-└── docs/                  # Documentation
+└── insane-nights-days-mobile/  # Application Mobile React Native
+    ├── screens/          # Écrans de l'application
+    ├── api/             # Configuration API
+    └── App.js           # Point d'entrée
 ```
 
 ## 🛠️ Technologies
 
-### Frontend
+### Frontend Web
 - **React 18.2.0** - Interface utilisateur
 - **Tailwind CSS 3.3.0** - Styling et design
 - **React Router 6.8.0** - Navigation
 - **Telegram Web App SDK** - Intégration native
+
+### Frontend Mobile
+- **React Native** - Framework mobile
+- **Expo** - Outils de développement
+- **React Navigation** - Navigation native
+- **API Config** - Configuration backend prête
 
 ### Backend
 - **Node.js 22.2.0** - Runtime JavaScript
@@ -72,38 +81,46 @@ insane-nights-days-app/
 ### Prérequis
 - Node.js 18+ 
 - npm ou yarn
+- Expo CLI (pour l'app mobile)
 
 ### 1. Cloner le projet
 ```bash
-git clone <votre-repo>
-cd "insane-nights-days-app"
+git clone https://github.com/rapappapapappapa/insane-nights-days-telegram-app.git
+cd insane-nights-days-telegram-app
 ```
 
 ### 2. Installer les dépendances
 ```bash
-# Dépendances racine
-npm install
+# Dépendances racine, client et serveur
+npm run install:all
 
-# Dépendances client
-cd client && npm install
-
-# Dépendances serveur
-cd ../server && npm install
+# Pour l'app mobile
+cd insane-nights-days-mobile && npm install
 ```
 
 ### 3. Lancer l'application
-```bash
-# Terminal 1 - Backend
-cd server && npm start
 
-# Terminal 2 - Frontend
-cd client && npm start
+#### Application Web
+```bash
+# Lancer en mode développement (client + serveur)
+npm run dev
+
+# Ou séparément :
+npm run server:dev  # Terminal 1
+npm run client:dev  # Terminal 2
+```
+
+#### Application Mobile
+```bash
+cd insane-nights-days-mobile
+npx expo start
 ```
 
 ### 4. Accéder à l'app
-- **Frontend** : http://localhost:3000
+- **Frontend Web** : http://localhost:3000
 - **Backend API** : http://localhost:5000
 - **Test API** : http://localhost:5000/api/test
+- **App Mobile** : Scanner le QR code avec Expo Go
 
 ## 📱 Utilisation
 

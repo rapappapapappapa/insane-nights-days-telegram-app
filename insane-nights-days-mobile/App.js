@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, ScrollView, TextInput, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, ScrollView, TextInput, Image, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { api } from './api/config';
 
 // Pages simples sans navigation
 function HomePage({ onNavigate }) {
@@ -138,9 +139,45 @@ const mockEvents = [
 ];
 
 function EventsPage({ onNavigate }) {
-  const [events] = useState(mockEvents);
+  const [events, setEvents] = useState(mockEvents);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
+
+  // Récupérer les événements depuis le backend
+  const fetchEvents = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+    try {
+      const data = await api.getEvents();
+      if (data && data.success && data.events) {
+        setEvents(data.events);
+        console.log('✅ Événements chargés depuis le backend:', data.events.length);
+      } else {
+        // Si erreur, utiliser les mock events
+        console.log('⚠️ Utilisation des données mock');
+        setEvents(mockEvents);
+      }
+    } catch (err) {
+      console.error('❌ Erreur récupération événements:', err);
+      setError('Impossible de charger les événements');
+      // En cas d'erreur, utiliser les mock events
+      setEvents(mockEvents);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const genres = ['all', ...new Set(events.map(event => event.genre))];
 
@@ -158,6 +195,23 @@ function EventsPage({ onNavigate }) {
     return '#10b981';
   };
 
+  if (loading && events.length === 0) {
+    return (
+      <View style={styles.eventsContainer}>
+        <StatusBar style="light" />
+        <View style={styles.eventsTopBar}>
+          <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
+            <Text style={styles.backButtonTopText}>← Retour</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff7a1a" />
+          <Text style={styles.loadingText}>Chargement des événements...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.eventsContainer}>
       <StatusBar style="light" />
@@ -166,7 +220,13 @@ function EventsPage({ onNavigate }) {
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView style={styles.eventsScroll} contentContainerStyle={styles.eventsContent}>
+      <ScrollView 
+        style={styles.eventsScroll} 
+        contentContainerStyle={styles.eventsContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchEvents(true)} tintColor="#ff7a1a" />
+        }
+      >
         <View style={styles.eventsHeader}>
           <Text style={styles.eventsTitle}>📅 Événements</Text>
           <Text style={styles.eventsSubtitle}>Découvrez tous les événements</Text>
@@ -744,6 +804,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 16,
+    fontSize: 14,
   },
   // Styles ProfilePage
   profileContainer: {

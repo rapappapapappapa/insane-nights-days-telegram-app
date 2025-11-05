@@ -1,5 +1,5 @@
 // Configuration API pour le backend
-export const API_CONFIG = {
+const API_CONFIG = {
   // URL de base du backend
   BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'http://172.20.10.7:5000',
   
@@ -20,7 +20,7 @@ export const API_CONFIG = {
 };
 
 // Fonction helper pour faire des requêtes
-export const apiRequest = async (endpoint, options = {}) => {
+const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
   
   const defaultOptions = {
@@ -60,7 +60,7 @@ export const apiRequest = async (endpoint, options = {}) => {
 };
 
 // Fonctions spécifiques pour chaque endpoint
-export const api = {
+const api = {
   // Connexion wallet
   connectWallet: async (walletAddress, username) => {
     return apiRequest(API_CONFIG.ENDPOINTS.WALLET_CONNECT, {
@@ -107,4 +107,6 @@ export const api = {
     return apiRequest(API_CONFIG.ENDPOINTS.TEST);
   },
 };
+
+export { api, API_CONFIG };
 

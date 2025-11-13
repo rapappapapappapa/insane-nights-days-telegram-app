@@ -1,22 +1,31 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
-export default function TicketsPage() {
+export default function TicketsPage({ onNavigate }) {
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🎟️ Mes Tickets</Text>
-        <Text style={styles.subtitle}>Gérez vos tickets et événements</Text>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
+          <Text style={styles.backButtonTopText}>← Retour</Text>
+        </TouchableOpacity>
       </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>🎟️ Mes Tickets</Text>
+          <Text style={styles.subtitle}>Retrouvez ici vos tickets et accès blockchain</Text>
+        </View>
 
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyEmoji}>🎫</Text>
-        <Text style={styles.emptyTitle}>Aucun ticket</Text>
-        <Text style={styles.emptyText}>
-          Vous n'avez pas encore de tickets. Explorez les événements pour en acheter !
-        </Text>
-      </View>
-    </ScrollView>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyEmoji}>🎫</Text>
+          <Text style={styles.emptyTitle}>Aucun ticket pour l'instant</Text>
+          <Text style={styles.emptyText}>
+            Explorez les événements pour acheter vos premiers tickets Insane Nights & Days.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -25,12 +34,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0b0b0e',
   },
-  header: {
+  topBar: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: '#0b0b0e',
+  },
+  backButtonTop: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  backButtonTopText: {
+    color: '#ff7a1a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
     padding: 20,
+  },
+  header: {
     alignItems: 'center',
+    marginBottom: 28,
   },
   title: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 8,
@@ -44,14 +75,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 60,
     paddingHorizontal: 40,
-    marginTop: 40,
   },
   emptyEmoji: {
     fontSize: 64,
     marginBottom: 16,
   },
   emptyTitle: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 8,

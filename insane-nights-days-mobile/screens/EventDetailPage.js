@@ -14,7 +14,7 @@ export default function EventDetailPage({ route }) {
       sold: 45,
       genre: 'Electro',
       image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-      djs: ['Kevin-Alexandre', 'DJ Luna'],
+      djs: ['DJ Neon', 'Mixmaster Nova'],
       description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
     },
   };

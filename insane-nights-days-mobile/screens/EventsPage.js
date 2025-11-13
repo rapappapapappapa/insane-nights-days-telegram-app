@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
   TextInput,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { api } from '../api/config';
 
-// Mock data pour fallback
 const mockEvents = [
   {
     id: '1',
@@ -25,7 +25,7 @@ const mockEvents = [
     sold: 45,
     genre: 'Electro',
     image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-    djs: ['Kevin-Alexandre', 'DJ Luna'],
+    djs: ['DJ Neon', 'Mixmaster Nova'],
     description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
   },
   {
@@ -39,43 +39,65 @@ const mockEvents = [
     sold: 78,
     genre: 'Drum & Bass',
     image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['DJ Phoenix', 'Kevin-Alexandre'],
+    djs: ['Bass Storm', 'DJ Cyber'],
     description: 'Une révolution sonore avec les meilleurs artistes drum & bass',
+  },
+  {
+    id: '3',
+    title: 'Techno Underground Session',
+    date: '25 Janvier 2024',
+    time: '23:00',
+    location: 'Le Bunker, Marseille',
+    price: 20,
+    capacity: 300,
+    sold: 120,
+    genre: 'Techno',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
+    djs: ['DJ Dark', 'Techno Master'],
+    description: 'Session techno underground dans un lieu unique',
   },
 ];
 
-export default function EventsPage({ navigation }) {
+export default function EventsPage({ onNavigate }) {
   const [events, setEvents] = useState(mockEvents);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: Activer la connexion au backend quand prêt
-  // useEffect(() => {
-  //   fetchEvents();
-  // }, []);
+  const fetchEvents = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const data = await api.getEvents();
+      if (data && data.success && Array.isArray(data.events)) {
+        setEvents(data.events);
+      } else {
+        setEvents(mockEvents);
+      }
+    } catch (error) {
+      console.log('⚠️ Backend non accessible, utilisation des données locales');
+      setEvents(mockEvents);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  // const fetchEvents = async () => {
-  //   setLoading(true);
-  //   try {
-  //     const data = await api.getEvents();
-  //     if (data.success) {
-  //       setEvents(data.events);
-  //     }
-  //   } catch (error) {
-  //     console.error('Erreur récupération événements:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const genres = ['all', ...new Set(events.map(event => event.genre))];
 
   const filteredEvents = events.filter(event => {
     const matchesGenre = selectedGenre === 'all' || event.genre === selectedGenre;
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesGenre && matchesSearch;
   });
 
@@ -86,35 +108,40 @@ export default function EventsPage({ navigation }) {
     return '#10b981';
   };
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
-
-  if (loading) {
+  if (loading && events.length === 0) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar style="light" />
         <ActivityIndicator size="large" color="#ff7a1a" />
-        <Text style={styles.loadingText}>Chargement des événements</Text>
+        <Text style={styles.loadingText}>Chargement des événements...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ff7a1a" />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>📅 Événements</Text>
-        <Text style={styles.headerSubtitle}>
-          Découvrez tous les événements Insane Nights & Days
-        </Text>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <View style={styles.eventsTopBar}>
+        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
+          <Text style={styles.backButtonTopText}>← Retour</Text>
+        </TouchableOpacity>
       </View>
+      <ScrollView
+        style={styles.eventsScroll}
+        contentContainerStyle={styles.eventsContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchEvents(true)}
+            tintColor="#ff7a1a"
+          />
+        }
+      >
+        <View style={styles.eventsHeader}>
+          <Text style={styles.eventsTitle}>📅 Événements</Text>
+          <Text style={styles.eventsSubtitle}>Découvrez tous les événements</Text>
+        </View>
 
-      <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
@@ -125,43 +152,31 @@ export default function EventsPage({ navigation }) {
             onChangeText={setSearchTerm}
           />
         </View>
-      </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
-        contentContainerStyle={styles.filtersContent}
-      >
-        {genres.map(genre => (
-          <TouchableOpacity
-            key={genre}
-            style={[
-              styles.filterButton,
-              selectedGenre === genre && styles.filterButtonActive,
-            ]}
-            onPress={() => setSelectedGenre(genre)}
-          >
-            <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
+          {genres.map(genre => (
+            <TouchableOpacity
+              key={genre}
               style={[
-                styles.filterText,
-                selectedGenre === genre && styles.filterTextActive,
+                styles.filterButton,
+                selectedGenre === genre && styles.filterButtonActive,
               ]}
+              onPress={() => setSelectedGenre(genre)}
             >
-              {genre === 'all' ? '🎵 Tous' : genre}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedGenre === genre && styles.filterTextActive,
+                ]}
+              >
+                {genre === 'all' ? '🎵 Tous' : genre}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-      <View style={styles.eventsContainer}>
         {filteredEvents.map(event => (
-          <TouchableOpacity
-            key={event.id}
-            style={styles.eventCard}
-            onPress={() => navigation.navigate('EventDetail', { event })}
-            activeOpacity={0.9}
-          >
+          <TouchableOpacity key={event.id} style={styles.eventCard}>
             <View style={styles.eventImageContainer}>
               <Image source={{ uri: event.image }} style={styles.eventImage} />
               <View style={styles.priceBadge}>
@@ -224,18 +239,18 @@ export default function EventsPage({ navigation }) {
             </View>
           </TouchableOpacity>
         ))}
-      </View>
 
-      {filteredEvents.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>😔</Text>
-          <Text style={styles.emptyTitle}>Aucun événement trouvé</Text>
-          <Text style={styles.emptyText}>
-            Essayez de modifier vos filtres ou votre recherche
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+        {filteredEvents.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyEmoji}>😔</Text>
+            <Text style={styles.emptyTitle}>Aucun événement trouvé</Text>
+            <Text style={styles.emptyText}>
+              Essayez de modifier vos filtres ou votre recherche
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -253,25 +268,45 @@ const styles = StyleSheet.create({
   loadingText: {
     color: 'rgba(255,255,255,0.7)',
     marginTop: 16,
+    fontSize: 14,
   },
-  header: {
+  eventsTopBar: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: '#0b0b0e',
+  },
+  backButtonTop: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  backButtonTopText: {
+    color: '#ff7a1a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  eventsScroll: {
+    flex: 1,
+  },
+  eventsContent: {
     padding: 20,
-    alignItems: 'center',
+    paddingBottom: 40,
   },
-  headerTitle: {
+  eventsHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  eventsTitle: {
     color: '#fff',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 8,
   },
-  headerSubtitle: {
+  eventsSubtitle: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     textAlign: 'center',
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
   },
   searchBar: {
     flexDirection: 'row',
@@ -282,10 +317,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    marginBottom: 16,
   },
   searchIcon: {
     fontSize: 18,
     marginRight: 12,
+    color: '#ff7a1a',
   },
   searchInput: {
     flex: 1,
@@ -294,10 +331,6 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     marginBottom: 20,
-  },
-  filtersContent: {
-    paddingHorizontal: 20,
-    gap: 8,
   },
   filterButton: {
     paddingHorizontal: 16,
@@ -319,10 +352,6 @@ const styles = StyleSheet.create({
   },
   filterTextActive: {
     color: '#0b0b0e',
-  },
-  eventsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   eventCard: {
     backgroundColor: '#1a1a1f',
@@ -459,8 +488,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     textAlign: 'center',
   },
 });
+

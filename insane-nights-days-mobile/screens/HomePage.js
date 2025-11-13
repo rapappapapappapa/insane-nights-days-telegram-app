@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
-export default function HomePage({ navigation }) {
+export default function HomePage({ onNavigate }) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const connectWallet = () => {
@@ -13,7 +14,7 @@ export default function HomePage({ navigation }) {
           text: 'Continuer',
           onPress: () => {
             setIsConnecting(false);
-            navigation.navigate('Menu');
+            onNavigate('menu');
           },
         },
       ]);
@@ -22,6 +23,7 @@ export default function HomePage({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <View style={styles.logoContainer}>
         <View style={styles.logo}>
           <Text style={styles.logoText}>I</Text>
@@ -41,7 +43,7 @@ export default function HomePage({ navigation }) {
       <TouchableOpacity
         style={[styles.button, isConnecting && styles.buttonDisabled]}
         onPress={connectWallet}
-        disabled={isConnecting}
+        disabled={!!isConnecting}
       >
         {isConnecting ? (
           <ActivityIndicator color="#111" />

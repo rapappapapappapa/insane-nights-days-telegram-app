@@ -7,16 +7,13 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Base de données simple en mémoire
 let users = [];
 let events = [];
 let tickets = [];
 
-// Données d'exemple pour les événements
 const defaultEvents = [
   {
     id: '1',
@@ -29,13 +26,12 @@ const defaultEvents = [
     sold: 45,
     genre: 'Electro',
     image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-    djs: ['Kevin-Alexandre', 'DJ Luna'],
+    djs: ['DJ Neon', 'Mixmaster Nova'],
     description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground'
-    // TODO: Vérifier si "explosive" est le bon adjectif
   },
   {
     id: '2',
-    title: 'Bass Revolution - Drum & Bass', // TODO: Vérifier l'orthographe de "Revolution"
+    title: 'Bass Revolution - Drum & Bass',
     date: '20 Janvier 2024',
     time: '21:00',
     location: 'Warehouse Underground, Lyon',
@@ -44,27 +40,18 @@ const defaultEvents = [
     sold: 78,
     genre: 'Drum & Bass',
     image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['DJ Phoenix', 'Kevin-Alexandre'], // TODO: Vérifier l'orthographe des noms de DJ
+    djs: ['Bass Storm', 'DJ Cyber'],
     description: 'Une révolution sonore avec les meilleurs artistes drum & bass'
-    // HACK: Parfois la description ne s'affiche pas correctement
   }
 ];
 
-// Initialiser les événements par défaut
 events = [...defaultEvents];
 
-// Routes API
-
-// 1. Connexion Wallet TON
 app.post('/api/wallet/connect', async (req, res) => {
   try {
     const { walletAddress, username } = req.body;
-    
-    // Vérifier si l'utilisateur existe déjà
     let user = users.find(u => u.walletAddress === walletAddress);
-    
     if (!user) {
-      // Créer un nouvel utilisateur
       user = {
         id: uuidv4(),
         walletAddress,
@@ -77,15 +64,9 @@ app.post('/api/wallet/connect', async (req, res) => {
         joinDate: new Date().toISOString(),
         sbtActive: true
       };
-      
       users.push(user);
-      console.log(`Nouvel utilisateur créé: ${user.username}`);
-      console.log('Debug: User data:', JSON.stringify(user, null, 2)); // TODO: Remove debug log
     }
-    
-    // Générer un token de session simple
     const sessionToken = uuidv4();
-    
     res.json({
       success: true,
       message: '🎉 Wallet TON connecté avec succès ! SBT actif',
@@ -97,32 +78,25 @@ app.post('/api/wallet/connect', async (req, res) => {
         sbtActive: user.sbtActive
       },
       sessionToken
-      // FIXME: Vérifier la sécurité du sessionToken
     });
-    
   } catch (error) {
     console.error('Erreur connexion wallet:', error);
     res.status(500).json({ success: false, message: 'Erreur de connexion' });
   }
 });
 
-// 2. Récupérer le profil utilisateur
 app.get('/api/user/:userId', (req, res) => {
   try {
     const user = users.find(u => u.id === req.params.userId);
-    
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
-    
     res.json({ success: true, user });
-    
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
-// 3. Récupérer tous les événements
 app.get('/api/events', (req, res) => {
   try {
     res.json({ success: true, events });
@@ -131,23 +105,17 @@ app.get('/api/events', (req, res) => {
   }
 });
 
-// 4. Acheter un ticket
 app.post('/api/tickets/buy', async (req, res) => {
   try {
     const { userId, eventId, quantity = 1 } = req.body;
-    
     const user = users.find(u => u.id === userId);
     const event = events.find(u => u.id === eventId);
-    
     if (!user || !event) {
       return res.status(404).json({ success: false, message: 'Utilisateur ou événement non trouvé' });
     }
-    
     if (event.sold + quantity > event.capacity) {
       return res.status(400).json({ success: false, message: 'Pas assez de places disponibles' });
     }
-    
-    // Créer les tickets
     const newTickets = [];
     for (let i = 0; i < quantity; i++) {
       const ticket = {
@@ -161,22 +129,13 @@ app.post('/api/tickets/buy', async (req, res) => {
         qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
         purchaseDate: new Date().toISOString()
       };
-      
       newTickets.push(ticket);
       tickets.push(ticket);
     }
-    
-    // Mettre à jour l'événement
     event.sold += quantity;
-    
-    // Mettre à jour l'utilisateur
     user.ticketsBought += quantity;
-    user.score += 50 * quantity; // +50 points par ticket
-    
-    // Calculer le nouveau niveau
+    user.score += 50 * quantity;
     user.level = Math.floor(user.score / 200) + 1;
-    console.log(`User ${user.username} level updated to: ${user.level}`); // Debug log
-    
     res.json({
       success: true,
       message: `🎟️ ${quantity} ticket(s) acheté(s) avec succès`,
@@ -187,14 +146,12 @@ app.post('/api/tickets/buy', async (req, res) => {
         ticketsBought: user.ticketsBought
       }
     });
-    
   } catch (error) {
     console.error('Erreur achat ticket:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
-// 5. Récupérer les tickets d'un utilisateur
 app.get('/api/user/:userId/tickets', (req, res) => {
   try {
     const userTickets = tickets.filter(t => t.userId === req.params.userId);
@@ -204,18 +161,13 @@ app.get('/api/user/:userId/tickets', (req, res) => {
   }
 });
 
-// 6. Générer QR code pour un ticket
 app.get('/api/tickets/:ticketId/qr', async (req, res) => {
   try {
     const ticket = tickets.find(t => t.id === req.params.ticketId);
-    
     if (!ticket) {
       return res.status(404).json({ success: false, message: 'Ticket non trouvé' });
     }
-    
-    // Générer le QR code
     const qrCodeDataURL = await QRCode.toDataURL(ticket.qrCode);
-    
     res.json({
       success: true,
       qrCode: qrCodeDataURL,
@@ -226,13 +178,11 @@ app.get('/api/tickets/:ticketId/qr', async (req, res) => {
         status: ticket.status
       }
     });
-    
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur génération QR code' });
   }
 });
 
-// 7. Statistiques globales
 app.get('/api/stats', (req, res) => {
   try {
     const stats = {
@@ -242,30 +192,24 @@ app.get('/api/stats', (req, res) => {
       totalRevenue: tickets.reduce((sum, t) => sum + t.price, 0),
       averageUserScore: users.length > 0 ? Math.round(users.reduce((sum, u) => sum + u.score, 0) / users.length) : 0
     };
-    
     res.json({ success: true, stats });
-    
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
-// Route de test
 app.get('/api/test', (req, res) => {
-  res.json({ 
+  res.json({
     message: '🎉 Backend Insane Nights & Days fonctionne parfaitement',
     timestamp: new Date().toISOString(),
     usersCount: users.length,
     eventsCount: events.length
-    // TODO: Ajouter plus de stats de debug
   });
 });
 
-// Démarrer le serveur
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
   console.log(`📊 ${users.length} utilisateurs, ${events.length} événements chargés`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   console.log(`🔗 Test réseau: http://172.20.10.7:${PORT}/api/test`);
-  console.log('Debug: Server started successfully'); // TODO: Remove this debug log
 });

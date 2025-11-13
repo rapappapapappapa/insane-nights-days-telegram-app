@@ -1,30 +1,32 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 const menuItems = [
   {
-    title: '🎵 Événements',
-    description: 'Découvrir les événements',
-    screen: 'Events',
+    id: 'events',
     emoji: '🎵',
+    title: 'Événements',
+    description: 'Découvrir les événements',
   },
   {
-    title: '🎟️ Mes Tickets',
-    description: 'Gérer mes tickets',
-    screen: 'Tickets',
+    id: 'tickets',
     emoji: '🎟️',
+    title: 'Mes Tickets',
+    description: 'Gérer mes tickets',
   },
   {
-    title: '🏆 Mon Profil',
-    description: 'Voir mon profil',
-    screen: 'Profile',
+    id: 'profile',
     emoji: '🏆',
+    title: 'Mon Profil',
+    description: 'Personnaliser mon profil',
   },
 ];
 
-export default function MenuPage({ navigation }) {
+export default function MenuPage({ onNavigate }) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <StatusBar style="light" />
       <View style={styles.header}>
         <View style={styles.logo}>
           <Text style={styles.logoText}>I</Text>
@@ -34,24 +36,22 @@ export default function MenuPage({ navigation }) {
       </View>
 
       <View style={styles.menuGrid}>
-        {menuItems.map((item, index) => (
+        {menuItems.map(item => (
           <TouchableOpacity
-            key={index}
+            key={item.id}
             style={styles.menuItem}
-            onPress={() => navigation.navigate(item.screen)}
-            activeOpacity={0.8}
+            onPress={() => onNavigate(item.id)}
+            activeOpacity={0.85}
           >
-            <View style={styles.iconContainer}>
-              <Text style={styles.iconEmoji}>{item.emoji}</Text>
-            </View>
-            <Text style={styles.menuTitle}>{item.title.split(' ').slice(1).join(' ')}</Text>
+            <Text style={styles.menuEmoji}>{item.emoji}</Text>
+            <Text style={styles.menuTitle}>{item.title}</Text>
             <Text style={styles.menuDescription}>{item.description}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.disconnectButton}>
-        <Text style={styles.disconnectText}>🔌 Déconnecter Wallet</Text>
+      <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('home')}>
+        <Text style={styles.backButtonText}>← Retour</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -68,83 +68,76 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 20,
+    marginVertical: 24,
   },
   logo: {
-    width: 64,
-    height: 64,
+    width: 72,
+    height: 72,
     backgroundColor: '#ff7a1a',
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   logoText: {
     color: '#0b0b0e',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
   },
   title: {
-    color: '#fff',
-    fontSize: 24,
+    color: '#ffffff',
+    fontSize: 26,
     fontWeight: '800',
-    marginBottom: 8,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
+    marginTop: 6,
   },
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     width: '100%',
-    maxWidth: 400,
-    gap: 16,
+    maxWidth: 420,
   },
   menuItem: {
+    width: '48%',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
-    borderRadius: 16,
-    padding: 20,
-    width: '48%',
+    borderColor: 'rgba(255,122,26,0.35)',
+    borderRadius: 18,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    minHeight: 140,
     justifyContent: 'center',
+    margin: 4,
   },
-  iconContainer: {
+  menuEmoji: {
+    fontSize: 32,
     marginBottom: 12,
   },
-  iconEmoji: {
-    fontSize: 32,
-  },
   menuTitle: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 4,
     textAlign: 'center',
+    marginBottom: 6,
   },
   menuDescription: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
+    fontSize: 12,
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
+    paddingHorizontal: 6,
   },
-  disconnectButton: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+  backButton: {
     marginTop: 32,
+    padding: 12,
   },
-  disconnectText: {
+  backButtonText: {
     color: '#ff7a1a',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

@@ -11,6 +11,8 @@ const API_CONFIG = {
     WALLET_CONNECT: '/api/wallet/connect',
     USER_PROFILE: '/api/user',
     EVENTS: '/api/events',
+    EVENT_DETAIL: '/api/events',
+    DJ_RANKING: '/api/djs/ranking',
     TICKETS_BUY: '/api/tickets/buy',
     TICKETS_USER: '/api/user',
     TICKET_QR: '/api/tickets',
@@ -54,6 +56,10 @@ const apiRequest = async (endpoint, options = {}) => {
     
     return await response.text();
   } catch (error) {
+    if (error?.message?.includes('Network request failed')) {
+      console.warn('API Request Warning: backend inaccessible, fallback local utilisé.');
+      return null;
+    }
     console.error('API Request Error:', error);
     throw error;
   }
@@ -77,6 +83,16 @@ const api = {
   // Récupérer tous les événements
   getEvents: async () => {
     return apiRequest(API_CONFIG.ENDPOINTS.EVENTS);
+  },
+
+  // Récupérer un événement par ID
+  getEventById: async (eventId) => {
+    return apiRequest(`${API_CONFIG.ENDPOINTS.EVENT_DETAIL}/${eventId}`);
+  },
+
+  // Récupérer le classement des DJs
+  getDjRanking: async () => {
+    return apiRequest(API_CONFIG.ENDPOINTS.DJ_RANKING);
   },
 
   // Acheter un ticket

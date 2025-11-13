@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -10,22 +10,52 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-export default function ProfilePage({ onNavigate }) {
-  const [user, setUser] = useState({
-    username: 'User_insane',
-    level: 1,
-    score: 120,
-    tickets: 2,
-    eventsParticipated: 3,
-    sbtActive: true,
-  });
+const formatDateTime = (dateString) => {
+  if (!dateString) {
+    return '';
+  }
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUser }) {
+  const username = user?.username ?? 'Utilisateur';
+  const level = user?.level ?? 1;
+  const score = user?.score ?? 0;
+  const sbtActive = user?.sbtActive ?? false;
+  const ticketsCount = user?.tickets ?? tickets.length ?? 0;
+  const eventsParticipated = user?.eventsParticipated ?? 0;
+
+  const lastTicket = useMemo(() => user?.lastTicket ?? tickets[0] ?? null, [tickets, user?.lastTicket]);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState({ username: user.username });
+  const [form, setForm] = useState({ username });
+
+  useEffect(() => {
+    setForm({ username });
+  }, [username]);
 
   const handleSave = () => {
-    setUser(prev => ({ ...prev, username: form.username.trim() || prev.username }));
+    const normalized = form.username.trim();
+    if (normalized && onUpdateUser) {
+      onUpdateUser({ username: normalized });
+      Alert.alert('Succès', 'Profil mis à jour !');
+    } else {
+      Alert.alert('Info', 'Le nom ne peut pas être vide.');
+      return;
+    }
+
     setIsEditing(false);
-    Alert.alert('Succès', 'Profil mis à jour (mock) !');
   };
 
   return (
@@ -78,20 +108,20 @@ export default function ProfilePage({ onNavigate }) {
             <View style={styles.info}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Nom d'utilisateur</Text>
-                <Text style={styles.infoValue}>{user.username}</Text>
+                <Text style={styles.infoValue}>{username}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Niveau</Text>
-                <Text style={styles.infoValue}>{user.level}</Text>
+                <Text style={styles.infoValue}>{level}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Score</Text>
-                <Text style={[styles.infoValue, styles.infoValueHighlight]}>{user.score}</Text>
+                <Text style={[styles.infoValue, styles.infoValueHighlight]}>{score}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>SBT</Text>
-                <Text style={[styles.infoValue, user.sbtActive ? styles.success : styles.warning]}>
-                  {user.sbtActive ? '✅ Actif' : '❌ Inactif'}
+                <Text style={[styles.infoValue, sbtActive ? styles.success : styles.warning]}>
+                  {sbtActive ? '✅ Actif' : '❌ Inactif'}
                 </Text>
               </View>
             </View>
@@ -102,11 +132,11 @@ export default function ProfilePage({ onNavigate }) {
           <Text style={styles.statsTitle}>Statistiques</Text>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.tickets}</Text>
+              <Text style={styles.statValue}>{ticketsCount}</Text>
               <Text style={styles.statLabel}>Tickets</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.eventsParticipated}</Text>
+              <Text style={styles.statValue}>{eventsParticipated}</Text>
               <Text style={styles.statLabel}>Événements</Text>
             </View>
             <View style={styles.statItem}>
@@ -117,10 +147,19 @@ export default function ProfilePage({ onNavigate }) {
         </View>
 
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>Notes</Text>
-          <Text style={styles.noteText}>
-            test
-          </Text>
+          <Text style={styles.noteTitle}>Dernière réservation</Text>
+          {lastTicket ? (
+            <Text style={styles.noteText}>
+              {`🎫 ${lastTicket.title}
+Quantité : ${lastTicket.quantity ?? 1}
+Réservé le ${formatDateTime(lastTicket.lastPurchasedAt)}
+📍 ${lastTicket.location}`}
+            </Text>
+          ) : (
+            <Text style={styles.noteText}>
+              Vous n'avez pas encore réservé de ticket. Rendez-vous sur la page Événements pour commencer !
+            </Text>
+          )}
         </View>
       </ScrollView>
     </View>

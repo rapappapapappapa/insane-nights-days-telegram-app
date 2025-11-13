@@ -10,6 +10,12 @@ const menuItems = [
     description: 'Découvrir les événements',
   },
   {
+    id: 'ranking',
+    emoji: '🏅',
+    title: 'Classement DJs',
+    description: 'Consulter le top artistes',
+  },
+  {
     id: 'tickets',
     emoji: '🎟️',
     title: 'Mes Tickets',
@@ -17,7 +23,7 @@ const menuItems = [
   },
   {
     id: 'profile',
-    emoji: '🏆',
+    emoji: '👤',
     title: 'Mon Profil',
     description: 'Personnaliser mon profil',
   },
@@ -37,12 +43,12 @@ export default function MenuPage({ onNavigate }) {
 
       <View style={styles.menuGrid}>
         {menuItems.map(item => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.menuItem}
-            onPress={() => onNavigate(item.id)}
-            activeOpacity={0.85}
-          >
+            <TouchableOpacity
+              key={item.id}
+              style={styles.menuItem}
+              onPress={() => onNavigate(item.id, item.params)}
+              activeOpacity={0.85}
+            >
             <Text style={styles.menuEmoji}>{item.emoji}</Text>
             <Text style={styles.menuTitle}>{item.title}</Text>
             <Text style={styles.menuDescription}>{item.description}</Text>
@@ -64,7 +70,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   header: {
     alignItems: 'center',
@@ -97,7 +103,7 @@ const styles = StyleSheet.create({
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     width: '100%',
     maxWidth: 420,
   },
@@ -111,7 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 4,
+    marginBottom: 16,
   },
   menuEmoji: {
     fontSize: 32,

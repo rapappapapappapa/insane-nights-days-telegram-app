@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   Image,
   RefreshControl,
@@ -58,7 +59,7 @@ const mockEvents = [
   },
 ];
 
-export default function EventsPage({ onNavigate }) {
+export default function EventsPage({ onNavigate, onBuyTicket }) {
   const [events, setEvents] = useState(mockEvents);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -176,7 +177,12 @@ export default function EventsPage({ onNavigate }) {
         </ScrollView>
 
         {filteredEvents.map(event => (
-          <TouchableOpacity key={event.id} style={styles.eventCard}>
+          <TouchableOpacity
+            key={event.id}
+            style={styles.eventCard}
+            activeOpacity={0.9}
+            onPress={() => onNavigate('eventDetail', { eventId: event.id })}
+          >
             <View style={styles.eventImageContainer}>
               <Image source={{ uri: event.image }} style={styles.eventImage} />
               <View style={styles.priceBadge}>
@@ -233,8 +239,38 @@ export default function EventsPage({ onNavigate }) {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.detailsButton}>
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={() => onNavigate('eventDetail', { eventId: event.id })}
+              >
                 <Text style={styles.detailsButtonText}>🎟️ Voir les Détails</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.reserveButton}
+                onPress={() => {
+                  if (!onBuyTicket) {
+                    return;
+                  }
+                  const ticket = onBuyTicket(event);
+                  if (ticket) {
+                    Alert.alert(
+                      'Réservation confirmée',
+                      `Votre ticket pour "${event.title}" est réservé.`,
+                      [
+                        {
+                          text: 'Voir mes tickets',
+                          onPress: () => onNavigate('tickets'),
+                        },
+                        {
+                          text: 'Fermer',
+                          style: 'cancel',
+                        },
+                      ],
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.reserveButtonText}>✅ Réserver ce ticket</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -469,6 +505,18 @@ const styles = StyleSheet.create({
   },
   detailsButtonText: {
     color: '#0b0b0e',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  reserveButton: {
+    marginTop: 12,
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  reserveButtonText: {
+    color: '#fefce8',
     fontSize: 16,
     fontWeight: '700',
   },

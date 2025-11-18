@@ -22,6 +22,12 @@ const menuItems = [
     description: 'Gérer mes tickets',
   },
   {
+    id: 'register',
+    emoji: '✨',
+    title: 'Créer un compte',
+    description: 'Inscription & progression',
+  },
+  {
     id: 'profile',
     emoji: '👤',
     title: 'Mon Profil',

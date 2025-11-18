@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
+import { LanguageProvider } from './contexts/LanguageContext';
 import HomePage from './screens/HomePage';
 import MenuPage from './screens/MenuPage';
 import EventsPage from './screens/EventsPage';
@@ -7,6 +8,7 @@ import TicketsPage from './screens/TicketsPage';
 import ProfilePage from './screens/ProfilePage';
 import EventDetailPage from './screens/EventDetailPage';
 import RankingPage from './screens/RankingPage';
+import RegisterPage from './screens/RegisterPage';
 
 const SCREENS = {
   home: HomePage,
@@ -16,11 +18,14 @@ const SCREENS = {
   tickets: TicketsPage,
   profile: ProfilePage,
   ranking: RankingPage,
+  register: RegisterPage,
 };
 
 export default function App() {
   const [route, setRoute] = useState({ name: 'home', params: undefined });
   const [user, setUser] = useState({
+    id: null,
+    email: '',
     username: 'User_insane',
     level: 1,
     score: 120,
@@ -28,6 +33,8 @@ export default function App() {
     eventsParticipated: 0,
     sbtActive: true,
     lastTicket: null,
+    isAuthenticated: false,
+    token: null,
   });
   const [tickets, setTickets] = useState([]);
 
@@ -153,18 +160,37 @@ export default function App() {
     }));
   }, []);
 
+  const handleAuthSuccess = useCallback(({ user: authUser, token }) => {
+    if (!authUser) {
+      return;
+    }
+    setUser((prev) => ({
+      ...prev,
+      id: authUser.id ?? prev.id,
+      email: authUser.email ?? prev.email,
+      username: authUser.username ?? prev.username,
+      score: authUser.score ?? prev.score,
+      level: authUser.level ?? prev.level,
+      isAuthenticated: true,
+      token: token ?? prev.token,
+    }));
+  }, []);
+
   const ScreenComponent = useMemo(() => SCREENS[route.name] ?? HomePage, [route.name]);
 
   return (
-    <ScreenComponent
-      onNavigate={navigate}
-      routeParams={route.params}
-      user={user}
-      tickets={tickets}
-      onBuyTicket={handleBuyTicket}
-      onUpdateUser={handleUpdateUser}
-      onRemoveTicket={handleRemoveTicket}
-    />
+    <LanguageProvider>
+      <ScreenComponent
+        onNavigate={navigate}
+        routeParams={route.params}
+        user={user}
+        tickets={tickets}
+        onBuyTicket={handleBuyTicket}
+        onUpdateUser={handleUpdateUser}
+        onRemoveTicket={handleRemoveTicket}
+        onAuthSuccess={handleAuthSuccess}
+      />
+    </LanguageProvider>
   );
 }
 

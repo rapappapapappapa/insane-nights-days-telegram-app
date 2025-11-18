@@ -1,0 +1,23 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Expo & React Native artifacts
+.expo/
+expo.log
+.expo-shared/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Environment & secrets
+.env
+*.env
+
+# Logs & caches
+*.log
+*.tmp
+.DS_Store
+
+

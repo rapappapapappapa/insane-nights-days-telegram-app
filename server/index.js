@@ -1,8 +1,11 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -10,10 +13,29 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+const prisma = new PrismaClient();
+
 let users = [];
 let events = [];
 let tickets = [];
 let djs = [];
+
+const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+const sanitizeUser = (user) => {
+  if (!user) {
+    return null;
+  }
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    score: user.score ?? 0,
+    level: user.level ?? 1,
+    createdAt: user.createdAt,
+  };
+};
 
 const defaultEvents = [
   {
@@ -125,8 +147,97 @@ const defaultDjs = [
   },
 ];
 
-
 djs = [...defaultDjs];
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, username, password } = req.body ?? {};
+
+    if (!email || !username || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Email, pseudo et mot de passe sont requis.' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Email invalide.' });
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: 'Email déjà utilisé.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        username: username.trim(),
+        password: hashedPassword,
+        score: 100,
+        level: 1,
+      },
+    });
+
+    const sessionToken = uuidv4();
+
+    res.status(201).json({
+      success: true,
+      message: 'Compte créé avec succès.',
+      user: sanitizeUser(newUser),
+      token: sessionToken,
+    });
+  } catch (error) {
+    console.error('Erreur inscription:', error);
+    res.status(500).json({ success: false, message: "Erreur lors de l'inscription." });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body ?? {};
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email et mot de passe sont requis.' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Identifiants invalides.' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ success: false, message: 'Identifiants invalides.' });
+    }
+
+    const sessionToken = uuidv4();
+
+    res.json({
+      success: true,
+      message: 'Connexion réussie.',
+      user: sanitizeUser(user),
+      token: sessionToken,
+    });
+  } catch (error) {
+    console.error('Erreur connexion:', error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la connexion.' });
+  }
+});
 
 app.post('/api/wallet/connect', async (req, res) => {
   try {
@@ -166,14 +277,26 @@ app.post('/api/wallet/connect', async (req, res) => {
   }
 });
 
-app.get('/api/user/:userId', (req, res) => {
+app.get('/api/user/:userId', async (req, res) => {
   try {
-    const user = users.find((u) => u.id === req.params.userId);
-    if (!user) {
+    const userId = req.params.userId;
+    const walletUser = users.find((u) => u.id === userId);
+
+    if (walletUser) {
+      return res.json({ success: true, user: walletUser });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!dbUser) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
-    res.json({ success: true, user });
+
+    res.json({ success: true, user: sanitizeUser(dbUser) });
   } catch (error) {
+    console.error('Erreur récupération utilisateur:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -276,18 +399,40 @@ app.get('/api/tickets/:ticketId/qr', async (req, res) => {
   }
 });
 
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', async (req, res) => {
   try {
+    const [registeredUsersCount, scoresAggregate] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.aggregate({
+        _avg: { score: true },
+        _sum: { score: true },
+      }),
+    ]);
+
+    const registeredAverageScore = Math.round(scoresAggregate._avg.score ?? 0);
+    const walletAverage = users.length
+      ? users.reduce((sum, u) => sum + u.score, 0) / users.length
+      : 0;
+    const totalUsers = users.length + registeredUsersCount;
+    const combinedAverage =
+      totalUsers > 0
+        ? Math.round(
+            (walletAverage * users.length + (scoresAggregate._sum.score ?? 0)) / totalUsers,
+          )
+        : 0;
+
     const stats = {
-      totalUsers: users.length,
+      totalUsers,
+      registeredUsers: registeredUsersCount,
+      walletUsers: users.length,
       totalEvents: events.length,
       totalTicketsSold: tickets.filter((t) => t.status === 'valid').length,
       totalRevenue: tickets.reduce((sum, t) => sum + t.price, 0),
-      averageUserScore:
-        users.length > 0 ? Math.round(users.reduce((sum, u) => sum + u.score, 0) / users.length) : 0,
+      averageUserScore: combinedAverage || registeredAverageScore,
     };
     res.json({ success: true, stats });
   } catch (error) {
+    console.error('Erreur récupération stats:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -301,18 +446,36 @@ app.get('/api/djs/ranking', (req, res) => {
   }
 });
 
-app.get('/api/test', (req, res) => {
-  res.json({
-    message: '🎉 Backend Insane Nights & Days fonctionne parfaitement',
-    timestamp: new Date().toISOString(),
-    usersCount: users.length,
-    eventsCount: events.length,
-  });
+app.get('/api/test', async (req, res) => {
+  try {
+    const registeredUsers = await prisma.user.count();
+    res.json({
+      message: '🎉 Backend Insane Nights & Days fonctionne parfaitement',
+      timestamp: new Date().toISOString(),
+      walletUsersCount: users.length,
+      registeredUsersCount: registeredUsers,
+      eventsCount: events.length,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur lors du test.' });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
-  console.log(`📊 ${users.length} utilisateurs, ${events.length} événements chargés`);
+  console.log(`📊 ${users.length} utilisateurs wallet, ${events.length} événements chargés`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
-  console.log(`🔗 Test réseau: http://172.20.10.7:${PORT}/api/test`);
 });
+
+const shutdown = async () => {
+  try {
+    await prisma.$disconnect();
+  } finally {
+    process.exit(0);
+  }
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+

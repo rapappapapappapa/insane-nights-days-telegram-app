@@ -13,45 +13,84 @@ import { StatusBar } from 'expo-status-bar';
 
 import { api } from '../api/config';
 
-const mockEvent = {
-  id: '1',
-  title: 'Insane Night - Soirée Electro',
-  date: '15 Janvier 2024',
-  time: '22:00',
-  location: 'Club Insane, Paris',
-  price: 25,
-  capacity: 200,
-  sold: 45,
-  genre: 'Electro',
-  image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-  djs: ['DJ Neon', 'Mixmaster Nova'],
-  description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
-};
+const mockEvents = [
+  {
+    id: '1',
+    title: 'Insane Night - Soirée Electro',
+    date: '15 Janvier 2024',
+    time: '22:00',
+    location: 'Club Insane, Paris',
+    price: 25,
+    capacity: 200,
+    sold: 45,
+    genre: 'Electro',
+    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
+    djs: ['DJ Neon', 'Mixmaster Nova'],
+    description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
+  },
+  {
+    id: '2',
+    title: 'Bass Revolution - Drum & Bass',
+    date: '20 Janvier 2024',
+    time: '21:00',
+    location: 'Warehouse Underground, Lyon',
+    price: 30,
+    capacity: 150,
+    sold: 78,
+    genre: 'Drum & Bass',
+    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
+    djs: ['Bass Storm', 'DJ Cyber'],
+    description: 'Une révolution sonore avec les meilleurs artistes drum & bass',
+  },
+  {
+    id: '3',
+    title: 'Techno Underground Session',
+    date: '25 Janvier 2024',
+    time: '23:00',
+    location: 'Le Bunker, Marseille',
+    price: 20,
+    capacity: 300,
+    sold: 120,
+    genre: 'Techno',
+    image: 'https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=400&h=300&fit=crop',
+    djs: ['Techno Master', 'DJ Neon'],
+    description: 'Session techno underground dans un lieu unique',
+  },
+];
 
 export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }) {
-  const [event, setEvent] = useState(mockEvent);
+  const eventId = useMemo(
+    () => routeParams?.eventId ?? mockEvents[0].id,
+    [routeParams?.eventId],
+  );
+
+  const defaultEvent = useMemo(
+    () => mockEvents.find((item) => item.id === eventId) ?? mockEvents[0],
+    [eventId],
+  );
+
+  const [event, setEvent] = useState(defaultEvent);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const eventId = useMemo(() => routeParams?.eventId ?? mockEvent.id, [routeParams?.eventId]);
 
   useEffect(() => {
     let isMounted = true;
     const fetchEvent = async () => {
-      setLoading(true);
-      setError(null);
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+        setEvent(defaultEvent);
+      }
       try {
         const data = await api.getEventById(eventId);
-        if (data?.success && data.event) {
-          if (isMounted) {
-            setEvent(data.event);
-          }
+        if (data?.success && data.event && isMounted) {
+          setEvent(data.event);
         } else if (isMounted) {
-          setEvent(mockEvent);
+          setEvent(defaultEvent);
         }
       } catch (err) {
         if (isMounted) {
-          setEvent(mockEvent);
+          setEvent(defaultEvent);
           setError("Impossible de charger l'événement en ligne.");
         }
       } finally {
@@ -66,7 +105,7 @@ export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }
     return () => {
       isMounted = false;
     };
-  }, [eventId]);
+  }, [eventId, defaultEvent]);
 
   if (loading) {
     return (

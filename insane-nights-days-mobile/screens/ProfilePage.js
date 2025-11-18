@@ -35,6 +35,8 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
   const sbtActive = user?.sbtActive ?? false;
   const ticketsCount = user?.tickets ?? tickets.length ?? 0;
   const eventsParticipated = user?.eventsParticipated ?? 0;
+  const email = user?.email ?? '';
+  const isAuthenticated = user?.isAuthenticated ?? false;
 
   const lastTicket = useMemo(() => user?.lastTicket ?? tickets[0] ?? null, [tickets, user?.lastTicket]);
 
@@ -75,6 +77,19 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
           <Text style={styles.title}>🏆 Mon Profil</Text>
         </View>
 
+        {!isAuthenticated ? (
+          <View style={styles.alertCard}>
+            <Text style={styles.alertTitle}>Compte invité</Text>
+            <Text style={styles.alertText}>
+              Crée un compte pour sauvegarder ta progression et retrouver tes tickets sur tous tes
+              appareils.
+            </Text>
+            <TouchableOpacity style={styles.alertButton} onPress={() => onNavigate('register')}>
+              <Text style={styles.alertButtonText}>Créer mon compte ✨</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Informations</Text>
@@ -110,6 +125,12 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
                 <Text style={styles.infoLabel}>Nom d'utilisateur</Text>
                 <Text style={styles.infoValue}>{username}</Text>
               </View>
+              {isAuthenticated ? (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Email</Text>
+                  <Text style={styles.infoValue}>{email}</Text>
+                </View>
+              ) : null}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Niveau</Text>
                 <Text style={styles.infoValue}>{level}</Text>
@@ -222,6 +243,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 6,
+  },
+  alertCard: {
+    backgroundColor: '#141419',
+    borderWidth: 1,
+    borderColor: 'rgba(250,204,21,0.4)',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+    gap: 12,
+  },
+  alertTitle: {
+    color: '#facc15',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  alertText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  alertButton: {
+    backgroundColor: '#facc15',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  alertButtonText: {
+    color: '#0b0b0e',
+    fontSize: 15,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: '#1a1a1f',

@@ -1,7 +1,7 @@
 // Configuration API pour le backend
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'http://172.20.10.7:5000',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'http://192.168.1.44:5000',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -13,6 +13,8 @@ const API_CONFIG = {
     EVENTS: '/api/events',
     EVENT_DETAIL: '/api/events',
     DJ_RANKING: '/api/djs/ranking',
+    AUTH_REGISTER: '/api/auth/register',
+    AUTH_LOGIN: '/api/auth/login',
     TICKETS_BUY: '/api/tickets/buy',
     TICKETS_USER: '/api/user',
     TICKET_QR: '/api/tickets',
@@ -44,17 +46,32 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const contentType = response.headers.get('content-type') ?? '';
+    const isJson = contentType.includes('application/json');
+    let data;
+
+    if (isJson) {
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.warn('API Response Warning: impossible de parser la réponse JSON.', parseError);
+        data = null;
+      }
+    } else {
+      data = await response.text();
     }
 
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+    if (!response.ok) {
+      const errorMessage =
+        (isJson && data && typeof data === 'object' && data.message) ||
+        `Erreur HTTP ${response.status}`;
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.payload = data;
+      throw error;
     }
-    
-    return await response.text();
+
+    return data;
   } catch (error) {
     if (error?.message?.includes('Network request failed')) {
       console.warn('API Request Warning: backend inaccessible, fallback local utilisé.');
@@ -72,6 +89,22 @@ const api = {
     return apiRequest(API_CONFIG.ENDPOINTS.WALLET_CONNECT, {
       method: 'POST',
       body: JSON.stringify({ walletAddress, username }),
+    });
+  },
+
+  // Inscription utilisateur
+  register: async ({ email, username, password }) => {
+    return apiRequest(API_CONFIG.ENDPOINTS.AUTH_REGISTER, {
+      method: 'POST',
+      body: JSON.stringify({ email, username, password }),
+    });
+  },
+
+  // Connexion utilisateur
+  login: async ({ email, password }) => {
+    return apiRequest(API_CONFIG.ENDPOINTS.AUTH_LOGIN, {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
   },
 

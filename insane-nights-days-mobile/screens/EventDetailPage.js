@@ -6,11 +6,16 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-
+import { useLanguage } from '../contexts/LanguageContext';
+import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 
 const mockEvents = [
@@ -58,7 +63,11 @@ const mockEvents = [
   },
 ];
 
-export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }) {
+export default function EventDetailPage() {
+  const { language } = useLanguage();
+  const { routeParams, navigate } = useNavigation();
+  const { user } = useAuth();
+  
   const eventId = useMemo(
     () => routeParams?.eventId ?? mockEvents[0].id,
     [routeParams?.eventId],
@@ -72,40 +81,157 @@ export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }
   const [event, setEvent] = useState(defaultEvent);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [buyingTicket, setBuyingTicket] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchEvent = async () => {
-      if (isMounted) {
-        setLoading(true);
-        setError(null);
+  // Utiliser le statut de l'événement plutôt que de calculer depuis la date
+  const isEventPast = () => {
+    return event.status === 'FINISHED';
+  };
+
+  const isEventUpcoming = () => {
+    return event.status === 'UPCOMING';
+  };
+
+  const getStatusLabel = () => {
+    switch (event.status) {
+      case 'UPCOMING':
+        return language === 'fr' ? 'À venir' : 'Upcoming';
+      case 'ONGOING':
+        return language === 'fr' ? 'En cours' : 'Ongoing';
+      case 'FINISHED':
+        return language === 'fr' ? 'Terminé' : 'Finished';
+      default:
+        return '';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (event.status) {
+      case 'UPCOMING':
+        return '#10b981'; // Vert
+      case 'ONGOING':
+        return '#f59e0b'; // Orange
+      case 'FINISHED':
+        return '#6b7280'; // Gris
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const handleBuyTicket = async () => {
+    if (!user?.isAuthenticated) {
+      Alert.alert(
+        language === 'fr' ? 'Connexion requise' : 'Login required',
+        language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    if (!user?.token) {
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr' ? 'Token d\'authentification manquant.' : 'Authentication token missing.',
+      );
+      return;
+    }
+
+    setBuyingTicket(true);
+    try {
+      const response = await api.buyTicket(user.token, eventId, 1);
+      if (response && response.success) {
+        Alert.alert(
+          language === 'fr' ? 'Ticket acheté' : 'Ticket purchased',
+          response.message || (language === 'fr' ? 'Ticket acheté avec succès !' : 'Ticket purchased successfully!'),
+          [
+            {
+              text: language === 'fr' ? 'Voir mes tickets' : 'View my tickets',
+              onPress: () => navigate('tickets'),
+            },
+            { text: 'OK' },
+          ],
+        );
+        // Rafraîchir les données de l'événement
+        fetchEvent();
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'),
+        );
+      }
+    } catch (error) {
+      console.error('Erreur achat ticket:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        error.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'),
+      );
+    } finally {
+      setBuyingTicket(false);
+    }
+  };
+
+  const handleChangeStatus = async () => {
+    if (!user?.token) {
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.',
+      );
+      return;
+    }
+
+    // Basculer entre UPCOMING et FINISHED
+    const newStatus = event.status === 'UPCOMING' ? 'FINISHED' : 'UPCOMING';
+
+    setChangingStatus(true);
+    try {
+      const response = await api.updateEventStatus(user.token, eventId, newStatus);
+      if (response && response.success) {
+        Alert.alert(
+          language === 'fr' ? 'Statut modifié' : 'Status updated',
+          language === 'fr' 
+            ? `Statut changé: ${newStatus === 'UPCOMING' ? 'À venir' : 'Terminé'}`
+            : `Status changed: ${newStatus === 'UPCOMING' ? 'Upcoming' : 'Finished'}`,
+        );
+        fetchEvent();
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          response?.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'),
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        error.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'),
+      );
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
+  const fetchEvent = async () => {
+    setLoading(true);
+    setError(null);
+    setEvent(defaultEvent);
+    try {
+      const data = await api.getEventById(eventId);
+      if (data?.success && data.event) {
+        setEvent(data.event);
+      } else {
         setEvent(defaultEvent);
       }
-      try {
-        const data = await api.getEventById(eventId);
-        if (data?.success && data.event && isMounted) {
-          setEvent(data.event);
-        } else if (isMounted) {
-          setEvent(defaultEvent);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setEvent(defaultEvent);
-          setError("Impossible de charger l'événement en ligne.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
+    } catch (err) {
+      setEvent(defaultEvent);
+      setError(language === 'fr' ? "Impossible de charger l'événement en ligne." : "Unable to load event online.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchEvent();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [eventId, defaultEvent]);
+  }, [eventId]);
 
   if (loading) {
     return (
@@ -113,22 +239,30 @@ export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }
         <StatusBar style="light" />
         <ActivityIndicator size="large" color="#ff7a1a" />
         <Text style={styles.loadingText}>Chargement de l'événement...</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('events')}>
-          <Text style={styles.backButtonText}>← Retour</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigate('events')}>
+          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('events')}>
-          <Text style={styles.backButtonText}>← Retour</Text>
+        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('events')}>
+          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.imageContainer}>
           <Image source={{ uri: event.image }} style={styles.image} />
           <View style={styles.priceBadge}>
@@ -155,10 +289,14 @@ export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }
               <Text style={styles.infoIcon}>📍</Text>
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>🎤</Text>
-              <Text style={styles.infoText}>{event.djs?.join(', ')}</Text>
-            </View>
+            {event.djs && event.djs.length > 0 && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>🎤</Text>
+                <Text style={styles.infoText}>
+                  {Array.isArray(event.djs) ? event.djs.join(', ') : event.djs}
+                </Text>
+              </View>
+            )}
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>🎟️</Text>
               <Text style={styles.infoText}>
@@ -167,30 +305,82 @@ export default function EventDetailPage({ onNavigate, routeParams, onBuyTicket }
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.buyButton}
-            onPress={() => {
-              if (!onBuyTicket) {
-                return;
-              }
-              const ticket = onBuyTicket(event);
-              if (ticket) {
-                Alert.alert(
-                  'Réservation confirmée',
-                  `Ticket réservé pour "${event.title}".`,
-                  [
-                    { text: 'Voir mes tickets', onPress: () => onNavigate('tickets') },
-                    { text: 'Fermer', style: 'cancel' },
-                  ],
-                );
-              }
-            }}
-          >
-            <Text style={styles.buyButtonText}>Acheter un ticket ({event.price}€)</Text>
-          </TouchableOpacity>
+          {/* Badge de statut */}
+          {event.status && (
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20', borderColor: getStatusColor() }]}>
+              <Text style={[styles.statusBadgeText, { color: getStatusColor() }]}>
+                {getStatusLabel()}
+              </Text>
+            </View>
+          )}
+
+          {isEventUpcoming() ? (
+            <TouchableOpacity
+              style={[styles.buyButton, buyingTicket && styles.buyButtonDisabled]}
+              onPress={handleBuyTicket}
+              disabled={buyingTicket}
+            >
+              {buyingTicket ? (
+                <ActivityIndicator color="#0b0b0e" />
+              ) : (
+                <Text style={styles.buyButtonText}>
+                  {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : isEventPast() ? (
+            <View style={styles.pastEventSection}>
+              <Text style={styles.pastEventText}>
+                {language === 'fr' ? 'Cet événement est terminé' : 'This event has ended'}
+              </Text>
+              <TouchableOpacity
+                style={styles.rateButton}
+                onPress={() => {
+                  navigate('rateEvent', {
+                    eventId: event.id,
+                    eventTitle: event.title,
+                    eventDate: event.date,
+                    eventStatus: event.status, // Passer le statut
+                    venueId: event.venueId,
+                    venueName: event.venueName,
+                    djIds: event.djIds || [],
+                  });
+                }}
+              >
+                <Text style={styles.rateButtonText}>
+                  {language === 'fr' ? 'Noter cet événement' : 'Rate this event'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.pastEventSection}>
+              <Text style={styles.pastEventText}>
+                {language === 'fr' ? 'Cet événement est en cours' : 'This event is ongoing'}
+              </Text>
+            </View>
+          )}
+
+          {/* Bouton TEMPORAIRE pour changer le statut */}
+          {user?.isAuthenticated && (
+            <TouchableOpacity
+              style={[styles.tempDateButton, changingStatus && styles.tempDateButtonDisabled]}
+              onPress={handleChangeStatus}
+              disabled={changingStatus}
+            >
+              {changingStatus ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.tempDateButtonText}>
+                  {language === 'fr' 
+                    ? `⚙️ Changer statut: ${event.status === 'UPCOMING' ? 'UPCOMING → FINISHED' : 'FINISHED → UPCOMING'} (TEMPORAIRE)`
+                    : `⚙️ Change status: ${event.status === 'UPCOMING' ? 'UPCOMING → FINISHED' : 'FINISHED → UPCOMING'} (TEMPORARY)`}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -235,7 +425,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,122,26,0.4)',
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   imageContainer: {
     position: 'relative',
@@ -317,9 +507,86 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
   },
+  buyButtonDisabled: {
+    opacity: 0.6,
+  },
   buyButtonText: {
     color: '#0b0b0e',
     fontSize: 18,
     fontWeight: '800',
+  },
+  pastEventSection: {
+    gap: 16,
+  },
+  pastEventText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  rateButton: {
+    backgroundColor: 'rgba(255,122,26,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.5)',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  rateButtonText: {
+    color: '#ff7a1a',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  tempDateButton: {
+    marginTop: 16,
+    backgroundColor: 'rgba(255,122,26,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  tempDateButtonText: {
+    color: '#ff7a1a',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tempDateButtonDisabled: {
+    opacity: 0.5,
+  },
+  dateEditor: {
+    marginTop: 16,
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  dateEditorLabel: {
+    color: '#ff7a1a',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  dateEditorInput: {
+    backgroundColor: '#0b0b0e',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  dateEditorButton: {
+    backgroundColor: '#ff7a1a',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  dateEditorButtonText: {
+    color: '#0b0b0e',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

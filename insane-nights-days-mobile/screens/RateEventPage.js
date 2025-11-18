@@ -1,0 +1,394 @@
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../api/config';
+import RatingModal from '../components/RatingModal';
+import StarRating from '../components/StarRating';
+
+export default function RateEventPage() {
+  const { language } = useLanguage();
+  const { routeParams, goBack } = useNavigation();
+  const { user } = useAuth();
+  const { eventId, eventTitle, eventDate, venueId, venueName, djIds = [] } = routeParams || {};
+
+  const [loading, setLoading] = useState(false);
+  const [djNames, setDjNames] = useState({}); // Map des IDs vers les noms
+  const [ratingDjModal, setRatingDjModal] = useState({ visible: false, djUserId: null, djName: null });
+  const [ratingVenueModal, setRatingVenueModal] = useState({ visible: false });
+
+  // Debug: afficher les djIds reçus
+  useEffect(() => {
+    console.log('[RATE EVENT PAGE] Route params:', {
+      eventId,
+      djIds,
+      djIdsType: Array.isArray(djIds) ? 'array' : typeof djIds,
+      djIdsLength: Array.isArray(djIds) ? djIds.length : 'N/A',
+    });
+  }, [eventId, djIds]);
+
+  // Récupérer les noms des DJs depuis leurs IDs
+  useEffect(() => {
+    const fetchDjNames = async () => {
+      if (!djIds || djIds.length === 0) return;
+      
+      try {
+        const djs = await api.getDjs();
+        if (djs && djs.success && Array.isArray(djs.djs)) {
+          const namesMap = {};
+          djs.djs.forEach((dj) => {
+            if (djIds.includes(dj.userId)) {
+              namesMap[dj.userId] = dj.artistName || dj.userId;
+            }
+          });
+          setDjNames(namesMap);
+        }
+      } catch (error) {
+        console.error('Erreur récupération noms DJs:', error);
+      }
+    };
+
+    fetchDjNames();
+  }, [djIds]);
+
+  // Utiliser le statut de l'événement plutôt que de calculer depuis la date
+  const isEventPast = () => {
+    // Si on a le statut dans les routeParams, l'utiliser
+    if (routeParams?.eventStatus) {
+      return routeParams.eventStatus === 'FINISHED';
+    }
+    // Sinon, fallback sur la date (pour compatibilité)
+    if (!eventDate) return false;
+    const eventDateTime = new Date(eventDate);
+    return eventDateTime < new Date();
+  };
+
+  const handleRateDj = async ({ rating, comment }) => {
+    if (!user?.token || !ratingDjModal.djUserId) {
+      console.error('[RATE DJ] Données manquantes:', { 
+        hasToken: !!user?.token, 
+        djUserId: ratingDjModal.djUserId 
+      });
+      return;
+    }
+
+    console.log('[RATE DJ] Envoi notation:', {
+      djUserId: ratingDjModal.djUserId,
+      eventId: eventId,
+      rating: rating,
+    });
+
+    setLoading(true);
+    try {
+      const response = await api.rateDj({
+        token: user.token,
+        djUserId: ratingDjModal.djUserId, // User.id du DJ
+        eventId: eventId,
+        rating: rating,
+        comment: comment,
+      });
+
+      if (response && response.success) {
+        Alert.alert(
+          language === 'fr' ? 'Note enregistrée' : 'Rating saved',
+          language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
+          [{ text: 'OK', onPress: () => setRatingDjModal({ visible: false, djUserId: null, djName: null }) }],
+        );
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
+        );
+      }
+    } catch (error) {
+      console.error('Erreur notation DJ:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRateVenue = async ({ rating, comment }) => {
+    if (!user?.token || !venueId) return;
+
+    setLoading(true);
+    try {
+      const response = await api.rateVenue({
+        token: user.token,
+        venueId: venueId,
+        eventId: eventId,
+        rating: rating,
+        comment: comment,
+      });
+
+      if (response && response.success) {
+        Alert.alert(
+          language === 'fr' ? 'Note enregistrée' : 'Rating saved',
+          language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
+          [{ text: 'OK', onPress: () => setRatingVenueModal({ visible: false }) }],
+        );
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
+        );
+      }
+    } catch (error) {
+      console.error('Erreur notation Lieu:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // TEMPORAIRE: Permettre de noter même si l'événement n'est pas passé (pour les tests)
+  // if (!isEventPast()) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <StatusBar style="light" />
+  //       <View style={styles.header}>
+  //         <TouchableOpacity style={styles.backButton} onPress={goBack}>
+  //           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+  //         </TouchableOpacity>
+  //       </View>
+  //       <View style={styles.errorContainer}>
+  //         <Text style={styles.errorText}>
+  //           {language === 'fr'
+  //             ? 'Vous ne pouvez noter qu\'après la date de l\'événement.'
+  //             : 'You can only rate after the event date.'}
+  //         </Text>
+  //       </View>
+  //     </View>
+  //   );
+  // }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {language === 'fr' ? 'Noter l\'événement' : 'Rate Event'}
+        </Text>
+      </View>
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.eventCard}>
+          <Text style={styles.eventTitle}>{eventTitle}</Text>
+          <Text style={styles.eventDate}>
+            {eventDate ? new Date(eventDate).toLocaleDateString() : ''}
+          </Text>
+        </View>
+
+        {/* Section Noter les DJs */}
+        {djIds && djIds.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {language === 'fr' ? 'Noter les DJs' : 'Rate DJs'}
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              {language === 'fr'
+                ? 'Donnez votre avis sur les performances des DJs'
+                : 'Share your opinion on the DJs\' performances'}
+            </Text>
+            {djIds.map((djId) => {
+              const djName = djNames[djId] || `DJ ${djId.slice(0, 8)}`;
+              return (
+                <TouchableOpacity
+                  key={djId}
+                  style={styles.rateButton}
+                  onPress={() => {
+                    // djId est le User.id du DJ
+                    setRatingDjModal({ visible: true, djUserId: djId, djName });
+                  }}
+                >
+                  <Text style={styles.rateButtonText}>
+                    {language === 'fr' ? 'Noter' : 'Rate'} {djName}
+                  </Text>
+                  <Text style={styles.rateButtonArrow}>→</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Section Noter le lieu */}
+        {venueId && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {language === 'fr' ? 'Noter le lieu' : 'Rate Venue'}
+            </Text>
+            <Text style={styles.sectionSubtitle}>
+              {language === 'fr'
+                ? 'Donnez votre avis sur le lieu de l\'événement'
+                : 'Share your opinion on the event venue'}
+            </Text>
+            <TouchableOpacity
+              style={styles.rateButton}
+              onPress={() => setRatingVenueModal({ visible: true })}
+            >
+              <Text style={styles.rateButtonText}>
+                {language === 'fr' ? 'Noter' : 'Rate'} {venueName || language === 'fr' ? 'le lieu' : 'venue'}
+              </Text>
+              <Text style={styles.rateButtonArrow}>→</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {(!djIds || djIds.length === 0) && !venueId && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {language === 'fr'
+                ? 'Aucun élément à noter pour cet événement.'
+                : 'Nothing to rate for this event.'}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Modal pour noter un DJ */}
+      <RatingModal
+        visible={ratingDjModal.visible}
+        onClose={() => setRatingDjModal({ visible: false, djUserId: null, djName: null })}
+        onSubmit={handleRateDj}
+        title={language === 'fr' ? `Noter ${ratingDjModal.djName || 'le DJ'}` : `Rate ${ratingDjModal.djName || 'DJ'}`}
+        loading={loading}
+      />
+
+      {/* Modal pour noter un lieu */}
+      <RatingModal
+        visible={ratingVenueModal.visible}
+        onClose={() => setRatingVenueModal({ visible: false })}
+        onSubmit={handleRateVenue}
+        title={language === 'fr' ? `Noter ${venueName || 'le lieu'}` : `Rate ${venueName || 'venue'}`}
+        loading={loading}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0b0b0e',
+  },
+  header: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,122,26,0.2)',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  backButtonText: {
+    color: '#ff7a1a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  eventCard: {
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  eventTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  eventDate: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  rateButton: {
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  rateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rateButtonArrow: {
+    color: '#ff7a1a',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+});
+

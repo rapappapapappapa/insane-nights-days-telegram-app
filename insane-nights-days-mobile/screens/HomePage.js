@@ -14,102 +14,105 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
-import { api } from '../api/config';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '../contexts/NavigationContext';
 
-const accountTypes = [
-  {
-    id: 'community',
-    emoji: '👥',
-    titleFr: 'Communauté',
-    titleEn: 'Community',
-    descriptionFr: 'Rejoignez la communauté',
-    descriptionEn: 'Join the community',
-  },
-  {
-    id: 'dj',
-    emoji: '🎧',
-    titleFr: 'DJ',
-    titleEn: 'DJ',
-    descriptionFr: 'Créez votre profil DJ',
-    descriptionEn: 'Create your DJ profile',
-  },
-  {
-    id: 'booker',
-    emoji: '📅',
-    titleFr: 'Booker',
-    titleEn: 'Booker',
-    descriptionFr: 'Gérez vos événements',
-    descriptionEn: 'Manage your events',
-  },
-  {
-    id: 'venue',
-    emoji: '🏢',
-    titleFr: 'Lieu',
-    titleEn: 'Venue',
-    descriptionFr: 'Ajoutez votre lieu',
-    descriptionEn: 'Add your venue',
-  },
-];
-
-export default function HomePage({ onNavigate, onAuthSuccess }) {
+export default function HomePage() {
   const { language, changeLanguage, t } = useLanguage();
+  const { user, login, register } = useAuth();
+  const { navigate } = useNavigation();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [mode, setMode] = useState('login'); // 'login' ou 'register'
+  
+  // État pour le formulaire de connexion
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  const handleAccountTypeSelect = (type) => {
-    // Pour l'instant, on navigue vers register avec le type en paramètre
-    // Plus tard, on créera des pages spécifiques : registerCommunity, registerDj, etc.
-    onNavigate('register', { accountType: type });
-  };
+  // État pour le formulaire d'inscription
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (loginLoading) {
-      return;
-    }
+    if (loginLoading) return;
 
     if (!loginEmail || !loginPassword) {
       Alert.alert(
         language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir email et mot de passe.' : 'Please fill in email and password.',
+        language === 'fr' ? 'Merci de remplir email/pseudo et mot de passe.' : 'Please fill in email/username and password.',
       );
       return;
     }
 
     setLoginLoading(true);
-    try {
-      const response = await api.login({ email: loginEmail, password: loginPassword });
-      if (!response?.success) {
-        throw new Error(
-          response?.message ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'),
-        );
-      }
+    const result = await login({ email: loginEmail, password: loginPassword });
+    setLoginLoading(false);
 
-      onAuthSuccess?.({ user: response.user, token: response.token });
+    if (result.success) {
       setLoginEmail('');
       setLoginPassword('');
+      navigate('welcome');
+    } else {
+      Alert.alert(
+        language === 'fr' ? 'Erreur de connexion' : 'Login error',
+        result.error ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'),
+      );
+    }
+  };
+
+  const handleRegister = async () => {
+    if (registerLoading) return;
+
+    // Permettre d'utiliser soit email soit pseudo (ou les deux)
+    if ((!registerEmail && !registerUsername) || !registerPassword) {
+      Alert.alert(
+        language === 'fr' ? 'Champs manquants' : 'Missing fields',
+        language === 'fr' ? 'Merci de remplir au moins un pseudo ou un email, et un mot de passe.' : 'Please fill in at least a username or email, and a password.',
+      );
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      Alert.alert(
+        language === 'fr' ? 'Mot de passe trop court' : 'Password too short',
+        language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Password must be at least 6 characters.',
+      );
+      return;
+    }
+
+    setRegisterLoading(true);
+    const result = await register({ 
+      email: registerEmail || undefined, 
+      username: registerUsername || undefined, 
+      password: registerPassword 
+    });
+    setRegisterLoading(false);
+
+    if (result.success) {
+      setRegisterEmail('');
+      setRegisterUsername('');
+      setRegisterPassword('');
 
       Alert.alert(
-        language === 'fr' ? 'Connexion réussie' : 'Login successful',
-        language === 'fr' ? 'Bienvenue sur Insane Nights & Days !' : 'Welcome to Insane Nights & Days!',
+        language === 'fr' ? 'Inscription réussie' : 'Registration successful',
+        language === 'fr' ? 'Compte créé avec succès !' : 'Account created successfully!',
         [
           {
             text: language === 'fr' ? 'Continuer' : 'Continue',
-            onPress: () => onNavigate?.('menu'),
+            onPress: () => {
+              // Navigue vers la page de choix de type de compte
+              navigate('accountType');
+            },
           },
         ],
       );
-    } catch (error) {
-      const errorMessage =
-        error?.message ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.');
+    } else {
       Alert.alert(
-        language === 'fr' ? 'Erreur de connexion' : 'Login error',
-        errorMessage,
+        language === 'fr' ? "Erreur d'inscription" : 'Registration error',
+        result.error ?? (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'),
       );
-    } finally {
-      setLoginLoading(false);
     }
   };
 
@@ -149,9 +152,7 @@ export default function HomePage({ onNavigate, onAuthSuccess }) {
               style={[styles.modeButton, mode === 'login' && styles.modeButtonActive]}
               onPress={() => setMode('login')}
             >
-              <Text
-                style={[styles.modeButtonText, mode === 'login' && styles.modeButtonTextActive]}
-              >
+              <Text style={[styles.modeButtonText, mode === 'login' && styles.modeButtonTextActive]}>
                 {t('login')}
               </Text>
             </TouchableOpacity>
@@ -159,30 +160,24 @@ export default function HomePage({ onNavigate, onAuthSuccess }) {
               style={[styles.modeButton, mode === 'register' && styles.modeButtonActive]}
               onPress={() => setMode('register')}
             >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  mode === 'register' && styles.modeButtonTextActive,
-                ]}
-              >
+              <Text style={[styles.modeButtonText, mode === 'register' && styles.modeButtonTextActive]}>
                 {t('register')}
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Formulaire selon le mode */}
           {mode === 'login' ? (
             <>
               {/* Formulaire de connexion */}
               <View style={styles.form}>
-                <Text style={styles.label}>{t('email')}</Text>
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Email ou Pseudo' : 'Email or Username'}
+                </Text>
                 <TextInput
                   style={styles.input}
-                  placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
+                  placeholder={language === 'fr' ? 'ton.email@example.com ou ton.pseudo' : 'your.email@example.com or your.username'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="email-address"
                   autoCapitalize="none"
-                  autoComplete="email"
                   value={loginEmail}
                   onChangeText={setLoginEmail}
                 />
@@ -209,10 +204,6 @@ export default function HomePage({ onNavigate, onAuthSuccess }) {
                   <Text style={styles.loginButtonText}>{t('loginButton')}</Text>
                 )}
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.forgotPasswordButton}>
-                <Text style={styles.forgotPasswordText}>{t('forgotPassword')}</Text>
-              </TouchableOpacity>
             </>
           ) : (
             <>
@@ -220,14 +211,30 @@ export default function HomePage({ onNavigate, onAuthSuccess }) {
               <Text style={styles.mainTitle}>{t('createAccount')}</Text>
               
               <View style={styles.form}>
-                <Text style={styles.label}>{t('email')}</Text>
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Pseudo (requis)' : 'Username (required)'}
+                </Text>
                 <TextInput
                   style={styles.input}
-                  placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
+                  placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  autoCapitalize="words"
+                  value={registerUsername}
+                  onChangeText={setRegisterUsername}
+                />
+
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Email (optionnel)' : 'Email (optional)'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={language === 'fr' ? 'ton.email@example.com (optionnel)' : 'your.email@example.com (optional)'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
+                  value={registerEmail}
+                  onChangeText={setRegisterEmail}
                 />
 
                 <Text style={styles.label}>{t('password')}</Text>
@@ -236,20 +243,23 @@ export default function HomePage({ onNavigate, onAuthSuccess }) {
                   placeholder={language === 'fr' ? 'Choisis un mot de passe' : 'Choose a password'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
                   secureTextEntry
+                  value={registerPassword}
+                  onChangeText={setRegisterPassword}
                 />
               </View>
 
               <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => {
-                  // Plus tard, on naviguera vers la page de choix de type de compte
-                  // Pour l'instant, on navigue vers register
-                  onNavigate('register');
-                }}
+                style={[styles.registerButton, registerLoading && styles.registerButtonDisabled]}
+                onPress={handleRegister}
+                disabled={registerLoading}
               >
-                <Text style={styles.registerButtonText}>
-                  {language === 'fr' ? 'Continuer' : 'Continue'}
-                </Text>
+                {registerLoading ? (
+                  <ActivityIndicator color="#0b0b0e" />
+                ) : (
+                  <Text style={styles.registerButtonText}>
+                    {language === 'fr' ? 'Créer mon compte' : 'Create account'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </>
           )}
@@ -431,15 +441,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
   },
-  forgotPasswordButton: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    textDecorationLine: 'underline',
+  mainTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 30,
   },
   registerButton: {
     backgroundColor: '#ff7a1a',
@@ -450,54 +458,13 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     marginTop: 8,
   },
+  registerButtonDisabled: {
+    opacity: 0.6,
+  },
   registerButtonText: {
     color: '#0b0b0e',
     fontSize: 18,
     fontWeight: '800',
-  },
-  mainTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  cardsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 40,
-  },
-  accountCard: {
-    width: '48%',
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.35)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    minHeight: 160,
-  },
-  cardEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  cardDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
   },
   legalContainer: {
     flexDirection: 'row',
@@ -518,7 +485,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginHorizontal: 8,
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',

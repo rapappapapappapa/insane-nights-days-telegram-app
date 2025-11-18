@@ -1,0 +1,63 @@
+SOURCES D'IMAGES - INSANE NIGHTS & DAYS MOBILE
+================================================
+
+IMAGES D'ÉVÉNEMENTS
+-------------------
+Électro/Techno:
+https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop
+
+Drum & Bass:
+https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop
+
+Techno Underground:
+https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=400&h=300&fit=crop
+
+
+IMAGES PROFIL DJ
+----------------
+Image de fond header (800x400):
+https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop
+
+Photo de profil DJ (200x200):
+https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop
+
+Miniature 1 (150x150):
+https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop
+
+Miniature 2 (150x150):
+https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=150&h=150&fit=crop
+
+
+URLS BRUTES (sans paramètres)
+-----------------------------
+Électro/Techno:
+https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f
+
+Drum & Bass:
+https://images.unsplash.com/photo-1516450360452-9312f5e86fc7
+
+Techno:
+https://images.unsplash.com/photo-1516900557549-41557d405ad2
+
+Profil homme:
+https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d
+
+
+UTILISATION DANS LE CODE
+------------------------
+EventDetailPage.js:
+- Event 1: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop
+- Event 2: https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop
+- Event 3: https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=400&h=300&fit=crop
+
+EventsPage.js:
+- Event 1: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop
+- Event 2: https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop
+- Event 3: https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop
+
+DjProfilePage.js:
+- Background: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop
+- Profile: https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop
+- Thumbnail 1: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop
+- Thumbnail 2: https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=150&h=150&fit=crop
+

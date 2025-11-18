@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
 
 const mockEvents = [
@@ -59,7 +60,8 @@ const mockEvents = [
   },
 ];
 
-export default function EventsPage({ onNavigate, onBuyTicket }) {
+export default function EventsPage() {
+  const { navigate } = useNavigation();
   const [events, setEvents] = useState(mockEvents);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,7 +125,7 @@ export default function EventsPage({ onNavigate, onBuyTicket }) {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.eventsTopBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
+        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
       </View>
@@ -181,7 +183,7 @@ export default function EventsPage({ onNavigate, onBuyTicket }) {
             key={event.id}
             style={styles.eventCard}
             activeOpacity={0.9}
-            onPress={() => onNavigate('eventDetail', { eventId: event.id })}
+            onPress={() => navigate('eventDetail', { eventId: event.id })}
           >
             <View style={styles.eventImageContainer}>
               <Image source={{ uri: event.image }} style={styles.eventImage} />
@@ -191,6 +193,24 @@ export default function EventsPage({ onNavigate, onBuyTicket }) {
               <View style={styles.genreBadge}>
                 <Text style={styles.genreText}>{event.genre}</Text>
               </View>
+              {event.status && (
+                <View style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: event.status === 'UPCOMING' ? '#10b98120' : event.status === 'ONGOING' ? '#f59e0b20' : '#6b728020',
+                    borderColor: event.status === 'UPCOMING' ? '#10b981' : event.status === 'ONGOING' ? '#f59e0b' : '#6b7280',
+                  }
+                ]}>
+                  <Text style={[
+                    styles.statusBadgeText,
+                    {
+                      color: event.status === 'UPCOMING' ? '#10b981' : event.status === 'ONGOING' ? '#f59e0b' : '#6b7280',
+                    }
+                  ]}>
+                    {event.status === 'UPCOMING' ? 'À venir' : event.status === 'ONGOING' ? 'En cours' : 'Terminé'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.eventContent}>
@@ -208,10 +228,14 @@ export default function EventsPage({ onNavigate, onBuyTicket }) {
                   <Text style={styles.eventInfoIcon}>📍</Text>
                   <Text style={styles.eventInfoText}>{event.location}</Text>
                 </View>
-                <View style={styles.eventInfoRow}>
-                  <Text style={styles.eventInfoIcon}>🎤</Text>
-                  <Text style={styles.eventInfoText}>{event.djs.join(', ')}</Text>
-                </View>
+                {event.djs && event.djs.length > 0 && (
+                  <View style={styles.eventInfoRow}>
+                    <Text style={styles.eventInfoIcon}>🎤</Text>
+                    <Text style={styles.eventInfoText}>
+                      {Array.isArray(event.djs) ? event.djs.join(', ') : event.djs}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.availabilityContainer}>
@@ -241,36 +265,9 @@ export default function EventsPage({ onNavigate, onBuyTicket }) {
 
               <TouchableOpacity
                 style={styles.detailsButton}
-                onPress={() => onNavigate('eventDetail', { eventId: event.id })}
+                onPress={() => navigate('eventDetail', { eventId: event.id })}
               >
                 <Text style={styles.detailsButtonText}>🎟️ Voir les Détails</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.reserveButton}
-                onPress={() => {
-                  if (!onBuyTicket) {
-                    return;
-                  }
-                  const ticket = onBuyTicket(event);
-                  if (ticket) {
-                    Alert.alert(
-                      'Réservation confirmée',
-                      `Votre ticket pour "${event.title}" est réservé.`,
-                      [
-                        {
-                          text: 'Voir mes tickets',
-                          onPress: () => onNavigate('tickets'),
-                        },
-                        {
-                          text: 'Fermer',
-                          style: 'cancel',
-                        },
-                      ],
-                    );
-                  }
-                }}
-              >
-                <Text style={styles.reserveButtonText}>✅ Réserver ce ticket</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -433,6 +430,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   eventContent: {
     padding: 16,

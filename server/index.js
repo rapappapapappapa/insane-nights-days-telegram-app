@@ -195,28 +195,15 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, username, password } = req.body ?? {};
 
-    // Permettre d'utiliser soit email soit pseudo
-    let finalEmail = email;
-    let finalUsername = username;
-
-    // Si pas d'email mais un username, utiliser le username comme identifiant
-    if (!email && username) {
-      finalUsername = username.trim();
-      // Générer un email fictif basé sur le pseudo
-      finalEmail = `${finalUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}@insane-nights.local`;
-    } else if (email && !username) {
-      // Si email fourni mais pas de username, utiliser l'email comme username
-      finalUsername = email.split('@')[0];
-      finalEmail = email;
-    } else if (email && username) {
-      // Les deux fournis, utiliser tels quels
-      finalEmail = email;
-      finalUsername = username.trim();
-    } else {
+    // Email et pseudo sont maintenant tous les deux requis
+    if (!email || !username) {
       return res
         .status(400)
-        .json({ success: false, message: 'Email ou pseudo et mot de passe sont requis.' });
+        .json({ success: false, message: 'Email, pseudo et mot de passe sont requis.' });
     }
+
+    const finalEmail = email.trim();
+    const finalUsername = username.trim();
 
     if (!password) {
       return res
@@ -453,6 +440,65 @@ app.post('/api/profile/community', authenticateToken, async (req, res) => {
       });
     }
 
+    // Validation du format de date (jj/mm/aaaa)
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    if (!dateRegex.test(dateNaissance.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'La date de naissance doit être au format jj/mm/aaaa.',
+      });
+    }
+
+    // Vérifier que la date est valide
+    const [, day, month, year] = dateNaissance.trim().match(dateRegex);
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+
+    if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
+      return res.status(400).json({
+        success: false,
+        message: 'L\'année de naissance doit être entre 1900 et l\'année actuelle.',
+      });
+    }
+
+    if (monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le mois doit être entre 01 et 12.',
+      });
+    }
+
+    if (dayNum < 1 || dayNum > 31) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le jour doit être entre 01 et 31.',
+      });
+    }
+
+    // Vérifier que la date est valide (ex: pas le 31 février)
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      date.getFullYear() !== yearNum ||
+      date.getMonth() !== monthNum - 1 ||
+      date.getDate() !== dayNum
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'La date de naissance n\'est pas valide.',
+      });
+    }
+
+    // Vérifier que la personne a au moins 13 ans
+    const today = new Date();
+    const age = today.getFullYear() - yearNum;
+    if (age < 13) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous devez avoir au moins 13 ans pour créer un compte.',
+      });
+    }
+
     // Vérifier que l'utilisateur existe
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -524,6 +570,98 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
         success: false,
         message: 'Tous les champs sont requis (artistName, city, phone, birthDate).',
       });
+    }
+
+    // Validation du format de date (jj/mm/aaaa)
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    if (!dateRegex.test(birthDate.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: 'La date de naissance doit être au format jj/mm/aaaa.',
+      });
+    }
+
+    // Vérifier que la date est valide
+    const [, day, month, year] = birthDate.trim().match(dateRegex);
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+
+    if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
+      return res.status(400).json({
+        success: false,
+        message: 'L\'année de naissance doit être entre 1900 et l\'année actuelle.',
+      });
+    }
+
+    if (monthNum < 1 || monthNum > 12) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le mois doit être entre 01 et 12.',
+      });
+    }
+
+    if (dayNum < 1 || dayNum > 31) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le jour doit être entre 01 et 31.',
+      });
+    }
+
+    // Vérifier que la date est valide (ex: pas le 31 février)
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      date.getFullYear() !== yearNum ||
+      date.getMonth() !== monthNum - 1 ||
+      date.getDate() !== dayNum
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'La date de naissance n\'est pas valide.',
+      });
+    }
+
+    // Vérifier que la personne a au moins 13 ans
+    const today = new Date();
+    const age = today.getFullYear() - yearNum;
+    if (age < 13) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous devez avoir au moins 13 ans pour créer un compte.',
+      });
+    }
+
+    // Valider que la ville existe (API Gouv France)
+    if (city && city.trim()) {
+      try {
+        const cityResponse = await fetch(
+          `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(city.trim())}&limit=1&fields=nom`
+        );
+        const cityData = await cityResponse.json();
+        
+        if (!cityData || !Array.isArray(cityData) || cityData.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'La ville saisie n\'existe pas. Veuillez sélectionner une ville valide depuis la liste.',
+          });
+        }
+        
+        // Vérifier que le nom correspond exactement (insensible à la casse)
+        const foundCity = cityData.find(
+          (c) => c.nom.toLowerCase() === city.trim().toLowerCase()
+        );
+        
+        if (!foundCity) {
+          return res.status(400).json({
+            success: false,
+            message: 'La ville saisie n\'existe pas. Veuillez sélectionner une ville valide depuis la liste.',
+          });
+        }
+      } catch (cityError) {
+        console.error('Erreur validation ville:', cityError);
+        // En cas d'erreur API, on accepte quand même pour ne pas bloquer l'inscription
+        // mais on pourrait aussi rejeter si on veut être strict
+      }
     }
 
     const user = await prisma.user.findUnique({
@@ -1200,7 +1338,7 @@ app.post('/api/ratings/dj', authenticateToken, async (req, res) => {
     // Validation selon le type de compte
     if (rater.accountType === 'COMMUNITY' && rater.community) {
       raterType = 'COMMUNITY';
-      // Vérifier qu'il a un ticket pour cet événement ET que le ticket a été acheté AVANT la date de l'événement
+      // Vérifier qu'il a un ticket valide pour cet événement
       const ticket = await prisma.ticket.findFirst({
         where: {
           userId: raterId,
@@ -1216,14 +1354,8 @@ app.post('/api/ratings/dj', authenticateToken, async (req, res) => {
         });
       }
 
-      // Vérifier que le ticket a été acheté AVANT la date de l'événement
-      if (ticket.purchaseDate > event.date) {
-        return res.status(403).json({
-          success: false,
-          message: 'Vous devez avoir acheté le ticket avant la date de l\'événement pour noter.',
-        });
-      }
-
+      // Le ticket existe et l'événement est FINISHED, donc le ticket a été acheté quand l'événement était UPCOMING
+      // (le système de statuts garantit qu'on ne peut acheter des tickets que pour des événements UPCOMING)
       ticketId = ticket.id;
     } else if (rater.accountType === 'BOOKER' && rater.booker) {
       raterType = 'BOOKER';
@@ -1380,7 +1512,7 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
     // Validation selon le type de compte
     if (rater.accountType === 'COMMUNITY' && rater.community) {
       raterType = 'COMMUNITY';
-      // Vérifier qu'il a un ticket pour cet événement ET que le ticket a été acheté AVANT la date de l'événement
+      // Vérifier qu'il a un ticket valide pour cet événement
       const ticket = await prisma.ticket.findFirst({
         where: {
           userId: raterId,
@@ -1396,14 +1528,8 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
         });
       }
 
-      // Vérifier que le ticket a été acheté AVANT la date de l'événement
-      if (ticket.purchaseDate > event.date) {
-        return res.status(403).json({
-          success: false,
-          message: 'Vous devez avoir acheté le ticket avant la date de l\'événement pour noter.',
-        });
-      }
-
+      // Le ticket existe et l'événement est FINISHED, donc le ticket a été acheté quand l'événement était UPCOMING
+      // (le système de statuts garantit qu'on ne peut acheter des tickets que pour des événements UPCOMING)
       ticketId = ticket.id;
     } else if (rater.accountType === 'BOOKER' && rater.booker) {
       raterType = 'BOOKER';
@@ -1478,6 +1604,72 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de l\'enregistrement de la note.',
+    });
+  }
+});
+
+// Endpoint pour vérifier les notes existantes d'un utilisateur pour un événement
+app.get('/api/ratings/check/:eventId', authenticateToken, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.id;
+
+    // Récupérer toutes les notes de DJs pour cet événement et cet utilisateur
+    const djRatings = await prisma.djRating.findMany({
+      where: {
+        eventId: eventId,
+        raterId: userId,
+      },
+      include: {
+        dj: {
+          include: {
+            user: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Récupérer la note du lieu pour cet événement et cet utilisateur
+    const venueRating = await prisma.venueRating.findFirst({
+      where: {
+        eventId: eventId,
+        raterId: userId,
+      },
+      include: {
+        venue: true,
+      },
+    });
+
+    // Formater les réponses
+    const ratedDjIds = djRatings.map((rating) => rating.dj.user.id); // User.id des DJs notés
+    const ratedVenueId = venueRating ? venueRating.venueId : null;
+
+    res.json({
+      success: true,
+      ratedDjIds, // Array de User.id des DJs déjà notés
+      ratedVenueId, // ID du lieu déjà noté (ou null)
+      djRatings: djRatings.map((r) => ({
+        djUserId: r.dj.user.id,
+        rating: r.rating,
+        comment: r.comment,
+      })),
+      venueRating: venueRating
+        ? {
+            venueId: venueRating.venueId,
+            rating: venueRating.rating,
+            comment: venueRating.comment,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error('Erreur vérification notes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la vérification des notes.',
     });
   }
 });
@@ -1676,6 +1868,63 @@ app.delete('/api/tickets/:ticketId', authenticateToken, async (req, res) => {
       });
     }
 
+    // Récupérer toutes les notes de DJs pour cet événement et cet utilisateur
+    // (on cherche par eventId et raterId car le ticketId peut être null si le ticket a déjà été supprimé)
+    const djRatings = await prisma.djRating.findMany({
+      where: {
+        eventId: ticket.eventId,
+        raterId: userId,
+      },
+      include: {
+        dj: true,
+      },
+    });
+
+    // Récupérer toutes les notes de lieux pour cet événement et cet utilisateur
+    const venueRatings = await prisma.venueRating.findMany({
+      where: {
+        eventId: ticket.eventId,
+        raterId: userId,
+      },
+      include: {
+        venue: true,
+      },
+    });
+
+    // Collecter les IDs uniques des DJs et lieux concernés pour recalculer les moyennes
+    const affectedDjIds = [...new Set(djRatings.map((r) => r.djId))];
+    const affectedVenueIds = [...new Set(venueRatings.map((r) => r.venueId))];
+
+    // Supprimer les notes de DJs pour cet événement et cet utilisateur
+    if (djRatings.length > 0) {
+      await prisma.djRating.deleteMany({
+        where: {
+          eventId: ticket.eventId,
+          raterId: userId,
+        },
+      });
+    }
+
+    // Supprimer les notes de lieux pour cet événement et cet utilisateur
+    if (venueRatings.length > 0) {
+      await prisma.venueRating.deleteMany({
+        where: {
+          eventId: ticket.eventId,
+          raterId: userId,
+        },
+      });
+    }
+
+    // Recalculer les moyennes pour chaque DJ concerné
+    for (const djId of affectedDjIds) {
+      await calculateDjRatings(djId);
+    }
+
+    // Recalculer les moyennes pour chaque lieu concerné
+    for (const venueId of affectedVenueIds) {
+      await calculateVenueRatings(venueId);
+    }
+
     // Supprimer le ticket
     await prisma.ticket.delete({
       where: { id: ticketId },
@@ -1683,7 +1932,7 @@ app.delete('/api/tickets/:ticketId', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Ticket supprimé avec succès.',
+      message: 'Ticket et notes associées supprimés avec succès.',
     });
   } catch (error) {
     console.error('Erreur suppression ticket:', error);

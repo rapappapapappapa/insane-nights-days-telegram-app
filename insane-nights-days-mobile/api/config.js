@@ -1,7 +1,7 @@
 // Configuration API pour le backend
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://kelly-courts-linear-name.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://next-surgical-simulations-pleasant.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -21,6 +21,7 @@ const API_CONFIG = {
     PROFILE_VENUE: '/api/profile/venue',
     RATINGS_DJ: '/api/ratings/dj',
     RATINGS_VENUE: '/api/ratings/venue',
+    RATINGS_CHECK: '/api/ratings/check',
     DJS_LIST: '/api/djs',
     DJ_RATINGS: '/api/dj',
     VENUE_RATINGS: '/api/venue',
@@ -125,7 +126,7 @@ const api = {
   },
 
   // Créer un profil Communauté (nécessite un token JWT)
-  createCommunityProfile: async ({ token, pseudo, nom, prenom, email, password, pays, dateNaissance }) => {
+  createCommunityProfile: async ({ token, pseudo, nom, prenom, email, pays, dateNaissance }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
@@ -133,14 +134,14 @@ const api = {
       API_CONFIG.ENDPOINTS.PROFILE_COMMUNITY,
       {
         method: 'POST',
-        body: JSON.stringify({ pseudo, nom, prenom, email, password, pays, dateNaissance }),
+        body: JSON.stringify({ pseudo, nom, prenom, email, pays, dateNaissance }),
       },
       token
     );
   },
 
   // Créer un profil DJ (nécessite un token JWT)
-  createDjProfile: async ({ token, pseudo, artistName, email, password, city, phone, birthDate }) => {
+  createDjProfile: async ({ token, pseudo, artistName, email, city, phone, birthDate }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
@@ -155,7 +156,7 @@ const api = {
   },
 
   // Créer un profil Booker (nécessite un token JWT)
-  createBookerProfile: async ({ token, pseudo, nom, prenom, email, password, phonePro, bookerType }) => {
+  createBookerProfile: async ({ token, pseudo, nom, prenom, email, phonePro, bookerType }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
@@ -170,7 +171,7 @@ const api = {
   },
 
   // Créer un profil Venue (nécessite un token JWT)
-  createVenueProfile: async ({ token, pseudo, venueName, email, password, address }) => {
+  createVenueProfile: async ({ token, pseudo, venueName, email, address }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
@@ -223,7 +224,7 @@ const api = {
   // djUserId est le User.id du DJ (pas le UserDj.id)
   rateDj: async ({ token, djUserId, eventId, rating, comment }) => {
     if (!token) {
-      throw new Error('Token d\'authentification requis pour noter.');
+      throw new Error('Token d\'authentification requis pour noter.');r
     }
     return apiRequest(
       API_CONFIG.ENDPOINTS.RATINGS_DJ,
@@ -263,6 +264,14 @@ const api = {
   // Récupérer la liste de tous les DJs
   getDjs: async () => {
     return apiRequest(API_CONFIG.ENDPOINTS.DJS_LIST);
+  },
+
+  // Vérifier les notes existantes d'un utilisateur pour un événement
+  checkRatings: async (token, eventId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`${API_CONFIG.ENDPOINTS.RATINGS_CHECK}/${eventId}`, {}, token);
   },
 
   // Changer le statut d'un événement (TEMPORAIRE - à supprimer en production)

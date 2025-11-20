@@ -6,7 +6,7 @@ const LanguageContext = createContext();
 const translations = {
   fr: {
     // Page d'accueil
-    createAccount: 'Créer votre compte Indé Booking',
+    createAccount: 'Créez votre compte Insane Nights Days',
     login: 'Connexion',
     register: 'Inscription',
     email: 'Email',
@@ -25,7 +25,7 @@ const translations = {
   },
   en: {
     // Home page
-    createAccount: 'Create your Indé Booking account',
+    createAccount: 'Create your Insane Nights Days account',
     login: 'Login',
     register: 'Sign up',
     email: 'Email',

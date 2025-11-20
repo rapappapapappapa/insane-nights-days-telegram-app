@@ -26,6 +26,9 @@ export default function RateEventPage() {
   const [djNames, setDjNames] = useState({}); // Map des IDs vers les noms
   const [ratingDjModal, setRatingDjModal] = useState({ visible: false, djUserId: null, djName: null });
   const [ratingVenueModal, setRatingVenueModal] = useState({ visible: false });
+  const [ratedDjIds, setRatedDjIds] = useState([]); // IDs des DJs déjà notés
+  const [ratedVenueId, setRatedVenueId] = useState(null); // ID du lieu déjà noté
+  const [checkingRatings, setCheckingRatings] = useState(true);
 
   // Debug: afficher les djIds reçus
   useEffect(() => {
@@ -60,6 +63,30 @@ export default function RateEventPage() {
 
     fetchDjNames();
   }, [djIds]);
+
+  // Vérifier les notes existantes
+  useEffect(() => {
+    const checkExistingRatings = async () => {
+      if (!user?.token || !eventId) {
+        setCheckingRatings(false);
+        return;
+      }
+
+      try {
+        const response = await api.checkRatings(user.token, eventId);
+        if (response && response.success) {
+          setRatedDjIds(response.ratedDjIds || []);
+          setRatedVenueId(response.ratedVenueId || null);
+        }
+      } catch (error) {
+        console.error('Erreur vérification notes:', error);
+      } finally {
+        setCheckingRatings(false);
+      }
+    };
+
+    checkExistingRatings();
+  }, [user?.token, eventId]);
 
   // Utiliser le statut de l'événement plutôt que de calculer depuis la date
   const isEventPast = () => {
@@ -99,6 +126,10 @@ export default function RateEventPage() {
       });
 
       if (response && response.success) {
+        // Mettre à jour la liste des DJs notés
+        if (!ratedDjIds.includes(ratingDjModal.djUserId)) {
+          setRatedDjIds([...ratedDjIds, ratingDjModal.djUserId]);
+        }
         Alert.alert(
           language === 'fr' ? 'Note enregistrée' : 'Rating saved',
           language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
@@ -135,6 +166,8 @@ export default function RateEventPage() {
       });
 
       if (response && response.success) {
+        // Mettre à jour le lieu noté
+        setRatedVenueId(venueId);
         Alert.alert(
           language === 'fr' ? 'Note enregistrée' : 'Rating saved',
           language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
@@ -211,20 +244,26 @@ export default function RateEventPage() {
             </Text>
             {djIds.map((djId) => {
               const djName = djNames[djId] || `DJ ${djId.slice(0, 8)}`;
+              const isRated = ratedDjIds.includes(djId);
               return (
-                <TouchableOpacity
+                <View
                   key={djId}
-                  style={styles.rateButton}
-                  onPress={() => {
-                    // djId est le User.id du DJ
-                    setRatingDjModal({ visible: true, djUserId: djId, djName });
-                  }}
+                  style={[styles.rateButton, isRated && styles.rateButtonRated]}
                 >
-                  <Text style={styles.rateButtonText}>
-                    {language === 'fr' ? 'Noter' : 'Rate'} {djName}
+                  <Text style={[styles.rateButtonText, isRated && styles.rateButtonTextRated]}>
+                    {isRated ? '✓ ' : ''}{isRated ? (language === 'fr' ? 'Noté' : 'Rated') : (language === 'fr' ? 'Noter' : 'Rate')} {djName}
                   </Text>
-                  <Text style={styles.rateButtonArrow}>→</Text>
-                </TouchableOpacity>
+                  {!isRated && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setRatingDjModal({ visible: true, djUserId: djId, djName });
+                      }}
+                    >
+                      <Text style={styles.rateButtonArrow}>→</Text>
+                    </TouchableOpacity>
+                  )}
+                  {isRated && <Text style={styles.rateButtonCheck}>✓</Text>}
+                </View>
               );
             })}
           </View>
@@ -241,15 +280,21 @@ export default function RateEventPage() {
                 ? 'Donnez votre avis sur le lieu de l\'événement'
                 : 'Share your opinion on the event venue'}
             </Text>
-            <TouchableOpacity
-              style={styles.rateButton}
-              onPress={() => setRatingVenueModal({ visible: true })}
+            <View
+              style={[styles.rateButton, ratedVenueId && styles.rateButtonRated]}
             >
-              <Text style={styles.rateButtonText}>
-                {language === 'fr' ? 'Noter' : 'Rate'} {venueName || language === 'fr' ? 'le lieu' : 'venue'}
+              <Text style={[styles.rateButtonText, ratedVenueId && styles.rateButtonTextRated]}>
+                {ratedVenueId ? '✓ ' : ''}{ratedVenueId ? (language === 'fr' ? 'Noté' : 'Rated') : (language === 'fr' ? 'Noter' : 'Rate')} {venueName || language === 'fr' ? 'le lieu' : 'venue'}
               </Text>
-              <Text style={styles.rateButtonArrow}>→</Text>
-            </TouchableOpacity>
+              {!ratedVenueId && (
+                <TouchableOpacity
+                  onPress={() => setRatingVenueModal({ visible: true })}
+                >
+                  <Text style={styles.rateButtonArrow}>→</Text>
+                </TouchableOpacity>
+              )}
+              {ratedVenueId && <Text style={styles.rateButtonCheck}>✓</Text>}
+            </View>
           </View>
         )}
 
@@ -371,14 +416,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  rateButtonRated: {
+    backgroundColor: '#1a2a1a',
+    borderColor: 'rgba(76,175,80,0.5)',
+    opacity: 0.8,
+  },
   rateButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+  rateButtonTextRated: {
+    color: 'rgba(255,255,255,0.7)',
+  },
   rateButtonArrow: {
     color: '#ff7a1a',
     fontSize: 20,
+    fontWeight: '700',
+  },
+  rateButtonCheck: {
+    color: '#4caf50',
+    fontSize: 24,
     fontWeight: '700',
   },
   emptyContainer: {

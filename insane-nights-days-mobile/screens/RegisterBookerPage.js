@@ -27,7 +27,6 @@ export default function RegisterBookerPage() {
     nom: '',
     prenom: '',
     email: user?.email || '',
-    password: '',
     phonePro: '',
     bookerType: '',
   });
@@ -41,18 +40,10 @@ export default function RegisterBookerPage() {
     if (loading) return;
 
     // Validation
-    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.password || !formData.phonePro || !formData.bookerType) {
+    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.phonePro || !formData.bookerType) {
       Alert.alert(
         language === 'fr' ? 'Champs manquants' : 'Missing fields',
         language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.',
-      );
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      Alert.alert(
-        language === 'fr' ? 'Mot de passe trop court' : 'Password too short',
-        language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Password must be at least 6 characters.',
       );
       return;
     }
@@ -88,7 +79,6 @@ export default function RegisterBookerPage() {
         nom: formData.nom,
         prenom: formData.prenom,
         email: formData.email,
-        password: formData.password,
         phonePro: formData.phonePro,
         bookerType: formData.bookerType,
       });
@@ -211,18 +201,6 @@ export default function RegisterBookerPage() {
             autoComplete="email"
             value={formData.email}
             onChangeText={(value) => handleChange('email', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Mot de passe' : 'Password'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Choisis un mot de passe' : 'Choose a password'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            secureTextEntry
-            value={formData.password}
-            onChangeText={(value) => handleChange('password', value)}
           />
 
           <Text style={styles.label}>

@@ -65,11 +65,21 @@ export default function HomePage() {
   const handleRegister = async () => {
     if (registerLoading) return;
 
-    // Permettre d'utiliser soit email soit pseudo (ou les deux)
-    if ((!registerEmail && !registerUsername) || !registerPassword) {
+    // Validation : pseudo et email sont requis
+    if (!registerUsername || !registerEmail || !registerPassword) {
       Alert.alert(
         language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir au moins un pseudo ou un email, et un mot de passe.' : 'Please fill in at least a username or email, and a password.',
+        language === 'fr' ? 'Merci de remplir tous les champs (pseudo, email et mot de passe).' : 'Please fill in all fields (username, email and password).',
+      );
+      return;
+    }
+
+    // Validation du format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(registerEmail.trim())) {
+      Alert.alert(
+        language === 'fr' ? 'Email invalide' : 'Invalid email',
+        language === 'fr' ? 'Veuillez entrer une adresse email valide.' : 'Please enter a valid email address.',
       );
       return;
     }
@@ -84,8 +94,8 @@ export default function HomePage() {
 
     setRegisterLoading(true);
     const result = await register({ 
-      email: registerEmail || undefined, 
-      username: registerUsername || undefined, 
+      email: registerEmail.trim(), 
+      username: registerUsername.trim(), 
       password: registerPassword 
     });
     setRegisterLoading(false);
@@ -224,11 +234,11 @@ export default function HomePage() {
                 />
 
                 <Text style={styles.label}>
-                  {language === 'fr' ? 'Email (optionnel)' : 'Email (optional)'}
+                  {language === 'fr' ? 'Email (requis)' : 'Email (required)'}
                 </Text>
                 <TextInput
                   style={styles.input}
-                  placeholder={language === 'fr' ? 'ton.email@example.com (optionnel)' : 'your.email@example.com (optional)'}
+                  placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
                   keyboardType="email-address"
                   autoCapitalize="none"

@@ -27,21 +27,82 @@ export default function RegisterCommunityPage() {
     nom: '',
     prenom: '',
     email: user?.email || '',
-    password: '',
     pays: '',
     dateNaissance: '',
   });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Validation spéciale pour la date de naissance
+    if (field === 'dateNaissance') {
+      // N'autoriser que les chiffres
+      const cleaned = value.replace(/[^0-9]/g, '');
+      
+      // Formater automatiquement avec des slashes
+      let formatted = cleaned;
+      if (cleaned.length > 2) {
+        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+      }
+      if (cleaned.length > 4) {
+        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
+      }
+      
+      // Limiter à 10 caractères (jj/mm/aaaa)
+      const limited = formatted.length > 10 ? formatted.slice(0, 10) : formatted;
+      setFormData((prev) => ({ ...prev, [field]: limited }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
+  const validateDate = (dateString) => {
+    // Format attendu: jj/mm/aaaa
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    if (!dateRegex.test(dateString)) {
+      return false;
+    }
+    
+    const [, day, month, year] = dateString.match(dateRegex);
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+    
+    // Vérifier les limites raisonnables
+    if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
+      return false;
+    }
+    if (monthNum < 1 || monthNum > 12) {
+      return false;
+    }
+    if (dayNum < 1 || dayNum > 31) {
+      return false;
+    }
+    
+    // Vérifier que la date est valide (ex: pas le 31 février)
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      date.getFullYear() !== yearNum ||
+      date.getMonth() !== monthNum - 1 ||
+      date.getDate() !== dayNum
+    ) {
+      return false;
+    }
+    
+    // Vérifier que la personne a au moins 13 ans
+    const today = new Date();
+    const age = today.getFullYear() - yearNum;
+    if (age < 13) {
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async () => {
     if (loading) return;
 
     // Validation
-    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.password || !formData.pays || !formData.dateNaissance) {
+    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
       Alert.alert(
         language === 'fr' ? 'Champs manquants' : 'Missing fields',
         language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.',
@@ -49,10 +110,13 @@ export default function RegisterCommunityPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
+    // Validation de la date de naissance
+    if (!validateDate(formData.dateNaissance)) {
       Alert.alert(
-        language === 'fr' ? 'Mot de passe trop court' : 'Password too short',
-        language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Password must be at least 6 characters.',
+        language === 'fr' ? 'Date invalide' : 'Invalid date',
+        language === 'fr' 
+          ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
+          : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.',
       );
       return;
     }
@@ -88,7 +152,6 @@ export default function RegisterCommunityPage() {
         nom: formData.nom,
         prenom: formData.prenom,
         email: formData.email,
-        password: formData.password,
         pays: formData.pays,
         dateNaissance: formData.dateNaissance,
       });
@@ -219,18 +282,6 @@ export default function RegisterCommunityPage() {
           />
 
           <Text style={styles.label}>
-            {language === 'fr' ? 'Mot de passe' : 'Password'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Choisis un mot de passe' : 'Choose a password'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            secureTextEntry
-            value={formData.password}
-            onChangeText={(value) => handleChange('password', value)}
-          />
-
-          <Text style={styles.label}>
             {language === 'fr' ? 'Pays' : 'Country'}
           </Text>
           <TextInput
@@ -248,6 +299,8 @@ export default function RegisterCommunityPage() {
             style={styles.input}
             placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
             placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            maxLength={10}
             value={formData.dateNaissance}
             onChangeText={(value) => handleChange('dateNaissance', value)}
           />

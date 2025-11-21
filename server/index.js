@@ -202,7 +202,7 @@ app.post('/api/auth/register', async (req, res) => {
         .json({ success: false, message: 'Email, pseudo et mot de passe sont requis.' });
     }
 
-    const finalEmail = email.trim();
+    let finalEmail = email.trim();
     const finalUsername = username.trim();
 
     if (!password) {
@@ -388,6 +388,137 @@ app.post('/api/wallet/connect', async (req, res) => {
   }
 });
 
+// Endpoint pour lister tous les profils d'un utilisateur (DOIT être avant /api/user/:userId)
+app.get('/api/user/profiles', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        communities: true,
+        djs: true,
+        bookers: true,
+        venues: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    const profiles = {
+      community: user.communities.map((c) => ({
+        id: c.id,
+        type: 'COMMUNITY',
+        nom: c.nom,
+        prenom: c.prenom,
+        pays: c.pays,
+        isnNumber: c.isnNumber,
+      })),
+      dj: user.djs.map((d) => ({
+        id: d.id,
+        type: 'DJ',
+        artistName: d.artistName,
+        city: d.city,
+      })),
+      booker: user.bookers.map((b) => ({
+        id: b.id,
+        type: 'BOOKER',
+        nom: b.nom,
+        prenom: b.prenom,
+        bookerType: b.bookerType,
+      })),
+      venue: user.venues.map((v) => ({
+        id: v.id,
+        type: 'VENUE',
+        venueName: v.venueName,
+        address: v.address,
+      })),
+    };
+
+    res.json({
+      success: true,
+      activeProfileType: user.activeProfileType,
+      profiles,
+    });
+  } catch (error) {
+    console.error('Erreur récupération profils:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour basculer entre profils (DOIT être avant /api/user/:userId)
+app.post('/api/user/switch-profile', authenticateToken, async (req, res) => {
+  try {
+    const { profileType } = req.body; // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE'
+    const userId = req.user.id;
+
+    if (!profileType || !['COMMUNITY', 'DJ', 'BOOKER', 'VENUE'].includes(profileType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'profileType requis et doit être COMMUNITY, DJ, BOOKER ou VENUE.',
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        communities: true,
+        djs: true,
+        bookers: true,
+        venues: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    // Vérifier que l'utilisateur a au moins un profil du type demandé
+    let hasProfile = false;
+    switch (profileType) {
+      case 'COMMUNITY':
+        hasProfile = user.communities && user.communities.length > 0;
+        break;
+      case 'DJ':
+        hasProfile = user.djs && user.djs.length > 0;
+        break;
+      case 'BOOKER':
+        hasProfile = user.bookers && user.bookers.length > 0;
+        break;
+      case 'VENUE':
+        hasProfile = user.venues && user.venues.length > 0;
+        break;
+    }
+
+    if (!hasProfile) {
+      return res.status(404).json({
+        success: false,
+        message: `Vous n'avez pas de profil ${profileType}. Créez-en un d'abord.`,
+      });
+    }
+
+    // Mettre à jour le profil actif
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        activeProfileType: profileType,
+        accountType: profileType, // Garde pour compatibilité
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Profil basculé vers ${profileType}`,
+      activeProfileType: profileType,
+    });
+  } catch (error) {
+    console.error('Erreur bascule profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -400,10 +531,10 @@ app.get('/api/user/:userId', async (req, res) => {
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        community: true,
-        dj: true,
-        booker: true,
-        venue: true,
+        communities: true,
+        djs: true,
+        bookers: true,
+        venues: true,
       },
     });
 
@@ -502,25 +633,16 @@ app.post('/api/profile/community', authenticateToken, async (req, res) => {
     // Vérifier que l'utilisateur existe
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { community: true },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    // Vérifier qu'il n'a pas déjà un profil Communauté
-    if (user.community) {
-      return res.status(409).json({
-        success: false,
-        message: 'Un profil Communauté existe déjà pour cet utilisateur.',
-      });
-    }
-
     // Générer un numéro ISN séquentiel
     const isnNumber = await generateISN();
 
-    // Créer le profil Communauté
+    // Créer le profil Communauté (plusieurs profils possibles maintenant)
     const communityProfile = await prisma.userCommunity.create({
       data: {
         userId,
@@ -532,10 +654,13 @@ app.post('/api/profile/community', authenticateToken, async (req, res) => {
       },
     });
 
-    // Mettre à jour le type de compte de l'utilisateur
+    // Mettre à jour le profil actif si c'est le premier profil ou si aucun profil n'est actif
     await prisma.user.update({
       where: { id: userId },
-      data: { accountType: 'COMMUNITY' },
+      data: { 
+        accountType: 'COMMUNITY', // Garde pour compatibilité
+        activeProfileType: user.activeProfileType || 'COMMUNITY', // Active ce profil si aucun n'est actif
+      },
     });
 
     res.status(201).json({
@@ -666,20 +791,13 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { dj: true },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    if (user.dj) {
-      return res.status(409).json({
-        success: false,
-        message: 'Un profil DJ existe déjà pour cet utilisateur.',
-      });
-    }
-
+    // Créer le profil DJ (plusieurs profils possibles maintenant)
     const djProfile = await prisma.userDj.create({
       data: {
         userId,
@@ -690,9 +808,13 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
       },
     });
 
+    // Mettre à jour le profil actif si aucun n'est actif
     await prisma.user.update({
       where: { id: userId },
-      data: { accountType: 'DJ' },
+      data: { 
+        accountType: 'DJ', // Garde pour compatibilité
+        activeProfileType: user.activeProfileType || 'DJ', // Active ce profil si aucun n'est actif
+      },
     });
 
     res.status(201).json({
@@ -730,20 +852,13 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { booker: true },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    if (user.booker) {
-      return res.status(409).json({
-        success: false,
-        message: 'Un profil Booker existe déjà pour cet utilisateur.',
-      });
-    }
-
+    // Créer le profil Booker (plusieurs profils possibles maintenant)
     const bookerProfile = await prisma.userBooker.create({
       data: {
         userId,
@@ -754,9 +869,13 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
       },
     });
 
+    // Mettre à jour le profil actif si aucun n'est actif
     await prisma.user.update({
       where: { id: userId },
-      data: { accountType: 'BOOKER' },
+      data: { 
+        accountType: 'BOOKER', // Garde pour compatibilité
+        activeProfileType: user.activeProfileType || 'BOOKER', // Active ce profil si aucun n'est actif
+      },
     });
 
     res.status(201).json({
@@ -794,20 +913,13 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { venue: true },
     });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    if (user.venue) {
-      return res.status(409).json({
-        success: false,
-        message: 'Un profil Lieu existe déjà pour cet utilisateur.',
-      });
-    }
-
+    // Créer le profil Venue (plusieurs profils possibles maintenant)
     const venueProfile = await prisma.userVenue.create({
       data: {
         userId,
@@ -816,9 +928,13 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
       },
     });
 
+    // Mettre à jour le profil actif si aucun n'est actif
     await prisma.user.update({
       where: { id: userId },
-      data: { accountType: 'VENUE' },
+      data: { 
+        accountType: 'VENUE', // Garde pour compatibilité
+        activeProfileType: user.activeProfileType || 'VENUE', // Active ce profil si aucun n'est actif
+      },
     });
 
     res.status(201).json({
@@ -1033,6 +1149,31 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       });
     }
 
+    // Vérifier que l'utilisateur a un profil Community actif
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { communities: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    if (user.activeProfileType !== 'COMMUNITY') {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les profils Community peuvent acheter des tickets. Veuillez basculer sur votre profil Community.',
+      });
+    }
+
+    // Vérifier qu'il a au moins un profil Community
+    if (!user.communities || user.communities.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous devez avoir un profil Community pour acheter des tickets. Créez-en un depuis votre profil.',
+      });
+    }
+
     const event = await prisma.event.findUnique({
       where: { id: eventId },
     });
@@ -1085,10 +1226,6 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
     });
 
     // Mettre à jour le score de l'utilisateur
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
     const newScore = (user.score || 0) + 50 * quantity;
     const newLevel = Math.floor(newScore / 200) + 1;
 
@@ -1162,6 +1299,7 @@ app.get('/api/user/:userId/tickets', async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
+
 
 // Fonction helper pour calculer les moyennes d'un DJ
 const calculateDjRatings = async (djId) => {
@@ -1355,7 +1493,6 @@ app.post('/api/ratings/dj', authenticateToken, async (req, res) => {
       }
 
       // Le ticket existe et l'événement est FINISHED, donc le ticket a été acheté quand l'événement était UPCOMING
-      // (le système de statuts garantit qu'on ne peut acheter des tickets que pour des événements UPCOMING)
       ticketId = ticket.id;
     } else if (rater.accountType === 'BOOKER' && rater.booker) {
       raterType = 'BOOKER';
@@ -1529,7 +1666,6 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
       }
 
       // Le ticket existe et l'événement est FINISHED, donc le ticket a été acheté quand l'événement était UPCOMING
-      // (le système de statuts garantit qu'on ne peut acheter des tickets que pour des événements UPCOMING)
       ticketId = ticket.id;
     } else if (rater.accountType === 'BOOKER' && rater.booker) {
       raterType = 'BOOKER';
@@ -1735,9 +1871,9 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
       },
     });
 
-    // Si pas trouvé, essayer avec User.id
+    // Si pas trouvé, essayer avec User.id (prendre le premier profil DJ de cet utilisateur)
     if (!dj) {
-      dj = await prisma.userDj.findUnique({
+      dj = await prisma.userDj.findFirst({
         where: { userId: req.params.identifier },
         include: {
           ratings: {
@@ -1764,6 +1900,14 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
 
     res.json({
       success: true,
+      dj: {
+        id: dj.id,
+        userId: dj.userId,
+        artistName: dj.artistName,
+        city: dj.city,
+        phone: dj.phone,
+        birthDate: dj.birthDate,
+      },
       ratings: {
         averageRatingCommunity: dj.averageRatingCommunity,
         averageRatingBooker: dj.averageRatingBooker,

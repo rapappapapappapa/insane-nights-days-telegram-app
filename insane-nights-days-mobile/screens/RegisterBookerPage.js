@@ -20,7 +20,7 @@ import { api } from '../api/config';
 export default function RegisterBookerPage() {
   const { language, t } = useLanguage();
   const { navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -101,6 +101,17 @@ export default function RegisterBookerPage() {
         );
         setLoading(false);
         return;
+      }
+
+      // Basculer automatiquement vers le profil BOOKER créé
+      try {
+        const switchResponse = await api.switchProfile(user.token, 'BOOKER');
+        if (switchResponse && switchResponse.success) {
+          updateUser({ activeProfileType: 'BOOKER' });
+        }
+      } catch (switchError) {
+        console.error('Erreur bascule profil:', switchError);
+        // On continue quand même, le profil est créé
       }
 
       // Succès !

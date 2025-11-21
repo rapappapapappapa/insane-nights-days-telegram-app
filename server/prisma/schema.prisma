@@ -17,15 +17,16 @@ model User {
   password  String
   score     Int      @default(0)
   level     Int      @default(1)
-  accountType String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE'
+  accountType String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)
+  activeProfileType String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' - Profil actuellement actif
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  // Relations optionnelles vers les profils spécifiques
-  community UserCommunity?
-  dj        UserDj?
-  booker    UserBooker?
-  venue     UserVenue?
+  // Relations vers les profils spécifiques (plusieurs profils possibles)
+  communities UserCommunity[]
+  djs         UserDj[]
+  bookers     UserBooker[]
+  venues      UserVenue[]
   
   // Relations vers les tickets
   tickets   Ticket[]
@@ -33,7 +34,7 @@ model User {
 
 model UserCommunity {
   id        String   @id @default(uuid())
-  userId    String   @unique
+  userId    String   // Plusieurs profils Community possibles par User
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nom       String
   prenom    String
@@ -42,11 +43,13 @@ model UserCommunity {
   isnNumber String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  @@index([userId])
 }
 
 model UserDj {
   id                      String      @id @default(uuid())
-  userId                  String      @unique
+  userId                  String       // Plusieurs profils DJ possibles par User
   user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   artistName              String
   city                    String
@@ -64,11 +67,13 @@ model UserDj {
   
   // Relations vers les notes reçues
   ratings                 DjRating[]
+  
+  @@index([userId])
 }
 
 model UserBooker {
   id         String   @id @default(uuid())
-  userId     String   @unique
+  userId     String    // Plusieurs profils Booker possibles par User
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nom        String
   prenom     String
@@ -79,11 +84,13 @@ model UserBooker {
   
   // Relations vers les événements organisés
   events     Event[]
+  
+  @@index([userId])
 }
 
 model UserVenue {
   id                      String        @id @default(uuid())
-  userId                  String        @unique
+  userId                  String         // Plusieurs profils Venue possibles par User
   user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   venueName               String
   address                 String
@@ -101,6 +108,8 @@ model UserVenue {
   events                  Event[]
   // Relations vers les notes reçues
   ratings                 VenueRating[]
+  
+  @@index([userId])
 }
 
 // Modèle pour stocker les notes données aux DJs

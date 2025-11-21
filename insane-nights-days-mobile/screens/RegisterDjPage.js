@@ -21,7 +21,7 @@ import CityAutocomplete from '../components/CityAutocomplete';
 export default function RegisterDjPage() {
   const { language, t } = useLanguage();
   const { navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -175,6 +175,17 @@ export default function RegisterDjPage() {
         );
         setLoading(false);
         return;
+      }
+
+      // Basculer automatiquement vers le profil DJ créé
+      try {
+        const switchResponse = await api.switchProfile(user.token, 'DJ');
+        if (switchResponse && switchResponse.success) {
+          updateUser({ activeProfileType: 'DJ' });
+        }
+      } catch (switchError) {
+        console.error('Erreur bascule profil:', switchError);
+        // On continue quand même, le profil est créé
       }
 
       // Succès !

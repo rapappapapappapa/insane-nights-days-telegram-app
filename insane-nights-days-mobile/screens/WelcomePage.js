@@ -72,6 +72,28 @@ export default function WelcomePage() {
                 {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigate('profile')}
+            >
+              <Text style={styles.actionEmoji}>👤</Text>
+              <Text style={styles.actionText}>
+                {language === 'fr' ? 'Mon Profil' : 'My Profile'}
+              </Text>
+            </TouchableOpacity>
+
+            {user?.isAuthenticated && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigate('switchProfile')}
+              >
+                <Text style={styles.actionEmoji}>🔄</Text>
+                <Text style={styles.actionText}>
+                  {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 

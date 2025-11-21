@@ -20,7 +20,7 @@ import { api } from '../api/config';
 export default function RegisterVenuePage() {
   const { language, t } = useLanguage();
   const { navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -97,6 +97,17 @@ export default function RegisterVenuePage() {
         );
         setLoading(false);
         return;
+      }
+
+      // Basculer automatiquement vers le profil VENUE créé
+      try {
+        const switchResponse = await api.switchProfile(user.token, 'VENUE');
+        if (switchResponse && switchResponse.success) {
+          updateUser({ activeProfileType: 'VENUE' });
+        }
+      } catch (switchError) {
+        console.error('Erreur bascule profil:', switchError);
+        // On continue quand même, le profil est créé
       }
 
       // Succès !

@@ -19,6 +19,35 @@ import StarRating from '../components/StarRating';
 
 const { width } = Dimensions.get('window');
 
+// Générer une image différente basée sur le nom du DJ
+const getDjImage = (djName) => {
+  if (!djName) return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop';
+  // Utiliser le hash du nom pour sélectionner une image différente
+  const hash = djName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const images = [
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
+    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&h=200&fit=crop',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
+    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop',
+  ];
+  return images[hash % images.length];
+};
+
+// Générer une image de background différente
+const getDjBackgroundImage = (djName) => {
+  if (!djName) return 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop';
+  const hash = djName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const images = [
+    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=800&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
+  ];
+  return images[hash % images.length];
+};
+
 export default function DjProfilePage() {
   const { language } = useLanguage();
   const { routeParams, goBack } = useNavigation();
@@ -39,20 +68,33 @@ export default function DjProfilePage() {
   const fetchDjProfile = async () => {
     setLoading(true);
     try {
-      // Récupérer les notes du DJ
+      // Récupérer les notes et les infos du DJ
       const identifier = djUserId || djId;
       const ratingsResponse = await api.getDjRatings(identifier);
       
       if (ratingsResponse && ratingsResponse.success) {
         setRatings(ratingsResponse.ratings);
-        // Créer un objet DJ avec les infos de base
-        setDj({
-          id: djId,
-          userId: djUserId,
-          artistName: 'KAYZEN', // À récupérer depuis l'API si disponible
-          city: 'Lyon',
-          averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
-        });
+        // Utiliser les infos du DJ depuis l'API
+        if (ratingsResponse.dj) {
+          setDj({
+            id: ratingsResponse.dj.id,
+            userId: ratingsResponse.dj.userId,
+            artistName: ratingsResponse.dj.artistName,
+            city: ratingsResponse.dj.city,
+            phone: ratingsResponse.dj.phone,
+            birthDate: ratingsResponse.dj.birthDate,
+            averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
+          });
+        } else {
+          // Fallback si les infos ne sont pas disponibles
+          setDj({
+            id: djId,
+            userId: djUserId,
+            artistName: routeParams?.djName || 'DJ',
+            city: 'Ville inconnue',
+            averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
+          });
+        }
       }
     } catch (error) {
       console.error('Erreur récupération profil DJ:', error);
@@ -100,7 +142,7 @@ export default function DjProfilePage() {
       <View style={styles.header}>
         <View style={styles.backgroundImage}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop' }}
+            source={{ uri: getDjBackgroundImage(dj.artistName) }}
             style={styles.backgroundImageContent}
             blurRadius={3}
           />
@@ -108,12 +150,12 @@ export default function DjProfilePage() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop' }}
+              source={{ uri: getDjImage(dj.artistName) }}
               style={styles.profileImage}
             />
           </View>
           <Text style={styles.djName}>{dj.artistName}</Text>
-          <Text style={styles.djLocation}>📍 {dj.city}, France</Text>
+          <Text style={styles.djLocation}>📍 {dj.city || 'Ville inconnue'}, France</Text>
           <TouchableOpacity style={styles.bookButton}>
             <Text style={styles.bookButtonText}>
               {language === 'fr' ? 'BOOKER CE DJ' : 'BOOK THIS DJ'}

@@ -18,6 +18,8 @@ import RateEventPage from './screens/RateEventPage';
 import TicketsPage from './screens/TicketsPage';
 import DjListPage from './screens/DjListPage';
 import DjProfilePage from './screens/DjProfilePage';
+import SwitchProfilePage from './screens/SwitchProfilePage';
+import ProfilePage from './screens/ProfilePage';
 
 const SCREENS = {
   home: HomePage,
@@ -35,6 +37,8 @@ const SCREENS = {
   rateEvent: RateEventPage,
   djList: DjListPage,
   djProfile: DjProfilePage,
+  switchProfile: SwitchProfilePage,
+  profile: ProfilePage,
 };
 
 function AppContent() {

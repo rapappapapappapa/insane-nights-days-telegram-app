@@ -1,7 +1,7 @@
 // Configuration API pour le backend
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://next-surgical-simulations-pleasant.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://cayman-cluster-operation-saves.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -32,6 +32,8 @@ const API_CONFIG = {
     TICKET_DELETE: '/api/tickets',
     STATS: '/api/stats',
     TEST: '/api/test',
+    USER_PROFILES: '/api/user/profiles',
+    USER_SWITCH_PROFILE: '/api/user/switch-profile',
   },
 };
 
@@ -336,6 +338,29 @@ const api = {
   // Test de connexion
   test: async () => {
     return apiRequest(API_CONFIG.ENDPOINTS.TEST);
+  },
+
+  // Récupérer tous les profils d'un utilisateur
+  getUserProfiles: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.USER_PROFILES, {}, token);
+  },
+
+  // Basculer entre profils
+  switchProfile: async (token, profileType) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.USER_SWITCH_PROFILE,
+      {
+        method: 'POST',
+        body: JSON.stringify({ profileType }),
+      },
+      token
+    );
   },
 };
 

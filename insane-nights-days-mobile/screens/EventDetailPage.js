@@ -67,6 +67,8 @@ export default function EventDetailPage() {
   const { language } = useLanguage();
   const { routeParams, navigate } = useNavigation();
   const { user } = useAuth();
+  const [userProfiles, setUserProfiles] = useState(null);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
   
   const eventId = useMemo(
     () => routeParams?.eventId ?? mockEvents[0].id,
@@ -233,6 +235,33 @@ export default function EventDetailPage() {
     fetchEvent();
   }, [eventId]);
 
+  useEffect(() => {
+    if (user?.isAuthenticated && user?.token) {
+      loadUserProfiles();
+    }
+  }, [user?.isAuthenticated, user?.token]);
+
+  const loadUserProfiles = async () => {
+    if (!user?.token) return;
+    setLoadingProfiles(true);
+    try {
+      const response = await api.getUserProfiles(user.token);
+      if (response && response.success) {
+        setUserProfiles(response);
+      }
+    } catch (error) {
+      console.error('Erreur récupération profils:', error);
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
+  const hasActiveCommunityProfile = () => {
+    return userProfiles?.activeProfileType === 'COMMUNITY' && 
+           userProfiles?.profiles?.community && 
+           userProfiles.profiles.community.length > 0;
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -315,19 +344,37 @@ export default function EventDetailPage() {
           )}
 
           {isEventUpcoming() ? (
-            <TouchableOpacity
-              style={[styles.buyButton, buyingTicket && styles.buyButtonDisabled]}
-              onPress={handleBuyTicket}
-              disabled={buyingTicket}
-            >
-              {buyingTicket ? (
-                <ActivityIndicator color="#0b0b0e" />
-              ) : (
-                <Text style={styles.buyButtonText}>
-                  {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
+            user?.isAuthenticated && !hasActiveCommunityProfile() ? (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningText}>
+                  {language === 'fr' 
+                    ? '⚠️ Seuls les profils Community peuvent acheter des tickets. Basculez sur votre profil Community depuis votre profil.' 
+                    : '⚠️ Only Community profiles can buy tickets. Switch to your Community profile from your profile.'}
                 </Text>
-              )}
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.profileButton}
+                  onPress={() => navigate('profile')}
+                >
+                  <Text style={styles.profileButtonText}>
+                    {language === 'fr' ? 'Aller au profil' : 'Go to profile'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.buyButton, buyingTicket && styles.buyButtonDisabled]}
+                onPress={handleBuyTicket}
+                disabled={buyingTicket || (user?.isAuthenticated && !hasActiveCommunityProfile())}
+              >
+                {buyingTicket ? (
+                  <ActivityIndicator color="#0b0b0e" />
+                ) : (
+                  <Text style={styles.buyButtonText}>
+                    {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )
           ) : isEventPast() ? (
             <View style={styles.pastEventSection}>
               <Text style={styles.pastEventText}>
@@ -587,6 +634,31 @@ const styles = StyleSheet.create({
   dateEditorButtonText: {
     color: '#0b0b0e',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  warningCard: {
+    backgroundColor: 'rgba(250,204,21,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(250,204,21,0.4)',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+  },
+  warningText: {
+    color: '#facc15',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  profileButton: {
+    backgroundColor: '#ff7a1a',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  profileButtonText: {
+    color: '#0b0b0e',
+    fontSize: 16,
     fontWeight: '700',
   },
 });

@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const menuItems = [
   {
@@ -33,9 +35,18 @@ const menuItems = [
     title: 'Mon Profil',
     description: 'Personnaliser mon profil',
   },
+  {
+    id: 'switchProfile',
+    emoji: '🔄',
+    title: 'Changer de profil',
+    description: 'Basculer entre tes profils',
+  },
 ];
 
-export default function MenuPage({ onNavigate }) {
+export default function MenuPage() {
+  const { navigate } = useNavigation();
+  const { user } = useAuth();
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <StatusBar style="light" />
@@ -48,21 +59,28 @@ export default function MenuPage({ onNavigate }) {
       </View>
 
       <View style={styles.menuGrid}>
-        {menuItems.map(item => (
+        {menuItems.map(item => {
+          // Masquer "Changer de profil" si l'utilisateur n'est pas connecté
+          if (item.id === 'switchProfile' && !user?.isAuthenticated) {
+            return null;
+          }
+          
+          return (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
-              onPress={() => onNavigate(item.id, item.params)}
+              onPress={() => navigate(item.id, item.params)}
               activeOpacity={0.85}
             >
-            <Text style={styles.menuEmoji}>{item.emoji}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            <Text style={styles.menuDescription}>{item.description}</Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.menuEmoji}>{item.emoji}</Text>
+              <Text style={styles.menuTitle}>{item.title}</Text>
+              <Text style={styles.menuDescription}>{item.description}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('home')}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigate('home')}>
         <Text style={styles.backButtonText}>← Retour</Text>
       </TouchableOpacity>
     </ScrollView>

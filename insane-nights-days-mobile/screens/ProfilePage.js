@@ -7,8 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '../contexts/NavigationContext';
+import { api } from '../api/config';
 
 const formatDateTime = (dateString) => {
   if (!dateString) {
@@ -28,7 +32,9 @@ const formatDateTime = (dateString) => {
   }
 };
 
-export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUser }) {
+export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
+  const { user: authUser, updateUser: updateAuthUser } = useAuth();
+  const { navigate } = useNavigation();
   const username = user?.username ?? 'Utilisateur';
   const level = user?.level ?? 1;
   const score = user?.score ?? 0;
@@ -42,10 +48,54 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ username });
+  const [profiles, setProfiles] = useState(null);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [switchingProfile, setSwitchingProfile] = useState(false);
 
   useEffect(() => {
     setForm({ username });
   }, [username]);
+
+  useEffect(() => {
+    if (isAuthenticated && authUser?.token) {
+      fetchProfiles();
+    }
+  }, [isAuthenticated, authUser?.token]);
+
+  const fetchProfiles = async () => {
+    if (!authUser?.token) return;
+    setLoadingProfiles(true);
+    try {
+      const response = await api.getUserProfiles(authUser.token);
+      if (response && response.success) {
+        setProfiles(response);
+      }
+    } catch (error) {
+      console.error('Erreur récupération profils:', error);
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
+  const handleSwitchProfile = async (profileType) => {
+    if (!authUser?.token) return;
+    setSwitchingProfile(true);
+    try {
+      const response = await api.switchProfile(authUser.token, profileType);
+      if (response && response.success) {
+        updateAuthUser({ activeProfileType: profileType });
+        await fetchProfiles();
+        Alert.alert('Succès', `Profil basculé vers ${profileType}`);
+      } else {
+        Alert.alert('Erreur', response?.message || 'Impossible de basculer le profil');
+      }
+    } catch (error) {
+      console.error('Erreur bascule profil:', error);
+      Alert.alert('Erreur', 'Impossible de basculer le profil');
+    } finally {
+      setSwitchingProfile(false);
+    }
+  };
 
   const handleSave = () => {
     const normalized = form.username.trim();
@@ -64,7 +114,7 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
+        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
       </View>
@@ -84,7 +134,7 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
               Crée un compte pour sauvegarder ta progression et retrouver tes tickets sur tous tes
               appareils.
             </Text>
-            <TouchableOpacity style={styles.alertButton} onPress={() => onNavigate('register')}>
+            <TouchableOpacity style={styles.alertButton} onPress={() => navigate('accountType')}>
               <Text style={styles.alertButtonText}>Créer mon compte ✨</Text>
             </TouchableOpacity>
           </View>
@@ -148,6 +198,141 @@ export default function ProfilePage({ onNavigate, user, tickets = [], onUpdateUs
             </View>
           )}
         </View>
+
+        {/* Section Profils */}
+        {isAuthenticated && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Mes Profils</Text>
+            {loadingProfiles ? (
+              <ActivityIndicator color="#ff7a1a" style={{ marginVertical: 20 }} />
+            ) : profiles ? (
+              <View>
+                <Text style={styles.profileActiveLabel}>
+                  Profil actif : {profiles.activeProfileType || 'Aucun'}
+                </Text>
+                
+                {/* Profils Community */}
+                {profiles.profiles?.community && profiles.profiles.community.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>👥 Communauté</Text>
+                    {profiles.profiles.community.map((profile) => (
+                      <TouchableOpacity
+                        key={profile.id}
+                        style={[
+                          styles.profileItem,
+                          profiles.activeProfileType === 'COMMUNITY' && styles.profileItemActive,
+                        ]}
+                        onPress={() => handleSwitchProfile('COMMUNITY')}
+                        disabled={switchingProfile || profiles.activeProfileType === 'COMMUNITY'}
+                      >
+                        <Text style={styles.profileItemText}>
+                          {profile.prenom} {profile.nom}
+                        </Text>
+                        {profiles.activeProfileType === 'COMMUNITY' && (
+                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                        )}
+                        {switchingProfile && profiles.activeProfileType !== 'COMMUNITY' && (
+                          <ActivityIndicator size="small" color="#ff7a1a" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Profils DJ */}
+                {profiles.profiles?.dj && profiles.profiles.dj.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>🎧 DJ</Text>
+                    {profiles.profiles.dj.map((profile) => (
+                      <TouchableOpacity
+                        key={profile.id}
+                        style={[
+                          styles.profileItem,
+                          profiles.activeProfileType === 'DJ' && styles.profileItemActive,
+                        ]}
+                        onPress={() => handleSwitchProfile('DJ')}
+                        disabled={switchingProfile || profiles.activeProfileType === 'DJ'}
+                      >
+                        <Text style={styles.profileItemText}>{profile.artistName}</Text>
+                        {profiles.activeProfileType === 'DJ' && (
+                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                        )}
+                        {switchingProfile && profiles.activeProfileType !== 'DJ' && (
+                          <ActivityIndicator size="small" color="#ff7a1a" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Profils Booker */}
+                {profiles.profiles?.booker && profiles.profiles.booker.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>📅 Booker</Text>
+                    {profiles.profiles.booker.map((profile) => (
+                      <TouchableOpacity
+                        key={profile.id}
+                        style={[
+                          styles.profileItem,
+                          profiles.activeProfileType === 'BOOKER' && styles.profileItemActive,
+                        ]}
+                        onPress={() => handleSwitchProfile('BOOKER')}
+                        disabled={switchingProfile || profiles.activeProfileType === 'BOOKER'}
+                      >
+                        <Text style={styles.profileItemText}>
+                          {profile.prenom} {profile.nom}
+                        </Text>
+                        {profiles.activeProfileType === 'BOOKER' && (
+                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                        )}
+                        {switchingProfile && profiles.activeProfileType !== 'BOOKER' && (
+                          <ActivityIndicator size="small" color="#ff7a1a" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Profils Venue */}
+                {profiles.profiles?.venue && profiles.profiles.venue.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>🏢 Lieu</Text>
+                    {profiles.profiles.venue.map((profile) => (
+                      <TouchableOpacity
+                        key={profile.id}
+                        style={[
+                          styles.profileItem,
+                          profiles.activeProfileType === 'VENUE' && styles.profileItemActive,
+                        ]}
+                        onPress={() => handleSwitchProfile('VENUE')}
+                        disabled={switchingProfile || profiles.activeProfileType === 'VENUE'}
+                      >
+                        <Text style={styles.profileItemText}>{profile.venueName}</Text>
+                        {profiles.activeProfileType === 'VENUE' && (
+                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                        )}
+                        {switchingProfile && profiles.activeProfileType !== 'VENUE' && (
+                          <ActivityIndicator size="small" color="#ff7a1a" />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {(!profiles.profiles?.community || profiles.profiles.community.length === 0) &&
+                 (!profiles.profiles?.dj || profiles.profiles.dj.length === 0) &&
+                 (!profiles.profiles?.booker || profiles.profiles.booker.length === 0) &&
+                 (!profiles.profiles?.venue || profiles.profiles.venue.length === 0) && (
+                  <Text style={styles.noProfilesText}>
+                    Aucun profil créé. Créez-en un depuis le menu !
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.noProfilesText}>Chargement des profils...</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>Statistiques</Text>
@@ -428,5 +613,51 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     lineHeight: 20,
+  },
+  profileActiveLabel: {
+    color: '#ff7a1a',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  profileSection: {
+    marginBottom: 20,
+  },
+  profileSectionTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  profileItem: {
+    backgroundColor: '#141419',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileItemActive: {
+    borderColor: '#ff7a1a',
+    backgroundColor: 'rgba(255,122,26,0.1)',
+  },
+  profileItemText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  profileItemActiveBadge: {
+    color: '#ff7a1a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noProfilesText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 20,
   },
 });

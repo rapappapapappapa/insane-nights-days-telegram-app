@@ -20,7 +20,7 @@ import { api } from '../api/config';
 export default function RegisterCommunityPage() {
   const { language, t } = useLanguage();
   const { navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -174,6 +174,17 @@ export default function RegisterCommunityPage() {
         );
         setLoading(false);
         return;
+      }
+
+      // Basculer automatiquement vers le profil COMMUNITY créé
+      try {
+        const switchResponse = await api.switchProfile(user.token, 'COMMUNITY');
+        if (switchResponse && switchResponse.success) {
+          updateUser({ activeProfileType: 'COMMUNITY' });
+        }
+      } catch (switchError) {
+        console.error('Erreur bascule profil:', switchError);
+        // On continue quand même, le profil est créé
       }
 
       // Succès !

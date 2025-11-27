@@ -1,10 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import QRCode from 'react-native-qrcode-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
+import Colors from '../constants/colors';
 
 const formatPurchaseDate = (dateString) => {
   if (!dateString) {
@@ -30,6 +32,7 @@ export default function TicketsPage() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTicketQR, setSelectedTicketQR] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -43,6 +46,14 @@ export default function TicketsPage() {
     try {
       const response = await api.getUserTickets(user.id);
       if (response && response.success && Array.isArray(response.tickets)) {
+        console.log('[TicketsPage] Tickets reçus:', response.tickets.length);
+        if (response.tickets.length > 0) {
+          console.log('[TicketsPage] Premier ticket:', {
+            id: response.tickets[0].id,
+            purchaseDate: response.tickets[0].purchaseDate,
+            qrCode: response.tickets[0].qrCode,
+          });
+        }
         setTickets(response.tickets);
       }
     } catch (error) {
@@ -137,7 +148,7 @@ export default function TicketsPage() {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ff7a1a" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>
               {language === 'fr' ? 'Chargement...' : 'Loading...'}
             </Text>
@@ -176,11 +187,45 @@ export default function TicketsPage() {
                     </View>
                   </View>
                   <View style={styles.ticketFooter}>
-                    <Text style={styles.ticketRef}>{ticket.qrCode}</Text>
-                    <Text style={styles.ticketPurchase}>
-                      {language === 'fr' ? 'Réservé le' : 'Purchased on'}{' '}
-                      {formatPurchaseDate(ticket.purchaseDate)}
-                    </Text>
+                    <View style={styles.ticketQRWrapper}>
+                      <TouchableOpacity
+                        onPress={() => setSelectedTicketQR(ticket.qrCode)}
+                        style={styles.qrCodeContainer}
+                        activeOpacity={0.6}
+                      >   
+                        <QRCode
+                          value={JSON.stringify({
+                            ticketId: ticket.id,
+                            qrCode: ticket.qrCode,
+                            eventId: ticket.eventId,
+                            userId: ticket.userId,
+                            status: ticket.status,
+                          })}
+                          size={80}
+                          color="#000000"
+                          backgroundColor="#FFFFFF"
+                          logoSize={20}
+                          logoMargin={2}
+                          logoBackgroundColor="transparent"
+                        />
+                        <View style={styles.qrCodeHint}>
+                          <Text style={styles.qrCodeHintText}>👆</Text>
+                        </View>
+                      </TouchableOpacity>
+                      <View style={styles.ticketInfoWrapper}>
+                        <Text style={styles.ticketRef}>Code: {ticket.qrCode}</Text>
+                        {ticket.purchaseDate ? (
+                          <Text style={styles.ticketPurchaseDate}>
+                            {language === 'fr' ? 'Acheté le' : 'Purchased on'}{' '}
+                            {formatPurchaseDate(ticket.purchaseDate)}
+                          </Text>
+                        ) : (
+                          <Text style={styles.ticketPurchaseDate}>
+                            {language === 'fr' ? 'Date d\'achat non disponible' : 'Purchase date not available'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
                   </View>
                 </TouchableOpacity>
                 {isEventPast(ticket) && (
@@ -216,12 +261,68 @@ export default function TicketsPage() {
                 )}
               </View>
             ))}
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Modal pour afficher le QR code en grand */}
+        <Modal
+          visible={!!selectedTicketQR}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedTicketQR(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                {language === 'fr' ? 'QR Code du ticket' : 'Ticket QR Code'}
+              </Text>
+              {selectedTicketQR && (() => {
+                const currentTicket = tickets.find(t => t.qrCode === selectedTicketQR);
+                const qrValue = currentTicket ? JSON.stringify({
+                  ticketId: currentTicket.id,
+                  qrCode: currentTicket.qrCode,
+                  eventId: currentTicket.eventId,
+                  userId: currentTicket.userId,
+                  status: currentTicket.status,
+                }) : selectedTicketQR;
+                
+                return (
+                  <>
+                    <View style={styles.modalQRContainer}>
+                      <QRCode
+                        value={qrValue}
+                        size={300}
+                        color="#000000"
+                        backgroundColor="#FFFFFF"
+                        logoSize={50}
+                        logoMargin={5}
+                        logoBackgroundColor="transparent"
+                      />
+                    </View>
+                    <Text style={styles.modalQRCode}>{selectedTicketQR}</Text>
+                    <Text style={styles.modalHint}>
+                      {language === 'fr' 
+                        ? 'Scannez ce QR code pour vérifier le ticket' 
+                        : 'Scan this QR code to verify the ticket'}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.modalCloseButton}
+                      onPress={() => setSelectedTicketQR(null)}
+                    >
+                      <Text style={styles.modalCloseButtonText}>
+                        {language === 'fr' ? 'Fermer' : 'Close'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                );
+              })()}
+            </View>
           </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-}
+        </Modal>
+      </View>
+    );
+  }
 
 const styles = StyleSheet.create({
   container: {
@@ -240,7 +341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#ff7a1a',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -260,6 +361,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 8,
   },
+  // Ajout d'un accent rouge sur le titre si besoin
+  titleAccent: {
+    color: Colors.primary,
+  },
   subtitle: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
@@ -269,9 +374,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   ticketCard: {
-    backgroundColor: '#1a1a1f',
+    backgroundColor: Colors.backgroundCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.25)',
+    borderColor: Colors.borderActive, // Plus visible avec 50% opacité
     borderRadius: 18,
     padding: 18,
     gap: 12,
@@ -304,9 +409,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ticketPrice: {
-    color: '#ff7a1a',
-    fontSize: 18,
-    fontWeight: '800',
+    color: Colors.primary,
+    fontSize: 20,
+    fontWeight: '900',
+    textShadowColor: Colors.glow,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   ticketStatus: {
     color: '#10b981',
@@ -320,18 +428,109 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   ticketFooter: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  ticketQRWrapper: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
+  },
+  qrCodeContainer: {
+    padding: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: Colors.borderActive,
+  },
+  qrCodeHint: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrCodeHintText: {
+    fontSize: 10,
+  },
+  ticketInfoWrapper: {
+    flex: 1,
   },
   ticketRef: {
     color: 'rgba(255,255,255,0.45)',
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'monospace',
   },
-  ticketPurchase: {
-    color: 'rgba(255,255,255,0.6)',
+  ticketPurchaseDate: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: Colors.borderActive,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  modalQRContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalQRCode: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontFamily: 'monospace',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalHint: {
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontStyle: 'italic',
+  },
+  modalCloseButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   deleteButton: {
     marginTop: 14,
@@ -381,16 +580,16 @@ const styles = StyleSheet.create({
   },
   rateButton: {
     marginTop: 12,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: Colors.shadow,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
+    borderColor: Colors.borderActive,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: 'center',
   },
   rateButtonText: {
-    color: '#ff7a1a',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },

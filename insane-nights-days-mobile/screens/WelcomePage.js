@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,11 +11,39 @@ import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import { api } from '../api/config';
 
 export default function WelcomePage() {
   const { language, t } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { navigate } = useNavigation();
+  const [loadingUserData, setLoadingUserData] = useState(false);
+
+  useEffect(() => {
+    // Charger les données utilisateur complètes si connecté
+    if (user?.isAuthenticated && user?.token && !user?.activeProfileType) {
+      loadUserData();
+    }
+  }, [user?.isAuthenticated, user?.token]);
+
+  const loadUserData = async () => {
+    if (!user?.token) return;
+    setLoadingUserData(true);
+    try {
+      const response = await api.getCurrentUser(user.token);
+      if (response && response.success && response.user) {
+        updateUser({
+          activeProfileType: response.user.activeProfileType,
+          score: response.user.score,
+          level: response.user.level,
+        });
+      }
+    } catch (error) {
+      console.error('Erreur chargement données utilisateur:', error);
+    } finally {
+      setLoadingUserData(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -53,6 +81,8 @@ export default function WelcomePage() {
               </Text>
             </TouchableOpacity>
 
+            {/* Masquer "Mes Tickets" pour les DJs */}
+            {user?.activeProfileType !== 'DJ' && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigate('tickets')}
@@ -62,6 +92,20 @@ export default function WelcomePage() {
                 {language === 'fr' ? 'Mes Tickets' : 'My Tickets'}
               </Text>
             </TouchableOpacity>
+            )}
+
+            {/* Afficher "Dashboard DJ" pour les DJs */}
+            {user?.activeProfileType === 'DJ' && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigate('djDashboard')}
+              >
+                <Text style={styles.actionEmoji}>🎧</Text>
+                <Text style={styles.actionText}>
+                  {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.actionButton}

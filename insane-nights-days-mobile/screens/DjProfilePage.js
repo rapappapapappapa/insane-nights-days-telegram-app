@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -16,6 +17,8 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import StarRating from '../components/StarRating';
+import VideoPlayer from '../components/VideoPlayer';
+import AudioPlayer from '../components/AudioPlayer';
 
 const { width } = Dimensions.get('window');
 
@@ -58,6 +61,11 @@ export default function DjProfilePage() {
   const [ratings, setRatings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('audio');
+  const [media, setMedia] = useState({ photos: [], videos: [], audio: [] });
+  const [profileImage, setProfileImage] = useState(null);
+  const [bannerImage, setBannerImage] = useState(null);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
 
   useEffect(() => {
     if (djId || djUserId) {
@@ -83,8 +91,54 @@ export default function DjProfilePage() {
             city: ratingsResponse.dj.city,
             phone: ratingsResponse.dj.phone,
             birthDate: ratingsResponse.dj.birthDate,
+            // Champs éditables
+            bio: ratingsResponse.dj.bio,
+            genre: ratingsResponse.dj.genre,
+            mainCity: ratingsResponse.dj.mainCity,
+            languages: ratingsResponse.dj.languages,
+            hourlyRate: ratingsResponse.dj.hourlyRate,
+            performanceRate: ratingsResponse.dj.performanceRate,
+            minTravelFee: ratingsResponse.dj.minTravelFee,
+            extraFees: ratingsResponse.dj.extraFees,
+            availableStatus: ratingsResponse.dj.availableStatus,
             averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
           });
+
+          // Récupérer les médias (depuis la réponse ou via API séparée)
+          const allMedia = ratingsResponse.media || [];
+          if (allMedia.length > 0) {
+            setMedia({
+              photos: allMedia.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
+              videos: allMedia.filter(m => m.type === 'video'),
+              audio: allMedia.filter(m => m.type === 'audio'),
+            });
+            
+            // Photo de profil et bannière
+            const profileImg = allMedia.find(m => m.type === 'photo' && m.title === 'profile');
+            const bannerImg = allMedia.find(m => m.type === 'photo' && m.title === 'banner');
+            if (profileImg) setProfileImage(profileImg.url);
+            if (bannerImg) setBannerImage(bannerImg.url);
+          } else {
+            // Fallback : récupérer les médias via API séparée
+            try {
+              const mediaResponse = await api.getDjMedia(identifier);
+              if (mediaResponse && mediaResponse.success) {
+                const mediaList = mediaResponse.media || [];
+                setMedia({
+                  photos: mediaList.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
+                  videos: mediaList.filter(m => m.type === 'video'),
+                  audio: mediaList.filter(m => m.type === 'audio'),
+                });
+                
+                const profileImg = mediaList.find(m => m.type === 'photo' && m.title === 'profile');
+                const bannerImg = mediaList.find(m => m.type === 'photo' && m.title === 'banner');
+                if (profileImg) setProfileImage(profileImg.url);
+                if (bannerImg) setBannerImage(bannerImg.url);
+              }
+            } catch (mediaError) {
+              console.error('Erreur récupération médias:', mediaError);
+            }
+          }
         } else {
           // Fallback si les infos ne sont pas disponibles
           setDj({
@@ -142,7 +196,7 @@ export default function DjProfilePage() {
       <View style={styles.header}>
         <View style={styles.backgroundImage}>
           <Image
-            source={{ uri: getDjBackgroundImage(dj.artistName) }}
+            source={{ uri: bannerImage || getDjBackgroundImage(dj.artistName) }}
             style={styles.backgroundImageContent}
             blurRadius={3}
           />
@@ -150,12 +204,12 @@ export default function DjProfilePage() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: getDjImage(dj.artistName) }}
+              source={{ uri: profileImage || getDjImage(dj.artistName) }}
               style={styles.profileImage}
             />
           </View>
           <Text style={styles.djName}>{dj.artistName}</Text>
-          <Text style={styles.djLocation}>📍 {dj.city || 'Ville inconnue'}, France</Text>
+          <Text style={styles.djLocation}>📍 {dj.mainCity || dj.city || 'Ville inconnue'}, France</Text>
           <TouchableOpacity style={styles.bookButton}>
             <Text style={styles.bookButtonText}>
               {language === 'fr' ? 'BOOKER CE DJ' : 'BOOK THIS DJ'}
@@ -170,32 +224,50 @@ export default function DjProfilePage() {
           <Text style={styles.sectionTitle}>
             {language === 'fr' ? 'Infos clés' : 'Key Info'}
           </Text>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Styles:' : 'Styles:'}
-            </Text>
-            <Text style={styles.infoValue}>Industrial • Hard Techno</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Tarif:' : 'Rate:'}
-            </Text>
-            <Text style={styles.infoValue}>250 € / {language === 'fr' ? 'heure' : 'hour'}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Disponibilité:' : 'Availability:'}
-            </Text>
-            <Text style={styles.infoValue}>
-              {language === 'fr' ? 'Vendredi - Dimanche' : 'Friday - Sunday'}
-            </Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Langues:' : 'Languages:'}
-            </Text>
-            <Text style={styles.infoValue}>Français • Anglais</Text>
-          </View>
+          {dj.genre && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>
+                {language === 'fr' ? 'Genre:' : 'Genre:'}
+              </Text>
+              <Text style={styles.infoValue}>{dj.genre}</Text>
+            </View>
+          )}
+          {dj.hourlyRate && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>
+                {language === 'fr' ? 'Tarif horaire:' : 'Hourly Rate:'}
+              </Text>
+              <Text style={styles.infoValue}>{dj.hourlyRate} € / {language === 'fr' ? 'heure' : 'hour'}</Text>
+            </View>
+          )}
+          {dj.performanceRate && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>
+                {language === 'fr' ? 'Tarif prestation:' : 'Performance Rate:'}
+              </Text>
+              <Text style={styles.infoValue}>{dj.performanceRate} €</Text>
+            </View>
+          )}
+          {dj.availableStatus !== undefined && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>
+                {language === 'fr' ? 'Disponibilité:' : 'Availability:'}
+              </Text>
+              <Text style={styles.infoValue}>
+                {dj.availableStatus 
+                  ? (language === 'fr' ? 'Disponible' : 'Available')
+                  : (language === 'fr' ? 'Indisponible' : 'Unavailable')}
+              </Text>
+            </View>
+          )}
+          {dj.languages && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>
+                {language === 'fr' ? 'Langues:' : 'Languages:'}
+              </Text>
+              <Text style={styles.infoValue}>{dj.languages}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.divider} />
@@ -205,9 +277,9 @@ export default function DjProfilePage() {
             {language === 'fr' ? 'Bio du DJ' : 'DJ Bio'}
           </Text>
           <Text style={styles.bioText}>
-            {language === 'fr'
-              ? 'Producteur et DJ basé à Lyon, KAYZEN est reconnu pour ses sets énergiques et ses sonorités industrielles. Il a joué dans les clubs et festivals à travers l\'Europe.'
-              : 'Producer and DJ based in Lyon, KAYZEN is known for his energetic sets and industrial sounds. He has played in clubs and festivals across Europe.'}
+            {dj.bio || (language === 'fr'
+              ? 'Aucune biographie disponible.'
+              : 'No biography available.')}
           </Text>
         </View>
       </View>
@@ -272,29 +344,204 @@ export default function DjProfilePage() {
 
       {/* Contenu des tabs */}
       {activeTab === 'audio' && (
-        <View style={styles.audioPlayer}>
-          <View style={styles.audioInfo}>
-            <Text style={styles.audioTitle}>Hard Techno Mix</Text>
-            <View style={styles.audioControls}>
-              <TouchableOpacity style={styles.playButton}>
-                <Text style={styles.playIcon}>▶</Text>
-              </TouchableOpacity>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '35%' }]} />
-              </View>
-              <Text style={styles.duration}>1:02:15</Text>
+        <View style={styles.mediaContent}>
+          {media.audio && media.audio.length > 0 ? (
+            media.audio
+              .filter(audio => {
+                // Filtrer les fichiers audio invalides
+                const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
+                return audioUrl && typeof audioUrl === 'string';
+              })
+              .map((audio, index) => {
+                const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
+                const audioTitle = audio?.title || `${language === 'fr' ? 'Set audio' : 'Audio Set'} ${index + 1}`;
+                
+                if (!audioUrl || typeof audioUrl !== 'string') {
+                  return null;
+                }
+
+                // Pour les fichiers locaux (comme "Tracer"), utiliser require
+                let finalAudioUrl = audioUrl;
+                if (audioTitle.toLowerCase().includes('tracer') || 
+                    audioTitle.toLowerCase().includes('gogg') ||
+                    audioUrl.includes('tracer') || 
+                    audioUrl.includes('gogg')) {
+                  try {
+                    // Si c'est un fichier local, on peut essayer de le charger
+                    // Pour l'instant, on utilise l'URL telle quelle
+                    finalAudioUrl = audioUrl;
+                  } catch (e) {
+                    console.error('Erreur chargement audio local:', e);
+                    finalAudioUrl = audioUrl;
+                  }
+                }
+
+                return (
+                  <AudioPlayer
+                    key={audio?.id || index}
+                    audioUrl={finalAudioUrl}
+                    title={audioTitle}
+                  />
+                );
+              })
+          ) : (
+            <Text style={styles.noMedia}>
+              {language === 'fr' ? 'Aucun set audio disponible' : 'No audio sets available'}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {activeTab === 'video' && (
+        <View style={styles.mediaContent}>
+          {media.videos && media.videos.length > 0 ? (
+            <View style={styles.videoGrid}>
+              {media.videos
+                .filter(video => {
+                  // Filtrer les vidéos invalides
+                  const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+                  return videoUrl && typeof videoUrl === 'string';
+                })
+                .map((video, index) => {
+                const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+                const videoTitle = video?.title || `${language === 'fr' ? 'Vidéo' : 'Video'} ${index + 1}`;
+                
+                // Double vérification (déjà filtré mais sécurité supplémentaire)
+                if (!videoUrl || typeof videoUrl !== 'string') {
+                  return null;
+                }
+                
+                const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+                
+                // Détecter si c'est un fichier local (par titre, URL ou préfixe "local:")
+                const isLocalFile = videoUrl.startsWith('local:') ||
+                  (videoTitle && typeof videoTitle === 'string' && (
+                    videoTitle.toLowerCase().includes('tracer') || 
+                    videoTitle.toLowerCase().includes('gogg')
+                  )) ||
+                  (!videoUrl.startsWith('http') && !videoUrl.startsWith('file://'));
+                
+                // Pour les fichiers locaux, utiliser require pour charger depuis assets
+                let finalVideoUrl = videoUrl;
+                if (isLocalFile) {
+                  try {
+                    // Si l'URL contient "gogg" ou "tracer", ou si le titre le contient, charger le fichier local
+                    if (videoUrl.includes('gogg') || videoUrl.includes('tracer') || 
+                        (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
+                      finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
+                    } else {
+                      finalVideoUrl = videoUrl;
+                    }
+                  } catch (e) {
+                    console.error('Erreur chargement vidéo locale:', e);
+                    finalVideoUrl = videoUrl;
+                  }
+                }
+                
+                // Extraire l'ID YouTube pour la miniature
+                let youtubeId = null;
+                if (isYouTube) {
+                  const match = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+                  if (match) youtubeId = match[1];
+                }
+                
+                const thumbnailUrl = youtubeId 
+                  ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
+                  : null;
+                
+                return (
+                  <TouchableOpacity
+                    key={video?.id || index}
+                    style={styles.videoItem}
+                    onPress={async () => {
+                      if (!videoUrl) {
+                        Alert.alert(
+                          language === 'fr' ? 'Erreur' : 'Error',
+                          language === 'fr' 
+                            ? 'URL vidéo invalide.' 
+                            : 'Invalid video URL.'
+                        );
+                        return;
+                      }
+                      
+                      // Ouvrir toutes les vidéos dans le lecteur intégré
+                      setSelectedVideo({
+                        url: isYouTube ? videoUrl : finalVideoUrl,
+                        title: videoTitle,
+                        thumbnail: thumbnailUrl,
+                        isYouTube: isYouTube,
+                      });
+                      setVideoPlayerVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.videoThumbnail}>
+                      {thumbnailUrl ? (
+                        <Image
+                          source={{ uri: thumbnailUrl }}
+                          style={styles.videoThumbnailImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.videoPlaceholder}>
+                          <Text style={styles.videoPlaceholderIcon}>🎬</Text>
+                          <Text style={styles.videoPlaceholderText} numberOfLines={2}>
+                            {videoTitle}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.playButtonOverlay}>
+                        <Text style={styles.playIconWhite}>▶</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.videoTitle} numberOfLines={2}>
+                      {videoTitle}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </View>
-          <View style={styles.photoThumbnails}>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=150&h=150&fit=crop' }}
-              style={styles.thumbnail}
-            />
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=150&h=150&fit=crop' }}
-              style={styles.thumbnail}
-            />
-          </View>
+          ) : (
+            <Text style={styles.noMedia}>
+              {language === 'fr' ? 'Aucune vidéo disponible' : 'No videos available'}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {activeTab === 'photo' && (
+        <View style={styles.mediaContent}>
+          {media.photos && media.photos.length > 0 ? (
+            <View style={styles.photoGrid}>
+              {media.photos
+                .filter(photo => {
+                  // Filtrer les photos invalides
+                  const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
+                  return photoUrl && typeof photoUrl === 'string';
+                })
+                .map((photo, index) => {
+                  // Gérer les deux formats : objet { url } ou string
+                  const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
+                  
+                  if (!photoUrl || typeof photoUrl !== 'string') {
+                    return null;
+                  }
+                  
+                  return (
+                    <Image
+                      key={photo?.id || index}
+                      source={{ uri: photoUrl }}
+                      style={styles.photoItem}
+                      resizeMode="cover"
+                    />
+                  );
+                })}
+            </View>
+          ) : (
+            <Text style={styles.noMedia}>
+              {language === 'fr' ? 'Aucune photo disponible' : 'No photos available'}
+            </Text>
+          )}
         </View>
       )}
 
@@ -373,6 +620,21 @@ export default function DjProfilePage() {
           ← {language === 'fr' ? 'Retour' : 'Back'}
         </Text>
       </TouchableOpacity>
+
+      {/* Lecteur vidéo modal */}
+      {selectedVideo && (
+        <VideoPlayer
+          videoUrl={selectedVideo.url}
+          thumbnailUrl={selectedVideo.thumbnail}
+          title={selectedVideo.title}
+          isYouTube={selectedVideo.isYouTube || false}
+          visible={videoPlayerVisible}
+          onClose={() => {
+            setVideoPlayerVisible(false);
+            setSelectedVideo(null);
+          }}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -579,6 +841,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 2,
   },
+  playIconWhite: {
+    color: '#fff',
+    fontSize: 20,
+    marginLeft: 3,
+    fontWeight: 'bold',
+  },
   progressBar: {
     flex: 1,
     height: 4,
@@ -602,6 +870,89 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
+  },
+  mediaContent: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  noMedia: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 40,
+    fontStyle: 'italic',
+  },
+  videoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  videoItem: {
+    width: (width - 60) / 2,
+    marginBottom: 12,
+  },
+  videoThumbnail: {
+    width: '100%',
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  videoThumbnailImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  videoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 122, 26, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    position: 'absolute',
+  },
+  videoPlaceholderIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  videoPlaceholderText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  playButtonOverlay: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 23, 68, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  videoTitle: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  photoItem: {
+    width: (width - 60) / 3,
+    height: (width - 60) / 3,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1f',
   },
   bottomSection: {
     flexDirection: 'row',

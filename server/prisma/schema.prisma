@@ -55,6 +55,18 @@ model UserDj {
   city                    String
   phone                   String
   birthDate               String
+  bio                     String?      // Bio du DJ
+  genre                   String?      // Genre musical principal
+  mainCity                String?      // Ville principale
+  languages               String?      // Langues parlées (séparées par virgules)
+  profileImage            String?      // URL de la photo de profil
+  bannerImage             String?      // URL de la bannière
+  hourlyRate              Float?       // Tarif horaire
+  performanceRate         Float?       // Tarif par prestation
+  minTravelFee            Float?       // Tarif minimum déplacement
+  extraFees               Float?       // Frais supplémentaires
+  availableDays           String?      // Jours disponibles (JSON string)
+  availableStatus         Boolean      @default(true) // Statut de disponibilité
   averageRatingCommunity  Float       @default(0.0)
   averageRatingBooker     Float       @default(0.0)
   averageRatingVenue      Float       @default(0.0)
@@ -67,6 +79,8 @@ model UserDj {
   
   // Relations vers les notes reçues
   ratings                 DjRating[]
+  // Relations vers les médias
+  media                   DjMedia[]
   
   @@index([userId])
 }
@@ -227,4 +241,20 @@ model Ticket {
   
   @@index([userId])
   @@index([eventId])
+}
+
+// Modèle pour stocker les médias des DJs (photos, vidéos, audio)
+model DjMedia {
+  id          String   @id @default(uuid())
+  djId        String
+  dj          UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
+  type        String   // 'photo', 'video', 'audio'
+  url         String   // URL du fichier (pour l'instant, on stocke juste l'URI local, à remplacer par une vraie URL de stockage)
+  title       String?  // Titre optionnel
+  thumbnail   String?  // URL de la miniature (pour vidéos)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([djId])
+  @@index([type])
 }

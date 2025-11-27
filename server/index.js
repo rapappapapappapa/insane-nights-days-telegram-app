@@ -1,553 +1,68 @@
+/**
+ * Serveur principal Insane Nights & Days
+ * 
+ * Ce fichier configure Express et organise toutes les routes de l'API.
+ * Les routes d'authentification et utilisateur sont maintenant modulaires
+ * (voir /routes/authRoutes.js et /routes/userRoutes.js).
+ */
+
 require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+
+// Import des routes modulaires
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const { authenticateToken } = require('./middleware/auth');
+const authController = require('./controllers/authController');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Clé secrète pour signer les JWT (en production, utiliser une variable d'environnement)
-const JWT_SECRET = process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'; // 7 jours
-
+// Configuration Express
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Augmenter la limite pour les vidéos
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Initialisation Prisma
 const prisma = new PrismaClient();
 
-let users = [];
-let events = [];
-let tickets = [];
-let djs = [];
+// Note: Les données sont maintenant stockées dans Prisma, plus besoin de tableaux en mémoire
 
-const normalizeEmail = (email = '') => email.trim().toLowerCase();
-const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+// ============================================================================
+// ROUTES MODULAIRES
+// ============================================================================
 
-const sanitizeUser = (user) => {
-  if (!user) {
-    return null;
-  }
-  return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    score: user.score ?? 0,
-    level: user.level ?? 1,
-    createdAt: user.createdAt,
-  };
-};
+/**
+ * Routes d'authentification
+ * - POST /api/auth/register - Inscription
+ * - POST /api/auth/login - Connexion
+ * - POST /api/auth/wallet/connect - Connexion wallet (mock)
+ */
+app.use('/api/auth', authRoutes);
 
-// Middleware pour vérifier le token JWT
-const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
+/**
+ * Routes utilisateur
+ * - GET /api/user/profiles - Récupère les profils d'un utilisateur
+ * - POST /api/user/switch-profile - Bascule le profil actif
+ * - POST /api/user/change-password - Change le mot de passe
+ * - GET /api/user/:userId - Récupère un utilisateur par ID
+ */
+app.use('/api/user', userRoutes);
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token d\'authentification requis.' });
-  }
+/**
+ * Route wallet (gérée dans authRoutes)
+ * - POST /api/wallet/connect - Connexion via wallet TON
+ */
+app.post('/api/wallet/connect', authController.connectWallet);
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    
-    // Vérifier que l'utilisateur existe toujours
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-    });
-
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Utilisateur non trouvé.' });
-    }
-
-    // Ajouter les infos utilisateur à la requête
-    req.user = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-    };
-    
-    next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ success: false, message: 'Token expiré.' });
-    }
-    return res.status(403).json({ success: false, message: 'Token invalide.' });
-  }
-};
-
-const defaultEvents = [
-  {
-    id: '1',
-    title: 'Insane Night - Soirée Electro',
-    date: '15 Janvier 2024',
-    time: '22:00',
-    location: 'Club Insane, Paris',
-    price: 25,
-    capacity: 200,
-    sold: 45,
-    genre: 'Electro',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-    djs: ['DJ Neon', 'Mixmaster Nova'],
-    description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
-  },
-  {
-    id: '2',
-    title: 'Bass Revolution - Drum & Bass',
-    date: '20 Janvier 2024',
-    time: '21:00',
-    location: 'Warehouse Underground, Lyon',
-    price: 30,
-    capacity: 150,
-    sold: 78,
-    genre: 'Drum & Bass',
-    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['Bass Storm', 'DJ Cyber'],
-    description: 'Une révolution sonore avec les meilleurs artistes drum & bass',
-  },
-  {
-    id: '3',
-    title: 'Techno Underground Session',
-    date: '25 Janvier 2024',
-    time: '23:00',
-    location: 'Le Bunker, Marseille',
-    price: 20,
-    capacity: 300,
-    sold: 120,
-    genre: 'Techno',
-    image: 'https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=400&h=300&fit=crop',
-    djs: ['Techno Master', 'DJ Neon'],
-    description: 'Session techno underground dans un lieu unique',
-  },
-];
-
-events = [...defaultEvents];
-
-const defaultDjs = [
-  {
-    id: 'dj-1',
-    name: 'DJ Neon',
-    genre: 'Electro',
-    currentRank: 1,
-    score: 982,
-    followers: 18420,
-    lastEvent: 'Insane Night - Soirée Electro',
-    wins: 8,
-    losses: 1,
-    trend: '+3',
-  },
-  {
-    id: 'dj-2',
-    name: 'Mixmaster Nova',
-    genre: 'Techno',
-    currentRank: 2,
-    score: 951,
-    followers: 16540,
-    lastEvent: 'Techno Underground Session',
-    wins: 6,
-    losses: 2,
-    trend: '+1',
-  },
-  {
-    id: 'dj-3',
-    name: 'Bass Storm',
-    genre: 'Drum & Bass',
-    currentRank: 3,
-    score: 917,
-    followers: 15210,
-    lastEvent: 'Bass Revolution - Drum & Bass',
-    wins: 7,
-    losses: 3,
-    trend: '-1',
-  },
-  {
-    id: 'dj-4',
-    name: 'DJ Cyber',
-    genre: 'Drum & Bass',
-    currentRank: 4,
-    score: 884,
-    followers: 14105,
-    lastEvent: 'Bass Revolution - Drum & Bass',
-    wins: 5,
-    losses: 2,
-    trend: '+2',
-  },
-  {
-    id: 'dj-5',
-    name: 'Techno Master',
-    genre: 'Techno',
-    currentRank: 5,
-    score: 861,
-    followers: 13200,
-    lastEvent: 'Techno Underground Session',
-    wins: 4,
-    losses: 2,
-    trend: '-3',
-  },
-];
-
-djs = [...defaultDjs];
-
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { email, username, password } = req.body ?? {};
-
-    // Email et pseudo sont maintenant tous les deux requis
-    if (!email || !username) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Email, pseudo et mot de passe sont requis.' });
-    }
-
-    let finalEmail = email.trim();
-    const finalUsername = username.trim();
-
-    if (!password) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Le mot de passe est requis.' });
-    }
-
-    // Si c'est un email (contient @), valider le format
-    if (finalEmail.includes('@')) {
-      if (!isValidEmail(finalEmail)) {
-        return res.status(400).json({ success: false, message: 'Email invalide.' });
-      }
-      finalEmail = normalizeEmail(finalEmail);
-    }
-
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
-    }
-
-    // Vérifier si l'email existe déjà
-    const existingUserByEmail = await prisma.user.findUnique({
-      where: { email: finalEmail },
-    });
-
-    if (existingUserByEmail) {
-      return res.status(409).json({ success: false, message: 'Cet email ou pseudo est déjà utilisé.' });
-    }
-
-    // Vérifier si le pseudo existe déjà (chercher par username)
-    const existingUserByUsername = await prisma.user.findFirst({
-      where: { username: finalUsername },
-    });
-
-    if (existingUserByUsername) {
-      return res.status(409).json({ success: false, message: 'Ce pseudo est déjà utilisé.' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await prisma.user.create({
-      data: {
-        email: finalEmail,
-        username: finalUsername,
-        password: hashedPassword,
-        score: 100,
-        level: 1,
-      },
-    });
-
-    // Générer un JWT
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Compte créé avec succès.',
-      user: sanitizeUser(newUser),
-      token: token,
-    });
-  } catch (error) {
-    console.error('Erreur inscription:', error);
-    res.status(500).json({ success: false, message: "Erreur lors de l'inscription." });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body ?? {};
-
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email/pseudo et mot de passe sont requis.' });
-    }
-
-    let user = null;
-
-    // Si c'est un email (contient @), chercher par email
-    if (email.includes('@')) {
-      const normalizedEmail = normalizeEmail(email);
-      user = await prisma.user.findUnique({
-        where: { email: normalizedEmail },
-      });
-    } else {
-      // Sinon, chercher par pseudo (username)
-      const usernameSearch = email.trim();
-      console.log('[LOGIN] Recherche par pseudo:', usernameSearch);
-      
-      // Chercher d'abord avec la casse exacte
-      user = await prisma.user.findFirst({
-        where: { username: usernameSearch },
-      });
-      
-      // Si pas trouvé, essayer avec une recherche insensible à la casse via requête brute SQLite
-      if (!user) {
-        try {
-          const users = await prisma.$queryRaw`
-            SELECT * FROM User WHERE LOWER(username) = LOWER(${usernameSearch})
-          `;
-          console.log('[LOGIN] Résultat requête brute:', users.length, 'utilisateur(s)');
-          if (users && users.length > 0) {
-            user = users[0];
-            console.log('[LOGIN] Utilisateur trouvé:', user.username);
-          }
-        } catch (queryError) {
-          console.error('[LOGIN] Erreur requête brute:', queryError);
-        }
-      } else {
-        console.log('[LOGIN] Utilisateur trouvé avec casse exacte:', user.username);
-      }
-    }
-    
-    if (!user) {
-      console.log('[LOGIN] Aucun utilisateur trouvé pour:', email);
-    }
-
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Identifiants invalides.' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Identifiants invalides.' });
-    }
-
-    // Générer un JWT
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
-
-    res.json({
-      success: true,
-      message: 'Connexion réussie.',
-      user: sanitizeUser(user),
-      token: token,
-    });
-  } catch (error) {
-    console.error('Erreur connexion:', error);
-    res.status(500).json({ success: false, message: 'Erreur lors de la connexion.' });
-  }
-});
-
-app.post('/api/wallet/connect', async (req, res) => {
-  try {
-    const { walletAddress, username } = req.body;
-    let user = users.find((u) => u.walletAddress === walletAddress);
-    if (!user) {
-      user = {
-        id: uuidv4(),
-        walletAddress,
-        username: username || `User_${walletAddress.slice(-6)}`,
-        score: 100,
-        level: 1,
-        eventsParticipated: 0,
-        djsLiked: 0,
-        ticketsBought: 0,
-        joinDate: new Date().toISOString(),
-        sbtActive: true,
-      };
-      users.push(user);
-    }
-    const sessionToken = uuidv4();
-    res.json({
-      success: true,
-      message: '🎉 Wallet TON connecté avec succès ! SBT actif',
-      user: {
-        id: user.id,
-        username: user.username,
-        score: user.score,
-        level: user.level,
-        sbtActive: user.sbtActive,
-      },
-      sessionToken,
-    });
-  } catch (error) {
-    console.error('Erreur connexion wallet:', error);
-    res.status(500).json({ success: false, message: 'Erreur de connexion' });
-  }
-});
-
-// Endpoint pour lister tous les profils d'un utilisateur (DOIT être avant /api/user/:userId)
-app.get('/api/user/profiles', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        communities: true,
-        djs: true,
-        bookers: true,
-        venues: true,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-    }
-
-    const profiles = {
-      community: user.communities.map((c) => ({
-        id: c.id,
-        type: 'COMMUNITY',
-        nom: c.nom,
-        prenom: c.prenom,
-        pays: c.pays,
-        isnNumber: c.isnNumber,
-      })),
-      dj: user.djs.map((d) => ({
-        id: d.id,
-        type: 'DJ',
-        artistName: d.artistName,
-        city: d.city,
-      })),
-      booker: user.bookers.map((b) => ({
-        id: b.id,
-        type: 'BOOKER',
-        nom: b.nom,
-        prenom: b.prenom,
-        bookerType: b.bookerType,
-      })),
-      venue: user.venues.map((v) => ({
-        id: v.id,
-        type: 'VENUE',
-        venueName: v.venueName,
-        address: v.address,
-      })),
-    };
-
-    res.json({
-      success: true,
-      activeProfileType: user.activeProfileType,
-      profiles,
-    });
-  } catch (error) {
-    console.error('Erreur récupération profils:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-// Endpoint pour basculer entre profils (DOIT être avant /api/user/:userId)
-app.post('/api/user/switch-profile', authenticateToken, async (req, res) => {
-  try {
-    const { profileType } = req.body; // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE'
-    const userId = req.user.id;
-
-    if (!profileType || !['COMMUNITY', 'DJ', 'BOOKER', 'VENUE'].includes(profileType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'profileType requis et doit être COMMUNITY, DJ, BOOKER ou VENUE.',
-      });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        communities: true,
-        djs: true,
-        bookers: true,
-        venues: true,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-    }
-
-    // Vérifier que l'utilisateur a au moins un profil du type demandé
-    let hasProfile = false;
-    switch (profileType) {
-      case 'COMMUNITY':
-        hasProfile = user.communities && user.communities.length > 0;
-        break;
-      case 'DJ':
-        hasProfile = user.djs && user.djs.length > 0;
-        break;
-      case 'BOOKER':
-        hasProfile = user.bookers && user.bookers.length > 0;
-        break;
-      case 'VENUE':
-        hasProfile = user.venues && user.venues.length > 0;
-        break;
-    }
-
-    if (!hasProfile) {
-      return res.status(404).json({
-        success: false,
-        message: `Vous n'avez pas de profil ${profileType}. Créez-en un d'abord.`,
-      });
-    }
-
-    // Mettre à jour le profil actif
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        activeProfileType: profileType,
-        accountType: profileType, // Garde pour compatibilité
-      },
-    });
-
-    res.json({
-      success: true,
-      message: `Profil basculé vers ${profileType}`,
-      activeProfileType: profileType,
-    });
-  } catch (error) {
-    console.error('Erreur bascule profil:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-app.get('/api/user/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const walletUser = users.find((u) => u.id === userId);
-
-    if (walletUser) {
-      return res.json({ success: true, user: walletUser });
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        communities: true,
-        djs: true,
-        bookers: true,
-        venues: true,
-      },
-    });
-
-    if (!dbUser) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-    }
-
-    res.json({ success: true, user: sanitizeUser(dbUser) });
-  } catch (error) {
-    console.error('Erreur récupération utilisateur:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
+// ============================================================================
+// ROUTES PROFILS (à refactoriser plus tard)
+// ============================================================================
 
 // Générer un numéro ISN unique séquentiel (format: ISN suivi de chiffres)
 const generateISN = async () => {
@@ -1833,6 +1348,15 @@ app.get('/api/djs', async (req, res) => {
       userId: dj.userId,
       artistName: dj.artistName,
       city: dj.city,
+      bio: dj.bio,
+      genre: dj.genre,
+      mainCity: dj.mainCity,
+      languages: dj.languages,
+      hourlyRate: dj.hourlyRate,
+      performanceRate: dj.performanceRate,
+      minTravelFee: dj.minTravelFee,
+      extraFees: dj.extraFees,
+      availableStatus: dj.availableStatus,
       averageRatingGlobal: dj.averageRatingGlobal,
       totalRatingsGlobal: dj.totalRatingsCommunity + dj.totalRatingsBooker + dj.totalRatingsVenue,
       averageRatingCommunity: dj.averageRatingCommunity,
@@ -1898,6 +1422,12 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
       return res.status(404).json({ success: false, message: 'DJ non trouvé.' });
     }
 
+    // Récupérer les médias du DJ
+    const media = await prisma.djMedia.findMany({
+      where: { djId: dj.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
     res.json({
       success: true,
       dj: {
@@ -1907,6 +1437,16 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
         city: dj.city,
         phone: dj.phone,
         birthDate: dj.birthDate,
+        // Champs éditables
+        bio: dj.bio,
+        genre: dj.genre,
+        mainCity: dj.mainCity,
+        languages: dj.languages,
+        hourlyRate: dj.hourlyRate,
+        performanceRate: dj.performanceRate,
+        minTravelFee: dj.minTravelFee,
+        extraFees: dj.extraFees,
+        availableStatus: dj.availableStatus,
       },
       ratings: {
         averageRatingCommunity: dj.averageRatingCommunity,
@@ -1926,9 +1466,240 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
           createdAt: r.createdAt,
         })),
       },
+      media: media.map((m) => ({
+        id: m.id,
+        type: m.type,
+        url: m.url,
+        title: m.title,
+        thumbnail: m.thumbnail,
+        createdAt: m.createdAt,
+      })),
     });
   } catch (error) {
     console.error('Erreur récupération notes DJ:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour uploader des médias pour un DJ
+app.post('/api/dj/:djId/media', authenticateToken, async (req, res) => {
+  try {
+    const { djId } = req.params;
+    const { type, url, title, thumbnail } = req.body;
+    const userId = req.user.id;
+
+    console.log('[UPLOAD MEDIA] Requête reçue:', { djId, type, title, userId });
+
+    if (!type || !url) {
+      return res.status(400).json({
+        success: false,
+        message: 'type et url sont requis.',
+      });
+    }
+
+    if (!['photo', 'video', 'audio'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'type doit être photo, video ou audio.',
+      });
+    }
+
+    // Vérifier que le DJ appartient à l'utilisateur
+    const dj = await prisma.userDj.findUnique({
+      where: { id: djId },
+    });
+
+    if (!dj) {
+      console.error('[UPLOAD MEDIA] DJ non trouvé:', djId);
+      return res.status(404).json({ success: false, message: 'DJ non trouvé.' });
+    }
+
+    if (dj.userId !== userId) {
+      console.error('[UPLOAD MEDIA] Accès non autorisé:', { djUserId: dj.userId, requestUserId: userId });
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez ajouter des médias qu\'à votre propre profil DJ.',
+      });
+    }
+
+    // Si c'est une photo de profil ou bannière, supprimer l'ancienne
+    if (title === 'profile' || title === 'banner') {
+      await prisma.djMedia.deleteMany({
+        where: {
+          djId,
+          type: 'photo',
+          title: title,
+        },
+      });
+    }
+
+    const media = await prisma.djMedia.create({
+      data: {
+        djId,
+        type,
+        url,
+        title: title || null,
+        thumbnail: thumbnail || null,
+      },
+    });
+
+    console.log('[UPLOAD MEDIA] Média créé avec succès:', media.id);
+
+    res.json({
+      success: true,
+      message: 'Média ajouté avec succès.',
+      media: {
+        id: media.id,
+        type: media.type,
+        url: media.url,
+        title: media.title,
+        thumbnail: media.thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('[UPLOAD MEDIA] Erreur upload média:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour récupérer les médias d'un DJ
+app.get('/api/dj/:identifier/media', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const { type } = req.query; // Optionnel : filtrer par type
+
+    // Essayer d'abord avec UserDj.id, puis avec User.id
+    let dj = await prisma.userDj.findUnique({
+      where: { id: identifier },
+    });
+
+    if (!dj) {
+      dj = await prisma.userDj.findFirst({
+        where: { userId: identifier },
+      });
+    }
+
+    if (!dj) {
+      return res.status(404).json({ success: false, message: 'DJ non trouvé.' });
+    }
+
+    const whereClause = { djId: dj.id };
+    if (type && ['photo', 'video', 'audio'].includes(type)) {
+      whereClause.type = type;
+    }
+
+    const media = await prisma.djMedia.findMany({
+      where: whereClause,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.json({
+      success: true,
+      media: media.map((m) => ({
+        id: m.id,
+        type: m.type,
+        url: m.url,
+        title: m.title,
+        thumbnail: m.thumbnail,
+        createdAt: m.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur récupération médias:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour mettre à jour le titre d'un média
+app.put('/api/dj/media/:mediaId', authenticateToken, async (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const { title } = req.body;
+    const userId = req.user.id;
+
+    // Accepter title même s'il est null ou une chaîne vide (pour permettre de vider le titre)
+    // On valide seulement que title est présent dans req.body (même si null)
+    if (!('title' in req.body)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le champ title est requis dans le body.',
+      });
+    }
+
+    const media = await prisma.djMedia.findUnique({
+      where: { id: mediaId },
+      include: { dj: true },
+    });
+
+    if (!media) {
+      return res.status(404).json({ success: false, message: 'Média non trouvé.' });
+    }
+
+    if (media.dj.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez modifier que vos propres médias.',
+      });
+    }
+
+    const updatedMedia = await prisma.djMedia.update({
+      where: { id: mediaId },
+      data: {
+        title: (title && typeof title === 'string' && title.trim()) ? title.trim() : null,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Titre mis à jour avec succès.',
+      media: {
+        id: updatedMedia.id,
+        type: updatedMedia.type,
+        url: updatedMedia.url,
+        title: updatedMedia.title,
+        thumbnail: updatedMedia.thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur mise à jour titre média:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour supprimer un média
+app.delete('/api/dj/media/:mediaId', authenticateToken, async (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const userId = req.user.id;
+
+    const media = await prisma.djMedia.findUnique({
+      where: { id: mediaId },
+      include: { dj: true },
+    });
+
+    if (!media) {
+      return res.status(404).json({ success: false, message: 'Média non trouvé.' });
+    }
+
+    if (media.dj.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez supprimer que vos propres médias.',
+      });
+    }
+
+    await prisma.djMedia.delete({
+      where: { id: mediaId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Média supprimé avec succès.',
+    });
+  } catch (error) {
+    console.error('Erreur suppression média:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -1987,7 +1758,11 @@ app.get('/api/venue/:venueId/ratings', async (req, res) => {
   }
 });
 
-// Endpoint TEMPORAIRE pour supprimer un ticket (à supprimer en production)
+/**
+ * Supprime un ticket et recalcule les notes associées
+ * @route DELETE /api/tickets/:ticketId
+ * @access Private (nécessite authentification)
+ */
 app.delete('/api/tickets/:ticketId', authenticateToken, async (req, res) => {
   try {
     const { ticketId } = req.params;
@@ -2217,36 +1992,40 @@ app.post('/api/admin/event/:eventId/date', authenticateToken, async (req, res) =
   }
 });
 
+/**
+ * Récupère les statistiques globales de la plateforme
+ * @route GET /api/stats
+ */
 app.get('/api/stats', async (req, res) => {
   try {
-    const [registeredUsersCount, scoresAggregate] = await Promise.all([
+    const [
+      registeredUsersCount,
+      scoresAggregate,
+      eventsCount,
+      ticketsData,
+    ] = await Promise.all([
       prisma.user.count(),
       prisma.user.aggregate({
         _avg: { score: true },
         _sum: { score: true },
       }),
+      prisma.event.count(),
+      prisma.ticket.aggregate({
+        _count: { id: true },
+        _sum: { price: true },
+      }),
     ]);
 
     const registeredAverageScore = Math.round(scoresAggregate._avg.score ?? 0);
-    const walletAverage = users.length
-      ? users.reduce((sum, u) => sum + u.score, 0) / users.length
-      : 0;
-    const totalUsers = users.length + registeredUsersCount;
-    const combinedAverage =
-      totalUsers > 0
-        ? Math.round(
-            (walletAverage * users.length + (scoresAggregate._sum.score ?? 0)) / totalUsers,
-          )
-        : 0;
 
     const stats = {
-      totalUsers,
+      totalUsers: registeredUsersCount,
       registeredUsers: registeredUsersCount,
-      walletUsers: users.length,
-      totalEvents: events.length,
-      totalTicketsSold: tickets.filter((t) => t.status === 'valid').length,
-      totalRevenue: tickets.reduce((sum, t) => sum + t.price, 0),
-      averageUserScore: combinedAverage || registeredAverageScore,
+      walletUsers: 0, // Plus utilisé, gardé pour compatibilité
+      totalEvents: eventsCount,
+      totalTicketsSold: ticketsData._count.id || 0,
+      totalRevenue: ticketsData._sum.price || 0,
+      averageUserScore: registeredAverageScore,
     };
     res.json({ success: true, stats });
   } catch (error) {
@@ -2255,24 +2034,62 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-app.get('/api/djs/ranking', (req, res) => {
+/**
+ * Récupère le classement des DJs basé sur leurs notes moyennes
+ * @route GET /api/djs/ranking
+ */
+app.get('/api/djs/ranking', async (req, res) => {
   try {
-    const sortedDjs = [...djs].sort((a, b) => a.currentRank - b.currentRank);
-    res.json({ success: true, djs: sortedDjs });
+    const djs = await prisma.userDj.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        averageRatingGlobal: 'desc',
+      },
+    });
+
+    const formattedDjs = djs.map((dj, index) => ({
+      id: dj.id,
+      userId: dj.userId,
+      artistName: dj.artistName,
+      city: dj.city,
+      currentRank: index + 1,
+      score: Math.round(dj.averageRatingGlobal * 100) || 0,
+      averageRatingGlobal: dj.averageRatingGlobal,
+      totalRatings: dj.totalRatingsCommunity + dj.totalRatingsBooker + dj.totalRatingsVenue,
+    }));
+
+    res.json({ success: true, djs: formattedDjs });
   } catch (error) {
+    console.error('Erreur récupération classement DJs:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
+/**
+ * Endpoint de test pour vérifier que le serveur fonctionne
+ * @route GET /api/test
+ */
 app.get('/api/test', async (req, res) => {
   try {
-    const registeredUsers = await prisma.user.count();
+    const [registeredUsers, eventsCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.event.count(),
+    ]);
+    
     res.json({
       message: '🎉 Backend Insane Nights & Days fonctionne parfaitement',
       timestamp: new Date().toISOString(),
-      walletUsersCount: users.length,
+      walletUsersCount: 0, // Plus utilisé, gardé pour compatibilité
       registeredUsersCount: registeredUsers,
-      eventsCount: events.length,
+      eventsCount: eventsCount,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur lors du test.' });
@@ -2287,7 +2104,6 @@ setInterval(updateEventStatuses, 5 * 60 * 1000);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
-  console.log(`📊 ${users.length} utilisateurs wallet, ${events.length} événements chargés`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   console.log(`⏰ Mise à jour automatique des statuts d'événements activée (toutes les 5 minutes)`);
 });

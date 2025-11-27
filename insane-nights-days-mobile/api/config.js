@@ -1,7 +1,7 @@
 // Configuration API pour le backend
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://cayman-cluster-operation-saves.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://labs-entire-pct-anymore.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -34,11 +34,13 @@ const API_CONFIG = {
     TEST: '/api/test',
     USER_PROFILES: '/api/user/profiles',
     USER_SWITCH_PROFILE: '/api/user/switch-profile',
+    USER_CHANGE_PASSWORD: '/api/user/change-password',
+    USER_DJ_PROFILE: '/api/user/dj/profile',
   },
 };
 
 // Fonction helper pour faire des requêtes
-const apiRequest = async (endpoint, options = {}, token = null) => {
+const apiRequest = async (endpoint, options = {}, token = null, customTimeout = null) => {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
   
   const defaultOptions = {
@@ -46,7 +48,7 @@ const apiRequest = async (endpoint, options = {}, token = null) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    timeout: API_CONFIG.TIMEOUT,
+    timeout: customTimeout || API_CONFIG.TIMEOUT,
   };
 
   // Ajouter le token JWT dans les headers si fourni
@@ -63,8 +65,18 @@ const apiRequest = async (endpoint, options = {}, token = null) => {
     },
   };
 
+  // Gérer le timeout avec AbortController
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
   try {
-    const response = await fetch(url, config);
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
     const contentType = response.headers.get('content-type') ?? '';
     const isJson = contentType.includes('application/json');
     let data;
@@ -92,6 +104,14 @@ const apiRequest = async (endpoint, options = {}, token = null) => {
 
     return data;
   } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      const timeoutError = new Error('Timeout: La requête a pris trop de temps');
+      timeoutError.status = 408;
+      throw timeoutError;
+    }
+    
     if (error?.message?.includes('Network request failed')) {
       console.warn('API Request Warning: backend inaccessible, fallback local utilisé.');
       return null;
@@ -190,6 +210,14 @@ const api = {
   // Récupérer le profil utilisateur
   getUserProfile: async (userId) => {
     return apiRequest(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/${userId}`);
+  },
+
+  // Récupère les informations de l'utilisateur connecté avec son dernier ticket
+  getCurrentUser: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/me`, {}, token);
   },
 
   // Récupérer tous les événements
@@ -358,6 +386,114 @@ const api = {
       {
         method: 'POST',
         body: JSON.stringify({ profileType }),
+      },
+      token
+    );
+  },
+
+  // Changer le mot de passe
+  changePassword: async (token, oldPassword, newPassword, confirmPassword) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.USER_CHANGE_PASSWORD,
+      {
+        method: 'POST',
+        body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      },
+      token
+    );
+  },
+
+  // Récupérer le profil DJ actif
+  getDjProfile: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.USER_DJ_PROFILE, {}, token);
+  },
+
+  // Mettre à jour le profil DJ
+  updateDjProfile: async (token, artistName, city, phone, birthDate, additionalData = {}) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    // Les champs artistName, city, phone, birthDate sont requis pour validation mais non modifiés
+    // Les champs éditables sont dans additionalData
+    const requestBody = { 
+      artistName, 
+      city, 
+      phone, 
+      birthDate,
+      ...additionalData // bio, genre, mainCity, languages, tarifs, disponibilités
+    };
+    
+    console.log('[api.updateDjProfile] Corps de la requête avant stringify:', requestBody);
+    console.log('[api.updateDjProfile] Clés dans requestBody:', Object.keys(requestBody));
+    console.log('[api.updateDjProfile] bio dans requestBody:', requestBody.bio);
+    console.log('[api.updateDjProfile] additionalData:', additionalData);
+    
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.USER_DJ_PROFILE,
+      {
+        method: 'PUT',
+        body: JSON.stringify(requestBody),
+      },
+      token
+    );
+  },
+
+  // Uploader un média pour un DJ
+  uploadDjMedia: async (token, djId, type, url, title = null, thumbnail = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    // Timeout plus long pour les vidéos (60 secondes)
+    const timeout = type === 'video' ? 60000 : 30000;
+    return apiRequest(
+      `/api/dj/${djId}/media`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ type, url, title, thumbnail }),
+      },
+      token,
+      timeout
+    );
+  },
+
+  // Récupérer les médias d'un DJ
+  getDjMedia: async (identifier, type = null) => {
+    const url = type 
+      ? `/api/dj/${identifier}/media?type=${type}`
+      : `/api/dj/${identifier}/media`;
+    return apiRequest(url);
+  },
+
+  // Mettre à jour le titre d'un média
+  updateDjMediaTitle: async (token, mediaId, title) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `/api/dj/media/${mediaId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ title }),
+      },
+      token
+    );
+  },
+
+  // Supprimer un média
+  deleteDjMedia: async (token, mediaId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `/api/dj/media/${mediaId}`,
+      {
+        method: 'DELETE',
       },
       token
     );

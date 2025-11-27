@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
     username: '',
     level: 1,
     score: 0,
+    activeProfileType: null,
     isAuthenticated: false,
     token: null,
   });
@@ -39,6 +40,7 @@ export function AuthProvider({ children }) {
         username: response.user.username ?? '',
         score: response.user.score ?? 0,
         level: response.user.level ?? 1,
+        activeProfileType: response.user.activeProfileType ?? null,
         isAuthenticated: true,
         token: response.token ?? null,
       });
@@ -74,6 +76,7 @@ export function AuthProvider({ children }) {
         username: response.user.username ?? '',
         score: response.user.score ?? 0,
         level: response.user.level ?? 1,
+        activeProfileType: response.user.activeProfileType ?? null,
         isAuthenticated: true,
         token: response.token ?? null,
       });
@@ -91,6 +94,7 @@ export function AuthProvider({ children }) {
       username: '',
       level: 1,
       score: 0,
+      activeProfileType: null,
       isAuthenticated: false,
       token: null,
     });

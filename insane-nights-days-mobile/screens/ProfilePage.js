@@ -1,4 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+/**
+ * Page de profil utilisateur
+ * 
+ * Affiche les informations de l'utilisateur connecté et permet :
+ * - L'édition du nom d'utilisateur
+ * - Le changement de mot de passe
+ * - La visualisation des statistiques (score, niveau, tickets, etc.)
+ * - L'accès au changement de profil
+ */
+
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -14,43 +24,39 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
 
-const formatDateTime = (dateString) => {
-  if (!dateString) {
-    return '';
-  }
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
-
+/**
+ * Composant principal de la page de profil
+ * @param {Object} props - Les propriétés du composant
+ * @param {Object} props.user - Données utilisateur (optionnel, pour compatibilité)
+ * @param {Array} props.tickets - Liste des tickets de l'utilisateur
+ * @param {Function} props.onUpdateUser - Callback pour mettre à jour l'utilisateur (optionnel)
+ */
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const { user: authUser, updateUser: updateAuthUser } = useAuth();
   const { navigate } = useNavigation();
-  const username = user?.username ?? 'Utilisateur';
-  const level = user?.level ?? 1;
-  const score = user?.score ?? 0;
-  const sbtActive = user?.sbtActive ?? false;
+  
+  // Utiliser authUser du contexte au lieu des props user (source de vérité)
+  const username = authUser?.username || user?.username || 'Utilisateur';
+  const level = authUser?.level || user?.level || 1;
+  const score = authUser?.score || user?.score || 0;
+  const sbtActive = authUser?.sbtActive || user?.sbtActive || false;
   const ticketsCount = user?.tickets ?? tickets.length ?? 0;
   const eventsParticipated = user?.eventsParticipated ?? 0;
-  const email = user?.email ?? '';
-  const isAuthenticated = user?.isAuthenticated ?? false;
-
-  const lastTicket = useMemo(() => user?.lastTicket ?? tickets[0] ?? null, [tickets, user?.lastTicket]);
+  const email = authUser?.email || user?.email || '';
+  const isAuthenticated = authUser?.isAuthenticated ?? false;
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ username });
   const [profiles, setProfiles] = useState(null);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   const [switchingProfile, setSwitchingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     setForm({ username });
@@ -62,6 +68,9 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     }
   }, [isAuthenticated, authUser?.token]);
 
+  /**
+   * Récupère tous les profils de l'utilisateur (Community, DJ, Booker, Venue)
+   */
   const fetchProfiles = async () => {
     if (!authUser?.token) return;
     setLoadingProfiles(true);
@@ -77,6 +86,10 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     }
   };
 
+  /**
+   * Bascule le profil actif de l'utilisateur
+   * @param {string} profileType - Type de profil ('COMMUNITY', 'DJ', 'BOOKER', 'VENUE')
+   */
   const handleSwitchProfile = async (profileType) => {
     if (!authUser?.token) return;
     setSwitchingProfile(true);
@@ -97,17 +110,84 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     }
   };
 
+  /**
+   * Sauvegarde les modifications du nom d'utilisateur
+   */
   const handleSave = () => {
     const normalized = form.username.trim();
-    if (normalized && onUpdateUser) {
-      onUpdateUser({ username: normalized });
-      Alert.alert('Succès', 'Profil mis à jour !');
-    } else {
+    if (!normalized) {
       Alert.alert('Info', 'Le nom ne peut pas être vide.');
       return;
     }
 
+    // Mettre à jour le contexte d'authentification
+    if (isAuthenticated) {
+      updateAuthUser({ username: normalized });
+    }
+    
+    // Mettre à jour via la prop si elle existe (pour compatibilité)
+    if (onUpdateUser) {
+      onUpdateUser({ username: normalized });
+    }
+    
+    Alert.alert('Succès', 'Profil mis à jour !');
     setIsEditing(false);
+  };
+
+  /**
+   * Gère le changement de mot de passe
+   * Valide les champs et appelle l'API pour mettre à jour le mot de passe
+   */
+  const handleChangePassword = async () => {
+    const { oldPassword, newPassword, confirmPassword } = passwordForm;
+    
+    // Validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Erreur', 'Tous les champs sont requis.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Erreur', 'Le nouveau mot de passe et la confirmation ne correspondent pas.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+
+    if (!authUser?.token) {
+      Alert.alert('Erreur', 'Vous devez être connecté pour changer votre mot de passe.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const response = await api.changePassword(
+        authUser.token,
+        oldPassword,
+        newPassword,
+        confirmPassword
+      );
+      
+      if (response && response.success) {
+        Alert.alert('Succès', 'Mot de passe modifié avec succès.');
+        setIsChangingPassword(false);
+        setPasswordForm({
+          oldPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+      } else {
+        Alert.alert('Erreur', response?.message || 'Impossible de modifier le mot de passe.');
+      }
+    } catch (error) {
+      console.error('Erreur changement mot de passe:', error);
+      Alert.alert('Erreur', error?.message || 'Impossible de modifier le mot de passe.');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -117,6 +197,14 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
+        {isAuthenticated && (
+          <TouchableOpacity
+            style={styles.switchProfileButton}
+            onPress={() => navigate('switchProfile')}
+          >
+            <Text style={styles.switchProfileButtonText}>🔄 Changer de profil</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -126,19 +214,6 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
           </View>
           <Text style={styles.title}>🏆 Mon Profil</Text>
         </View>
-
-        {!isAuthenticated ? (
-          <View style={styles.alertCard}>
-            <Text style={styles.alertTitle}>Compte invité</Text>
-            <Text style={styles.alertText}>
-              Crée un compte pour sauvegarder ta progression et retrouver tes tickets sur tous tes
-              appareils.
-            </Text>
-            <TouchableOpacity style={styles.alertButton} onPress={() => navigate('accountType')}>
-              <Text style={styles.alertButtonText}>Créer mon compte ✨</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -198,6 +273,89 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
             </View>
           )}
         </View>
+
+        {/* Section Changer le mot de passe */}
+        {isAuthenticated && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>🔒 Sécurité</Text>
+              {!isChangingPassword ? (
+                <TouchableOpacity onPress={() => setIsChangingPassword(true)}>
+                  <Text style={styles.editButton}>Modifier</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {isChangingPassword ? (
+              <View>
+                <Text style={styles.label}>Ancien mot de passe</Text>
+                <TextInput
+                  value={passwordForm.oldPassword}
+                  onChangeText={text => setPasswordForm({ ...passwordForm, oldPassword: text })}
+                  placeholder="Ancien mot de passe"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.input}
+                  secureTextEntry
+                />
+
+                <Text style={styles.label}>Nouveau mot de passe</Text>
+                <TextInput
+                  value={passwordForm.newPassword}
+                  onChangeText={text => setPasswordForm({ ...passwordForm, newPassword: text })}
+                  placeholder="Nouveau mot de passe (min. 6 caractères)"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.input}
+                  secureTextEntry
+                />
+
+                <Text style={styles.label}>Confirmer le nouveau mot de passe</Text>
+                <TextInput
+                  value={passwordForm.confirmPassword}
+                  onChangeText={text => setPasswordForm({ ...passwordForm, confirmPassword: text })}
+                  placeholder="Confirmer le nouveau mot de passe"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.input}
+                  secureTextEntry
+                />
+
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => {
+                      setIsChangingPassword(false);
+                      setPasswordForm({
+                        oldPassword: '',
+                        newPassword: '',
+                        confirmPassword: '',
+                      });
+                    }}
+                    disabled={changingPassword}
+                  >
+                    <Text style={styles.cancelText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleChangePassword}
+                    disabled={changingPassword}
+                  >
+                    {changingPassword ? (
+                      <ActivityIndicator color="#0b0b0e" />
+                    ) : (
+                      <Text style={styles.saveText}>Enregistrer</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.info}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Mot de passe</Text>
+                  <Text style={styles.infoValue}>••••••••</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Section Profils */}
         {isAuthenticated && (
@@ -352,21 +510,6 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
           </View>
         </View>
 
-        <View style={styles.note}>
-          <Text style={styles.noteTitle}>Dernière réservation</Text>
-          {lastTicket ? (
-            <Text style={styles.noteText}>
-              {`🎫 ${lastTicket.title}
-Quantité : ${lastTicket.quantity ?? 1}
-Réservé le ${formatDateTime(lastTicket.lastPurchasedAt)}
-📍 ${lastTicket.location}`}
-            </Text>
-          ) : (
-            <Text style={styles.noteText}>
-              Vous n'avez pas encore réservé de ticket. Rendez-vous sur la page Événements pour commencer !
-            </Text>
-          )}
-        </View>
       </ScrollView>
     </View>
   );
@@ -378,19 +521,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0b0e',
   },
   topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
     backgroundColor: '#0b0b0e',
   },
   backButtonTop: {
-    alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   backButtonTopText: {
     color: '#ff7a1a',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  switchProfileButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 122, 26, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff7a1a',
+  },
+  switchProfileButtonText: {
+    color: '#ff7a1a',
+    fontSize: 14,
     fontWeight: '600',
   },
   scroll: {

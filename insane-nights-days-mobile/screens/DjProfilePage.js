@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Audio } from 'expo-av';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,9 +54,9 @@ const getDjBackgroundImage = (djName) => {
 
 export default function DjProfilePage() {
   const { language } = useLanguage();
-  const { routeParams, goBack } = useNavigation();
+  const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
-  const { djId, djUserId } = routeParams || {};
+  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo } = routeParams || {};
   
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
@@ -66,12 +67,46 @@ export default function DjProfilePage() {
   const [bannerImage, setBannerImage] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+  const [events, setEvents] = useState({ upcomingEvents: [], pastEvents: [] });
+  const previousTabRef = useRef(activeTab);
 
   useEffect(() => {
     if (djId || djUserId) {
       fetchDjProfile();
     }
   }, [djId, djUserId]);
+
+  // Couper tous les sons quand on QUITTE l'onglet audio (pour éviter les doublons)
+  useEffect(() => {
+    const previousTab = previousTabRef.current;
+
+    const stopAllAudio = async () => {
+      try {
+        await Audio.setIsEnabledAsync(false);
+        await Audio.setIsEnabledAsync(true);
+      } catch (e) {
+        console.error("Erreur lors de l'arrêt de l'audio en changeant d'onglet:", e);
+      }
+    };
+
+    if (previousTab === 'audio' && activeTab !== 'audio') {
+      stopAllAudio();
+    }
+
+    previousTabRef.current = activeTab;
+  }, [activeTab]);
+
+  // Fonction pour arrêter l'audio et revenir en arrière
+  const handleBack = async () => {
+    try {
+      // Couper tous les sons en cours
+      await Audio.setIsEnabledAsync(false);
+      await Audio.setIsEnabledAsync(true);
+    } catch (e) {
+      console.error("Erreur lors de l'arrêt de l'audio au retour:", e);
+    }
+    goBack();
+  };
 
   const fetchDjProfile = async () => {
     setLoading(true);
@@ -101,6 +136,12 @@ export default function DjProfilePage() {
             minTravelFee: ratingsResponse.dj.minTravelFee,
             extraFees: ratingsResponse.dj.extraFees,
             availableStatus: ratingsResponse.dj.availableStatus,
+            soundcloudUrl: ratingsResponse.dj.soundcloudUrl,
+            spotifyUrl: ratingsResponse.dj.spotifyUrl,
+            youtubeUrl: ratingsResponse.dj.youtubeUrl,
+            instagramUrl: ratingsResponse.dj.instagramUrl,
+            tiktokUrl: ratingsResponse.dj.tiktokUrl,
+            equipment: ratingsResponse.dj.equipment,
             averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
           });
 
@@ -149,6 +190,21 @@ export default function DjProfilePage() {
             averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
           });
         }
+      }
+
+      // Récupérer les événements du DJ
+      try {
+        const identifier = djUserId || djId;
+        const eventsResponse = await api.getDjEvents(identifier);
+        if (eventsResponse && eventsResponse.success) {
+          setEvents({
+            upcomingEvents: eventsResponse.upcomingEvents || [],
+            pastEvents: eventsResponse.pastEvents || [],
+          });
+        }
+      } catch (eventsError) {
+        console.error('Erreur récupération événements DJ:', eventsError);
+        // Ne pas bloquer l'affichage si les événements ne peuvent pas être chargés
       }
     } catch (error) {
       console.error('Erreur récupération profil DJ:', error);
@@ -210,11 +266,71 @@ export default function DjProfilePage() {
           </View>
           <Text style={styles.djName}>{dj.artistName}</Text>
           <Text style={styles.djLocation}>📍 {dj.mainCity || dj.city || 'Ville inconnue'}, France</Text>
-          <TouchableOpacity style={styles.bookButton}>
-            <Text style={styles.bookButtonText}>
-              {language === 'fr' ? 'BOOKER CE DJ' : 'BOOK THIS DJ'}
-            </Text>
-          </TouchableOpacity>
+          {selectionMode ? (
+            <TouchableOpacity 
+              style={[styles.bookButton, selectedDjIds.includes(dj.userId) && styles.bookButtonSelected]}
+              onPress={() => {
+                // Retourner au dashboard avec la sélection
+                navigate('bookerDashboard', {
+                  selectedDjId: dj.userId,
+                  selectedDjName: dj.artistName,
+                  action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
+                });
+              }}
+            >
+              <Text style={styles.bookButtonText}>
+                {selectedDjIds.includes(dj.userId)
+                  ? (language === 'fr' ? '✓ DÉSÉLECTIONNER' : '✓ DESELECT')
+                  : (language === 'fr' ? 'SÉLECTIONNER' : 'SELECT')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            user?.activeProfileType === 'BOOKER' && (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.bookButton,
+                    dj.availableStatus === false && styles.bookButtonDisabled,
+                  ]}
+                  disabled={dj.availableStatus === false}
+                  onPress={() => {
+                    if (dj.availableStatus === false) {
+                      Alert.alert(
+                        language === 'fr' ? 'Indisponible' : 'Unavailable',
+                        language === 'fr'
+                          ? 'Ce DJ n\'est pas disponible pour le moment.'
+                          : 'This DJ is not available at the moment.'
+                      );
+                      return;
+                    }
+                    // Ici on pourra brancher le flux de booking direct plus tard
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.bookButtonText,
+                      dj.availableStatus === false && styles.bookButtonTextDisabled,
+                    ]}
+                  >
+                    {dj.availableStatus === false
+                      ? language === 'fr'
+                        ? 'INDISPONIBLE'
+                        : 'UNAVAILABLE'
+                      : language === 'fr'
+                        ? 'BOOKER CE DJ'
+                        : 'BOOK THIS DJ'}
+                  </Text>
+                </TouchableOpacity>
+                {dj.availableStatus === false && (
+                  <Text style={styles.unavailableHint}>
+                    {language === 'fr'
+                      ? 'Ce DJ est marqué comme indisponible par le DJ.'
+                      : 'This DJ has marked themselves as unavailable.'}
+                  </Text>
+                )}
+              </>
+            )
+          )}
         </View>
       </View>
 
@@ -225,20 +341,20 @@ export default function DjProfilePage() {
             {language === 'fr' ? 'Infos clés' : 'Key Info'}
           </Text>
           {dj.genre && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>
                 {language === 'fr' ? 'Genre:' : 'Genre:'}
-              </Text>
+            </Text>
               <Text style={styles.infoValue}>{dj.genre}</Text>
-            </View>
+          </View>
           )}
           {dj.hourlyRate && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>
                 {language === 'fr' ? 'Tarif horaire:' : 'Hourly Rate:'}
-              </Text>
+            </Text>
               <Text style={styles.infoValue}>{dj.hourlyRate} € / {language === 'fr' ? 'heure' : 'hour'}</Text>
-            </View>
+          </View>
           )}
           {dj.performanceRate && (
             <View style={styles.infoItem}>
@@ -249,24 +365,24 @@ export default function DjProfilePage() {
             </View>
           )}
           {dj.availableStatus !== undefined && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>
-                {language === 'fr' ? 'Disponibilité:' : 'Availability:'}
-              </Text>
-              <Text style={styles.infoValue}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>
+              {language === 'fr' ? 'Disponibilité:' : 'Availability:'}
+            </Text>
+            <Text style={styles.infoValue}>
                 {dj.availableStatus 
                   ? (language === 'fr' ? 'Disponible' : 'Available')
                   : (language === 'fr' ? 'Indisponible' : 'Unavailable')}
-              </Text>
-            </View>
+            </Text>
+          </View>
           )}
           {dj.languages && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>
-                {language === 'fr' ? 'Langues:' : 'Languages:'}
-              </Text>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>
+              {language === 'fr' ? 'Langues:' : 'Languages:'}
+            </Text>
               <Text style={styles.infoValue}>{dj.languages}</Text>
-            </View>
+          </View>
           )}
         </View>
 
@@ -286,24 +402,46 @@ export default function DjProfilePage() {
 
       {/* Réseaux sociaux */}
       <View style={styles.socialSection}>
-        <TouchableOpacity style={styles.socialButton}>
+        {dj.soundcloudUrl ? (
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={() => Linking.openURL(dj.soundcloudUrl)}
+          >
           <Text style={styles.socialIcon}>🎵</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
+        ) : null}
+        {dj.spotifyUrl ? (
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={() => Linking.openURL(dj.spotifyUrl)}
+          >
           <Text style={styles.socialIcon}>☁️</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialIcon}>🎧</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
+        ) : null}
+        {dj.youtubeUrl ? (
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={() => Linking.openURL(dj.youtubeUrl)}
+          >
           <Text style={styles.socialIcon}>▶️</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialIcon}>🎬</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
+        ) : null}
+        {dj.instagramUrl ? (
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={() => Linking.openURL(dj.instagramUrl)}
+          >
           <Text style={styles.socialIcon}>📷</Text>
         </TouchableOpacity>
+        ) : null}
+        {dj.tiktokUrl ? (
+          <TouchableOpacity 
+            style={styles.socialButton}
+            onPress={() => Linking.openURL(dj.tiktokUrl)}
+          >
+            <Text style={styles.socialIcon}>🎬</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Tabs pour Sets Audio, Vidéos, Photos, Stories */}
@@ -389,7 +527,7 @@ export default function DjProfilePage() {
               {language === 'fr' ? 'Aucun set audio disponible' : 'No audio sets available'}
             </Text>
           )}
-        </View>
+              </View>
       )}
 
       {activeTab === 'video' && (
@@ -488,11 +626,11 @@ export default function DjProfilePage() {
                           <Text style={styles.videoPlaceholderText} numberOfLines={2}>
                             {videoTitle}
                           </Text>
-                        </View>
+            </View>
                       )}
                       <View style={styles.playButtonOverlay}>
                         <Text style={styles.playIconWhite}>▶</Text>
-                      </View>
+          </View>
                     </View>
                     <Text style={styles.videoTitle} numberOfLines={2}>
                       {videoTitle}
@@ -528,7 +666,7 @@ export default function DjProfilePage() {
                   }
                   
                   return (
-                    <Image
+            <Image
                       key={photo?.id || index}
                       source={{ uri: photoUrl }}
                       style={styles.photoItem}
@@ -536,7 +674,7 @@ export default function DjProfilePage() {
                     />
                   );
                 })}
-            </View>
+          </View>
           ) : (
             <Text style={styles.noMedia}>
               {language === 'fr' ? 'Aucune photo disponible' : 'No photos available'}
@@ -581,11 +719,15 @@ export default function DjProfilePage() {
           <Text style={styles.sectionTitle}>
             {language === 'fr' ? 'Matériel' : 'Equipment'}
           </Text>
+          {dj.equipment ? (
+            <Text style={styles.equipmentText}>{dj.equipment}</Text>
+          ) : (
           <View style={styles.equipmentList}>
             <Text style={styles.equipmentItem}>• CDJ-3000</Text>
             <Text style={styles.equipmentItem}>• DJM-900NX32</Text>
             <Text style={styles.equipmentItem}>• Moniteurs Pioneer</Text>
           </View>
+          )}
         </View>
       </View>
 
@@ -602,20 +744,62 @@ export default function DjProfilePage() {
             <Text style={styles.calendarArrow}>→</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.eventBox}>
-          <Text style={styles.eventDate}>27 AVR 2024</Text>
-          <Text style={styles.eventName}>REFLEX</Text>
-        </View>
-        <Text style={styles.pastEventsTitle}>
-          {language === 'fr' ? 'ÉVÈNEMENTS PASSÉS' : 'PAST EVENTS'}
-        </Text>
-        <View style={styles.pastEventBox}>
-          <Text style={styles.pastEventDate}>02 MAR 2024</Text>
-        </View>
+        
+        {/* Événements à venir */}
+        {events.upcomingEvents && events.upcomingEvents.length > 0 ? (
+          events.upcomingEvents.slice(0, 3).map((event) => {
+            const eventDate = new Date(event.date);
+            const monthNames = language === 'fr' 
+              ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
+              : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
+            
+            return (
+              <View key={event.id} style={styles.eventBox}>
+                <Text style={styles.eventDate}>{formattedDate}</Text>
+                <Text style={styles.eventName}>{event.title}</Text>
+                {event.venue && (
+                  <Text style={styles.eventVenue}>{event.venue.name}</Text>
+                )}
+              </View>
+            );
+          })
+        ) : (
+          <View style={styles.eventBox}>
+            <Text style={styles.eventDate}>
+              {language === 'fr' ? 'Aucun événement à venir' : 'No upcoming events'}
+            </Text>
+          </View>
+        )}
+        
+        {/* Événements passés */}
+        {events.pastEvents && events.pastEvents.length > 0 && (
+          <>
+            <Text style={styles.pastEventsTitle}>
+              {language === 'fr' ? 'ÉVÈNEMENTS PASSÉS' : 'PAST EVENTS'}
+            </Text>
+            {events.pastEvents.slice(0, 5).map((event) => {
+              const eventDate = new Date(event.date);
+              const monthNames = language === 'fr' 
+                ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
+                : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+              const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
+              
+              return (
+                <View key={event.id} style={styles.pastEventBox}>
+                  <Text style={styles.pastEventDate}>{formattedDate}</Text>
+                  {event.title && (
+                    <Text style={styles.pastEventName}>{event.title}</Text>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
       </View>
 
       {/* Bouton retour */}
-      <TouchableOpacity style={styles.backButton} onPress={goBack}>
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
         <Text style={styles.backButtonText}>
           ← {language === 'fr' ? 'Retour' : 'Back'}
         </Text>
@@ -716,11 +900,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
+  bookButtonSelected: {
+    backgroundColor: '#ff7a1a',
+  },
   bookButtonText: {
     color: '#ff7a1a',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  bookButtonDisabled: {
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  bookButtonTextDisabled: {
+    color: 'rgba(255,255,255,0.6)',
   },
   infoSection: {
     flexDirection: 'row',
@@ -749,6 +943,12 @@ const styles = StyleSheet.create({
   },
   infoItem: {
     marginBottom: 12,
+  },
+  unavailableHint: {
+    marginTop: 8,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   infoLabel: {
     color: 'rgba(255,255,255,0.6)',
@@ -1005,6 +1205,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
   },
+  equipmentText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
   calendarSection: {
     paddingHorizontal: 20,
     marginBottom: 30,
@@ -1044,6 +1249,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  eventVenue: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    marginTop: 4,
+  },
   pastEventsTitle: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
@@ -1057,10 +1267,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
     padding: 12,
+    marginBottom: 12,
   },
   pastEventDate: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
+  },
+  pastEventName: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginTop: 4,
+    fontWeight: '600',
   },
   backButton: {
     padding: 20,

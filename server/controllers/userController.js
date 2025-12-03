@@ -449,6 +449,13 @@ const getCurrentDjProfile = async (req, res) => {
         // Disponibilités
         availableDays: djProfile.availableDays,
         availableStatus: djProfile.availableStatus,
+        // Réseaux sociaux
+        soundcloudUrl: djProfile.soundcloudUrl,
+        spotifyUrl: djProfile.spotifyUrl,
+        youtubeUrl: djProfile.youtubeUrl,
+        instagramUrl: djProfile.instagramUrl,
+        tiktokUrl: djProfile.tiktokUrl,
+        equipment: djProfile.equipment,
         // Ratings
         averageRatingGlobal: djProfile.averageRatingGlobal,
         totalRatingsGlobal: djProfile.totalRatingsCommunity + djProfile.totalRatingsBooker + djProfile.totalRatingsVenue,
@@ -532,6 +539,16 @@ const updateDjProfile = async (req, res) => {
     updateData.availableDays = req.body.availableDays ? (typeof req.body.availableDays === 'string' ? req.body.availableDays : JSON.stringify(req.body.availableDays)) : null;
     updateData.availableStatus = req.body.availableStatus !== undefined ? req.body.availableStatus : true;
     
+    // Réseaux sociaux
+    updateData.soundcloudUrl = (req.body.soundcloudUrl && typeof req.body.soundcloudUrl === 'string' && req.body.soundcloudUrl.trim()) ? req.body.soundcloudUrl.trim() : null;
+    updateData.spotifyUrl = (req.body.spotifyUrl && typeof req.body.spotifyUrl === 'string' && req.body.spotifyUrl.trim()) ? req.body.spotifyUrl.trim() : null;
+    updateData.youtubeUrl = (req.body.youtubeUrl && typeof req.body.youtubeUrl === 'string' && req.body.youtubeUrl.trim()) ? req.body.youtubeUrl.trim() : null;
+    updateData.instagramUrl = (req.body.instagramUrl && typeof req.body.instagramUrl === 'string' && req.body.instagramUrl.trim()) ? req.body.instagramUrl.trim() : null;
+    updateData.tiktokUrl = (req.body.tiktokUrl && typeof req.body.tiktokUrl === 'string' && req.body.tiktokUrl.trim()) ? req.body.tiktokUrl.trim() : null;
+    
+    // Matériel
+    updateData.equipment = (req.body.equipment && typeof req.body.equipment === 'string' && req.body.equipment.trim()) ? req.body.equipment.trim() : null;
+    
     console.log('[updateDjProfile] updateData final (TOUS les champs):', JSON.stringify(updateData, null, 2));
     
     // Note: artistName, city, phone, birthDate ne sont PAS modifiés (champs d'inscription)
@@ -593,6 +610,12 @@ const updateDjProfile = async (req, res) => {
         extraFees: finalDj.extraFees,
         availableDays: finalDj.availableDays,
         availableStatus: finalDj.availableStatus,
+        soundcloudUrl: finalDj.soundcloudUrl,
+        spotifyUrl: finalDj.spotifyUrl,
+        youtubeUrl: finalDj.youtubeUrl,
+        instagramUrl: finalDj.instagramUrl,
+        tiktokUrl: finalDj.tiktokUrl,
+        equipment: finalDj.equipment,
       },
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -32,6 +32,56 @@ export default function RegisterDjPage() {
     dateNaissance: '',
   });
   const [loading, setLoading] = useState(false);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+
+  // Charger les profils existants pour pré-remplir les données
+  useEffect(() => {
+    const loadExistingProfiles = async () => {
+      if (!user?.token) {
+        setLoadingProfiles(false);
+        return;
+      }
+
+      try {
+        const profilesResponse = await api.getUserProfiles(user.token);
+        if (profilesResponse && profilesResponse.success && profilesResponse.profiles) {
+          // Récupérer les données depuis un profil DJ existant s'il existe
+          if (profilesResponse.profiles.dj && profilesResponse.profiles.dj.length > 0) {
+            const djProfile = profilesResponse.profiles.dj[0];
+            // Récupérer les détails complets du profil DJ
+            try {
+              const djDetailsResponse = await api.getDjProfile(user.token);
+              if (djDetailsResponse && djDetailsResponse.success && djDetailsResponse.dj) {
+                const dj = djDetailsResponse.dj;
+                setFormData(prev => ({
+                  ...prev,
+                  artistName: dj.artistName || prev.artistName,
+                  city: dj.city || prev.city,
+                  phone: dj.phone || prev.phone,
+                  dateNaissance: dj.birthDate || prev.dateNaissance,
+                }));
+              }
+            } catch (djError) {
+              console.error('Erreur récupération détails DJ:', djError);
+              // Si on ne peut pas récupérer les détails, utiliser au moins les données de base
+              setFormData(prev => ({
+                ...prev,
+                artistName: djProfile.artistName || prev.artistName,
+                city: djProfile.city || prev.city,
+              }));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement profils existants:', error);
+        // On continue même en cas d'erreur
+      } finally {
+        setLoadingProfiles(false);
+      }
+    };
+
+    loadExistingProfiles();
+  }, [user?.token]);
 
   const handleChange = (field, value) => {
     // Validation spéciale pour la date de naissance
@@ -240,6 +290,9 @@ export default function RegisterDjPage() {
         <View style={styles.form}>
           <Text style={styles.label}>
             {language === 'fr' ? 'Nom d\'artiste' : 'Artist name'}
+            {formData.artistName && (
+              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli depuis votre profil DJ existant' : 'pre-filled from your existing DJ profile'})</Text>
+            )}
           </Text>
           <TextInput
             style={styles.input}
@@ -248,6 +301,7 @@ export default function RegisterDjPage() {
             autoCapitalize="words"
             value={formData.artistName}
             onChangeText={(value) => handleChange('artistName', value)}
+            editable={!loadingProfiles}
           />
 
           <Text style={styles.label}>
@@ -278,6 +332,9 @@ export default function RegisterDjPage() {
 
           <Text style={styles.label}>
             {language === 'fr' ? 'Ville' : 'City'}
+            {formData.city && (
+              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
+            )}
           </Text>
           <CityAutocomplete
             value={formData.city}
@@ -285,10 +342,14 @@ export default function RegisterDjPage() {
             placeholder={language === 'fr' ? 'Tapez le nom de votre ville...' : 'Type your city name...'}
             placeholderTextColor="rgba(255,255,255,0.4)"
             style={styles.input}
+            editable={!loadingProfiles}
           />
 
           <Text style={styles.label}>
             {language === 'fr' ? 'Téléphone' : 'Phone'}
+            {formData.phone && (
+              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
+            )}
           </Text>
           <TextInput
             style={styles.input}
@@ -297,10 +358,14 @@ export default function RegisterDjPage() {
             keyboardType="phone-pad"
             value={formData.phone}
             onChangeText={(value) => handleChange('phone', value)}
+            editable={!loadingProfiles}
           />
 
           <Text style={styles.label}>
             {language === 'fr' ? 'Date de naissance' : 'Date of birth'}
+            {formData.dateNaissance && (
+              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
+            )}
           </Text>
           <TextInput
             style={styles.input}
@@ -310,6 +375,7 @@ export default function RegisterDjPage() {
             maxLength={10}
             value={formData.dateNaissance}
             onChangeText={(value) => handleChange('dateNaissance', value)}
+            editable={!loadingProfiles}
           />
         </View>
 
@@ -403,6 +469,12 @@ const styles = StyleSheet.create({
     color: '#0b0b0e',
     fontSize: 18,
     fontWeight: '800',
+  },
+  autoFillHint: {
+    color: 'rgba(255,122,26,0.6)',
+    fontSize: 11,
+    fontWeight: '400',
+    fontStyle: 'italic',
   },
 });
 

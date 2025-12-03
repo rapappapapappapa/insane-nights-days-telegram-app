@@ -21,7 +21,8 @@ export default function WelcomePage() {
 
   useEffect(() => {
     // Charger les données utilisateur complètes si connecté
-    if (user?.isAuthenticated && user?.token && !user?.activeProfileType) {
+    // Recharger aussi si on arrive sur la page pour s'assurer que activeProfileType est à jour
+    if (user?.isAuthenticated && user?.token) {
       loadUserData();
     }
   }, [user?.isAuthenticated, user?.token]);
@@ -81,8 +82,8 @@ export default function WelcomePage() {
               </Text>
             </TouchableOpacity>
 
-            {/* Masquer "Mes Tickets" pour les DJs */}
-            {user?.activeProfileType !== 'DJ' && (
+            {/* Afficher "Mes Tickets" uniquement pour le profil COMMUNITY */}
+            {user?.activeProfileType === 'COMMUNITY' && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigate('tickets')}
@@ -105,6 +106,31 @@ export default function WelcomePage() {
                   {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
                 </Text>
               </TouchableOpacity>
+            )}
+
+            {/* Afficher "Dashboard Booker" et les listes DJ / Lieux pour les Bookers */}
+            {user?.activeProfileType === 'BOOKER' && (
+              <>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigate('bookerDashboard')}
+                >
+                  <Text style={styles.actionEmoji}>📅</Text>
+                  <Text style={styles.actionText}>
+                    {language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigate('venueList')}
+                >
+                  <Text style={styles.actionEmoji}>🏢</Text>
+                  <Text style={styles.actionText}>
+                    {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
 
             <TouchableOpacity

@@ -6,37 +6,40 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Image,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import StarRating from '../components/StarRating';
 
-export default function DjListPage() {
+export default function SelectDjPage() {
   const { language } = useLanguage();
-  const { navigate, goBack } = useNavigation();
+  const { navigate, goBack, routeParams } = useNavigation();
+  const { user } = useAuth();
+  const { selectedDjIds = [] } = routeParams || {}; // IDs déjà sélectionnés
+  
   const [djs, setDjs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDjs();
-  }, []);
+    if (user?.token) {
+      fetchAvailableDjs();
+    }
+  }, [user?.token]);
 
-  const fetchDjs = async () => {
+  const fetchAvailableDjs = async () => {
     setLoading(true);
     try {
-      const response = await api.getDjs();
+      const response = await api.getAvailableDjs(user.token);
       if (response && response.success && Array.isArray(response.djs)) {
         setDjs(response.djs);
       } else {
         setDjs([]);
       }
     } catch (error) {
-      console.error('Erreur récupération DJs:', error);
+      console.error('Erreur récupération DJs disponibles:', error);
       setDjs([]);
     } finally {
       setLoading(false);
@@ -44,24 +47,15 @@ export default function DjListPage() {
   };
 
   const handleDjPress = (dj) => {
-    // Naviguer vers la page de profil DJ
+    // Naviguer vers le profil DJ en mode sélection
     navigate('djProfile', {
       djId: dj.id,
       djUserId: dj.userId,
       djName: dj.artistName,
+      selectionMode: true, // Mode sélection
+      selectedDjIds: selectedDjIds, // Passer les IDs déjà sélectionnés
+      returnTo: 'selectDj', // Retourner ici après sélection
     });
-  };
-
-  // Fonction pour arrêter l'audio et revenir en arrière
-  const handleBack = async () => {
-    try {
-      // Couper tous les sons en cours
-      await Audio.setIsEnabledAsync(false);
-      await Audio.setIsEnabledAsync(true);
-    } catch (e) {
-      console.error("Erreur lors de l'arrêt de l'audio au retour:", e);
-    }
-    goBack();
   };
 
   if (loading) {
@@ -82,11 +76,16 @@ export default function DjListPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
+          {language === 'fr' ? 'Sélectionner des DJs' : 'Select DJs'}
+        </Text>
+        <Text style={styles.headerSubtitle}>
+          {language === 'fr' 
+            ? 'Appuyez sur un DJ pour voir son profil et le sélectionner'
+            : 'Tap on a DJ to view their profile and select them'}
         </Text>
       </View>
 
@@ -98,34 +97,38 @@ export default function DjListPage() {
             </Text>
           </View>
         ) : (
-          djs.map((dj) => (
-            <TouchableOpacity
-              key={dj.id || dj.userId}
-              style={styles.djCard}
-              onPress={() => handleDjPress(dj)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.djCardHeader}>
-                <View style={styles.djAvatar}>
-                  <Text style={styles.djAvatarText}>
-                    {dj.artistName?.charAt(0) || 'DJ'}
-                  </Text>
+          djs.map((dj) => {
+            const isSelected = selectedDjIds.includes(dj.userId);
+            return (
+              <TouchableOpacity
+                key={dj.userId}
+                style={[styles.djCard, isSelected && styles.djCardSelected]}
+                onPress={() => handleDjPress(dj)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.djCardHeader}>
+                  <View style={styles.djAvatar}>
+                    <Text style={styles.djAvatarText}>
+                      {dj.artistName?.charAt(0) || 'DJ'}
+                    </Text>
+                  </View>
+                  <View style={styles.djInfo}>
+                    <Text style={styles.djName}>{dj.artistName || 'DJ'}</Text>
+                    {dj.hourlyRate && (
+                      <Text style={styles.djRate}>
+                        💰 {dj.hourlyRate} €/h
+                      </Text>
+                    )}
+                  </View>
+                  {isSelected && (
+                    <View style={styles.selectedBadge}>
+                      <Text style={styles.selectedBadgeText}>✓</Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.djInfo}>
-                  <Text style={styles.djName}>{dj.artistName || 'DJ'}</Text>
-                  <Text style={styles.djCity}>
-                    📍 {dj.city || language === 'fr' ? 'Ville inconnue' : 'Unknown city'}
-                  </Text>
-                </View>
-                <View style={styles.djRating}>
-                  <StarRating rating={dj.averageRatingGlobal || 0} size={20} showStars={false} />
-                  <Text style={styles.ratingCount}>
-                    ({dj.totalRatingsGlobal || 0} {language === 'fr' ? 'avis' : 'reviews'})
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -157,6 +160,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: '700',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
@@ -191,6 +199,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+  djCardSelected: {
+    borderColor: '#ff7a1a',
+    backgroundColor: 'rgba(255,122,26,0.1)',
+  },
   djCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -218,17 +230,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 4,
   },
-  djCity: {
+  djRate: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
   },
-  djRating: {
-    alignItems: 'flex-end',
+  selectedBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ff7a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  ratingCount: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    marginTop: 4,
+  selectedBadgeText: {
+    color: '#0b0b0e',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 

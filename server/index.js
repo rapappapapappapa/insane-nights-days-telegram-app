@@ -384,12 +384,13 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
       },
     });
 
-    // Mettre à jour le profil actif si aucun n'est actif
+    // Mettre à jour le profil actif - forcer BOOKER après création
+    // On active toujours BOOKER après la création d'un profil booker
     await prisma.user.update({
       where: { id: userId },
       data: { 
         accountType: 'BOOKER', // Garde pour compatibilité
-        activeProfileType: user.activeProfileType || 'BOOKER', // Active ce profil si aucun n'est actif
+        activeProfileType: 'BOOKER', // Activer automatiquement le profil BOOKER
       },
     });
 
@@ -1447,6 +1448,13 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
         minTravelFee: dj.minTravelFee,
         extraFees: dj.extraFees,
         availableStatus: dj.availableStatus,
+        // Réseaux sociaux
+        soundcloudUrl: dj.soundcloudUrl,
+        spotifyUrl: dj.spotifyUrl,
+        youtubeUrl: dj.youtubeUrl,
+        instagramUrl: dj.instagramUrl,
+        tiktokUrl: dj.tiktokUrl,
+        equipment: dj.equipment,
       },
       ratings: {
         averageRatingCommunity: dj.averageRatingCommunity,
@@ -1477,6 +1485,90 @@ app.get('/api/dj/:identifier/ratings', async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur récupération notes DJ:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupère les événements d'un DJ pour affichage public (calendrier)
+ * @route GET /api/dj/:identifier/events
+ */
+app.get('/api/dj/:identifier/events', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    
+    // Essayer d'abord avec UserDj.id, puis avec User.id
+    let dj = await prisma.userDj.findUnique({
+      where: { id: identifier },
+    });
+
+    if (!dj) {
+      dj = await prisma.userDj.findFirst({
+        where: { userId: identifier },
+      });
+    }
+
+    if (!dj) {
+      return res.status(404).json({ success: false, message: 'DJ non trouvé.' });
+    }
+
+    // Récupérer les événements où ce DJ est associé
+    const eventDjs = await prisma.eventDj.findMany({
+      where: { djId: dj.userId },
+      include: {
+        event: {
+          include: {
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+                address: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          date: 'desc',
+        },
+      },
+    });
+
+    const now = new Date();
+    const upcomingEvents = [];
+    const pastEvents = [];
+
+    eventDjs.forEach((ed) => {
+      const eventDate = new Date(ed.event.date);
+      const event = {
+        id: ed.event.id,
+        title: ed.event.title,
+        date: ed.event.date,
+        time: ed.event.time,
+        location: ed.event.location,
+        status: ed.event.status,
+        venue: ed.event.venue ? {
+          id: ed.event.venue.id,
+          name: ed.event.venue.venueName,
+          address: ed.event.venue.address,
+        } : null,
+      };
+
+      if (eventDate >= now) {
+        upcomingEvents.push(event);
+      } else {
+        pastEvents.push(event);
+      }
+    });
+
+    res.json({
+      success: true,
+      upcomingEvents: upcomingEvents.sort((a, b) => new Date(a.date) - new Date(b.date)),
+      pastEvents: pastEvents.sort((a, b) => new Date(b.date) - new Date(a.date)),
+    });
+  } catch (error) {
+    console.error('Erreur récupération événements DJ:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -1558,6 +1650,83 @@ app.post('/api/dj/:djId/media', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('[UPLOAD MEDIA] Erreur upload média:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour récupérer les bookings d'un DJ (événements où il est associé)
+app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer le profil DJ de l'utilisateur
+    const dj = await prisma.userDj.findFirst({
+      where: { userId },
+    });
+
+    if (!dj) {
+      return res.status(404).json({ success: false, message: 'Profil DJ non trouvé.' });
+    }
+
+    // Récupérer les événements où ce DJ est associé
+    // djId dans EventDj pointe vers User.id (pas UserDj.id)
+    const eventDjs = await prisma.eventDj.findMany({
+      where: { djId: userId },
+      include: {
+        event: {
+          include: {
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+                address: true,
+              },
+            },
+            booker: {
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                bookerType: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          date: 'desc',
+        },
+      },
+    });
+
+    const bookings = eventDjs.map((ed) => ({
+      id: ed.id,
+      eventId: ed.event.id,
+      eventTitle: ed.event.title,
+      eventDate: ed.event.date,
+      eventTime: ed.event.time,
+      eventLocation: ed.event.location,
+      eventStatus: ed.event.status,
+      venue: ed.event.venue ? {
+        id: ed.event.venue.id,
+        name: ed.event.venue.venueName,
+        address: ed.event.venue.address,
+      } : null,
+      booker: ed.event.booker ? {
+        id: ed.event.booker.id,
+        name: `${ed.event.booker.prenom} ${ed.event.booker.nom}`,
+        type: ed.event.booker.bookerType,
+      } : null,
+      createdAt: ed.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error('Erreur récupération bookings DJ:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -2031,6 +2200,562 @@ app.get('/api/stats', async (req, res) => {
   } catch (error) {
     console.error('Erreur récupération stats:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupère les DJs disponibles pour un booker
+ * @route GET /api/booker/available-djs
+ */
+app.get('/api/booker/available-djs', authenticateToken, async (req, res) => {
+  try {
+    const { date } = req.query; // Date optionnelle pour filtrer les DJs disponibles
+
+    // Construire la condition de base
+    const whereCondition = {
+      availableStatus: true,
+    };
+
+    // Récupérer tous les DJs avec availableStatus = true
+    let availableDjs = await prisma.userDj.findMany({
+      where: whereCondition,
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        artistName: 'asc',
+      },
+    });
+
+    // Si une date est fournie, filtrer les DJs qui ont déjà un événement à cette date (même jour, peu importe l'heure)
+    if (date) {
+      try {
+        const eventDate = new Date(date);
+        if (!isNaN(eventDate.getTime())) {
+          // Normaliser la date pour ne garder que la partie jour (année/mois/jour)
+          const targetYear = eventDate.getFullYear();
+          const targetMonth = eventDate.getMonth();
+          const targetDay = eventDate.getDate();
+
+          // Récupérer tous les événements UPCOMING ou ONGOING
+          const allEvents = await prisma.event.findMany({
+            where: {
+              status: {
+                in: ['UPCOMING', 'ONGOING'],
+              },
+            },
+            include: {
+              eventDjs: {
+                select: {
+                  djId: true,
+                },
+              },
+            },
+          });
+
+          // Filtrer les événements qui sont le même jour que la date cible
+          const bookedDjUserIds = new Set();
+          allEvents.forEach(event => {
+            const eventDateObj = new Date(event.date);
+            const eventYear = eventDateObj.getFullYear();
+            const eventMonth = eventDateObj.getMonth();
+            const eventDay = eventDateObj.getDate();
+
+            // Si c'est le même jour (même année, même mois, même jour)
+            if (eventYear === targetYear && eventMonth === targetMonth && eventDay === targetDay) {
+              event.eventDjs.forEach(ed => {
+                bookedDjUserIds.add(ed.djId);
+              });
+            }
+          });
+
+          // Filtrer les DJs disponibles pour exclure ceux qui sont déjà bookés ce jour-là
+          availableDjs = availableDjs.filter(dj => !bookedDjUserIds.has(dj.userId));
+        }
+      } catch (dateError) {
+        console.error('Erreur parsing date:', dateError);
+        // Si la date est invalide, on continue sans filtrer
+      }
+    }
+
+    const formattedDjs = availableDjs.map((dj) => ({
+      id: dj.id,
+      userId: dj.userId,
+      artistName: dj.artistName,
+      city: dj.city,
+      genre: dj.genre,
+      hourlyRate: dj.hourlyRate,
+      performanceRate: dj.performanceRate,
+      availableDays: dj.availableDays ? (typeof dj.availableDays === 'string' ? JSON.parse(dj.availableDays) : dj.availableDays) : null,
+      availableStatus: dj.availableStatus,
+      averageRatingGlobal: dj.averageRatingGlobal,
+    }));
+
+    res.json({
+      success: true,
+      djs: formattedDjs,
+    });
+  } catch (error) {
+    console.error('Erreur récupération DJs disponibles:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupère tous les lieux disponibles
+ * @route GET /api/booker/venues
+ */
+app.get('/api/booker/venues', authenticateToken, async (req, res) => {
+  try {
+    const venues = await prisma.userVenue.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        venueName: 'asc',
+      },
+    });
+
+    const formattedVenues = venues.map((venue) => ({
+      id: venue.id,
+      venueName: venue.venueName,
+      address: venue.address,
+      averageRatingGlobal: venue.averageRatingGlobal,
+    }));
+
+    res.json({
+      success: true,
+      venues: formattedVenues,
+    });
+  } catch (error) {
+    console.error('Erreur récupération lieux:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer les événements d'un booker
+ * @route GET /api/booker/events
+ */
+app.get('/api/booker/events', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Vérifier que le booker existe
+    const booker = await prisma.userBooker.findFirst({
+      where: { userId },
+    });
+
+    if (!booker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil Booker non trouvé.',
+      });
+    }
+
+    // Récupérer les événements du booker
+    const events = await prisma.event.findMany({
+      where: {
+        bookerId: booker.id,
+      },
+      include: {
+        venue: {
+          select: {
+            id: true,
+            venueName: true,
+            address: true,
+          },
+        },
+        eventDjs: true,
+      },
+      orderBy: {
+        date: 'desc',
+      },
+    });
+
+    // Enrichir avec les infos des DJs
+    const enrichedEvents = await Promise.all(
+      events.map(async (event) => {
+        const djUserIds = event.eventDjs.map((ed) => ed.djId);
+        const djs = await prisma.userDj.findMany({
+          where: {
+            userId: { in: djUserIds },
+          },
+          select: {
+            userId: true,
+            artistName: true,
+            hourlyRate: true,
+            performanceRate: true,
+          },
+        });
+
+        return {
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          price: event.price,
+          capacity: event.capacity,
+          sold: event.sold,
+          genre: event.genre,
+          description: event.description,
+          image: event.image,
+          status: event.status,
+          venue: event.venue,
+          djs: djs.map((dj) => ({
+            userId: dj.userId,
+            artistName: dj.artistName,
+            hourlyRate: dj.hourlyRate,
+            performanceRate: dj.performanceRate,
+          })),
+          createdAt: event.createdAt,
+          updatedAt: event.updatedAt,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      events: enrichedEvents,
+    });
+  } catch (error) {
+    console.error('Erreur récupération événements booker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Supprimer un événement (Booker)
+ * @route DELETE /api/booker/events/:eventId
+ */
+app.delete('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+
+    // Vérifier que le booker existe
+    const booker = await prisma.userBooker.findFirst({
+      where: { userId },
+    });
+
+    if (!booker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil Booker non trouvé.',
+      });
+    }
+
+    // Vérifier que l'événement existe et appartient au booker
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        booker: true,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Événement non trouvé.',
+      });
+    }
+
+    if (event.bookerId !== booker.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez supprimer que vos propres événements.',
+      });
+    }
+
+    // Vérifier s'il y a des tickets vendus
+    const ticketsCount = await prisma.ticket.count({
+      where: { eventId: eventId },
+    });
+
+    if (ticketsCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible de supprimer l'événement : ${ticketsCount} ticket(s) déjà vendu(s).`,
+      });
+    }
+
+    // Supprimer les EventDj associés (cascade)
+    await prisma.eventDj.deleteMany({
+      where: { eventId: eventId },
+    });
+
+    // Supprimer l'événement
+    await prisma.event.delete({
+      where: { id: eventId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Événement supprimé avec succès.',
+    });
+  } catch (error) {
+    console.error('Erreur suppression événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Crée un nouvel événement pour un booker
+ * @route POST /api/booker/events
+ */
+app.post('/api/booker/events', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { title, date, time, venueId, djIds, price, capacity, genre, description, image } = req.body;
+
+    // Validation des champs requis
+    if (!title || !date || !time || !venueId || !djIds || !Array.isArray(djIds) || djIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Les champs title, date, time, venueId et djIds (tableau non vide) sont requis.',
+      });
+    }
+
+    // Vérifier que le booker existe
+    const booker = await prisma.userBooker.findFirst({
+      where: { userId },
+    });
+
+    if (!booker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil Booker non trouvé.',
+      });
+    }
+
+    // Vérifier que le lieu existe
+    const venue = await prisma.userVenue.findUnique({
+      where: { id: venueId },
+    });
+
+    if (!venue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Lieu non trouvé.',
+      });
+    }
+
+    // Vérifier que les DJs existent et sont disponibles
+    const djs = await prisma.userDj.findMany({
+      where: {
+        userId: { in: djIds },
+        availableStatus: true,
+      },
+    });
+
+    if (djs.length !== djIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un ou plusieurs DJs ne sont pas disponibles ou n\'existent pas.',
+      });
+    }
+
+    // Vérifier les conflits de date/lieu
+    // Convertir la date en DateTime
+    const eventDate = new Date(date);
+    if (isNaN(eventDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date invalide.',
+      });
+    }
+
+    // Vérifier que la date n'est pas dans le passé (on compare uniquement la date, pas l'heure)
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+
+    if (eventDay < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Impossible de créer un événement à une date passée.',
+      });
+    }
+
+    // Créer les dates de début et fin de journée sans modifier l'objet original
+    const startOfDay = new Date(eventDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(eventDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Vérifier s'il y a déjà un événement à ce lieu à cette date
+    const conflictingEvent = await prisma.event.findFirst({
+      where: {
+        venueId: venueId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        status: {
+          in: ['UPCOMING', 'ONGOING'],
+        },
+        // Exclure l'événement actuel si on est en mode édition (pas le cas ici, mais pour sécurité)
+        id: {
+          not: undefined, // Pas de filtre, on cherche tous les événements
+        },
+      },
+    });
+
+    if (conflictingEvent) {
+      return res.status(409).json({
+        success: false,
+        message: 'Un événement existe déjà à ce lieu à cette date.',
+        conflictingEvent: {
+          id: conflictingEvent.id,
+          title: conflictingEvent.title,
+          date: conflictingEvent.date,
+        },
+      });
+    }
+
+    // Vérifier que les DJs ne sont pas déjà bookés à cette date
+    const conflictingDjEvents = await prisma.eventDj.findMany({
+      where: {
+        djId: { in: djIds },
+        event: {
+          date: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+          status: {
+            in: ['UPCOMING', 'ONGOING'],
+          },
+        },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            time: true,
+          },
+        },
+      },
+    });
+
+    if (conflictingDjEvents.length > 0) {
+      // Trouver tous les DJs en conflit
+      const conflictingDjs = conflictingDjEvents.map(ed => {
+        const dj = djs.find(d => d.userId === ed.djId);
+        return dj?.artistName || 'DJ inconnu';
+      });
+
+      const conflictingDj = conflictingDjEvents[0];
+      const dj = djs.find(d => d.userId === conflictingDj.djId);
+      
+      return res.status(409).json({
+        success: false,
+        message: conflictingDjs.length === 1
+          ? `Le DJ ${dj?.artistName || 'sélectionné'} est déjà booké à cette date.`
+          : `Les DJs ${conflictingDjs.join(', ')} sont déjà bookés à cette date.`,
+        conflictingEvent: {
+          id: conflictingDj.event.id,
+          title: conflictingDj.event.title,
+          date: conflictingDj.event.date,
+          time: conflictingDj.event.time,
+        },
+        conflictingDjs: conflictingDjs,
+      });
+    }
+
+    // Créer l'événement
+    const event = await prisma.event.create({
+      data: {
+        title: title.trim(),
+        date: eventDate,
+        time: time.trim(),
+        location: venue.address,
+        price: price ? parseFloat(price) : 0,
+        capacity: capacity ? parseInt(capacity) : 100,
+        genre: genre ? genre.trim() : 'Mixed',
+        description: description ? description.trim() : null,
+        image: image || null,
+        venueId: venueId,
+        bookerId: booker.id,
+        status: 'UPCOMING',
+        eventDjs: {
+          create: djIds.map((djId) => ({
+            djId: djId,
+          })),
+        },
+      },
+      include: {
+        venue: {
+          select: {
+            id: true,
+            venueName: true,
+            address: true,
+          },
+        },
+        eventDjs: {
+          include: {
+            // On récupérera les infos DJ séparément
+          },
+        },
+      },
+    });
+
+    // Récupérer les infos des DJs pour la réponse
+    const eventDjsInfo = await prisma.userDj.findMany({
+      where: {
+        userId: { in: djIds },
+      },
+      select: {
+        userId: true,
+        artistName: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Événement créé avec succès.',
+      event: {
+        id: event.id,
+        title: event.title,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        price: event.price,
+        capacity: event.capacity,
+        genre: event.genre,
+        description: event.description,
+        image: event.image,
+        status: event.status,
+        venue: {
+          id: event.venue.id,
+          name: event.venue.venueName,
+          address: event.venue.address,
+        },
+        djs: eventDjsInfo.map((dj) => ({
+          userId: dj.userId,
+          artistName: dj.artistName,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('Erreur création événement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création de l\'événement.',
+    });
   }
 });
 

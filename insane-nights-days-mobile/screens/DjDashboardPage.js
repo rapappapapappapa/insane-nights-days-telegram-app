@@ -17,6 +17,7 @@ import {
   Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -58,6 +59,16 @@ export default function DjDashboardPage() {
   const [mainCity, setMainCity] = useState('');
   const [languages, setLanguages] = useState('Français, Anglais');
   
+  // Réseaux sociaux
+  const [soundcloudUrl, setSoundcloudUrl] = useState('');
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [tiktokUrl, setTiktokUrl] = useState('');
+  
+  // Matériel
+  const [equipment, setEquipment] = useState('');
+  
   // Tarifs
   const [hourlyRate, setHourlyRate] = useState('300');
   const [performanceRate, setPerformanceRate] = useState('800');
@@ -85,12 +96,50 @@ export default function DjDashboardPage() {
   
   // Sélection de photo pour profil/bannière
   const [selectingPhotoFor, setSelectingPhotoFor] = useState(null); // 'profile' | 'banner' | null
+  
+  // Bookings
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  const handleBack = async () => {
+    try {
+      // Couper tous les sons en cours (dashboard + autres écrans)
+      await Audio.setIsEnabledAsync(false);
+      await Audio.setIsEnabledAsync(true);
+    } catch (e) {
+      console.error("Erreur lors de l'arrêt de l'audio au retour dashboard:", e);
+    }
+    goBack();
+  };
 
   useEffect(() => {
     if (user?.token) {
       fetchDjProfile();
     }
   }, [user?.token]);
+
+  // Charger les bookings quand on accède à la section
+  useEffect(() => {
+    if (activeSection === 'bookings' && user?.token && !loadingBookings) {
+      fetchBookings();
+    }
+  }, [activeSection, user?.token]);
+
+  const fetchBookings = async () => {
+    if (!user?.token || loadingBookings) return;
+    
+    setLoadingBookings(true);
+    try {
+      const response = await api.getDjBookings(user.token);
+      if (response && response.success) {
+        setBookings(response.bookings || []);
+      }
+    } catch (error) {
+      console.error('Erreur récupération bookings:', error);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
 
   useEffect(() => {
     Animated.timing(sidebarAnimation, {
@@ -121,6 +170,14 @@ export default function DjDashboardPage() {
         setBio(response.dj.bio || '');
         setGenre(response.dj.genre || '');
         setLanguages(response.dj.languages || '');
+        // Réseaux sociaux
+        setSoundcloudUrl(response.dj.soundcloudUrl || '');
+        setSpotifyUrl(response.dj.spotifyUrl || '');
+        setYoutubeUrl(response.dj.youtubeUrl || '');
+        setInstagramUrl(response.dj.instagramUrl || '');
+        setTiktokUrl(response.dj.tiktokUrl || '');
+        // Matériel
+        setEquipment(response.dj.equipment || '');
         // Tarifs
         setHourlyRate(response.dj.hourlyRate ? response.dj.hourlyRate.toString() : '');
         setPerformanceRate(response.dj.performanceRate ? response.dj.performanceRate.toString() : '');
@@ -183,6 +240,14 @@ export default function DjDashboardPage() {
         genre: genre && genre.trim() ? genre.trim() : null,
         mainCity: mainCity && mainCity.trim() ? mainCity.trim() : null,
         languages: languages && languages.trim() ? languages.trim() : null,
+        // Réseaux sociaux
+        soundcloudUrl: soundcloudUrl && soundcloudUrl.trim() ? soundcloudUrl.trim() : null,
+        spotifyUrl: spotifyUrl && spotifyUrl.trim() ? spotifyUrl.trim() : null,
+        youtubeUrl: youtubeUrl && youtubeUrl.trim() ? youtubeUrl.trim() : null,
+        instagramUrl: instagramUrl && instagramUrl.trim() ? instagramUrl.trim() : null,
+        tiktokUrl: tiktokUrl && tiktokUrl.trim() ? tiktokUrl.trim() : null,
+        // Matériel
+        equipment: equipment && equipment.trim() ? equipment.trim() : null,
         // Tarifs
         hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
         performanceRate: performanceRate ? parseFloat(performanceRate) : null,
@@ -263,13 +328,13 @@ export default function DjDashboardPage() {
           setDjProfile(response.dj);
         } else {
           console.error('[saveMedia] Impossible de récupérer le profil DJ');
-          Alert.alert(
+      Alert.alert(
             language === 'fr' ? 'Erreur' : 'Error',
-            language === 'fr' 
+        language === 'fr' 
               ? 'Impossible de sauvegarder le média. Assurez-vous d\'avoir un profil DJ actif.' 
               : 'Unable to save media. Make sure you have an active DJ profile.'
-          );
-          return;
+      );
+      return;
         }
       } catch (error) {
         console.error('[saveMedia] Erreur récupération profil DJ:', error);
@@ -380,7 +445,7 @@ export default function DjDashboardPage() {
       console.error('[deleteMedia] Erreur suppression média:', error);
       Alert.alert(
         language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
+          language === 'fr' 
           ? `Erreur lors de la suppression: ${error.message || 'Erreur inconnue'}` 
           : `Error deleting: ${error.message || 'Unknown error'}`
       );
@@ -861,7 +926,7 @@ export default function DjDashboardPage() {
               <Text style={styles.label}>{language === 'fr' ? 'Nom réel' : 'Real Name'}</Text>
               <View style={styles.readOnlyInput}>
                 <Text style={styles.readOnlyText}>{realName || '-'}</Text>
-              </View>
+                </View>
               <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
                 </View>
 
@@ -903,8 +968,8 @@ export default function DjDashboardPage() {
               </View>
               <Text style={styles.imageHint}>
                 {language === 'fr' ? 'Appuyez sur une image pour choisir parmi vos photos' : 'Tap an image to choose from your photos'}
-              </Text>
-            </View>
+                  </Text>
+                </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Bio courte' : 'Short Bio'}</Text>
@@ -917,7 +982,7 @@ export default function DjDashboardPage() {
                 multiline
                 numberOfLines={4}
               />
-          </View>
+                </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Date de naissance' : 'Date of Birth'}</Text>
@@ -925,7 +990,7 @@ export default function DjDashboardPage() {
                 <Text style={styles.readOnlyText}>{birthDate || '-'}</Text>
               </View>
               <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
-              </View>
+            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Genre musical principal' : 'Main Music Genre'}</Text>
@@ -936,7 +1001,7 @@ export default function DjDashboardPage() {
                 placeholder="Techno"
                 placeholderTextColor="rgba(255,255,255,0.4)"
               />
-            </View>
+          </View>
 
             {/* Zones de déplacement */}
             <View style={styles.inputGroup}>
@@ -956,7 +1021,7 @@ export default function DjDashboardPage() {
                       availableDays[day] && styles.dayButtonTextActive
                     ]}>
                       {day}
-                </Text>
+            </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -979,7 +1044,7 @@ export default function DjDashboardPage() {
                 placeholder={language === 'fr' ? 'Ville principale pour les déplacements' : 'Main city for travel'}
                 placeholderTextColor="rgba(255,255,255,0.4)"
               />
-          </View>
+              </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Langues parlées' : 'Spoken Languages'}</Text>
@@ -991,6 +1056,76 @@ export default function DjDashboardPage() {
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 returnKeyType="done"
                 blurOnSubmit={true}
+              />
+            </View>
+
+            {/* Réseaux sociaux */}
+            <Text style={[styles.sectionTitle, { marginTop: 30, marginBottom: 16 }]}>
+              {language === 'fr' ? 'RÉSEAUX SOCIAUX' : 'SOCIAL NETWORKS'}
+                </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>🎵 SoundCloud</Text>
+              <TextInput
+                style={styles.input}
+                value={soundcloudUrl}
+                onChangeText={setSoundcloudUrl}
+                placeholder="https://soundcloud.com/..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+              </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>☁️ Spotify</Text>
+              <TextInput
+                style={styles.input}
+                value={spotifyUrl}
+                onChangeText={setSpotifyUrl}
+                placeholder="https://open.spotify.com/..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>▶️ YouTube</Text>
+              <TextInput
+                style={styles.input}
+                value={youtubeUrl}
+                onChangeText={setYoutubeUrl}
+                placeholder="https://youtube.com/..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+          </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>📷 Instagram</Text>
+              <TextInput
+                style={styles.input}
+                value={instagramUrl}
+                onChangeText={setInstagramUrl}
+                placeholder="https://instagram.com/..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="url"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>🎬 TikTok</Text>
+              <TextInput
+                style={styles.input}
+                value={tiktokUrl}
+                onChangeText={setTiktokUrl}
+                placeholder="https://tiktok.com/..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="url"
+                autoCapitalize="none"
               />
             </View>
 
@@ -1113,16 +1248,178 @@ export default function DjDashboardPage() {
         </View>
 
             <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.saveButtonText}>
                   {language === 'fr' ? 'Enregistrer' : 'Save'}
-                </Text>
-              )}
-            </TouchableOpacity>
+              </Text>
+            )}
+          </TouchableOpacity>
       </ScrollView>
           </KeyboardAvoidingView>
+        );
+
+      case 'materiel':
+        return (
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+          >
+            <ScrollView 
+              style={styles.contentScroll} 
+              contentContainerStyle={styles.contentContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
+              <Text style={styles.sectionTitle}>
+                {language === 'fr' ? 'MATÉRIEL & RIDER' : 'EQUIPMENT & RIDER'}
+              </Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{language === 'fr' ? 'Matériel et rider technique' : 'Technical Equipment & Rider'}</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={equipment}
+                  onChangeText={setEquipment}
+                  placeholder={language === 'fr' ? 'Listez votre matériel et vos besoins techniques...' : 'List your equipment and technical needs...'}
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  multiline
+                  numberOfLines={10}
+                />
+        </View>
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>
+                    {language === 'fr' ? 'Enregistrer' : 'Save'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+      </ScrollView>
+          </KeyboardAvoidingView>
+        );
+
+      case 'bookings':
+        return (
+          <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
+            <Text style={styles.sectionTitle}>
+              {language === 'fr' ? 'BOOKINGS' : 'BOOKINGS'}
+            </Text>
+            
+            {loadingBookings ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.loadingText}>
+                  {language === 'fr' ? 'Chargement...' : 'Loading...'}
+                </Text>
+              </View>
+            ) : bookings.length > 0 ? (
+              <View style={styles.bookingsList}>
+                {bookings.map((booking) => {
+                  const eventDate = new Date(booking.eventDate);
+                  const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  });
+                  
+                  const statusColors = {
+                    UPCOMING: Colors.primary,
+                    ONGOING: '#4CAF50',
+                    FINISHED: Colors.textSecondary,
+                  };
+                  
+                  const statusLabels = {
+                    UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                    ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
+                    FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+                  };
+                  
+                  return (
+                    <View key={booking.id} style={styles.bookingCard}>
+                      <View style={styles.bookingHeader}>
+                        <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                        <View style={[styles.bookingStatus, { backgroundColor: statusColors[booking.eventStatus] + '20' }]}>
+                          <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] }]}>
+                            {statusLabels[booking.eventStatus]}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>
+                          📅 {language === 'fr' ? 'Date' : 'Date'}
+                        </Text>
+                        <Text style={styles.bookingInfoValue}>
+                          {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                        </Text>
+                      </View>
+                      
+                      {booking.venue && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>
+                            📍 {language === 'fr' ? 'Lieu' : 'Venue'}
+                          </Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {booking.venue.name}
+                            {booking.venue.address && ` - ${booking.venue.address}`}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {booking.booker && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>
+                            👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                          </Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {booking.booker.name} ({booking.booker.type})
+                          </Text>
+                        </View>
+                      )}
+                      
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>
+                          📍 {language === 'fr' ? 'Adresse' : 'Address'}
+                        </Text>
+                        <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
+                      </View>
+    </View>
+  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateIcon}>📅</Text>
+                <Text style={styles.emptyStateText}>
+                  {language === 'fr' 
+                    ? 'Aucun booking pour le moment' 
+                    : 'No bookings yet'}
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {language === 'fr' 
+                    ? 'Vos réservations et demandes de booking apparaîtront ici.' 
+                    : 'Your bookings and booking requests will appear here.'}
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        );
+
+      case 'avis':
+        return (
+          <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
+            <Text style={styles.sectionTitle}>
+              {language === 'fr' ? 'AVIS & NOTES' : 'REVIEWS & RATINGS'}
+            </Text>
+            <Text style={styles.comingSoon}>
+              {language === 'fr' ? 'Cette section affichera les avis et notes reçus sur votre profil DJ.' : 'This section will display reviews and ratings received on your DJ profile.'}
+            </Text>
+          </ScrollView>
         );
 
       case 'medias':
@@ -1489,7 +1786,7 @@ export default function DjDashboardPage() {
           >
             <Text style={styles.menuButtonText}>☰</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
           </TouchableOpacity>
         </View>
@@ -2388,5 +2685,76 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Bookings
+  bookingsList: {
+    gap: 16,
+    marginTop: 8,
+  },
+  bookingCard: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  bookingTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 12,
+  },
+  bookingStatus: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  bookingStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  bookingInfo: {
+    marginBottom: 10,
+  },
+  bookingInfoLabel: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  bookingInfoValue: {
+    color: Colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyStateText: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });

@@ -1,7 +1,7 @@
 // Configuration API pour le backend
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://labs-entire-pct-anymore.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://wifi-introduced-charitable-previews.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -36,6 +36,12 @@ const API_CONFIG = {
     USER_SWITCH_PROFILE: '/api/user/switch-profile',
     USER_CHANGE_PASSWORD: '/api/user/change-password',
     USER_DJ_PROFILE: '/api/user/dj/profile',
+    DJ_BOOKINGS: '/api/dj/bookings',
+    BOOKER_AVAILABLE_DJS: '/api/booker/available-djs',
+    BOOKER_VENUES: '/api/booker/venues',
+    BOOKER_EVENTS: '/api/booker/events',
+    BOOKER_CREATE_EVENT: '/api/booker/events',
+    BOOKER_DELETE_EVENT: '/api/booker/events',
   },
 };
 
@@ -254,7 +260,7 @@ const api = {
   // djUserId est le User.id du DJ (pas le UserDj.id)
   rateDj: async ({ token, djUserId, eventId, rating, comment }) => {
     if (!token) {
-      throw new Error('Token d\'authentification requis pour noter.');r
+      throw new Error('Token d\'authentification requis pour noter.');
     }
     return apiRequest(
       API_CONFIG.ENDPOINTS.RATINGS_DJ,
@@ -284,6 +290,11 @@ const api = {
   // Récupérer les notes d'un DJ (peut être UserDj.id ou User.id)
   getDjRatings: async (identifier) => {
     return apiRequest(`${API_CONFIG.ENDPOINTS.DJ_RATINGS}/${identifier}/ratings`);
+  },
+
+  // Récupérer les événements d'un DJ (pour affichage public)
+  getDjEvents: async (identifier) => {
+    return apiRequest(`/api/dj/${identifier}/events`);
   },
 
   // Récupérer les notes d'un lieu
@@ -492,6 +503,70 @@ const api = {
     }
     return apiRequest(
       `/api/dj/media/${mediaId}`,
+      {
+        method: 'DELETE',
+      },
+      token
+    );
+  },
+
+  // Récupérer les bookings d'un DJ
+  getDjBookings: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.DJ_BOOKINGS, {}, token);
+  },
+
+  // Récupérer les DJs disponibles pour un booker
+  getAvailableDjs: async (token, date = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    const url = date 
+      ? `${API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_DJS}?date=${encodeURIComponent(date)}`
+      : API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_DJS;
+    return apiRequest(url, {}, token);
+  },
+
+  // Récupérer tous les lieux disponibles
+  getVenues: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_VENUES, {}, token);
+  },
+
+  // Récupérer les événements d'un booker
+  getBookerEvents: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_EVENTS, {}, token);
+  },
+
+  // Créer un événement (booker)
+  createEvent: async (token, eventData) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.BOOKER_CREATE_EVENT,
+      {
+        method: 'POST',
+        body: JSON.stringify(eventData),
+      },
+      token
+    );
+  },
+
+  // Supprimer un événement (booker)
+  deleteEvent: async (token, eventId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_DELETE_EVENT}/${eventId}`,
       {
         method: 'DELETE',
       },

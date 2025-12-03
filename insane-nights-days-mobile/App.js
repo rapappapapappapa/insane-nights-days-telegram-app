@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
+import { EventFormProvider } from './contexts/EventFormContext';
 import { useNavigation } from './contexts/NavigationContext';
 import HomePage from './screens/HomePage';
 import AccountTypePage from './screens/AccountTypePage';
@@ -17,8 +18,13 @@ import VenueRatingsPage from './screens/VenueRatingsPage';
 import RateEventPage from './screens/RateEventPage';
 import TicketsPage from './screens/TicketsPage';
 import DjListPage from './screens/DjListPage';
+import VenueListPage from './screens/VenueListPage';
 import DjProfilePage from './screens/DjProfilePage';
 import DjDashboardPage from './screens/DjDashboardPage';
+import BookerDashboardPage from './screens/BookerDashboardPage';
+import SelectDjPage from './screens/SelectDjPage';
+import SelectVenuePage from './screens/SelectVenuePage';
+import VenueProfilePage from './screens/VenueProfilePage';
 import SwitchProfilePage from './screens/SwitchProfilePage';
 import ProfilePage from './screens/ProfilePage';
 
@@ -37,8 +43,13 @@ const SCREENS = {
   venueRatings: VenueRatingsPage,
   rateEvent: RateEventPage,
   djList: DjListPage,
+  venueList: VenueListPage,
   djProfile: DjProfilePage,
   djDashboard: DjDashboardPage,
+  bookerDashboard: BookerDashboardPage,
+  selectDj: SelectDjPage,
+  selectVenue: SelectVenuePage,
+  venueProfile: VenueProfilePage,
   switchProfile: SwitchProfilePage,
   profile: ProfilePage,
 };
@@ -66,10 +77,13 @@ export default function App() {
     <LanguageProvider>
       <AuthProvider>
         <NavigationProvider>
-          <AppContent />
+          <EventFormProvider>
+            <AppContent />
+          </EventFormProvider>
         </NavigationProvider>
       </AuthProvider>
     </LanguageProvider>
   );
 }
 
+ 

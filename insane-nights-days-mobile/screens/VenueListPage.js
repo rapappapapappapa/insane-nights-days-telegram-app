@@ -6,62 +6,50 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Image,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import StarRating from '../components/StarRating';
 
-export default function DjListPage() {
+export default function VenueListPage() {
   const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
-  const [djs, setDjs] = useState([]);
+  const { user } = useAuth();
+  const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDjs();
-  }, []);
+    if (user?.token) {
+      fetchVenues();
+    }
+  }, [user?.token]);
 
-  const fetchDjs = async () => {
+  const fetchVenues = async () => {
     setLoading(true);
     try {
-      const response = await api.getDjs();
-      if (response && response.success && Array.isArray(response.djs)) {
-        setDjs(response.djs);
+      const response = await api.getVenues(user.token);
+      if (response && response.success && Array.isArray(response.venues)) {
+        setVenues(response.venues);
       } else {
-        setDjs([]);
+        setVenues([]);
       }
     } catch (error) {
-      console.error('Erreur récupération DJs:', error);
-      setDjs([]);
+      console.error('Erreur récupération lieux:', error);
+      setVenues([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDjPress = (dj) => {
-    // Naviguer vers la page de profil DJ
-    navigate('djProfile', {
-      djId: dj.id,
-      djUserId: dj.userId,
-      djName: dj.artistName,
+  const handleVenuePress = (venue) => {
+    navigate('venueProfile', {
+      venueId: venue.id,
+      venueName: venue.venueName,
+      selectionMode: false,
     });
-  };
-
-  // Fonction pour arrêter l'audio et revenir en arrière
-  const handleBack = async () => {
-    try {
-      // Couper tous les sons en cours
-      await Audio.setIsEnabledAsync(false);
-      await Audio.setIsEnabledAsync(true);
-    } catch (e) {
-      console.error("Erreur lors de l'arrêt de l'audio au retour:", e);
-    }
-    goBack();
   };
 
   if (loading) {
@@ -82,46 +70,52 @@ export default function DjListPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <Text style={styles.backButtonText}>
+            ← {language === 'fr' ? 'Retour' : 'Back'}
+          </Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
+          {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {djs.length === 0 ? (
+        {venues.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {language === 'fr' ? 'Aucun DJ disponible' : 'No DJs available'}
+              {language === 'fr' ? 'Aucun lieu disponible' : 'No venues available'}
             </Text>
           </View>
         ) : (
-          djs.map((dj) => (
+          venues.map((venue) => (
             <TouchableOpacity
-              key={dj.id || dj.userId}
-              style={styles.djCard}
-              onPress={() => handleDjPress(dj)}
+              key={venue.id}
+              style={styles.venueCard}
+              onPress={() => handleVenuePress(venue)}
               activeOpacity={0.85}
             >
-              <View style={styles.djCardHeader}>
-                <View style={styles.djAvatar}>
-                  <Text style={styles.djAvatarText}>
-                    {dj.artistName?.charAt(0) || 'DJ'}
-                  </Text>
+              <View style={styles.venueCardHeader}>
+                <View style={styles.venueIcon}>
+                  <Text style={styles.venueIconText}>🏢</Text>
                 </View>
-                <View style={styles.djInfo}>
-                  <Text style={styles.djName}>{dj.artistName || 'DJ'}</Text>
-                  <Text style={styles.djCity}>
-                    📍 {dj.city || language === 'fr' ? 'Ville inconnue' : 'Unknown city'}
+                <View style={styles.venueInfo}>
+                  <Text style={styles.venueName}>{venue.venueName}</Text>
+                  <Text style={styles.venueAddress}>
+                    📍 {venue.address}
                   </Text>
-                </View>
-                <View style={styles.djRating}>
-                  <StarRating rating={dj.averageRatingGlobal || 0} size={20} showStars={false} />
-                  <Text style={styles.ratingCount}>
-                    ({dj.totalRatingsGlobal || 0} {language === 'fr' ? 'avis' : 'reviews'})
-                  </Text>
+                  {venue.averageRatingGlobal > 0 && (
+                    <View style={styles.venueRating}>
+                      <StarRating
+                        rating={venue.averageRatingGlobal}
+                        size={16}
+                        showStars={false}
+                      />
+                      <Text style={styles.ratingText}>
+                        {venue.averageRatingGlobal.toFixed(1)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </TouchableOpacity>
@@ -183,7 +177,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 16,
   },
-  djCard: {
+  venueCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
     borderColor: 'rgba(255,122,26,0.3)',
@@ -191,11 +185,11 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
-  djCardHeader: {
+  venueCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  djAvatar: {
+  venueIcon: {
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -204,31 +198,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  djAvatarText: {
-    color: '#0b0b0e',
-    fontSize: 24,
-    fontWeight: '800',
+  venueIconText: {
+    fontSize: 28,
   },
-  djInfo: {
+  venueInfo: {
     flex: 1,
   },
-  djName: {
+  venueName: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 4,
   },
-  djCity: {
+  venueAddress: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  venueRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ratingText: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
   },
-  djRating: {
-    alignItems: 'flex-end',
-  },
-  ratingCount: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    marginTop: 4,
-  },
 });
+
 

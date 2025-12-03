@@ -67,6 +67,13 @@ model UserDj {
   extraFees               Float?       // Frais supplémentaires
   availableDays           String?      // Jours disponibles (JSON string)
   availableStatus         Boolean      @default(true) // Statut de disponibilité
+  // Réseaux sociaux
+  soundcloudUrl           String?      // URL SoundCloud
+  spotifyUrl              String?      // URL Spotify
+  youtubeUrl              String?      // URL YouTube
+  instagramUrl            String?      // URL Instagram
+  tiktokUrl               String?      // URL TikTok
+  equipment               String?      // Matériel & rider (texte)
   averageRatingCommunity  Float       @default(0.0)
   averageRatingBooker     Float       @default(0.0)
   averageRatingVenue      Float       @default(0.0)

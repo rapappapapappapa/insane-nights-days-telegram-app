@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -20,7 +20,7 @@ import { api } from '../api/config';
 
 export default function RegisterBookerPage() {
   const { language, t } = useLanguage();
-  const { navigate } = useNavigation();
+  const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -34,6 +34,7 @@ export default function RegisterBookerPage() {
   const [loading, setLoading] = useState(false);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [showBookerTypeModal, setShowBookerTypeModal] = useState(false);
+  const scrollViewRef = useRef(null);
 
   // Types de bookers disponibles
   const bookerTypes = [
@@ -207,19 +208,23 @@ export default function RegisterBookerPage() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigate('accountType')}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -296,6 +301,13 @@ export default function RegisterBookerPage() {
             keyboardType="phone-pad"
             value={formData.phonePro}
             onChangeText={(value) => handleChange('phonePro', value)}
+            onFocus={() => {
+              if (Platform.OS === 'android') {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 300);
+              }
+            }}
           />
 
           <Text style={styles.label}>

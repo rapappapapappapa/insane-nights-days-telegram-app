@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +40,59 @@ export default function BookerDashboardPage() {
   // Date & heure avec sélecteurs stylés
   const [tempDate, setTempDate] = useState(eventDateTime);
   const [tempTime, setTempTime] = useState(eventDateTime);
+  // Ouvrir le sélecteur de date (native sur Android, modal sur iOS)
+  const openDatePicker = () => {
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: eventDateTime || new Date(),
+        mode: 'date',
+        onChange: (_, selectedDate) => {
+          if (selectedDate) {
+            setEventDateTime((prev) => {
+              const base = prev ? new Date(prev) : new Date();
+              const merged = new Date(selectedDate);
+              merged.setHours(base.getHours());
+              merged.setMinutes(base.getMinutes());
+              return merged;
+            });
+            handleChange('date', selectedDate.toISOString());
+          }
+        },
+      });
+      return;
+    }
+    setTempDate(eventDateTime || new Date());
+    setShowDatePicker(true);
+  };
+
+  // Ouvrir le sélecteur d'heure (native sur Android, modal sur iOS)
+  const openTimePicker = () => {
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: eventDateTime || new Date(),
+        mode: 'time',
+        is24Hour: true,
+        onChange: (_, selectedTime) => {
+          if (selectedTime) {
+            setEventDateTime((prev) => {
+              const base = prev ? new Date(prev) : new Date();
+              const merged = new Date(base);
+              merged.setHours(selectedTime.getHours());
+              merged.setMinutes(selectedTime.getMinutes());
+              return merged;
+            });
+            const hours = selectedTime.getHours().toString().padStart(2, '0');
+            const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+            handleChange('time', `${hours}:${minutes}`);
+          }
+        },
+      });
+      return;
+    }
+    setTempTime(eventDateTime || new Date());
+    setShowTimePicker(true);
+  };
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   
@@ -406,7 +459,8 @@ export default function BookerDashboardPage() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <StatusBar style="light" />
       <View style={styles.header}>
@@ -439,7 +493,11 @@ export default function BookerDashboardPage() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {showMyEvents ? (
           // Section "Mes événements"
           <View style={styles.eventsSection}>
@@ -550,10 +608,7 @@ export default function BookerDashboardPage() {
                 </Text>
                 <TouchableOpacity
                   style={styles.selectButton}
-                  onPress={() => {
-                    setTempDate(eventDateTime);
-                    setShowDatePicker(true);
-                  }}
+                  onPress={openDatePicker}
                 >
                   <Text style={[styles.selectButtonText, !formData.date && styles.placeholderText]}>
                     {formData.date
@@ -575,10 +630,7 @@ export default function BookerDashboardPage() {
                 </Text>
                 <TouchableOpacity
                   style={styles.selectButton}
-                  onPress={() => {
-                    setTempTime(eventDateTime);
-                    setShowTimePicker(true);
-                  }}
+                  onPress={openTimePicker}
                 >
                   <Text style={[styles.selectButtonText, !formData.time && styles.placeholderText]}>
                     {formData.time
@@ -1029,6 +1081,7 @@ export default function BookerDashboardPage() {
       </ScrollView>
 
       {/* Modal pour le sélecteur de date */}
+      {Platform.OS === 'ios' && (
       <Modal
         visible={showDatePicker}
         transparent={true}
@@ -1102,8 +1155,10 @@ export default function BookerDashboardPage() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      )}
 
       {/* Modal pour le sélecteur d'heure */}
+      {Platform.OS === 'ios' && (
       <Modal
         visible={showTimePicker}
         transparent={true}
@@ -1180,6 +1235,7 @@ export default function BookerDashboardPage() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      )}
     </KeyboardAvoidingView>
   );
 }

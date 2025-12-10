@@ -23,7 +23,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { api, API_CONFIG } from '../api/config';
+import { api, API_CONFIG, normalizeMediaUrl } from '../api/config';
 import Colors from '../constants/colors';
 import StarRating from '../components/StarRating';
 import VideoPlayer from '../components/VideoPlayer';
@@ -207,8 +207,8 @@ export default function DjDashboardPage() {
             setAudioFiles(media.filter(m => m.type === 'audio').map(m => ({ id: m.id, url: m.url, title: m.title })));
             const profileImg = media.find(m => m.type === 'photo' && m.title === 'profile');
             const bannerImg = media.find(m => m.type === 'photo' && m.title === 'banner');
-            if (profileImg) setProfileImage(profileImg.url);
-            if (bannerImg) setBannerImage(bannerImg.url);
+            if (profileImg) setProfileImage(normalizeMediaUrl(profileImg.url));
+            if (bannerImg) setBannerImage(normalizeMediaUrl(bannerImg.url));
           }
         }
       }
@@ -335,7 +335,7 @@ export default function DjDashboardPage() {
               : 'Unable to save media. Make sure you have an active DJ profile.'
       );
       return;
-        }
+    }
       } catch (error) {
         console.error('[saveMedia] Erreur récupération profil DJ:', error);
         Alert.alert(
@@ -349,11 +349,59 @@ export default function DjDashboardPage() {
     }
     
     try {
-      console.log('[saveMedia] Upload média:', { djId, type, title });
-      const response = await api.uploadDjMedia(user.token, djId, type, url, title);
+      console.log('[saveMedia] Upload média:', { djId, type, title, url: url.substring(0, 50) + '...' });
+      
+      // Vérifier si c'est une URL locale (file:// ou content://) ou une URL HTTP
+      const isLocalFile = url.startsWith('file://') || url.startsWith('content://') || (!url.startsWith('http://') && !url.startsWith('https://'));
+      
+      let response;
+      if (isLocalFile) {
+        // Uploader le fichier sur le serveur
+        console.log('[saveMedia] Upload fichier local vers serveur...');
+        try {
+          response = await api.uploadDjMediaFile(user.token, djId, url, type, title);
+        } catch (uploadError) {
+          console.error('[saveMedia] Erreur upload fichier:', uploadError);
+          // Si l'upload échoue, afficher un message d'erreur détaillé
+          const errorMessage = uploadError.message || 'Erreur inconnue lors de l\'upload';
+          Alert.alert(
+            language === 'fr' ? 'Erreur upload' : 'Upload error',
+            language === 'fr' 
+              ? `Impossible d'uploader le fichier: ${errorMessage}\n\nVérifiez:\n- Votre connexion internet\n- La taille du fichier (max 100MB)\n- Réessayez dans quelques instants` 
+              : `Unable to upload file: ${errorMessage}\n\nCheck:\n- Your internet connection\n- File size (max 100MB)\n- Try again in a few moments`,
+            [{ text: language === 'fr' ? 'OK' : 'OK' }]
+          );
+          throw uploadError;
+        }
+      } else {
+        // C'est déjà une URL HTTP, utiliser l'ancienne méthode
+        console.log('[saveMedia] Utilisation URL HTTP existante...');
+        response = await api.uploadDjMedia(user.token, djId, type, url, title);
+      }
+      
       if (response && response.success) {
-        console.log('[saveMedia] Média sauvegardé avec succès');
-        return response; // Retourner la réponse pour récupérer l'ID
+        console.log('[saveMedia] Média sauvegardé avec succès:', response.media?.url);
+        // Recharger les médias après l'upload réussi
+        if (djId) {
+          try {
+            const mediaResponse = await api.getDjMedia(djId);
+            if (mediaResponse && mediaResponse.success) {
+              const media = mediaResponse.media || [];
+              // Mettre à jour les états avec les médias rechargés
+              setPhotos(media.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner').map(m => ({ id: m.id, url: m.url })));
+              setVideos(media.filter(m => m.type === 'video').map(m => ({ id: m.id, url: m.url, title: m.title })));
+              setAudioFiles(media.filter(m => m.type === 'audio').map(m => ({ id: m.id, url: m.url, title: m.title })));
+              const profileImg = media.find(m => m.type === 'photo' && m.title === 'profile');
+              const bannerImg = media.find(m => m.type === 'photo' && m.title === 'banner');
+              if (profileImg) setProfileImage(normalizeMediaUrl(profileImg.url));
+              if (bannerImg) setBannerImage(normalizeMediaUrl(bannerImg.url));
+            }
+          } catch (reloadError) {
+            console.error('[saveMedia] Erreur rechargement médias:', reloadError);
+            // Ne pas bloquer si le rechargement échoue
+          }
+        }
+        return response; // Retourner la réponse pour récupérer l'ID et l'URL
       } else {
         console.error('[saveMedia] Réponse invalide:', response);
         return null;
@@ -464,7 +512,7 @@ export default function DjDashboardPage() {
         return;
       }
 
-      // Utiliser MediaTypeOptions qui est toujours supporté (même si déprécié)
+      // Utiliser MediaType (nouvelle API recommandée)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -477,7 +525,8 @@ export default function DjDashboardPage() {
           try {
             const response = await saveMedia('photo', asset.uri);
             if (response && response.success && response.media) {
-              setPhotos([...photos, { id: response.media.id, url: asset.uri }]);
+              // Utiliser l'URL retournée par le serveur (URL publique)
+              setPhotos([...photos, { id: response.media.id, url: response.media.url }]);
             } else {
               // Si pas d'ID, ajouter temporairement sans ID
               setPhotos([...photos, { id: null, url: asset.uri }]);
@@ -528,7 +577,7 @@ export default function DjDashboardPage() {
               : 'Gallery access appears limited. To select videos, you must grant full access to all photos in iOS app settings (Settings > [App Name] > Photos > All Photos).',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              { 
+            {
                 text: language === 'fr' ? 'Paramètres' : 'Settings', 
               onPress: () => {
                   Linking.openURL('app-settings:');
@@ -560,8 +609,8 @@ export default function DjDashboardPage() {
                   Linking.openURL('app-settings:');
                 }
               }
-            ]
-          );
+          ]
+        );
           return;
         }
       } else {
@@ -582,8 +631,8 @@ export default function DjDashboardPage() {
       let result;
       try {
         // Options minimales pour iOS - éviter l'erreur 3164
-        // Utiliser MediaTypeOptions qui fonctionne (même si déprécié)
-        result = await ImagePicker.launchImageLibraryAsync({
+        // Utiliser MediaType (nouvelle API recommandée)
+    result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Videos,
           allowsMultipleSelection: false,
           allowsEditing: false,
@@ -625,7 +674,8 @@ export default function DjDashboardPage() {
                       try {
                         const response = await saveMedia('video', videoUri);
                         if (response && response.success && response.media) {
-                          setVideos([...videos, { id: response.media.id, url: videoUri }]);
+                          // Utiliser l'URL retournée par le serveur (URL publique)
+                          setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
                           Alert.alert(
                             language === 'fr' ? 'Succès' : 'Success',
                             language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
@@ -668,7 +718,8 @@ export default function DjDashboardPage() {
               try {
                 const response = await saveMedia('video', videoUri);
                 if (response && response.success && response.media) {
-                  setVideos([...videos, { id: response.media.id, url: videoUri }]);
+                  // Utiliser l'URL retournée par le serveur (URL publique)
+                  setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
                   Alert.alert(
                     language === 'fr' ? 'Succès' : 'Success',
                     language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
@@ -707,7 +758,8 @@ export default function DjDashboardPage() {
             console.log('[pickVideo] Sauvegarde vidéo:', asset.uri.substring(0, 50) + '...');
             const response = await saveMedia('video', asset.uri);
             if (response && response.success && response.media) {
-              setVideos([...videos, { id: response.media.id, url: asset.uri }]);
+              // Utiliser l'URL retournée par le serveur (URL publique)
+              setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
               console.log('[pickVideo] Vidéo sauvegardée avec succès');
             } else {
               setVideos([...videos, { id: null, url: asset.uri }]);
@@ -757,7 +809,8 @@ export default function DjDashboardPage() {
           try {
             const response = await saveMedia('audio', asset.uri);
             if (response && response.success && response.media) {
-              setAudioFiles([...audioFiles, { id: response.media.id, url: asset.uri }]);
+              // Utiliser l'URL retournée par le serveur (URL publique)
+              setAudioFiles([...audioFiles, { id: response.media.id, url: response.media.url, title: response.media.title }]);
             } else {
               setAudioFiles([...audioFiles, { id: null, url: asset.uri }]);
             }
@@ -796,7 +849,7 @@ export default function DjDashboardPage() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -804,15 +857,18 @@ export default function DjDashboardPage() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      setProfileImage(uri);
       
       // Sauvegarder avec feedback
       try {
-        await saveMedia('photo', uri, 'profile');
-        Alert.alert(
-          language === 'fr' ? 'Succès' : 'Success',
-          language === 'fr' ? 'Photo de profil mise à jour' : 'Profile picture updated'
-        );
+        const response = await saveMedia('photo', uri, 'profile');
+        if (response && response.success && response.media) {
+          // Utiliser l'URL retournée par le serveur (URL publique)
+          setProfileImage(normalizeMediaUrl(response.media.url));
+          Alert.alert(
+            language === 'fr' ? 'Succès' : 'Success',
+            language === 'fr' ? 'Photo de profil mise à jour' : 'Profile picture updated'
+      );
+        }
       } catch (error) {
         console.error('Erreur sauvegarde photo de profil:', error);
         // L'erreur est déjà gérée dans saveMedia
@@ -832,7 +888,7 @@ export default function DjDashboardPage() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
+      mediaTypes: [ImagePicker.MediaTypeOptions.Images],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
@@ -840,15 +896,18 @@ export default function DjDashboardPage() {
 
     if (!result.canceled && result.assets[0]) {
       const uri = result.assets[0].uri;
-      setBannerImage(uri);
       
       // Sauvegarder avec feedback
       try {
-        await saveMedia('photo', uri, 'banner');
-        Alert.alert(
-          language === 'fr' ? 'Succès' : 'Success',
-          language === 'fr' ? 'Bannière mise à jour' : 'Banner updated'
-        );
+        const response = await saveMedia('photo', uri, 'banner');
+        if (response && response.success && response.media) {
+          // Utiliser l'URL retournée par le serveur (URL publique)
+          setBannerImage(normalizeMediaUrl(response.media.url));
+          Alert.alert(
+            language === 'fr' ? 'Succès' : 'Success',
+            language === 'fr' ? 'Bannière mise à jour' : 'Banner updated'
+          );
+        }
       } catch (error) {
         console.error('Erreur sauvegarde bannière:', error);
         // L'erreur est déjà gérée dans saveMedia
@@ -921,7 +980,7 @@ export default function DjDashboardPage() {
                 placeholderTextColor="rgba(255,255,255,0.4)"
               />
                 </View>
-
+            
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Nom réel' : 'Real Name'}</Text>
               <View style={styles.readOnlyInput}>
@@ -1505,6 +1564,21 @@ export default function DjDashboardPage() {
                     }
                   } catch (e) {
                     console.error('Erreur chargement vidéo locale:', e);
+                    finalVideoUrl = videoUrl;
+                  }
+                } else {
+                  // Pour les URLs HTTP/HTTPS, s'assurer qu'elles sont complètes
+                  if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+                    // Vérifier si c'est une URL de l'ancien tunnel Cloudflare et la remplacer
+                    const oldTunnelPattern = /https?:\/\/[^\/]+\.trycloudflare\.com/;
+                    if (oldTunnelPattern.test(videoUrl)) {
+                      // Remplacer l'ancienne URL du tunnel par la nouvelle
+                      finalVideoUrl = normalizeMediaUrl(videoUrl);
+                    } else {
+                      finalVideoUrl = videoUrl;
+                    }
+                  } else {
+                    finalVideoUrl = normalizeMediaUrl(videoUrl);
                   }
                 }
                 
@@ -1630,11 +1704,19 @@ export default function DjDashboardPage() {
                   }
 
                   let finalAudioUrl = audioUrl;
-                  if (audioTitle.toLowerCase().includes('tracer') || 
-                      audioTitle.toLowerCase().includes('gogg') ||
-                      audioUrl.includes('tracer') || 
-                      audioUrl.includes('gogg')) {
+                  
+                  // Pour les URLs HTTP/HTTPS, s'assurer qu'elles sont complètes
+                  if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+                    // Vérifier si c'est une URL de l'ancien tunnel Cloudflare et la remplacer
+                    const oldTunnelPattern = /https?:\/\/[^\/]+\.trycloudflare\.com/;
+                    if (oldTunnelPattern.test(audioUrl)) {
+                      // Remplacer l'ancienne URL du tunnel par la nouvelle
+                      finalAudioUrl = normalizeMediaUrl(audioUrl);
+                    } else {
                     finalAudioUrl = audioUrl;
+                    }
+                  } else {
+                    finalAudioUrl = normalizeMediaUrl(audioUrl);
                   }
 
                   return (
@@ -1895,9 +1977,9 @@ export default function DjDashboardPage() {
                         try {
                           await saveMedia('photo', photo.url, selectingPhotoFor);
                           if (selectingPhotoFor === 'profile') {
-                            setProfileImage(photo.url);
+                            setProfileImage(normalizeMediaUrl(photo.url));
                           } else {
-                            setBannerImage(photo.url);
+                            setBannerImage(normalizeMediaUrl(photo.url));
                           }
                           Alert.alert(
                             language === 'fr' ? 'Succès' : 'Success',

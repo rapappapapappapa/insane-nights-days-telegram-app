@@ -16,7 +16,7 @@ import { Audio } from 'expo-av';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../api/config';
+import { api, API_CONFIG, normalizeMediaUrl } from '../api/config';
 import StarRating from '../components/StarRating';
 import VideoPlayer from '../components/VideoPlayer';
 import AudioPlayer from '../components/AudioPlayer';
@@ -248,6 +248,13 @@ export default function DjProfilePage() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <StatusBar style="light" />
       
+      {/* Bouton retour */}
+      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <Text style={styles.backButtonText}>
+          ← {language === 'fr' ? 'Retour' : 'Back'}
+        </Text>
+      </TouchableOpacity>
+      
       {/* Header avec photo de profil et background */}
       <View style={styles.header}>
         <View style={styles.backgroundImage}>
@@ -278,12 +285,12 @@ export default function DjProfilePage() {
                 });
               }}
             >
-              <Text style={styles.bookButtonText}>
+            <Text style={styles.bookButtonText}>
                 {selectedDjIds.includes(dj.userId)
                   ? (language === 'fr' ? '✓ DÉSÉLECTIONNER' : '✓ DESELECT')
                   : (language === 'fr' ? 'SÉLECTIONNER' : 'SELECT')}
-              </Text>
-            </TouchableOpacity>
+            </Text>
+          </TouchableOpacity>
           ) : (
             user?.activeProfileType === 'BOOKER' && (
               <>
@@ -498,20 +505,56 @@ export default function DjProfilePage() {
                   return null;
                 }
 
-                // Pour les fichiers locaux (comme "Tracer"), utiliser require
+                // Détecter si c'est un fichier local (URI locale qui n'existe que sur l'appareil qui l'a uploadé)
+                const isLocalFileUri = audioUrl.startsWith('file://') || audioUrl.startsWith('content://') || 
+                  audioUrl.startsWith('ph://') || audioUrl.startsWith('assets-library://');
+                
+                // Détecter si c'est un fichier local spécial (assets de l'app)
+                const isLocalAsset = audioUrl.startsWith('local:') ||
+                  (audioTitle && typeof audioTitle === 'string' && (
+                    audioTitle.toLowerCase().includes('tracer') || 
+                    audioTitle.toLowerCase().includes('gogg')
+                  ) && !audioUrl.startsWith('http'));
+
+                // Pour les fichiers locaux uniquement, utiliser require pour charger depuis assets
                 let finalAudioUrl = audioUrl;
-                if (audioTitle.toLowerCase().includes('tracer') || 
-                    audioTitle.toLowerCase().includes('gogg') ||
-                    audioUrl.includes('tracer') || 
-                    audioUrl.includes('gogg')) {
+                let isUnavailable = false;
+                
+                if (isLocalFileUri) {
+                  // C'est une URI locale (file://, content://, etc.) - ne fonctionnera pas sur d'autres appareils
+                  isUnavailable = true;
+                  console.warn('[AUDIO] URI locale détectée - non accessible sur d\'autres appareils:', audioUrl);
+                } else if (isLocalAsset) {
+                  // Fichier local dans les assets de l'app
                   try {
-                    // Si c'est un fichier local, on peut essayer de le charger
-                    // Pour l'instant, on utilise l'URL telle quelle
-                    finalAudioUrl = audioUrl;
+                    if (audioUrl.includes('gogg') || audioUrl.includes('tracer') || 
+                        (audioTitle && typeof audioTitle === 'string' && audioTitle.toLowerCase().includes('tracer'))) {
+                      // Pour les assets locaux, on peut essayer de les charger
+                      finalAudioUrl = audioUrl;
+                    } else {
+                      finalAudioUrl = audioUrl;
+                    }
                   } catch (e) {
                     console.error('Erreur chargement audio local:', e);
                     finalAudioUrl = audioUrl;
                   }
+                } else {
+                    // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
+                    finalAudioUrl = normalizeMediaUrl(audioUrl);
+                }
+
+                // Si le fichier est indisponible, afficher un message au lieu du lecteur
+                if (isUnavailable) {
+                  return (
+                    <View key={audio?.id || index} style={styles.audioUnavailableContainer}>
+                      <Text style={styles.audioUnavailableTitle}>{audioTitle}</Text>
+                      <Text style={styles.audioUnavailableText}>
+                        {language === 'fr' 
+                          ? 'Ce fichier audio a été uploadé depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de le re-uploader.' 
+                          : 'This audio file was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.'}
+                      </Text>
+              </View>
+                  );
                 }
 
                 return (
@@ -527,7 +570,7 @@ export default function DjProfilePage() {
               {language === 'fr' ? 'Aucun set audio disponible' : 'No audio sets available'}
             </Text>
           )}
-              </View>
+            </View>
       )}
 
       {activeTab === 'video' && (
@@ -551,19 +594,28 @@ export default function DjProfilePage() {
                 
                 const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
                 
-                // Détecter si c'est un fichier local (par titre, URL ou préfixe "local:")
-                const isLocalFile = videoUrl.startsWith('local:') ||
+                // Détecter si c'est un fichier local (URI locale qui n'existe que sur l'appareil qui l'a uploadé)
+                const isLocalFileUri = videoUrl.startsWith('file://') || videoUrl.startsWith('content://') || 
+                  videoUrl.startsWith('ph://') || videoUrl.startsWith('assets-library://');
+                
+                // Détecter si c'est un fichier local spécial (assets de l'app)
+                const isLocalAsset = videoUrl.startsWith('local:') ||
                   (videoTitle && typeof videoTitle === 'string' && (
                     videoTitle.toLowerCase().includes('tracer') || 
                     videoTitle.toLowerCase().includes('gogg')
-                  )) ||
-                  (!videoUrl.startsWith('http') && !videoUrl.startsWith('file://'));
+                  ) && !videoUrl.startsWith('http'));
                 
-                // Pour les fichiers locaux, utiliser require pour charger depuis assets
+                // Pour les fichiers locaux uniquement, utiliser require pour charger depuis assets
                 let finalVideoUrl = videoUrl;
-                if (isLocalFile) {
+                let isUnavailable = false;
+                
+                if (isLocalFileUri) {
+                  // C'est une URI locale (file://, content://, etc.) - ne fonctionnera pas sur d'autres appareils
+                  isUnavailable = true;
+                  console.warn('[VIDEO] URI locale détectée - non accessible sur d\'autres appareils:', videoUrl);
+                } else if (isLocalAsset) {
+                  // Fichier local dans les assets de l'app
                   try {
-                    // Si l'URL contient "gogg" ou "tracer", ou si le titre le contient, charger le fichier local
                     if (videoUrl.includes('gogg') || videoUrl.includes('tracer') || 
                         (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
                       finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
@@ -574,7 +626,20 @@ export default function DjProfilePage() {
                     console.error('Erreur chargement vidéo locale:', e);
                     finalVideoUrl = videoUrl;
                   }
+                } else {
+                  // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
+                  finalVideoUrl = normalizeMediaUrl(videoUrl);
                 }
+                
+                console.log('[VIDEO DEBUG]', {
+                  originalUrl: videoUrl,
+                  finalUrl: finalVideoUrl,
+                  isYouTube,
+                  isLocalFileUri,
+                  isLocalAsset,
+                  isUnavailable,
+                  title: videoTitle
+                });
                 
                 // Extraire l'ID YouTube pour la miniature
                 let youtubeId = null;
@@ -590,9 +655,20 @@ export default function DjProfilePage() {
                 return (
                   <TouchableOpacity
                     key={video?.id || index}
-                    style={styles.videoItem}
+                    style={[styles.videoItem, isUnavailable && styles.videoItemUnavailable]}
                     onPress={async () => {
-                      if (!videoUrl) {
+                      if (isUnavailable) {
+                        Alert.alert(
+                          language === 'fr' ? 'Vidéo non disponible' : 'Video unavailable',
+                          language === 'fr' 
+                            ? 'Cette vidéo a été uploadée depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de la re-uploader.' 
+                            : 'This video was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.'
+                        );
+                        return;
+                      }
+                      
+                      if (!videoUrl || !finalVideoUrl) {
+                        console.error('[VIDEO ERROR] URL invalide:', { videoUrl, finalVideoUrl });
                         Alert.alert(
                           language === 'fr' ? 'Erreur' : 'Error',
                           language === 'fr' 
@@ -601,6 +677,13 @@ export default function DjProfilePage() {
                         );
                         return;
                       }
+                      
+                      console.log('[VIDEO PLAY] Ouverture vidéo:', {
+                        originalUrl: videoUrl,
+                        finalUrl: finalVideoUrl,
+                        isYouTube,
+                        title: videoTitle
+                      });
                       
                       // Ouvrir toutes les vidéos dans le lecteur intégré
                       setSelectedVideo({
@@ -612,10 +695,11 @@ export default function DjProfilePage() {
                       setVideoPlayerVisible(true);
                     }}
                     activeOpacity={0.7}
+                    disabled={isUnavailable}
                   >
                     <View style={styles.videoThumbnail}>
                       {thumbnailUrl ? (
-                        <Image
+            <Image
                           source={{ uri: thumbnailUrl }}
                           style={styles.videoThumbnailImage}
                           resizeMode="cover"
@@ -628,11 +712,20 @@ export default function DjProfilePage() {
                           </Text>
             </View>
                       )}
-                      <View style={styles.playButtonOverlay}>
-                        <Text style={styles.playIconWhite}>▶</Text>
-          </View>
+                      {isUnavailable && (
+                        <View style={styles.unavailableOverlay}>
+                          <Text style={styles.unavailableText}>
+                            {language === 'fr' ? 'Non disponible' : 'Unavailable'}
+                          </Text>
+                        </View>
+                      )}
+                      {!isUnavailable && (
+                        <View style={styles.playButtonOverlay}>
+                          <Text style={styles.playIconWhite}>▶</Text>
+                        </View>
+                      )}
                     </View>
-                    <Text style={styles.videoTitle} numberOfLines={2}>
+                    <Text style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]} numberOfLines={2}>
                       {videoTitle}
                     </Text>
                   </TouchableOpacity>
@@ -659,11 +752,14 @@ export default function DjProfilePage() {
                 })
                 .map((photo, index) => {
                   // Gérer les deux formats : objet { url } ou string
-                  const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
+                  let photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
                   
                   if (!photoUrl || typeof photoUrl !== 'string') {
                     return null;
                   }
+                  
+                  // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
+                  photoUrl = normalizeMediaUrl(photoUrl);
                   
                   return (
             <Image
@@ -765,19 +861,19 @@ export default function DjProfilePage() {
             );
           })
         ) : (
-          <View style={styles.eventBox}>
+        <View style={styles.eventBox}>
             <Text style={styles.eventDate}>
               {language === 'fr' ? 'Aucun événement à venir' : 'No upcoming events'}
             </Text>
-          </View>
+        </View>
         )}
         
         {/* Événements passés */}
         {events.pastEvents && events.pastEvents.length > 0 && (
           <>
-            <Text style={styles.pastEventsTitle}>
-              {language === 'fr' ? 'ÉVÈNEMENTS PASSÉS' : 'PAST EVENTS'}
-            </Text>
+        <Text style={styles.pastEventsTitle}>
+          {language === 'fr' ? 'ÉVÈNEMENTS PASSÉS' : 'PAST EVENTS'}
+        </Text>
             {events.pastEvents.slice(0, 5).map((event) => {
               const eventDate = new Date(event.date);
               const monthNames = language === 'fr' 
@@ -791,19 +887,12 @@ export default function DjProfilePage() {
                   {event.title && (
                     <Text style={styles.pastEventName}>{event.title}</Text>
                   )}
-                </View>
+        </View>
               );
             })}
           </>
         )}
       </View>
-
-      {/* Bouton retour */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>
-          ← {language === 'fr' ? 'Retour' : 'Back'}
-        </Text>
-      </TouchableOpacity>
 
       {/* Lecteur vidéo modal */}
       {selectedVideo && (
@@ -1143,6 +1232,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  videoTitleUnavailable: {
+    color: 'rgba(255,255,255,0.5)',
+    textDecorationLine: 'line-through',
+  },
+  videoItemUnavailable: {
+    opacity: 0.6,
+  },
+  unavailableOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  unavailableText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  audioUnavailableContainer: {
+    backgroundColor: 'rgba(255, 122, 26, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 122, 26, 0.3)',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  audioUnavailableTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  audioUnavailableText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    lineHeight: 18,
+  },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1280,8 +1412,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   backButton: {
-    padding: 20,
-    alignItems: 'flex-start',
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1000,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(11, 11, 14, 0.7)',
+    borderRadius: 8,
   },
   backButtonText: {
     color: '#ff7a1a',

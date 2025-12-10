@@ -13,6 +13,9 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Import des routes modulaires
 const authRoutes = require('./routes/authRoutes');
@@ -27,6 +30,84 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Augmenter la limite pour les vidéos
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Configuration Multer pour l'upload de fichiers
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, 'uploads', 'media');
+    // Créer le dossier s'il n'existe pas
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    // Générer un nom de fichier unique avec l'extension originale
+    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max
+  },
+  fileFilter: (req, file, cb) => {
+    console.log('[MULTER] Fichier reçu:', { 
+      originalname: file.originalname, 
+      mimetype: file.mimetype,
+      fieldname: file.fieldname 
+    });
+    
+    // Accepter seulement les fichiers image, vidéo et audio
+    const allowedMimes = [
+      // Images
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
+      // Vidéos
+      'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo',
+      'video/3gpp', 'video/3gpp2',
+      // Audio
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg',
+      'audio/mp4', 'audio/x-m4a', 'audio/3gpp'
+    ];
+    
+    // Si le mimetype est dans la liste, accepter
+    if (file.mimetype && allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+    
+    // Si le mimetype est vide ou inconnu, vérifier l'extension du fichier
+    if (!file.mimetype || file.mimetype === 'application/octet-stream' || file.mimetype === '') {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const allowedExtensions = [
+        // Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif',
+        // Vidéos
+        '.mp4', '.mov', '.avi', '.mpeg', '.3gp', '.3gpp',
+        // Audio
+        '.mp3', '.wav', '.aac', '.ogg', '.m4a'
+      ];
+      
+      if (allowedExtensions.includes(ext)) {
+        console.log('[MULTER] Fichier accepté par extension:', ext);
+        cb(null, true);
+        return;
+      }
+    }
+    
+    console.error('[MULTER] Type de fichier rejeté:', { 
+      mimetype: file.mimetype, 
+      originalname: file.originalname 
+    });
+    cb(new Error(`Type de fichier non autorisé: ${file.mimetype || 'inconnu'}. Seuls les fichiers image, vidéo et audio sont acceptés.`));
+  },
+});
+
+// Servir les fichiers uploadés de manière statique
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Initialisation Prisma
 const prisma = new PrismaClient();
@@ -1573,7 +1654,130 @@ app.get('/api/dj/:identifier/events', async (req, res) => {
   }
 });
 
-// Endpoint pour uploader des médias pour un DJ
+// Endpoint pour uploader des fichiers médias pour un DJ
+app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'), async (req, res) => {
+  try {
+    const { djId } = req.params;
+    const { type, title, thumbnail } = req.body;
+    const userId = req.user.id;
+
+    console.log('[UPLOAD MEDIA FILE] Requête reçue:', { djId, type, title, userId, hasFile: !!req.file });
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucun fichier fourni.',
+      });
+    }
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le type est requis.',
+      });
+    }
+
+    if (!['photo', 'video', 'audio'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'type doit être photo, video ou audio.',
+      });
+    }
+
+    // Vérifier que le DJ appartient à l'utilisateur
+    const dj = await prisma.userDj.findUnique({
+      where: { id: djId },
+    });
+
+    if (!dj) {
+      console.error('[UPLOAD MEDIA FILE] DJ non trouvé:', djId);
+      return res.status(404).json({ success: false, message: 'DJ non trouvé.' });
+    }
+
+    if (dj.userId !== userId) {
+      console.error('[UPLOAD MEDIA FILE] Accès non autorisé:', { djUserId: dj.userId, requestUserId: userId });
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez ajouter des médias qu\'à votre propre profil DJ.',
+      });
+    }
+
+    // Construire l'URL publique du fichier
+    // Priorité : PUBLIC_URL (variable d'environnement) > Origin/Referer > Host de la requête
+    // Cela garantit que les médias sont toujours accessibles via le tunnel Cloudflare
+    const publicUrl = process.env.PUBLIC_URL;
+    const origin = req.get('origin') || req.get('referer');
+    const baseUrl = publicUrl 
+      ? publicUrl.replace(/\/$/, '') 
+      : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
+    const fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+
+    // Si c'est une photo de profil ou bannière, supprimer l'ancienne
+    if (title === 'profile' || title === 'banner') {
+      const oldMedia = await prisma.djMedia.findMany({
+        where: {
+          djId,
+          type: 'photo',
+          title: title,
+        },
+      });
+      
+      // Supprimer les anciens fichiers du disque
+      for (const old of oldMedia) {
+        if (old.url && old.url.includes('/uploads/media/')) {
+          const oldFilePath = path.join(__dirname, 'uploads', 'media', path.basename(old.url));
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+      }
+      
+      await prisma.djMedia.deleteMany({
+        where: {
+          djId,
+          type: 'photo',
+          title: title,
+        },
+      });
+    }
+
+    const media = await prisma.djMedia.create({
+      data: {
+        djId,
+        type,
+        url: fileUrl,
+        title: title || null,
+        thumbnail: thumbnail || null,
+      },
+    });
+
+    console.log('[UPLOAD MEDIA FILE] Média créé avec succès:', media.id, fileUrl);
+
+    res.json({
+      success: true,
+      message: 'Média uploadé avec succès.',
+      media: {
+        id: media.id,
+        type: media.type,
+        url: media.url,
+        title: media.title,
+        thumbnail: media.thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('[UPLOAD MEDIA FILE] Erreur upload média:', error);
+    // Supprimer le fichier en cas d'erreur
+    if (req.file) {
+      const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour uploader des médias pour un DJ (compatibilité - accepte URL ou fichier)
 app.post('/api/dj/:djId/media', authenticateToken, async (req, res) => {
   try {
     const { djId } = req.params;

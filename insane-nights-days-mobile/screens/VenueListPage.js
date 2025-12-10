@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +22,9 @@ export default function VenueListPage() {
   const { user } = useAuth();
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
+  const [minRating, setMinRating] = useState(0);
 
   useEffect(() => {
     if (user?.token) {
@@ -52,6 +57,27 @@ export default function VenueListPage() {
     });
   };
 
+  // Filtrer les lieux selon la recherche, la localisation et la note minimale
+  const filteredVenues = useMemo(() => {
+    return venues.filter((venue) => {
+      // Filtre par nom
+      const matchesSearch =
+        searchQuery === '' ||
+        venue.venueName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Filtre par localisation (adresse)
+      const matchesLocation =
+        locationQuery === '' ||
+        venue.address?.toLowerCase().includes(locationQuery.toLowerCase());
+
+      // Filtre par note minimale
+      const matchesRating =
+        minRating === 0 || (venue.averageRatingGlobal || 0) >= minRating;
+
+      return matchesSearch && matchesLocation && matchesRating;
+    });
+  }, [venues, searchQuery, locationQuery, minRating]);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -80,15 +106,88 @@ export default function VenueListPage() {
         </Text>
       </View>
 
+      {/* Barre de recherche et filtres */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="rgba(255,255,255,0.5)" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={language === 'fr' ? 'Rechercher un lieu...' : 'Search a venue...'}
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons name="location" size={20} color="rgba(255,255,255,0.5)" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={language === 'fr' ? 'Rechercher par localisation...' : 'Search by location...'}
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={locationQuery}
+            onChangeText={setLocationQuery}
+          />
+          {locationQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setLocationQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filtre par note */}
+        <View style={styles.ratingFilterContainer}>
+          <Text style={styles.filterLabel}>
+            {language === 'fr' ? 'Note minimale:' : 'Min rating:'}
+          </Text>
+          <View style={styles.ratingButtons}>
+            {[0, 3, 4, 4.5].map((rating) => (
+              <TouchableOpacity
+                key={rating}
+                style={[
+                  styles.ratingButton,
+                  minRating === rating && styles.ratingButtonActive,
+                ]}
+                onPress={() => setMinRating(rating)}
+              >
+                <Text
+                  style={[
+                    styles.ratingButtonText,
+                    minRating === rating && styles.ratingButtonTextActive,
+                  ]}
+                >
+                  {rating === 0
+                    ? language === 'fr'
+                      ? 'Toutes'
+                      : 'All'
+                    : `${rating}+`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {venues.length === 0 ? (
+        {filteredVenues.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {language === 'fr' ? 'Aucun lieu disponible' : 'No venues available'}
+              {language === 'fr'
+                ? venues.length === 0
+                  ? 'Aucun lieu disponible'
+                  : 'Aucun lieu ne correspond à vos critères'
+                : venues.length === 0
+                ? 'No venues available'
+                : 'No venues match your criteria'}
             </Text>
           </View>
         ) : (
-          venues.map((venue) => (
+          filteredVenues.map((venue) => (
             <TouchableOpacity
               key={venue.id}
               style={styles.venueCard}
@@ -223,6 +322,68 @@ const styles = StyleSheet.create({
   ratingText: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
+  },
+  filtersContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#0b0b0e',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,122,26,0.2)',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1f',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+    paddingVertical: 12,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  ratingFilterContainer: {
+    marginTop: 8,
+  },
+  filterLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  ratingButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ratingButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+  },
+  ratingButtonActive: {
+    backgroundColor: '#ff7a1a',
+    borderColor: '#ff7a1a',
+  },
+  ratingButtonText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ratingButtonTextActive: {
+    color: '#0b0b0e',
   },
 });
 

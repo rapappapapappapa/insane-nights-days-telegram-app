@@ -20,4 +20,7 @@ expo.log
 *.tmp
 .DS_Store
 
+# Uploaded media files
+server/uploads/
+
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -13,6 +14,7 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import StarRating from '../components/StarRating';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SelectDjPage() {
   const { language } = useLanguage();
@@ -22,6 +24,8 @@ export default function SelectDjPage() {
   
   const [djs, setDjs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minRating, setMinRating] = useState(0);
 
   useEffect(() => {
     if (user?.token) {
@@ -58,6 +62,20 @@ export default function SelectDjPage() {
     });
   };
 
+  // Filtrage (recherche + note minimale) comme dans DjListPage
+  const filteredDjs = useMemo(() => {
+    return djs.filter((dj) => {
+      const matchesSearch =
+        searchQuery === '' ||
+        dj.artistName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRating =
+        minRating === 0 || (dj.averageRatingGlobal || 0) >= minRating;
+
+      return matchesSearch && matchesRating;
+    });
+  }, [djs, searchQuery, minRating]);
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -89,15 +107,65 @@ export default function SelectDjPage() {
         </Text>
       </View>
 
+      {/* Barre de recherche et filtres */}
+      <View style={styles.filtersContainer}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="rgba(255,255,255,0.5)" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={language === 'fr' ? 'Rechercher un DJ...' : 'Search a DJ...'}
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.ratingFilterContainer}>
+          <Text style={styles.filterLabel}>
+            {language === 'fr' ? 'Note minimale :' : 'Min rating:'}
+          </Text>
+          <View style={styles.ratingButtons}>
+            {[0, 3, 4, 4.5].map((rating) => (
+              <TouchableOpacity
+                key={rating}
+                style={[
+                  styles.ratingButton,
+                  minRating === rating && styles.ratingButtonActive,
+                ]}
+                onPress={() => setMinRating(rating)}
+              >
+                <Text
+                  style={[
+                    styles.ratingButtonText,
+                    minRating === rating && styles.ratingButtonTextActive,
+                  ]}
+                >
+                  {rating === 0
+                    ? language === 'fr'
+                      ? 'Toutes'
+                      : 'All'
+                    : `${rating}+`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {djs.length === 0 ? (
+        {filteredDjs.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {language === 'fr' ? 'Aucun DJ disponible' : 'No DJs available'}
             </Text>
           </View>
         ) : (
-          djs.map((dj) => {
+          filteredDjs.map((dj) => {
             const isSelected = selectedDjIds.includes(dj.userId);
             return (
               <TouchableOpacity
@@ -180,6 +248,69 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+  },
+  filtersContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    paddingTop: 8,
+    gap: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1f',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+  },
+  clearButton: {
+    paddingLeft: 8,
+  },
+  ratingFilterContainer: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    padding: 12,
+  },
+  filterLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  ratingButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ratingButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#111116',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+  },
+  ratingButtonActive: {
+    backgroundColor: 'rgba(255,122,26,0.15)',
+    borderColor: '#ff7a1a',
+  },
+  ratingButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ratingButtonTextActive: {
+    color: '#ff7a1a',
   },
   emptyContainer: {
     flex: 1,

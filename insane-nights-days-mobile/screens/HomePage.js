@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -34,6 +35,10 @@ export default function HomePage() {
   const [registerUsername, setRegisterUsername] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const scrollViewRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   const handleLogin = async () => {
     if (loginLoading) return;
@@ -149,12 +154,15 @@ export default function HomePage() {
 
       <KeyboardAvoidingView
         style={styles.scrollView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           {/* Switch Connexion/Inscription */}
           <View style={styles.modeSwitch}>
@@ -193,14 +201,26 @@ export default function HomePage() {
                 />
 
                 <Text style={styles.label}>{t('password')}</Text>
+                <View style={styles.passwordContainer}>
                 <TextInput
-                  style={styles.input}
+                    style={styles.passwordInput}
                   placeholder={language === 'fr' ? 'Mot de passe' : 'Password'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
-                  secureTextEntry
+                    secureTextEntry={!showLoginPassword}
                   value={loginPassword}
                   onChangeText={setLoginPassword}
                 />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowLoginPassword(!showLoginPassword)}
+                  >
+                    <Ionicons
+                      name={showLoginPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                      color="rgba(255,255,255,0.6)"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -248,14 +268,37 @@ export default function HomePage() {
                 />
 
                 <Text style={styles.label}>{t('password')}</Text>
+                <View style={styles.passwordContainer}>
                 <TextInput
-                  style={styles.input}
+                    ref={passwordInputRef}
+                    style={styles.passwordInput}
                   placeholder={language === 'fr' ? 'Choisis un mot de passe' : 'Choose a password'}
                   placeholderTextColor="rgba(255,255,255,0.4)"
-                  secureTextEntry
+                    secureTextEntry={!showRegisterPassword}
                   value={registerPassword}
                   onChangeText={setRegisterPassword}
-                />
+                    returnKeyType="done"
+                    blurOnSubmit={false}
+                    onFocus={() => {
+                      // Scroll vers le bas pour s'assurer que le champ est visible
+                      if (Platform.OS === 'android') {
+                        setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 300);
+                      }
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowRegisterPassword(!showRegisterPassword)}
+                  >
+                    <Ionicons
+                      name={showRegisterPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                      color="rgba(255,255,255,0.6)"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -378,10 +421,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 100,
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     flexGrow: 1,
+    minHeight: '100%',
   },
   modeSwitch: {
     flexDirection: 'row',
@@ -433,6 +477,27 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: '#ffffff',
     fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,122,26,0.3)',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  passwordInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 16,
+    paddingRight: 8,
+  },
+  passwordToggle: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loginButton: {
     backgroundColor: '#ff7a1a',

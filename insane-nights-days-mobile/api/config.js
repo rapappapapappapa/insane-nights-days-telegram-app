@@ -1,7 +1,9 @@
 // Configuration API pour le backend
+import axios from 'axios';
+
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://wifi-introduced-charitable-previews.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://mines-see-edit-inherited.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -43,6 +45,42 @@ const API_CONFIG = {
     BOOKER_CREATE_EVENT: '/api/booker/events',
     BOOKER_DELETE_EVENT: '/api/booker/events',
   },
+};
+
+// Fonctions helper pour l'upload de fichiers
+const getMimeType = (uri, type) => {
+  const extension = uri.split('.').pop().toLowerCase();
+  const mimeTypes = {
+    // Images
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    // Vidéos
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    mpeg: 'video/mpeg',
+    // Audio
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    aac: 'audio/aac',
+    ogg: 'audio/ogg',
+  };
+  return mimeTypes[extension] || (type === 'photo' ? 'image/jpeg' : type === 'video' ? 'video/mp4' : 'audio/mpeg');
+};
+
+const getFileName = (uri) => {
+  // Extraire le nom de fichier de l'URI
+  const parts = uri.split('/');
+  let fileName = parts[parts.length - 1];
+  // Si c'est un URI local, utiliser un nom générique
+  if (uri.startsWith('file://') || uri.startsWith('content://')) {
+    const extension = uri.split('.').pop().toLowerCase();
+    fileName = `media.${extension}`;
+  }
+  return fileName;
 };
 
 // Fonction helper pour faire des requêtes
@@ -473,6 +511,78 @@ const api = {
     );
   },
 
+  // Uploader un fichier média pour un DJ
+  uploadDjMediaFile: async (token, djId, fileUri, type, title = null, thumbnail = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    
+    console.log('[uploadDjMediaFile] Début upload:', { djId, type, fileUri: fileUri.substring(0, 50) + '...', title });
+    
+    // Créer un FormData pour l'upload
+    const formData = new FormData();
+    const fileData = {
+      uri: fileUri,
+      type: getMimeType(fileUri, type),
+      name: getFileName(fileUri),
+    };
+    console.log('[uploadDjMediaFile] File data:', { type: fileData.type, name: fileData.name });
+    
+    // IMPORTANT: Ne pas mettre 'file' comme clé, utiliser directement l'objet
+    formData.append('file', fileData);
+    formData.append('type', type);
+    if (title) formData.append('title', title);
+    if (thumbnail) formData.append('thumbnail', thumbnail);
+
+    const uploadUrl = `${API_CONFIG.BASE_URL}/api/dj/${djId}/media/upload`;
+    console.log('[uploadDjMediaFile] URL:', uploadUrl);
+
+    // Utiliser axios au lieu de fetch pour mieux gérer FormData dans React Native
+    // Timeout plus long pour les fichiers volumineux (5 minutes)
+    try {
+      console.log('[uploadDjMediaFile] Envoi de la requête avec axios...');
+      const response = await axios.post(uploadUrl, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Ne pas mettre Content-Type, axios le gère automatiquement pour FormData
+        },
+        timeout: 5 * 60 * 1000, // 5 minutes
+        // Configuration spécifique pour React Native
+        transformRequest: (data) => {
+          return data; // Laisser axios gérer FormData
+        },
+      });
+
+      console.log('[uploadDjMediaFile] Réponse reçue:', { status: response.status, success: response.data?.success });
+      
+      if (response.data && response.data.success) {
+        console.log('[uploadDjMediaFile] Upload réussi:', response.data);
+        return response.data;
+      } else {
+        throw new Error(response.data?.message || 'Erreur serveur');
+      }
+    } catch (error) {
+      console.error('[uploadDjMediaFile] Erreur catch:', { 
+        name: error.name, 
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        stack: error.stack?.substring(0, 200)
+      });
+      
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new Error('Upload timeout - Le fichier est trop volumineux ou la connexion est trop lente');
+      }
+      if (error.message && (error.message.includes('Network request failed') || error.message.includes('Network Error'))) {
+        throw new Error('Erreur réseau - Vérifiez votre connexion internet et réessayez. Si le problème persiste, le fichier est peut-être trop volumineux.');
+      }
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
   // Récupérer les médias d'un DJ
   getDjMedia: async (identifier, type = null) => {
     const url = type 
@@ -573,6 +683,36 @@ const api = {
       token
     );
   },
+};
+
+// Fonction helper pour normaliser les URLs des médias
+// Remplace les anciennes URLs de tunnel et convertit les URLs relatives en URLs absolues
+export const normalizeMediaUrl = (url) => {
+  if (!url || typeof url !== 'string') {
+    return url;
+  }
+
+  // Si c'est une URL HTTP/HTTPS complète
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    // Vérifier si c'est une URL de l'ancien tunnel Cloudflare et la remplacer
+    const oldTunnelPattern = /https?:\/\/[^\/]+\.trycloudflare\.com/;
+    if (oldTunnelPattern.test(url)) {
+      // Remplacer l'ancienne URL du tunnel par la nouvelle
+      const normalizedUrl = url.replace(oldTunnelPattern, API_CONFIG.BASE_URL);
+      console.log('[NORMALIZE URL] Ancienne URL tunnel remplacée:', { old: url, new: normalizedUrl });
+      return normalizedUrl;
+    }
+    // URL déjà complète et valide
+    return url;
+  }
+  
+  // Si c'est une URL relative, la convertir en URL absolue avec le BASE_URL
+  if (url.startsWith('/')) {
+    return `${API_CONFIG.BASE_URL}${url}`;
+  }
+  
+  // Sinon, retourner l'URL telle quelle
+  return url;
 };
 
 export { api, API_CONFIG };

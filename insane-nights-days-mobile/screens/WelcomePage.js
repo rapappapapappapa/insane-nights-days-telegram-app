@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -76,7 +77,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('events')}
             >
-              <Text style={styles.actionEmoji}>🎵</Text>
+              <Ionicons name="musical-notes" size={36} color="#ff7a1a" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Événements' : 'Events'}
               </Text>
@@ -88,7 +89,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('tickets')}
             >
-              <Text style={styles.actionEmoji}>🎟️</Text>
+              <MaterialIcons name="confirmation-number" size={36} color="#ff7a1a" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Mes Tickets' : 'My Tickets'}
               </Text>
@@ -101,7 +102,7 @@ export default function WelcomePage() {
                 style={styles.actionButton}
                 onPress={() => navigate('djDashboard')}
               >
-                <Text style={styles.actionEmoji}>🎧</Text>
+                <Ionicons name="headset" size={36} color="#ff7a1a" />
                 <Text style={styles.actionText}>
                   {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
                 </Text>
@@ -115,7 +116,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('bookerDashboard')}
                 >
-                  <Text style={styles.actionEmoji}>📅</Text>
+                  <MaterialIcons name="event" size={36} color="#ff7a1a" />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}
                   </Text>
@@ -125,7 +126,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('venueList')}
                 >
-                  <Text style={styles.actionEmoji}>🏢</Text>
+                  <MaterialIcons name="location-city" size={36} color="#ff7a1a" />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
                   </Text>
@@ -137,7 +138,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('djList')}
             >
-              <Text style={styles.actionEmoji}>🎧</Text>
+              <Ionicons name="people" size={36} color="#ff7a1a" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
               </Text>
@@ -147,7 +148,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('profile')}
             >
-              <Text style={styles.actionEmoji}>👤</Text>
+              <Ionicons name="person" size={36} color="#ff7a1a" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Mon Profil' : 'My Profile'}
               </Text>
@@ -158,7 +159,7 @@ export default function WelcomePage() {
                 style={styles.actionButton}
                 onPress={() => navigate('switchProfile')}
               >
-                <Text style={styles.actionEmoji}>🔄</Text>
+                <Ionicons name="swap-horizontal" size={36} color="#ff7a1a" />
                 <Text style={styles.actionText}>
                   {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
                 </Text>
@@ -174,6 +175,7 @@ export default function WelcomePage() {
             navigate('home');
           }}
         >
+          <Ionicons name="log-out-outline" size={20} color="#ff7a1a" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>
             {language === 'fr' ? 'Déconnexion' : 'Logout'}
           </Text>
@@ -255,10 +257,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 120,
   },
-  actionEmoji: {
-    fontSize: 36,
-    marginBottom: 12,
-  },
   actionText: {
     color: '#fff',
     fontSize: 16,
@@ -273,6 +271,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoutButtonText: {
     color: '#ff7a1a',

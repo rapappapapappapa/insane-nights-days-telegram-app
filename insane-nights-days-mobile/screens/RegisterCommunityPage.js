@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,7 +19,7 @@ import { api } from '../api/config';
 
 export default function RegisterCommunityPage() {
   const { language, t } = useLanguage();
-  const { navigate } = useNavigation();
+  const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -31,6 +31,7 @@ export default function RegisterCommunityPage() {
     dateNaissance: '',
   });
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef(null);
 
   const handleChange = (field, value) => {
     // Validation spéciale pour la date de naissance
@@ -216,19 +217,23 @@ export default function RegisterCommunityPage() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigate('accountType')}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -301,6 +306,13 @@ export default function RegisterCommunityPage() {
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={formData.pays}
             onChangeText={(value) => handleChange('pays', value)}
+            onFocus={() => {
+              if (Platform.OS === 'android') {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 300);
+              }
+            }}
           />
 
           <Text style={styles.label}>
@@ -314,6 +326,13 @@ export default function RegisterCommunityPage() {
             maxLength={10}
             value={formData.dateNaissance}
             onChangeText={(value) => handleChange('dateNaissance', value)}
+            onFocus={() => {
+              if (Platform.OS === 'android') {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 300);
+              }
+            }}
           />
         </View>
 

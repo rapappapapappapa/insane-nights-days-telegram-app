@@ -1748,7 +1748,8 @@ export default function DjDashboardPage() {
             </Text>
             <View style={styles.mediaList}>
               {videos.map((video, index) => {
-                const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+                const rawVideoUrl = video?.url || (typeof video === 'string' ? video : null);
+                const videoUrl = normalizeMediaUrl(rawVideoUrl);
                 const videoTitle = video?.title || `${language === 'fr' ? 'Vidéo' : 'Video'} ${index + 1}`;
                 
                 if (!videoUrl || typeof videoUrl !== 'string') {

@@ -267,7 +267,7 @@ export default function DjProfilePage() {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: profileImage || getDjImage(dj.artistName) }}
+              source={{ uri: normalizeMediaUrl(profileImage) || getDjImage(dj.artistName) }}
               style={styles.profileImage}
             />
           </View>

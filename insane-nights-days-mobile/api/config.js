@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://italic-auburn-nations-sitemap.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://care-pack-wilderness-badge.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,

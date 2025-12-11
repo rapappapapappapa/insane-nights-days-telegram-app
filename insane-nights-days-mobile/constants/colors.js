@@ -81,9 +81,9 @@ export const withOpacity = (color, opacity) => {
 export const ColorPalettes = {
   // Palette actuelle (orange)
   orange: {
-    primary: '#ff7a1a',
-    primaryDark: '#e66a0a',
-    primaryLight: '#ff8a2a',
+    primary: '#FF1744',
+    primaryDark: '#C41E3A',
+    primaryLight: '#FF6B7A',
   },
   
   // Palette cyberpunk rouge (recommandée)

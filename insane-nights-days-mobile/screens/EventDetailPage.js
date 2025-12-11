@@ -266,7 +266,7 @@ export default function EventDetailPage() {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#ff7a1a" />
+        <ActivityIndicator size="large" color="#FF1744" />
         <Text style={styles.loadingText}>Chargement de l'événement...</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => navigate('events')}>
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.4)',
+    borderColor: 'rgba(255,23,68,0.4)',
   },
   scrollContent: {
     paddingBottom: 100,
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 24,
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buyButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
@@ -571,30 +571,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rateButton: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
+    borderColor: 'rgba(255,23,68,0.5)',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
   },
   rateButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
   },
   tempDateButton: {
     marginTop: 16,
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    backgroundColor: 'rgba(255,23,68,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
   },
   tempDateButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -605,12 +605,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 12,
     padding: 16,
   },
   dateEditorLabel: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   dateEditorInput: {
     backgroundColor: '#0b0b0e',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 8,
     padding: 12,
     color: '#fff',
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dateEditorButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   profileButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',

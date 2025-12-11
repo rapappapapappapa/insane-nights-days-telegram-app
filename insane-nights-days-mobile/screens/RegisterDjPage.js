@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   submitButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   autoFillHint: {
-    color: 'rgba(255,122,26,0.6)',
+    color: 'rgba(255,23,68,0.6)',
     fontSize: 11,
     fontWeight: '400',
     fontStyle: 'italic',

@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   submitButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   autoFillHint: {
-    color: 'rgba(255,122,26,0.6)',
+    color: 'rgba(255,23,68,0.6)',
     fontSize: 11,
     fontWeight: '400',
     fontStyle: 'italic',
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
     borderTopWidth: 2,
-    borderTopColor: '#ff7a1a',
+    borderTopColor: '#FF1744',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.3)',
+    borderBottomColor: 'rgba(255,23,68,0.3)',
   },
   modalTitle: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -517,12 +517,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCloseButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 24,
     fontWeight: '300',
   },
@@ -539,11 +539,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#0b0b0e',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.2)',
+    borderColor: 'rgba(255,23,68,0.2)',
   },
   modalOptionSelected: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
-    borderColor: '#ff7a1a',
+    backgroundColor: 'rgba(255,23,68,0.2)',
+    borderColor: '#FF1744',
   },
   modalOptionText: {
     color: '#ffffff',
@@ -551,11 +551,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modalOptionTextSelected: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontWeight: '700',
   },
   modalOptionCheck: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
   },

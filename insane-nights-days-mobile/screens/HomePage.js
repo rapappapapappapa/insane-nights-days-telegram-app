@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 100,
     height: 100,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
+    borderColor: 'rgba(255,23,68,0.5)',
   },
   languageButtonText: {
     color: '#fff',
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modeButtonActive: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   modeButtonText: {
     color: 'rgba(255,255,255,0.6)',
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   registerButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 300,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.35)',
+    borderColor: 'rgba(255,23,68,0.35)',
   },
   modalTitle: {
     color: '#fff',
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0b0e',
   },
   modalOptionSelected: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   modalOptionText: {
     color: '#fff',

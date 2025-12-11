@@ -115,7 +115,7 @@ export default function EventsPage() {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#ff7a1a" />
+        <ActivityIndicator size="large" color="#FF1744" />
         <Text style={styles.loadingText}>Chargement des événements...</Text>
       </View>
     );
@@ -136,7 +136,7 @@ export default function EventsPage() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchEvents(true)}
-            tintColor="#ff7a1a"
+            tintColor="#FF1744"
           />
         }
       >
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     fontSize: 18,
     marginRight: 12,
-    color: '#ff7a1a',
+    color: '#FF1744',
   },
   searchInput: {
     flex: 1,
@@ -371,12 +371,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     marginRight: 8,
   },
   filterButtonActive: {
-    backgroundColor: '#ff7a1a',
-    borderColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
+    borderColor: '#FF1744',
   },
   filterText: {
     color: '#fff',
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,122,26,0.3)',
+    borderTopColor: 'rgba(255,23,68,0.3)',
   },
   availabilityHeader: {
     flexDirection: 'row',
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   detailsButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

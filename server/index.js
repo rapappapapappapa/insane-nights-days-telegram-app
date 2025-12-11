@@ -1777,6 +1777,242 @@ app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'),
   }
 });
 
+// Endpoint pour uploader des fichiers médias pour un lieu
+app.post('/api/venue/:venueId/media/upload', authenticateToken, upload.single('file'), async (req, res) => {
+  try {
+    const { venueId } = req.params;
+    const { type, title, thumbnail } = req.body;
+    const userId = req.user.id;
+
+    console.log('[UPLOAD VENUE MEDIA FILE] Requête reçue:', { venueId, type, title, userId, hasFile: !!req.file });
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucun fichier fourni.',
+      });
+    }
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le type est requis.',
+      });
+    }
+
+    if (!['photo', 'video'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'type doit être photo ou video.',
+      });
+    }
+
+    // Vérifier que le lieu appartient à l'utilisateur
+    const venue = await prisma.userVenue.findUnique({
+      where: { id: venueId },
+    });
+
+    if (!venue) {
+      console.error('[UPLOAD VENUE MEDIA FILE] Lieu non trouvé:', venueId);
+      return res.status(404).json({ success: false, message: 'Lieu non trouvé.' });
+    }
+
+    if (venue.userId !== userId) {
+      console.error('[UPLOAD VENUE MEDIA FILE] Accès non autorisé:', { venueUserId: venue.userId, requestUserId: userId });
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez ajouter des médias qu\'à votre propre lieu.',
+      });
+    }
+
+    // Construire l'URL publique du fichier (utilise PUBLIC_URL ou l'origine de la requête)
+    const publicUrl = process.env.PUBLIC_URL;
+    const origin = req.get('origin') || req.get('referer');
+    const baseUrl = publicUrl
+      ? publicUrl.replace(/\/$/, '')
+      : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
+    const fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+
+    const media = await prisma.venueMedia.create({
+      data: {
+        venueId,
+        type,
+        url: fileUrl,
+        title: title || null,
+        thumbnail: thumbnail || null,
+      },
+    });
+
+    console.log('[UPLOAD VENUE MEDIA FILE] Média créé avec succès:', media.id, fileUrl);
+
+    res.json({
+      success: true,
+      message: 'Média uploadé avec succès.',
+      media: {
+        id: media.id,
+        type: media.type,
+        url: media.url,
+        title: media.title,
+        thumbnail: media.thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('[UPLOAD VENUE MEDIA FILE] Erreur upload média:', error);
+    // Supprimer le fichier en cas d'erreur
+    if (req.file) {
+      const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour uploader des médias pour un lieu (compatibilité - accepte URL)
+app.post('/api/venue/:venueId/media', authenticateToken, async (req, res) => {
+  try {
+    const { venueId } = req.params;
+    const { type, url, title, thumbnail } = req.body;
+    const userId = req.user.id;
+
+    console.log('[UPLOAD VENUE MEDIA] Requête reçue:', { venueId, type, title, userId });
+
+    if (!type || !url) {
+      return res.status(400).json({
+        success: false,
+        message: 'type et url sont requis.',
+      });
+    }
+
+    if (!['photo', 'video'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: 'type doit être photo ou video.',
+      });
+    }
+
+    // Vérifier que le lieu appartient à l'utilisateur
+    const venue = await prisma.userVenue.findUnique({
+      where: { id: venueId },
+    });
+
+    if (!venue) {
+      console.error('[UPLOAD VENUE MEDIA] Lieu non trouvé:', venueId);
+      return res.status(404).json({ success: false, message: 'Lieu non trouvé.' });
+    }
+
+    if (venue.userId !== userId) {
+      console.error('[UPLOAD VENUE MEDIA] Accès non autorisé:', { venueUserId: venue.userId, requestUserId: userId });
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez ajouter des médias qu\'à votre propre lieu.',
+      });
+    }
+
+    const media = await prisma.venueMedia.create({
+      data: {
+        venueId,
+        type,
+        url,
+        title: title || null,
+        thumbnail: thumbnail || null,
+      },
+    });
+
+    console.log('[UPLOAD VENUE MEDIA] Média créé avec succès:', media.id);
+
+    res.json({
+      success: true,
+      message: 'Média ajouté avec succès.',
+      media: {
+        id: media.id,
+        type: media.type,
+        url: media.url,
+        title: media.title,
+        thumbnail: media.thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('[UPLOAD VENUE MEDIA] Erreur upload média:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour supprimer un média d'un lieu
+app.delete('/api/venue/:venueId/media/:mediaId', authenticateToken, async (req, res) => {
+  try {
+    const { venueId, mediaId } = req.params;
+    const userId = req.user.id;
+
+    const venue = await prisma.userVenue.findUnique({ where: { id: venueId } });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Lieu non trouvé.' });
+    }
+    if (venue.userId !== userId) {
+      return res.status(403).json({ success: false, message: 'Accès non autorisé pour ce lieu.' });
+    }
+
+    const media = await prisma.venueMedia.findUnique({ where: { id: mediaId } });
+    if (!media || media.venueId !== venueId) {
+      return res.status(404).json({ success: false, message: 'Média non trouvé.' });
+    }
+
+    await prisma.venueMedia.delete({ where: { id: mediaId } });
+
+    // Supprimer le fichier local s'il provient du dossier uploads/media
+    if (media.url && media.url.includes('/uploads/media/')) {
+      const filename = media.url.split('/uploads/media/')[1];
+      if (filename) {
+        const filePath = path.join(__dirname, 'uploads', 'media', filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Média supprimé.' });
+  } catch (error) {
+    console.error('[DELETE VENUE MEDIA] Erreur suppression média:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Endpoint pour récupérer les médias d'un lieu
+app.get('/api/venue/:venueId/media', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+    const { type } = req.query; // Optionnel : filtrer par type
+
+    const whereClause = { venueId };
+    if (type && ['photo', 'video'].includes(type)) {
+      whereClause.type = type;
+    }
+
+    const media = await prisma.venueMedia.findMany({
+      where: whereClause,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    res.json({
+      success: true,
+      media: media.map((m) => ({
+        id: m.id,
+        type: m.type,
+        url: m.url,
+        title: m.title,
+        thumbnail: m.thumbnail,
+        createdAt: m.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur récupération médias lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Endpoint pour uploader des médias pour un DJ (compatibilité - accepte URL ou fichier)
 app.post('/api/dj/:djId/media', authenticateToken, async (req, res) => {
   try {
@@ -1912,6 +2148,7 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
       eventTime: ed.event.time,
       eventLocation: ed.event.location,
       eventStatus: ed.event.status,
+      invitationStatus: ed.status, // Statut de l'invitation (PENDING, ACCEPTED, REJECTED)
       venue: ed.event.venue ? {
         id: ed.event.venue.id,
         name: ed.event.venue.venueName,
@@ -1931,6 +2168,188 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur récupération bookings DJ:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Accepte une invitation à un événement
+ * @route PUT /api/dj/invitations/:invitationId/accept
+ */
+app.put('/api/dj/invitations/:invitationId/accept', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { invitationId } = req.params;
+
+    // Récupérer l'invitation
+    const invitation = await prisma.eventDj.findUnique({
+      where: { id: invitationId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            time: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation non trouvée.',
+      });
+    }
+
+    // Vérifier que l'invitation appartient au DJ connecté
+    if (invitation.djId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à modifier cette invitation.',
+      });
+    }
+
+    // Vérifier que l'invitation est en PENDING
+    if (invitation.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${invitation.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    // Mettre à jour le statut à ACCEPTED
+    const updatedInvitation = await prisma.eventDj.update({
+      where: { id: invitationId },
+      data: { status: 'ACCEPTED' },
+      include: {
+        event: {
+          include: {
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+                address: true,
+              },
+            },
+            booker: {
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                bookerType: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation acceptée avec succès.',
+      invitation: {
+        id: updatedInvitation.id,
+        eventId: updatedInvitation.event.id,
+        eventTitle: updatedInvitation.event.title,
+        eventDate: updatedInvitation.event.date,
+        eventTime: updatedInvitation.event.time,
+        eventLocation: updatedInvitation.event.location,
+        invitationStatus: updatedInvitation.status,
+        venue: updatedInvitation.event.venue ? {
+          id: updatedInvitation.event.venue.id,
+          name: updatedInvitation.event.venue.venueName,
+          address: updatedInvitation.event.venue.address,
+        } : null,
+        booker: updatedInvitation.event.booker ? {
+          id: updatedInvitation.event.booker.id,
+          name: `${updatedInvitation.event.booker.prenom} ${updatedInvitation.event.booker.nom}`,
+          type: updatedInvitation.event.booker.bookerType,
+        } : null,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur acceptation invitation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Refuse une invitation à un événement
+ * @route PUT /api/dj/invitations/:invitationId/reject
+ */
+app.put('/api/dj/invitations/:invitationId/reject', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { invitationId } = req.params;
+
+    // Récupérer l'invitation
+    const invitation = await prisma.eventDj.findUnique({
+      where: { id: invitationId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            time: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation non trouvée.',
+      });
+    }
+
+    // Vérifier que l'invitation appartient au DJ connecté
+    if (invitation.djId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à modifier cette invitation.',
+      });
+    }
+
+    // Vérifier que l'invitation est en PENDING
+    if (invitation.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${invitation.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    // Mettre à jour le statut à REJECTED
+    const updatedInvitation = await prisma.eventDj.update({
+      where: { id: invitationId },
+      data: { status: 'REJECTED' },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            time: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation refusée.',
+      invitation: {
+        id: updatedInvitation.id,
+        eventId: updatedInvitation.event.id,
+        eventTitle: updatedInvitation.event.title,
+        invitationStatus: updatedInvitation.status,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur refus invitation:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -2588,9 +3007,15 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
       },
     });
 
-    // Enrichir avec les infos des DJs
+    // Enrichir avec les infos des DJs et leurs statuts d'invitation
     const enrichedEvents = await Promise.all(
       events.map(async (event) => {
+        // Créer un map des statuts d'invitation par userId
+        const invitationStatusMap = {};
+        event.eventDjs.forEach((ed) => {
+          invitationStatusMap[ed.djId] = ed.status;
+        });
+
         const djUserIds = event.eventDjs.map((ed) => ed.djId);
         const djs = await prisma.userDj.findMany({
           where: {
@@ -2623,6 +3048,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
             artistName: dj.artistName,
             hourlyRate: dj.hourlyRate,
             performanceRate: dj.performanceRate,
+            invitationStatus: invitationStatusMap[dj.userId] || 'PENDING', // Statut de l'invitation
           })),
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
@@ -2829,10 +3255,11 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Vérifier que les DJs ne sont pas déjà bookés à cette date
+    // Vérifier que les DJs ne sont pas déjà bookés à cette date (seulement les invitations ACCEPTED)
     const conflictingDjEvents = await prisma.eventDj.findMany({
       where: {
         djId: { in: djIds },
+        status: 'ACCEPTED', // Seulement les invitations acceptées comptent comme des réservations
         event: {
           date: {
             gte: startOfDay,
@@ -2898,6 +3325,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         eventDjs: {
           create: djIds.map((djId) => ({
             djId: djId,
+            status: 'PENDING', // Les invitations commencent en PENDING
           })),
         },
       },

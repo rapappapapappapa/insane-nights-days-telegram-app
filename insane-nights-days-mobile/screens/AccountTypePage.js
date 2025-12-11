@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     width: '48%',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.35)',
+    borderColor: 'rgba(255,23,68,0.35)',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',

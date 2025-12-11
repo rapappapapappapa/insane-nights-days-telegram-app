@@ -222,7 +222,7 @@ export default function SwitchProfilePage() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#ff7a1a" size="large" style={styles.loader} />
+          <ActivityIndicator color="#FF1744" size="large" style={styles.loader} />
         ) : (
           <View style={styles.profilesContainer}>
             {profileTypes.map((profileType) => {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   activeProfileText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '600',
     marginTop: 8,
@@ -342,13 +342,13 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 18,
     padding: 20,
   },
   profileCardActive: {
-    borderColor: '#ff7a1a',
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    borderColor: '#FF1744',
+    backgroundColor: 'rgba(255,23,68,0.1)',
   },
   profileCardDisabled: {
     opacity: 0.6,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   profileName: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 6,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   activeBadge: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -397,12 +397,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   switchText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
   createText: {
-    color: 'rgba(255,122,26,0.7)',
+    color: 'rgba(255,23,68,0.7)',
     fontSize: 16,
     fontWeight: '600',
   },

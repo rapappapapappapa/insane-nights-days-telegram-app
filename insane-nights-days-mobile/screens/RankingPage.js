@@ -89,7 +89,7 @@ export default function RankingPage({ onNavigate }) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#ff7a1a" />
+        <ActivityIndicator size="large" color="#FF1744" />
         <Text style={styles.loadingText}>Chargement du classement...</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('menu')}>
           <Text style={styles.backButtonText}>← Retour</Text>
@@ -111,7 +111,7 @@ export default function RankingPage({ onNavigate }) {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => fetchRanking(true)} tintColor="#ff7a1a" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchRanking(true)} tintColor="#FF1744" />
         }
       >
         <View style={styles.header}>
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -195,10 +195,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.4)',
+    borderColor: 'rgba(255,23,68,0.4)',
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -237,24 +237,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     padding: 18,
     alignItems: 'center',
     gap: 6,
   },
   podiumStep1: {
     transform: [{ translateY: -12 }],
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     backgroundColor: '#201f1a',
   },
   podiumStep2: {
-    borderColor: 'rgba(255,122,26,0.2)',
+    borderColor: 'rgba(255,23,68,0.2)',
   },
   podiumStep3: {
-    borderColor: 'rgba(255,122,26,0.2)',
+    borderColor: 'rgba(255,23,68,0.2)',
   },
   podiumRank: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: '800',
   },
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   podiumScore: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.2)',
+    borderColor: 'rgba(255,23,68,0.2)',
   },
   listItem: {
     flexDirection: 'row',
@@ -294,14 +294,14 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.1)',
+    borderBottomColor: 'rgba(255,23,68,0.1)',
     gap: 14,
   },
   rankBadge: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -81,7 +81,7 @@ export default function SelectDjPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff7a1a" />
+          <ActivityIndicator size="large" color="#FF1744" />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -213,14 +213,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.2)',
+    borderBottomColor: 'rgba(255,23,68,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     padding: 12,
   },
   filterLabel: {
@@ -298,11 +298,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#111116',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
   },
   ratingButtonActive: {
-    backgroundColor: 'rgba(255,122,26,0.15)',
-    borderColor: '#ff7a1a',
+    backgroundColor: 'rgba(255,23,68,0.15)',
+    borderColor: '#FF1744',
   },
   ratingButtonText: {
     color: '#fff',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ratingButtonTextActive: {
-    color: '#ff7a1a',
+    color: '#FF1744',
   },
   emptyContainer: {
     flex: 1,
@@ -325,14 +325,14 @@ const styles = StyleSheet.create({
   djCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
   },
   djCardSelected: {
-    borderColor: '#ff7a1a',
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    borderColor: '#FF1744',
+    backgroundColor: 'rgba(255,23,68,0.1)',
   },
   djCardHeader: {
     flexDirection: 'row',
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     justifyContent: 'center',
     alignItems: 'center',
   },

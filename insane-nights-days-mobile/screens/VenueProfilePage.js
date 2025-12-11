@@ -13,8 +13,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../api/config';
+import { api, normalizeMediaUrl } from '../api/config';
 import StarRating from '../components/StarRating';
+import VideoPlayer from '../components/VideoPlayer';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +27,10 @@ export default function VenueProfilePage() {
   
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
     if (venueId) {
@@ -44,6 +49,13 @@ export default function VenueProfilePage() {
           setVenue(foundVenue);
         }
       }
+      // Charger les médias du lieu
+      const mediaRes = await api.getVenueMedia(venueId);
+      if (mediaRes?.success && Array.isArray(mediaRes.media)) {
+        const normalized = mediaRes.media.map((m) => ({ ...m, url: normalizeMediaUrl(m.url) }));
+        setPhotos(normalized.filter((m) => m.type === 'photo'));
+        setVideos(normalized.filter((m) => m.type === 'video'));
+      }
     } catch (error) {
       console.error('Erreur récupération profil lieu:', error);
     } finally {
@@ -56,7 +68,7 @@ export default function VenueProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff7a1a" />
+          <ActivityIndicator size="large" color="#FF1744" />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -159,6 +171,64 @@ export default function VenueProfilePage() {
           <Text style={styles.addressValue}>{venue.address}</Text>
         </View>
       </View>
+
+      {/* Médias */}
+      <View style={styles.mediaSection}>
+        <Text style={styles.sectionTitle}>
+          {language === 'fr' ? 'Médias' : 'Media'}
+        </Text>
+
+        <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'Photos' : 'Photos'}</Text>
+        {photos.length > 0 ? (
+          <View style={styles.photoGrid}>
+            {photos.map((p) => (
+              <Image
+                key={p.id}
+                source={{ uri: p.url }}
+                style={styles.photoItem}
+                resizeMode="cover"
+              />
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyMediaText}>
+            {language === 'fr' ? 'Aucune photo' : 'No photos yet'}
+          </Text>
+        )}
+
+        <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'Vidéos' : 'Videos'}</Text>
+        {videos.length > 0 ? (
+          <View style={styles.videoList}>
+            {videos.map((v) => (
+              <TouchableOpacity
+                key={v.id}
+                style={styles.videoItem}
+                onPress={() => {
+                  setSelectedVideo(v);
+                  setVideoModalVisible(true);
+                }}
+              >
+                <View style={styles.videoPlaceholder}>
+                  <Text style={styles.playIcon}>▶</Text>
+                </View>
+                {v.title ? <Text style={styles.videoTitle}>{v.title}</Text> : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyMediaText}>
+            {language === 'fr' ? 'Aucune vidéo' : 'No videos yet'}
+          </Text>
+        )}
+      </View>
+
+      {/* Modal vidéo */}
+      <VideoPlayer
+        videoUrl={selectedVideo?.url}
+        title={selectedVideo?.title}
+        visible={videoModalVisible}
+        onClose={() => setVideoModalVisible(false)}
+      />
     </ScrollView>
   );
 }
@@ -206,7 +276,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -232,17 +302,17 @@ const styles = StyleSheet.create({
   selectButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 32,
     minWidth: 200,
   },
   selectButtonSelected: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   selectButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
@@ -259,7 +329,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -278,7 +348,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionTitle: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 20,
@@ -290,7 +360,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
   },
   ratingLabel: {
     color: 'rgba(255,255,255,0.6)',
@@ -307,12 +377,70 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  mediaSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  mediaSubtitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  photoItem: {
+    width: (width - 60) / 2,
+    height: 150,
+    borderRadius: 10,
+    backgroundColor: '#111',
+  },
+  videoList: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  videoItem: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#111',
+    padding: 8,
+  },
+  videoPlaceholder: {
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: '#0d0d11',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playIcon: {
+    color: '#FF1744',
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  videoTitle: {
+    color: '#fff',
+    padding: 8,
+    fontWeight: '600',
+  },
+  emptyMediaText: {
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 8,
+  },
   addressContainer: {
     padding: 16,
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
   },
   addressLabel: {
     color: 'rgba(255,255,255,0.6)',

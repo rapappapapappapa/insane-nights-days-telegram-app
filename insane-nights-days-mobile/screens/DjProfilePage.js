@@ -222,7 +222,7 @@ export default function DjProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff7a1a" />
+          <ActivityIndicator size="large" color="#FF1744" />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     overflow: 'hidden',
     marginBottom: 12,
   },
@@ -984,16 +984,16 @@ const styles = StyleSheet.create({
   bookButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
   bookButtonSelected: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   bookButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1020,11 +1020,11 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: 'rgba(255,122,26,0.3)',
+    backgroundColor: 'rgba(255,23,68,0.3)',
     marginHorizontal: 10,
   },
   sectionTitle: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 12,
@@ -1065,8 +1065,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    borderColor: 'rgba(255,23,68,0.5)',
+    backgroundColor: 'rgba(255,23,68,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1086,8 +1086,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    borderBottomColor: '#ff7a1a',
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    borderBottomColor: '#FF1744',
+    backgroundColor: 'rgba(255,23,68,0.1)',
   },
   tabText: {
     color: 'rgba(255,255,255,0.6)',
@@ -1095,7 +1095,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabTextActive: {
-    color: '#ff7a1a',
+    color: '#FF1744',
   },
   audioPlayer: {
     flexDirection: 'row',
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1145,7 +1145,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   duration: {
     color: 'rgba(255,255,255,0.6)',
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.2)',
+    borderBottomColor: 'rgba(255,23,68,0.2)',
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -1315,7 +1315,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   reviewerName: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1358,20 +1358,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   calendarArrow: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: '700',
   },
   eventBox: {
-    backgroundColor: 'rgba(255,122,26,0.1)',
+    backgroundColor: 'rgba(255,23,68,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   eventDate: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
@@ -1422,9 +1422,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
 });
-

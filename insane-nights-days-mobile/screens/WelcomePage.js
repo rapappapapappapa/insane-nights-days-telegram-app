@@ -77,7 +77,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('events')}
             >
-              <Ionicons name="musical-notes" size={36} color="#ff7a1a" />
+              <Ionicons name="musical-notes" size={36} color="#FF1744" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Événements' : 'Events'}
               </Text>
@@ -89,7 +89,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('tickets')}
             >
-              <MaterialIcons name="confirmation-number" size={36} color="#ff7a1a" />
+              <MaterialIcons name="confirmation-number" size={36} color="#FF1744" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Mes Tickets' : 'My Tickets'}
               </Text>
@@ -102,12 +102,36 @@ export default function WelcomePage() {
                 style={styles.actionButton}
                 onPress={() => navigate('djDashboard')}
               >
-                <Ionicons name="headset" size={36} color="#ff7a1a" />
+                <Ionicons name="headset" size={36} color="#FF1744" />
                 <Text style={styles.actionText}>
                   {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
                 </Text>
               </TouchableOpacity>
             )}
+
+            {/* Afficher "Dashboard Lieu" pour les Lieux */}
+            {user?.activeProfileType === 'VENUE' && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => navigate('venueDashboard')}
+              >
+                <Ionicons name="business" size={36} color="#FF1744" />
+                <Text style={styles.actionText}>
+                  {language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Bouton pour parcourir les profils de lieux */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigate('venueList')}
+            >
+              <Ionicons name="location" size={36} color="#FF1744" />
+              <Text style={styles.actionText}>
+                {language === 'fr' ? 'Profils de lieux' : 'Venue profiles'}
+              </Text>
+            </TouchableOpacity>
 
             {/* Afficher "Dashboard Booker" et les listes DJ / Lieux pour les Bookers */}
             {user?.activeProfileType === 'BOOKER' && (
@@ -116,7 +140,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('bookerDashboard')}
                 >
-                  <MaterialIcons name="event" size={36} color="#ff7a1a" />
+                  <MaterialIcons name="event" size={36} color="#FF1744" />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}
                   </Text>
@@ -126,7 +150,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('venueList')}
                 >
-                  <MaterialIcons name="location-city" size={36} color="#ff7a1a" />
+                  <MaterialIcons name="location-city" size={36} color="#FF1744" />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
                   </Text>
@@ -138,7 +162,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('djList')}
             >
-              <Ionicons name="people" size={36} color="#ff7a1a" />
+              <Ionicons name="people" size={36} color="#FF1744" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
               </Text>
@@ -148,7 +172,7 @@ export default function WelcomePage() {
               style={styles.actionButton}
               onPress={() => navigate('profile')}
             >
-              <Ionicons name="person" size={36} color="#ff7a1a" />
+              <Ionicons name="person" size={36} color="#FF1744" />
               <Text style={styles.actionText}>
                 {language === 'fr' ? 'Mon Profil' : 'My Profile'}
               </Text>
@@ -159,7 +183,7 @@ export default function WelcomePage() {
                 style={styles.actionButton}
                 onPress={() => navigate('switchProfile')}
               >
-                <Ionicons name="swap-horizontal" size={36} color="#ff7a1a" />
+                <Ionicons name="swap-horizontal" size={36} color="#FF1744" />
                 <Text style={styles.actionText}>
                   {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
                 </Text>
@@ -175,7 +199,7 @@ export default function WelcomePage() {
             navigate('home');
           }}
         >
-          <Ionicons name="log-out-outline" size={20} color="#ff7a1a" style={{ marginRight: 8 }} />
+          <Ionicons name="log-out-outline" size={20} color="#FF1744" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>
             {language === 'fr' ? 'Déconnexion' : 'Logout'}
           </Text>
@@ -206,7 +230,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 80,
     height: 80,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -224,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   usernameText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 24,
     fontWeight: '600',
   },
@@ -250,7 +274,7 @@ const styles = StyleSheet.create({
     width: '45%',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -264,9 +288,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   logoutButton: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
+    borderColor: 'rgba(255,23,68,0.5)',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -276,7 +300,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },

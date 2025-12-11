@@ -340,14 +340,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.2)',
+    borderBottomColor: 'rgba(255,23,68,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   rateButton: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   rateButtonArrow: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: '700',
   },

@@ -105,17 +105,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ratingButton: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.5)',
+    borderColor: 'rgba(255,23,68,0.5)',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 4,
   },
   ratingButtonActive: {
-    backgroundColor: '#ff7a1a',
-    borderColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
+    borderColor: '#FF1744',
   },
   ratingButtonText: {
     color: '#fff',

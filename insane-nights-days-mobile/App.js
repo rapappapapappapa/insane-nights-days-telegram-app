@@ -22,6 +22,7 @@ import VenueListPage from './screens/VenueListPage';
 import DjProfilePage from './screens/DjProfilePage';
 import DjDashboardPage from './screens/DjDashboardPage';
 import BookerDashboardPage from './screens/BookerDashboardPage';
+import VenueDashboardPage from './screens/VenueDashboardPage';
 import SelectDjPage from './screens/SelectDjPage';
 import SelectVenuePage from './screens/SelectVenuePage';
 import VenueProfilePage from './screens/VenueProfilePage';
@@ -46,6 +47,7 @@ const SCREENS = {
   venueList: VenueListPage,
   djProfile: DjProfilePage,
   djDashboard: DjDashboardPage,
+  venueDashboard: VenueDashboardPage,
   bookerDashboard: BookerDashboardPage,
   selectDj: SelectDjPage,
   selectVenue: SelectVenuePage,

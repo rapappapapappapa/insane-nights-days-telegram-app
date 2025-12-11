@@ -125,6 +125,8 @@ export default function DjDashboardPage() {
     }
   }, [activeSection, user?.token]);
 
+  const [processingInvitation, setProcessingInvitation] = useState(null);
+
   const fetchBookings = async () => {
     if (!user?.token || loadingBookings) return;
     
@@ -139,6 +141,88 @@ export default function DjDashboardPage() {
     } finally {
       setLoadingBookings(false);
     }
+  };
+
+  const handleAcceptInvitation = async (invitationId) => {
+    if (!user?.token || processingInvitation) return;
+    
+    setProcessingInvitation(invitationId);
+    try {
+      const response = await api.acceptInvitation(user.token, invitationId);
+      if (response && response.success) {
+        // Recharger les bookings pour mettre à jour l'affichage
+        await fetchBookings();
+        Alert.alert(
+          language === 'fr' ? 'Invitation acceptée' : 'Invitation accepted',
+          language === 'fr' 
+            ? 'Vous avez accepté l\'invitation à cet événement.'
+            : 'You have accepted the invitation to this event.'
+        );
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          response?.message || (language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.')
+        );
+      }
+    } catch (error) {
+      console.error('Erreur acceptation invitation:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.'
+      );
+    } finally {
+      setProcessingInvitation(null);
+    }
+  };
+
+  const handleRejectInvitation = async (invitationId) => {
+    if (!user?.token || processingInvitation) return;
+    
+    Alert.alert(
+      language === 'fr' ? 'Refuser l\'invitation' : 'Reject invitation',
+      language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir refuser cette invitation ?' 
+        : 'Are you sure you want to reject this invitation?',
+      [
+        {
+          text: language === 'fr' ? 'Annuler' : 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: language === 'fr' ? 'Refuser' : 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            setProcessingInvitation(invitationId);
+            try {
+              const response = await api.rejectInvitation(user.token, invitationId);
+              if (response && response.success) {
+                // Recharger les bookings pour mettre à jour l'affichage
+                await fetchBookings();
+                Alert.alert(
+                  language === 'fr' ? 'Invitation refusée' : 'Invitation rejected',
+                  language === 'fr' 
+                    ? 'Vous avez refusé l\'invitation à cet événement.'
+                    : 'You have rejected the invitation to this event.'
+                );
+              } else {
+                Alert.alert(
+                  language === 'fr' ? 'Erreur' : 'Error',
+                  response?.message || (language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.')
+                );
+              }
+            } catch (error) {
+              console.error('Erreur refus invitation:', error);
+              Alert.alert(
+                language === 'fr' ? 'Erreur' : 'Error',
+                language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.'
+              );
+            } finally {
+              setProcessingInvitation(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   useEffect(() => {
@@ -1363,6 +1447,11 @@ export default function DjDashboardPage() {
         );
 
       case 'bookings':
+        // Séparer les invitations PENDING des bookings ACCEPTED
+        const pendingInvitations = bookings.filter(b => b.invitationStatus === 'PENDING');
+        const acceptedBookings = bookings.filter(b => b.invitationStatus === 'ACCEPTED');
+        const rejectedInvitations = bookings.filter(b => b.invitationStatus === 'REJECTED');
+        
         return (
           <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
             <Text style={styles.sectionTitle}>
@@ -1376,95 +1465,208 @@ export default function DjDashboardPage() {
                   {language === 'fr' ? 'Chargement...' : 'Loading...'}
                 </Text>
               </View>
-            ) : bookings.length > 0 ? (
-              <View style={styles.bookingsList}>
-                {bookings.map((booking) => {
-                  const eventDate = new Date(booking.eventDate);
-                  const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  });
-                  
-                  const statusColors = {
-                    UPCOMING: Colors.primary,
-                    ONGOING: '#4CAF50',
-                    FINISHED: Colors.textSecondary,
-                  };
-                  
-                  const statusLabels = {
-                    UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
-                    ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
-                    FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
-                  };
-                  
-                  return (
-                    <View key={booking.id} style={styles.bookingCard}>
-                      <View style={styles.bookingHeader}>
-                        <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
-                        <View style={[styles.bookingStatus, { backgroundColor: statusColors[booking.eventStatus] + '20' }]}>
-                          <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] }]}>
-                            {statusLabels[booking.eventStatus]}
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.bookingInfo}>
-                        <Text style={styles.bookingInfoLabel}>
-                          📅 {language === 'fr' ? 'Date' : 'Date'}
-                        </Text>
-                        <Text style={styles.bookingInfoValue}>
-                          {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
-                        </Text>
-                      </View>
-                      
-                      {booking.venue && (
-                        <View style={styles.bookingInfo}>
-                          <Text style={styles.bookingInfoLabel}>
-                            📍 {language === 'fr' ? 'Lieu' : 'Venue'}
-                          </Text>
-                          <Text style={styles.bookingInfoValue}>
-                            {booking.venue.name}
-                            {booking.venue.address && ` - ${booking.venue.address}`}
-                          </Text>
-                        </View>
-                      )}
-                      
-                      {booking.booker && (
-                        <View style={styles.bookingInfo}>
-                          <Text style={styles.bookingInfoLabel}>
-                            👤 {language === 'fr' ? 'Booker' : 'Booker'}
-                          </Text>
-                          <Text style={styles.bookingInfoValue}>
-                            {booking.booker.name} ({booking.booker.type})
-                          </Text>
-                        </View>
-                      )}
-                      
-                      <View style={styles.bookingInfo}>
-                        <Text style={styles.bookingInfoLabel}>
-                          📍 {language === 'fr' ? 'Adresse' : 'Address'}
-                        </Text>
-                        <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
-                      </View>
-    </View>
-  );
-                })}
-              </View>
             ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>📅</Text>
-                <Text style={styles.emptyStateText}>
-                  {language === 'fr' 
-                    ? 'Aucun booking pour le moment' 
-                    : 'No bookings yet'}
-                </Text>
-                <Text style={styles.emptyStateSubtext}>
-                  {language === 'fr' 
-                    ? 'Vos réservations et demandes de booking apparaîtront ici.' 
-                    : 'Your bookings and booking requests will appear here.'}
-                </Text>
-              </View>
+              <>
+                {/* Invitations en attente */}
+                {pendingInvitations.length > 0 && (
+                  <View style={styles.invitationsSection}>
+                    <Text style={styles.invitationsSectionTitle}>
+                      {language === 'fr' ? '📩 Invitations en attente' : '📩 Pending invitations'}
+                    </Text>
+                    <View style={styles.bookingsList}>
+                      {pendingInvitations.map((booking) => {
+                        const eventDate = new Date(booking.eventDate);
+                        const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        });
+                        
+                        return (
+                          <View key={booking.id} style={[styles.bookingCard, styles.pendingInvitationCard]}>
+                            <View style={styles.bookingHeader}>
+                              <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                              <View style={[styles.bookingStatus, { backgroundColor: '#FFA50020' }]}>
+                                <Text style={[styles.bookingStatusText, { color: '#FFA500' }]}>
+                                  {language === 'fr' ? 'En attente' : 'Pending'}
+                                </Text>
+                              </View>
+                            </View>
+                            
+                            <View style={styles.bookingInfo}>
+                              <Text style={styles.bookingInfoLabel}>
+                                📅 {language === 'fr' ? 'Date' : 'Date'}
+                              </Text>
+                              <Text style={styles.bookingInfoValue}>
+                                {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                              </Text>
+                            </View>
+                            
+                            {booking.venue && (
+                              <View style={styles.bookingInfo}>
+                                <Text style={styles.bookingInfoLabel}>
+                                  📍 {language === 'fr' ? 'Lieu' : 'Venue'}
+                                </Text>
+                                <Text style={styles.bookingInfoValue}>
+                                  {booking.venue.name}
+                                  {booking.venue.address && ` - ${booking.venue.address}`}
+                                </Text>
+                              </View>
+                            )}
+                            
+                            {booking.booker && (
+                              <View style={styles.bookingInfo}>
+                                <Text style={styles.bookingInfoLabel}>
+                                  👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                                </Text>
+                                <Text style={styles.bookingInfoValue}>
+                                  {booking.booker.name} ({booking.booker.type})
+                                </Text>
+                              </View>
+                            )}
+                            
+                            <View style={styles.bookingInfo}>
+                              <Text style={styles.bookingInfoLabel}>
+                                📍 {language === 'fr' ? 'Adresse' : 'Address'}
+                              </Text>
+                              <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
+                            </View>
+                            
+                            <View style={styles.invitationActions}>
+                              <TouchableOpacity
+                                style={[styles.invitationButton, styles.rejectButton]}
+                                onPress={() => handleRejectInvitation(booking.id)}
+                                disabled={processingInvitation === booking.id}
+                              >
+                                {processingInvitation === booking.id ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <Text style={styles.invitationButtonText}>
+                                    {language === 'fr' ? 'Refuser' : 'Reject'}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.invitationButton, styles.acceptButton]}
+                                onPress={() => handleAcceptInvitation(booking.id)}
+                                disabled={processingInvitation === booking.id}
+                              >
+                                {processingInvitation === booking.id ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <Text style={styles.invitationButtonText}>
+                                    {language === 'fr' ? 'Accepter' : 'Accept'}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+                
+                {/* Bookings acceptés */}
+                {acceptedBookings.length > 0 && (
+                  <View style={styles.invitationsSection}>
+                    <Text style={styles.invitationsSectionTitle}>
+                      {language === 'fr' ? '✅ Bookings confirmés' : '✅ Confirmed bookings'}
+                    </Text>
+                    <View style={styles.bookingsList}>
+                      {acceptedBookings.map((booking) => {
+                        const eventDate = new Date(booking.eventDate);
+                        const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        });
+                        
+                        const statusColors = {
+                          UPCOMING: Colors.primary,
+                          ONGOING: '#4CAF50',
+                          FINISHED: Colors.textSecondary,
+                        };
+                        
+                        const statusLabels = {
+                          UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                          ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
+                          FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+                        };
+                        
+                        return (
+                          <View key={booking.id} style={styles.bookingCard}>
+                            <View style={styles.bookingHeader}>
+                              <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                              <View style={[styles.bookingStatus, { backgroundColor: statusColors[booking.eventStatus] + '20' }]}>
+                                <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] }]}>
+                                  {statusLabels[booking.eventStatus]}
+                                </Text>
+                              </View>
+                            </View>
+                            
+                            <View style={styles.bookingInfo}>
+                              <Text style={styles.bookingInfoLabel}>
+                                📅 {language === 'fr' ? 'Date' : 'Date'}
+                              </Text>
+                              <Text style={styles.bookingInfoValue}>
+                                {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                              </Text>
+                            </View>
+                            
+                            {booking.venue && (
+                              <View style={styles.bookingInfo}>
+                                <Text style={styles.bookingInfoLabel}>
+                                  📍 {language === 'fr' ? 'Lieu' : 'Venue'}
+                                </Text>
+                                <Text style={styles.bookingInfoValue}>
+                                  {booking.venue.name}
+                                  {booking.venue.address && ` - ${booking.venue.address}`}
+                                </Text>
+                              </View>
+                            )}
+                            
+                            {booking.booker && (
+                              <View style={styles.bookingInfo}>
+                                <Text style={styles.bookingInfoLabel}>
+                                  👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                                </Text>
+                                <Text style={styles.bookingInfoValue}>
+                                  {booking.booker.name} ({booking.booker.type})
+                                </Text>
+                              </View>
+                            )}
+                            
+                            <View style={styles.bookingInfo}>
+                              <Text style={styles.bookingInfoLabel}>
+                                📍 {language === 'fr' ? 'Adresse' : 'Address'}
+                              </Text>
+                              <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+                
+                {/* État vide */}
+                {pendingInvitations.length === 0 && acceptedBookings.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateIcon}>📅</Text>
+                    <Text style={styles.emptyStateText}>
+                      {language === 'fr' 
+                        ? 'Aucun booking pour le moment' 
+                        : 'No bookings yet'}
+                    </Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      {language === 'fr' 
+                        ? 'Vos réservations et demandes de booking apparaîtront ici.' 
+                        : 'Your bookings and booking requests will appear here.'}
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
           </ScrollView>
         );
@@ -2769,6 +2971,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Bookings
+  invitationsSection: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  invitationsSectionTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
   bookingsList: {
     gap: 16,
     marginTop: 8,
@@ -2779,6 +2991,37 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  pendingInvitationCard: {
+    borderColor: '#FFA500',
+    borderWidth: 2,
+  },
+  invitationActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  invitationButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptButton: {
+    backgroundColor: '#4CAF50',
+  },
+  rejectButton: {
+    backgroundColor: '#F44336',
+  },
+  invitationButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   bookingHeader: {
     flexDirection: 'row',

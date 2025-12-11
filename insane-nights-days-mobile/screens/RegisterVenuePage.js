@@ -10,7 +10,6 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  FlatList,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -33,6 +32,7 @@ export default function RegisterVenuePage() {
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingAddress, setSearchingAddress] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(null); // Pour valider que l'adresse vient des suggestions
   const addressSearchTimeoutRef = useRef(null);
   const scrollViewRef = useRef(null);
 
@@ -89,13 +89,99 @@ export default function RegisterVenuePage() {
       }
 
       const data = await response.json();
-      const suggestions = data.map((item) => ({
-        id: item.place_id,
-        displayName: item.display_name,
-        address: item.display_name,
-        lat: parseFloat(item.lat),
-        lon: parseFloat(item.lon),
-      }));
+      const suggestions = data.map((item) => {
+        // Formater l'adresse de manière très courte : "Numéro Rue, Code postal Ville"
+        let formattedAddress = item.display_name;
+        
+        if (item.address) {
+          const addr = item.address;
+          const parts = [];
+          
+          // Partie 1 : Numéro + Rue (uniquement)
+          let streetPart = '';
+          if (addr.house_number && addr.road) {
+            streetPart = `${addr.house_number} ${addr.road}`;
+          } else if (addr.road) {
+            streetPart = addr.road;
+          } else if (addr.street) {
+            streetPart = addr.street;
+          } else if (addr.pedestrian) {
+            streetPart = addr.pedestrian;
+          }
+          
+          if (streetPart) {
+            parts.push(streetPart);
+          }
+          
+          // Partie 2 : Code postal + Ville (uniquement)
+          const postcode = addr.postcode || '';
+          const city = addr.city || addr.town || addr.municipality || '';
+          
+          if (postcode && city) {
+            parts.push(`${postcode} ${city}`);
+          } else if (city) {
+            parts.push(city);
+          } else if (postcode) {
+            parts.push(postcode);
+          }
+          
+          // Utiliser le format court uniquement si on a les deux parties
+          if (parts.length >= 2) {
+            formattedAddress = parts.join(', ');
+          } else if (parts.length === 1) {
+            formattedAddress = parts[0];
+          } else {
+            // Fallback : parser display_name pour extraire l'essentiel
+            // Format attendu : "Numéro, Rue, ..., Ville, ..., Code postal, ..."
+            const displayParts = item.display_name.split(',').map(p => p.trim());
+            if (displayParts.length >= 3) {
+              // Prendre la rue (première et deuxième partie si la première est juste un numéro)
+              let streetPart = displayParts[0];
+              if (displayParts[0].match(/^\d+$/) && displayParts[1]) {
+                streetPart = `${displayParts[0]} ${displayParts[1]}`;
+              } else if (displayParts[1] && !displayParts[1].match(/^\d{5}/)) {
+                // Si la deuxième partie n'est pas un code postal, l'ajouter à la rue
+                streetPart = `${displayParts[0]} ${displayParts[1]}`;
+              }
+              
+              // Trouver le code postal (format 5 chiffres)
+              const postcodeIndex = displayParts.findIndex(p => /^\d{5}/.test(p));
+              const postcode = postcodeIndex >= 0 ? displayParts[postcodeIndex] : '';
+              
+              // La ville est généralement juste avant le code postal, ou à l'index 2-3
+              let city = '';
+              if (postcodeIndex > 0) {
+                city = displayParts[postcodeIndex - 1];
+              } else {
+                // Chercher une partie qui ressemble à une ville (pas un numéro, pas trop court)
+                city = displayParts.find((p, i) => i >= 2 && i < 5 && !p.match(/^\d+$/) && p.length > 3) || displayParts[2] || '';
+              }
+              
+              if (postcode && city) {
+                formattedAddress = `${streetPart}, ${postcode} ${city}`;
+              } else if (city) {
+                formattedAddress = `${streetPart}, ${city}`;
+              } else if (postcode) {
+                formattedAddress = `${streetPart}, ${postcode}`;
+              } else {
+                formattedAddress = streetPart;
+              }
+            } else if (displayParts.length >= 2) {
+              formattedAddress = `${displayParts[0]}, ${displayParts[1]}`;
+            } else if (displayParts.length === 1) {
+              formattedAddress = displayParts[0];
+            }
+          }
+        }
+        
+        return {
+          id: item.place_id,
+          displayName: item.display_name, // Pour l'affichage dans la liste (complet)
+          address: formattedAddress, // Format court pour le stockage : "Rue, Code postal Ville"
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
+        };
+      });
 
       setAddressSuggestions(suggestions);
       setShowSuggestions(suggestions.length > 0);
@@ -110,6 +196,7 @@ export default function RegisterVenuePage() {
 
   const selectAddress = (suggestion) => {
     setFormData((prev) => ({ ...prev, address: suggestion.address }));
+    setSelectedAddressId(suggestion.id); // Marquer l'adresse comme sélectionnée depuis les suggestions
     setAddressSuggestions([]);
     setShowSuggestions(false);
   };
@@ -122,6 +209,17 @@ export default function RegisterVenuePage() {
       Alert.alert(
         language === 'fr' ? 'Champs manquants' : 'Missing fields',
         language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.',
+      );
+      return;
+    }
+    
+    // Valider que l'adresse a été sélectionnée depuis les suggestions
+    if (!selectedAddressId) {
+      Alert.alert(
+        language === 'fr' ? 'Adresse invalide' : 'Invalid address',
+        language === 'fr' 
+          ? 'Veuillez sélectionner une adresse depuis la liste de suggestions.' 
+          : 'Please select an address from the suggestions list.',
       );
       return;
     }
@@ -235,7 +333,7 @@ export default function RegisterVenuePage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="none"
       >
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -291,7 +389,13 @@ export default function RegisterVenuePage() {
               placeholder={language === 'fr' ? 'Commencez à taper une adresse...' : 'Start typing an address...'}
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={formData.address}
-            onChangeText={(value) => handleChange('address', value)}
+              onChangeText={(value) => {
+                handleChange('address', value);
+                // Réinitialiser la sélection si l'utilisateur modifie manuellement
+                if (selectedAddressId && value !== formData.address) {
+                  setSelectedAddressId(null);
+                }
+              }}
               onFocus={() => {
                 if (addressSuggestions.length > 0) {
                   setShowSuggestions(true);
@@ -303,34 +407,35 @@ export default function RegisterVenuePage() {
                 }
               }}
               onBlur={() => {
-                // Délai pour permettre le clic sur une suggestion
-                setTimeout(() => setShowSuggestions(false), 200);
+                // Délai plus long pour permettre le clic sur une suggestion et le scroll
+                // Avec keyboardDismissMode="none", onBlur ne devrait plus être appelé lors du scroll
+                setTimeout(() => {
+                  // Cacher les suggestions seulement si on a vraiment perdu le focus
+                  if (addressSuggestions.length > 0) {
+                    setShowSuggestions(false);
+                  }
+                }, 300);
               }}
             />
             {searchingAddress && (
               <ActivityIndicator
                 size="small"
-                color="#ff7a1a"
+                color="#FF1744"
                 style={styles.addressSearchLoader}
               />
             )}
           </View>
           {showSuggestions && addressSuggestions.length > 0 && (
             <View style={styles.suggestionsContainer}>
-              <FlatList
-                data={addressSuggestions}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.suggestionItem}
-                    onPress={() => selectAddress(item)}
-                  >
-                    <Text style={styles.suggestionText}>{item.displayName}</Text>
-                  </TouchableOpacity>
-                )}
-                nestedScrollEnabled={true}
-                keyboardShouldPersistTaps="handled"
-              />
+              {addressSuggestions.map((item) => (
+                <TouchableOpacity
+                  key={item.id.toString()}
+                  style={styles.suggestionItem}
+                  onPress={() => selectAddress(item)}
+                >
+                  <Text style={styles.suggestionText}>{item.displayName}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
@@ -369,7 +474,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -378,7 +483,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 300,
   },
   header: {
     marginTop: 20,
@@ -395,7 +500,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -404,7 +509,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -424,7 +529,7 @@ const styles = StyleSheet.create({
   suggestionsContainer: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     marginTop: 4,
     maxHeight: 200,
@@ -434,7 +539,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.1)',
+    borderBottomColor: 'rgba(255,23,68,0.1)',
   },
   suggestionText: {
     color: '#ffffff',
@@ -442,7 +547,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   submitButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -457,4 +562,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

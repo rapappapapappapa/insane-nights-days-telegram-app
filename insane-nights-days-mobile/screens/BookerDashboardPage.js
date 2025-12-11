@@ -526,9 +526,34 @@ export default function BookerDashboardPage() {
                     <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
                   )}
                   {event.djs && event.djs.length > 0 && (
-                    <Text style={styles.eventInfo}>
-                      🎧 {event.djs.map((dj) => dj.artistName).join(', ')}
-                    </Text>
+                    <View style={styles.djsList}>
+                      <Text style={styles.eventInfoLabel}>
+                        🎧 {language === 'fr' ? 'DJs' : 'DJs'}:
+                      </Text>
+                      {event.djs.map((dj) => {
+                        const statusColors = {
+                          PENDING: '#FFA500',
+                          ACCEPTED: '#4CAF50',
+                          REJECTED: '#F44336',
+                        };
+                        const statusLabels = {
+                          PENDING: language === 'fr' ? 'En attente' : 'Pending',
+                          ACCEPTED: language === 'fr' ? 'Accepté' : 'Accepted',
+                          REJECTED: language === 'fr' ? 'Refusé' : 'Rejected',
+                        };
+                        const status = dj.invitationStatus || 'PENDING';
+                        return (
+                          <View key={dj.userId} style={styles.djItem}>
+                            <Text style={styles.djName}>{dj.artistName}</Text>
+                            <View style={[styles.djStatusBadge, { backgroundColor: statusColors[status] + '20' }]}>
+                              <Text style={[styles.djStatusText, { color: statusColors[status] }]}>
+                                {statusLabels[status]}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
                   )}
                   <Text style={styles.eventInfo}>💰 {event.price} €</Text>
                   <Text style={styles.eventInfo}>
@@ -1250,14 +1275,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.2)',
+    borderBottomColor: 'rgba(255,23,68,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
     marginBottom: 10,
   },
   backButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1278,7 +1303,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   sectionTitle: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 10,
@@ -1288,7 +1313,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1297,7 +1322,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1311,7 +1336,7 @@ const styles = StyleSheet.create({
   selectButton: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1333,7 +1358,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   createButton: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -1365,7 +1390,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     color: 'rgba(255,255,255,0.5)',
     fontSize: 16,
     fontWeight: '700',
@@ -1374,7 +1399,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stepNumberActive: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     color: '#0b0b0e',
   },
   stepLabel: {
@@ -1383,17 +1408,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepLabelActive: {
-    color: '#ff7a1a',
+    color: '#FF1744',
   },
   stepLine: {
     flex: 1,
     height: 2,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     marginHorizontal: 8,
     marginBottom: 20,
   },
   stepLineActive: {
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
   },
   stepDescription: {
     color: 'rgba(255,255,255,0.7)',
@@ -1402,15 +1427,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   selectedInfo: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
   },
   selectedInfoText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1422,21 +1447,21 @@ const styles = StyleSheet.create({
   },
   backButtonStep: {
     flex: 1,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: '#ff7a1a',
+    borderColor: '#FF1744',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
   },
   backButtonStepText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 16,
     fontWeight: '700',
   },
   nextButton: {
     flex: 1,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1460,7 +1485,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
     borderTopWidth: 2,
-    borderTopColor: '#ff7a1a',
+    borderTopColor: '#FF1744',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1468,10 +1493,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.3)',
+    borderBottomColor: 'rgba(255,23,68,0.3)',
   },
   modalTitle: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1480,12 +1505,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,122,26,0.2)',
+    backgroundColor: 'rgba(255,23,68,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCloseButtonText: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 24,
     fontWeight: '300',
   },
@@ -1502,11 +1527,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#0b0b0e',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.2)',
+    borderColor: 'rgba(255,23,68,0.2)',
   },
   modalOptionSelected: {
-    backgroundColor: 'rgba(255,122,26,0.2)',
-    borderColor: '#ff7a1a',
+    backgroundColor: 'rgba(255,23,68,0.2)',
+    borderColor: '#FF1744',
   },
   modalOptionText: {
     color: '#ffffff',
@@ -1514,11 +1539,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modalOptionTextSelected: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontWeight: '700',
   },
   modalOptionCheck: {
-    color: '#ff7a1a',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
   },
@@ -1563,7 +1588,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     borderTopWidth: 2,
-    borderTopColor: '#ff7a1a',
+    borderTopColor: '#FF1744',
   },
   datePickerHeader: {
     flexDirection: 'row',
@@ -1583,7 +1608,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1627,7 +1652,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#ff7a1a',
+    backgroundColor: '#FF1744',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1641,7 +1666,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,122,26,0.2)',
+    borderBottomColor: 'rgba(255,23,68,0.2)',
   },
   tabButton: {
     flex: 1,
@@ -1653,7 +1678,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#FF7A1A',
+    backgroundColor: '#FF1744',
   },
   tabButtonText: {
     color: 'rgba(255,255,255,0.6)',
@@ -1672,7 +1697,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
   },
   eventTitle: {
     color: '#fff',
@@ -1684,6 +1709,37 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
     marginBottom: 6,
+  },
+  eventInfoLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  djsList: {
+    marginBottom: 8,
+  },
+  djItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+    paddingVertical: 4,
+  },
+  djName: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    flex: 1,
+  },
+  djStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  djStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyText: {
     color: 'rgba(255,255,255,0.6)',
@@ -1700,7 +1756,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
   },
   summaryTitle: {
     color: '#fff',
@@ -1734,10 +1790,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 2,
-    borderTopColor: 'rgba(255,122,26,0.5)',
+    borderTopColor: 'rgba(255,23,68,0.5)',
   },
   costTitle: {
-    color: '#FF7A1A',
+    color: '#FF1744',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
@@ -1766,15 +1822,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 2,
-    borderTopColor: 'rgba(255,122,26,0.5)',
+    borderTopColor: 'rgba(255,23,68,0.5)',
   },
   costTotalLabel: {
-    color: '#FF7A1A',
+    color: '#FF1744',
     fontSize: 20,
     fontWeight: 'bold',
   },
   costTotalValue: {
-    color: '#FF7A1A',
+    color: '#FF1744',
     fontSize: 24,
     fontWeight: 'bold',
   },

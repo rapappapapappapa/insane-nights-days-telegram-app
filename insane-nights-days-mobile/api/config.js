@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://mines-see-edit-inherited.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://italic-auburn-nations-sitemap.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -39,6 +39,9 @@ const API_CONFIG = {
     USER_CHANGE_PASSWORD: '/api/user/change-password',
     USER_DJ_PROFILE: '/api/user/dj/profile',
     DJ_BOOKINGS: '/api/dj/bookings',
+    DJ_ACCEPT_INVITATION: '/api/dj/invitations',
+    DJ_REJECT_INVITATION: '/api/dj/invitations',
+    VENUE_MEDIA: '/api/venue',
     BOOKER_AVAILABLE_DJS: '/api/booker/available-djs',
     BOOKER_VENUES: '/api/booker/venues',
     BOOKER_EVENTS: '/api/booker/events',
@@ -537,50 +540,121 @@ const api = {
     const uploadUrl = `${API_CONFIG.BASE_URL}/api/dj/${djId}/media/upload`;
     console.log('[uploadDjMediaFile] URL:', uploadUrl);
 
-    // Utiliser axios au lieu de fetch pour mieux gérer FormData dans React Native
-    // Timeout plus long pour les fichiers volumineux (5 minutes)
+    // Utiliser fetch (plus robuste sur Android que axios pour FormData)
     try {
-      console.log('[uploadDjMediaFile] Envoi de la requête avec axios...');
-      const response = await axios.post(uploadUrl, formData, {
+      console.log('[uploadDjMediaFile] Envoi de la requête avec fetch...');
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Ne pas mettre Content-Type, axios le gère automatiquement pour FormData
+          'Accept': 'application/json',
         },
-        timeout: 5 * 60 * 1000, // 5 minutes
-        // Configuration spécifique pour React Native
-        transformRequest: (data) => {
-          return data; // Laisser axios gérer FormData
-        },
+        body: formData,
       });
 
-      console.log('[uploadDjMediaFile] Réponse reçue:', { status: response.status, success: response.data?.success });
-      
-      if (response.data && response.data.success) {
-        console.log('[uploadDjMediaFile] Upload réussi:', response.data);
-        return response.data;
-      } else {
-        throw new Error(response.data?.message || 'Erreur serveur');
+      const result = await response.json();
+      console.log('[uploadDjMediaFile] Réponse:', result);
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Échec de l\'upload du média.');
       }
+
+      return result;
     } catch (error) {
       console.error('[uploadDjMediaFile] Erreur catch:', { 
         name: error.name, 
         message: error.message,
         code: error.code,
-        response: error.response?.data,
         stack: error.stack?.substring(0, 200)
       });
       
-      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        throw new Error('Upload timeout - Le fichier est trop volumineux ou la connexion est trop lente');
-      }
       if (error.message && (error.message.includes('Network request failed') || error.message.includes('Network Error'))) {
         throw new Error('Erreur réseau - Vérifiez votre connexion internet et réessayez. Si le problème persiste, le fichier est peut-être trop volumineux.');
       }
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
       throw error;
     }
+  },
+
+  // Récupérer les médias d'un lieu
+  getVenueMedia: async (venueId, type = null) => {
+    const query = type ? `?type=${type}` : '';
+    return apiRequest(`${API_CONFIG.ENDPOINTS.VENUE_MEDIA}/${venueId}/media${query}`);
+  },
+
+  // Uploader un média par URL pour un lieu
+  uploadVenueMedia: async (token, venueId, type, url, title = null, thumbnail = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.VENUE_MEDIA}/${venueId}/media`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ type, url, title, thumbnail }),
+      },
+      token
+    );
+  },
+
+  // Uploader un fichier média pour un lieu
+  uploadVenueMediaFile: async (token, venueId, fileUri, type, title = null, thumbnail = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+
+    console.log('[uploadVenueMediaFile] Début upload:', { venueId, type, fileUri: fileUri?.substring(0, 50) + '...', title });
+
+    const formData = new FormData();
+    const fileData = {
+      uri: fileUri,
+      type: getMimeType(fileUri, type),
+      name: getFileName(fileUri),
+    };
+    formData.append('file', fileData);
+    formData.append('type', type);
+    if (title) formData.append('title', title);
+    if (thumbnail) formData.append('thumbnail', thumbnail);
+
+    const uploadUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENUE_MEDIA}/${venueId}/media/upload`;
+    console.log('[uploadVenueMediaFile] URL:', uploadUrl);
+
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      console.log('[uploadVenueMediaFile] Réponse:', result);
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Échec de l\'upload du média.');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[uploadVenueMediaFile] Erreur:', error);
+      throw error;
+    }
+  },
+
+  // Supprimer un média d'un lieu
+  deleteVenueMedia: async (token, venueId, mediaId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.VENUE_MEDIA}/${venueId}/media/${mediaId}`,
+      {
+        method: 'DELETE',
+      },
+      token
+    );
   },
 
   // Récupérer les médias d'un DJ
@@ -626,6 +700,34 @@ const api = {
       throw new Error('Token d\'authentification requis.');
     }
     return apiRequest(API_CONFIG.ENDPOINTS.DJ_BOOKINGS, {}, token);
+  },
+
+  // Accepter une invitation à un événement
+  acceptInvitation: async (token, invitationId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.DJ_ACCEPT_INVITATION}/${invitationId}/accept`,
+      {
+        method: 'PUT',
+      },
+      token
+    );
+  },
+
+  // Refuser une invitation à un événement
+  rejectInvitation: async (token, invitationId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.DJ_REJECT_INVITATION}/${invitationId}/reject`,
+      {
+        method: 'PUT',
+      },
+      token
+    );
   },
 
   // Récupérer les DJs disponibles pour un booker
@@ -686,7 +788,7 @@ const api = {
 };
 
 // Fonction helper pour normaliser les URLs des médias
-// Remplace les anciennes URLs de tunnel et convertit les URLs relatives en URLs absolues
+// Remplace uniquement les anciennes URLs de tunnel (différentes de l'actuel) et convertit les URLs relatives en URLs absolues
 export const normalizeMediaUrl = (url) => {
   if (!url || typeof url !== 'string') {
     return url;
@@ -694,15 +796,26 @@ export const normalizeMediaUrl = (url) => {
 
   // Si c'est une URL HTTP/HTTPS complète
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // Vérifier si c'est une URL de l'ancien tunnel Cloudflare et la remplacer
-    const oldTunnelPattern = /https?:\/\/[^\/]+\.trycloudflare\.com/;
-    if (oldTunnelPattern.test(url)) {
-      // Remplacer l'ancienne URL du tunnel par la nouvelle
-      const normalizedUrl = url.replace(oldTunnelPattern, API_CONFIG.BASE_URL);
-      console.log('[NORMALIZE URL] Ancienne URL tunnel remplacée:', { old: url, new: normalizedUrl });
-      return normalizedUrl;
+    // Extraire le domaine de l'URL fournie
+    const urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
+    if (urlMatch) {
+      const urlDomain = urlMatch[1];
+      const baseUrlDomain = API_CONFIG.BASE_URL.replace(/\/$/, ''); // Retirer le slash final si présent
+      
+      // Vérifier si c'est une URL de tunnel Cloudflare
+      const isTunnelUrl = /\.trycloudflare\.com/.test(urlDomain);
+      
+      // Ne remplacer que si :
+      // 1. C'est une URL de tunnel Cloudflare
+      // 2. ET le domaine est différent de celui actuel
+      if (isTunnelUrl && urlDomain !== baseUrlDomain) {
+        // Remplacer uniquement le domaine, en conservant le chemin
+        const normalizedUrl = url.replace(/^(https?:\/\/[^\/]+)/, baseUrlDomain);
+        console.log('[NORMALIZE URL] Ancienne URL tunnel remplacée:', { old: url, new: normalizedUrl });
+        return normalizedUrl;
+      }
     }
-    // URL déjà complète et valide
+    // URL déjà complète et valide (même domaine ou non-tunnel)
     return url;
   }
   

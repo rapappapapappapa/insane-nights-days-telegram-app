@@ -129,6 +129,8 @@ model UserVenue {
   events                  Event[]
   // Relations vers les notes reçues
   ratings                 VenueRating[]
+  // Relations vers les médias
+  media                   VenueMedia[]
   
   @@index([userId])
 }
@@ -177,11 +179,34 @@ model VenueRating {
   @@unique([venueId, raterId, eventId]) // Une note par Lieu/Utilisateur/Événement
 }
 
+// Médias pour les lieux (photos / vidéos)
+model VenueMedia {
+  id        String     @id @default(uuid())
+  venueId   String
+  venue     UserVenue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  type      String     // 'photo' ou 'video'
+  url       String
+  title     String?
+  thumbnail String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  @@index([venueId])
+  @@index([type])
+}
+
 // Enum pour le statut des événements
 enum EventStatus {
   UPCOMING   // À venir
   ONGOING    // En cours
   FINISHED   // Terminé
+}
+
+// Enum pour le statut d'invitation d'un DJ à un événement
+enum InvitationStatus {
+  PENDING    // En attente de réponse
+  ACCEPTED   // Acceptée
+  REJECTED   // Refusée
 }
 
 // Modèle pour les événements
@@ -219,15 +244,18 @@ model Event {
 
 // Table de jointure pour Event <-> DJ (many-to-many)
 model EventDj {
-  id        String   @id @default(uuid())
+  id        String            @id @default(uuid())
   eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  djId      String   // User.id du DJ
-  createdAt DateTime @default(now())
+  event     Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  djId      String            // User.id du DJ
+  status    InvitationStatus  @default(PENDING) // Statut de l'invitation
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
   
   @@unique([eventId, djId])
   @@index([eventId])
   @@index([djId])
+  @@index([status])
 }
 
 // Modèle pour les tickets

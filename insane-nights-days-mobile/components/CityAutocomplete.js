@@ -94,7 +94,7 @@ const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholder
       />
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#ff7a1a" />
+          <ActivityIndicator size="small" color="#FF1744" />
         </View>
       )}
       {showSuggestions && suggestions.length > 0 && (
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,122,26,0.3)',
+    borderColor: 'rgba(255,23,68,0.3)',
     borderTopWidth: 0,
     borderBottomLeftRadius: 14,
     borderBottomRightRadius: 14,

@@ -1707,7 +1707,7 @@ export default function DjDashboardPage() {
             <View style={styles.mediaGrid}>
               {photos.map((photo, index) => (
                 <View key={photo.id || index} style={styles.mediaItem}>
-                  <Image source={{ uri: photo.url }} style={styles.mediaImage} />
+                  <Image source={{ uri: normalizeMediaUrl(photo.url) }} style={styles.mediaImage} />
                   <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => {

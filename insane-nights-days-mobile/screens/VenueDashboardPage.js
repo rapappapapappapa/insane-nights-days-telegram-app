@@ -312,6 +312,9 @@ export default function VenueDashboardPage() {
 
             {/* Photos */}
             <Text style={styles.sectionSubtitle}>{language === 'fr' ? 'Photos' : 'Photos'}</Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
+            </Text>
             {photos.length > 0 ? (
               <View style={styles.photoGrid}>
                 {photos.map((photo) => (
@@ -341,6 +344,9 @@ export default function VenueDashboardPage() {
 
             {/* Vidéos */}
             <Text style={styles.sectionSubtitle}>{language === 'fr' ? 'Vidéos' : 'Videos'}</Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
+            </Text>
             {videos.length > 0 ? (
               <View style={{ gap: 12 }}>
                 {videos.map((video) => (
@@ -505,6 +511,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginTop: 12,
+    marginBottom: 8,
+  },
+  mediaHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginTop: -4,
     marginBottom: 8,
   },
   mediaActions: {

@@ -1701,6 +1701,9 @@ export default function DjDashboardPage() {
             <Text style={styles.mediaSubtitle}>
               {language === 'fr' ? 'PHOTOS' : 'PHOTOS'}
             </Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
+            </Text>
             <View style={styles.mediaGrid}>
               {photos.map((photo, index) => (
                 <View key={photo.id || index} style={styles.mediaItem}>
@@ -1739,6 +1742,9 @@ export default function DjDashboardPage() {
             {/* Vidéos */}
             <Text style={styles.mediaSubtitle}>
               {language === 'fr' ? 'VIDÉOS & MUSIQUE' : 'VIDEOS & MUSIC'}
+            </Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
             </Text>
             <View style={styles.mediaList}>
               {videos.map((video, index) => {
@@ -1890,6 +1896,9 @@ export default function DjDashboardPage() {
             {/* Audio MP3 */}
             <Text style={styles.mediaSubtitle}>
               {language === 'fr' ? 'AUDIO (MP3)' : 'AUDIO (MP3)'}
+            </Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
             </Text>
             <View style={styles.mediaList}>
               {audioFiles
@@ -2581,6 +2590,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 24,
     marginBottom: 16,
+  },
+  mediaHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 8,
   },
   mediaGrid: {
     flexDirection: 'row',

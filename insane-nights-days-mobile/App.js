@@ -1,9 +1,13 @@
 import React, { useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
 import { EventFormProvider } from './contexts/EventFormContext';
 import { useNavigation } from './contexts/NavigationContext';
+import { useNotifications } from './hooks/useNotifications';
+import ErrorBoundary from './components/ErrorBoundary';
+import PushNotification from './components/PushNotification';
 import HomePage from './screens/HomePage';
 import AccountTypePage from './screens/AccountTypePage';
 import RegisterCommunityPage from './screens/RegisterCommunityPage';
@@ -58,33 +62,86 @@ const SCREENS = {
 
 function AppContent() {
   const { currentPage, navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, isInitializing } = useAuth();
+  const { hasNewMessage, clearNewMessage } = useNotifications();
   
+  // IMPORTANT: Tous les Hooks doivent être appelés AVANT tout return conditionnel
   // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
   useEffect(() => {
-    if (user?.isAuthenticated && currentPage === 'home') {
-      navigate('welcome');
-    } else if (!user?.isAuthenticated && currentPage === 'welcome') {
-      navigate('home');
+    if (!isInitializing) {
+      if (user?.isAuthenticated && currentPage === 'home') {
+        navigate('welcome');
+      } else if (!user?.isAuthenticated && currentPage === 'welcome') {
+        navigate('home');
+      }
     }
-  }, [user?.isAuthenticated, currentPage, navigate]);
+  }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
+
+  // Gérer la navigation vers le chat quand on clique sur la notification
+  const handleNotificationPress = () => {
+    if (!user?.isAuthenticated) return;
+
+    // Naviguer vers le dashboard approprié selon le profil actif avec la section bookings ouverte
+    if (user.activeProfileType === 'DJ') {
+      navigate('djDashboard', { openBookings: true });
+    } else if (user.activeProfileType === 'BOOKER') {
+      navigate('bookerDashboard', { openBookings: true });
+    } else {
+      // Par défaut, aller sur welcome
+      navigate('welcome');
+    }
+    clearNewMessage();
+  };
+  
+  // Afficher un loader pendant l'initialisation de l'authentification
+  if (isInitializing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF1744" />
+      </View>
+    );
+  }
   
   const ScreenComponent = SCREENS[currentPage] || HomePage;
   
-  return <ScreenComponent />;
+  return (
+    <>
+      <ScreenComponent />
+      {/* Notification push globale */}
+      {user?.isAuthenticated && (
+        <PushNotification
+          visible={hasNewMessage}
+          message="Vous avez reçu un nouveau message"
+          onPress={handleNotificationPress}
+          onClose={clearNewMessage}
+        />
+      )}
+    </>
+  );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0b0b0e',
+  },
+});
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <NavigationProvider>
-          <EventFormProvider>
-            <AppContent />
-          </EventFormProvider>
-        </NavigationProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <NavigationProvider>
+            <EventFormProvider>
+              <AppContent />
+            </EventFormProvider>
+          </NavigationProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }
 

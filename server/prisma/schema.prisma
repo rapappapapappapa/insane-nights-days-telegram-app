@@ -11,90 +11,90 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  username  String
-  password  String
-  score     Int      @default(0)
-  level     Int      @default(1)
-  accountType String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)
+  id                String   @id @default(uuid())
+  email             String   @unique
+  username          String
+  password          String
+  score             Int      @default(0)
+  level             Int      @default(1)
+  accountType       String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)
   activeProfileType String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' - Profil actuellement actif
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
   // Relations vers les profils spécifiques (plusieurs profils possibles)
   communities UserCommunity[]
   djs         UserDj[]
   bookers     UserBooker[]
   venues      UserVenue[]
-  
+
   // Relations vers les tickets
-  tickets   Ticket[]
+  tickets Ticket[]
 }
 
 model UserCommunity {
-  id        String   @id @default(uuid())
-  userId    String   // Plusieurs profils Community possibles par User
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nom       String
-  prenom    String
-  pays      String
+  id            String   @id @default(uuid())
+  userId        String // Plusieurs profils Community possibles par User
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nom           String
+  prenom        String
+  pays          String
   dateNaissance String // Format: jj/mm/aaaa
-  isnNumber String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  isnNumber     String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
   @@index([userId])
 }
 
 model UserDj {
-  id                      String      @id @default(uuid())
-  userId                  String       // Plusieurs profils DJ possibles par User
-  user                    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  artistName              String
-  city                    String
-  phone                   String
-  birthDate               String
-  bio                     String?      // Bio du DJ
-  genre                   String?      // Genre musical principal
-  mainCity                String?      // Ville principale
-  languages               String?      // Langues parlées (séparées par virgules)
-  profileImage            String?      // URL de la photo de profil
-  bannerImage             String?      // URL de la bannière
-  hourlyRate              Float?       // Tarif horaire
-  performanceRate         Float?       // Tarif par prestation
-  minTravelFee            Float?       // Tarif minimum déplacement
-  extraFees               Float?       // Frais supplémentaires
-  availableDays           String?      // Jours disponibles (JSON string)
-  availableStatus         Boolean      @default(true) // Statut de disponibilité
+  id                     String   @id @default(uuid())
+  userId                 String // Plusieurs profils DJ possibles par User
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistName             String
+  city                   String
+  phone                  String
+  birthDate              String
+  bio                    String? // Bio du DJ
+  genre                  String? // Genre musical principal
+  mainCity               String? // Ville principale
+  languages              String? // Langues parlées (séparées par virgules)
+  profileImage           String? // URL de la photo de profil
+  bannerImage            String? // URL de la bannière
+  hourlyRate             Float? // Tarif horaire
+  performanceRate        Float? // Tarif par prestation
+  minTravelFee           Float? // Tarif minimum déplacement
+  extraFees              Float? // Frais supplémentaires
+  availableDays          String? // Jours disponibles (JSON string)
+  availableStatus        Boolean  @default(true) // Statut de disponibilité
   // Réseaux sociaux
-  soundcloudUrl           String?      // URL SoundCloud
-  spotifyUrl              String?      // URL Spotify
-  youtubeUrl              String?      // URL YouTube
-  instagramUrl            String?      // URL Instagram
-  tiktokUrl               String?      // URL TikTok
-  equipment               String?      // Matériel & rider (texte)
-  averageRatingCommunity  Float       @default(0.0)
-  averageRatingBooker     Float       @default(0.0)
-  averageRatingVenue      Float       @default(0.0)
-  averageRatingGlobal     Float       @default(0.0)
-  totalRatingsCommunity   Int         @default(0)
-  totalRatingsBooker      Int         @default(0)
-  totalRatingsVenue       Int         @default(0)
-  createdAt               DateTime    @default(now())
-  updatedAt               DateTime    @updatedAt
-  
+  soundcloudUrl          String? // URL SoundCloud
+  spotifyUrl             String? // URL Spotify
+  youtubeUrl             String? // URL YouTube
+  instagramUrl           String? // URL Instagram
+  tiktokUrl              String? // URL TikTok
+  equipment              String? // Matériel & rider (texte)
+  averageRatingCommunity Float    @default(0.0)
+  averageRatingBooker    Float    @default(0.0)
+  averageRatingVenue     Float    @default(0.0)
+  averageRatingGlobal    Float    @default(0.0)
+  totalRatingsCommunity  Int      @default(0)
+  totalRatingsBooker     Int      @default(0)
+  totalRatingsVenue      Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
   // Relations vers les notes reçues
-  ratings                 DjRating[]
+  ratings DjRating[]
   // Relations vers les médias
-  media                   DjMedia[]
-  
+  media   DjMedia[]
+
   @@index([userId])
 }
 
 model UserBooker {
   id         String   @id @default(uuid())
-  userId     String    // Plusieurs profils Booker possibles par User
+  userId     String // Plusieurs profils Booker possibles par User
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nom        String
   prenom     String
@@ -102,120 +102,120 @@ model UserBooker {
   bookerType String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  
+
   // Relations vers les événements organisés
-  events     Event[]
-  
+  events Event[]
+
   @@index([userId])
 }
 
 model UserVenue {
-  id                      String        @id @default(uuid())
-  userId                  String         // Plusieurs profils Venue possibles par User
-  user                    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  venueName               String
-  address                 String
-  averageRatingCommunity  Float         @default(0.0)
-  averageRatingBooker     Float         @default(0.0)
-  averageRatingDj         Float         @default(0.0)
-  averageRatingGlobal     Float         @default(0.0)
-  totalRatingsCommunity   Int           @default(0)
-  totalRatingsBooker      Int           @default(0)
-  totalRatingsDj          Int           @default(0)
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  
+  id                     String   @id @default(uuid())
+  userId                 String // Plusieurs profils Venue possibles par User
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueName              String
+  address                String
+  averageRatingCommunity Float    @default(0.0)
+  averageRatingBooker    Float    @default(0.0)
+  averageRatingDj        Float    @default(0.0)
+  averageRatingGlobal    Float    @default(0.0)
+  totalRatingsCommunity  Int      @default(0)
+  totalRatingsBooker     Int      @default(0)
+  totalRatingsDj         Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
   // Relations vers les événements hébergés
-  events                  Event[]
+  events  Event[]
   // Relations vers les notes reçues
-  ratings                 VenueRating[]
+  ratings VenueRating[]
   // Relations vers les médias
-  media                   VenueMedia[]
-  
+  media   VenueMedia[]
+
   @@index([userId])
 }
 
 // Modèle pour stocker les notes données aux DJs
 model DjRating {
-  id          String   @id @default(uuid())
-  djId        String
-  dj          UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
-  raterId     String   // ID de l'utilisateur qui note (User.id)
-  raterType   String   // 'COMMUNITY', 'BOOKER', 'VENUE'
-  rating      Float    // Note de 1 à 5
-  comment     String?  // Commentaire optionnel
-  eventId     String   // ID de l'événement lié (obligatoire)
-  event       Event    @relation(fields: [eventId], references: [id])
-  ticketId    String?  // ID du ticket (pour la communauté)
-  ticket      Ticket?  @relation("DjRatingTickets", fields: [ticketId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(uuid())
+  djId      String
+  dj        UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
+  raterId   String // ID de l'utilisateur qui note (User.id)
+  raterType String // 'COMMUNITY', 'BOOKER', 'VENUE'
+  rating    Float // Note de 1 à 5
+  comment   String? // Commentaire optionnel
+  eventId   String // ID de l'événement lié (obligatoire)
+  event     Event    @relation(fields: [eventId], references: [id])
+  ticketId  String? // ID du ticket (pour la communauté)
+  ticket    Ticket?  @relation("DjRatingTickets", fields: [ticketId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([djId, raterId, eventId]) // Une note par DJ/Utilisateur/Événement
   @@index([djId])
   @@index([raterId])
   @@index([eventId])
-  @@unique([djId, raterId, eventId]) // Une note par DJ/Utilisateur/Événement
 }
 
 // Modèle pour stocker les notes données aux Lieux
 model VenueRating {
-  id          String   @id @default(uuid())
-  venueId     String
-  venue       UserVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  raterId     String   // ID de l'utilisateur qui note (User.id)
-  raterType   String   // 'COMMUNITY', 'BOOKER', 'DJ'
-  rating      Float    // Note de 1 à 5
-  comment     String?  // Commentaire optionnel
-  eventId     String   // ID de l'événement lié (obligatoire)
-  event       Event    @relation(fields: [eventId], references: [id])
-  ticketId    String?  // ID du ticket (pour la communauté)
-  ticket      Ticket?  @relation("VenueRatingTickets", fields: [ticketId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String    @id @default(uuid())
+  venueId   String
+  venue     UserVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  raterId   String // ID de l'utilisateur qui note (User.id)
+  raterType String // 'COMMUNITY', 'BOOKER', 'DJ'
+  rating    Float // Note de 1 à 5
+  comment   String? // Commentaire optionnel
+  eventId   String // ID de l'événement lié (obligatoire)
+  event     Event     @relation(fields: [eventId], references: [id])
+  ticketId  String? // ID du ticket (pour la communauté)
+  ticket    Ticket?   @relation("VenueRatingTickets", fields: [ticketId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([venueId, raterId, eventId]) // Une note par Lieu/Utilisateur/Événement
   @@index([venueId])
   @@index([raterId])
   @@index([eventId])
-  @@unique([venueId, raterId, eventId]) // Une note par Lieu/Utilisateur/Événement
 }
 
 // Médias pour les lieux (photos / vidéos)
 model VenueMedia {
-  id        String     @id @default(uuid())
+  id        String    @id @default(uuid())
   venueId   String
-  venue     UserVenue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  type      String     // 'photo' ou 'video'
+  venue     UserVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  type      String // 'photo' ou 'video'
   url       String
   title     String?
   thumbnail String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
   @@index([venueId])
   @@index([type])
 }
 
 // Enum pour le statut des événements
 enum EventStatus {
-  UPCOMING   // À venir
-  ONGOING    // En cours
-  FINISHED   // Terminé
+  UPCOMING // À venir
+  ONGOING // En cours
+  FINISHED // Terminé
 }
 
 // Enum pour le statut d'invitation d'un DJ à un événement
 enum InvitationStatus {
-  PENDING    // En attente de réponse
-  ACCEPTED   // Acceptée
-  REJECTED   // Refusée
+  PENDING // En attente de réponse
+  ACCEPTED // Acceptée
+  REJECTED // Refusée
 }
 
 // Modèle pour les événements
 model Event {
   id          String      @id @default(uuid())
   title       String
-  date        DateTime    // Date de l'événement
+  date        DateTime // Date de l'événement
   time        String
-  location    String      // Adresse textuelle (pour compatibilité)
+  location    String // Adresse textuelle (pour compatibilité)
   price       Float
   capacity    Int
   sold        Int         @default(0)
@@ -223,73 +223,107 @@ model Event {
   description String?
   image       String?
   status      EventStatus @default(UPCOMING) // Statut de l'événement
-  
+
   // Relations
-  venueId     String?
-  venue       UserVenue? @relation(fields: [venueId], references: [id])
-  bookerId    String?
-  booker      UserBooker? @relation(fields: [bookerId], references: [id])
-  
+  venueId  String?
+  venue    UserVenue?  @relation(fields: [venueId], references: [id])
+  bookerId String?
+  booker   UserBooker? @relation(fields: [bookerId], references: [id])
+
   // Table de jointure pour les DJs (many-to-many)
-  eventDjs    EventDj[]
-  
+  eventDjs EventDj[]
+
   // Relations vers les tickets et notes
-  tickets     Ticket[]
-  djRatings   DjRating[]
+  tickets      Ticket[]
+  djRatings    DjRating[]
   venueRatings VenueRating[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  // Messages de groupe pour cet événement
+  groupMessages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Table de jointure pour Event <-> DJ (many-to-many)
 model EventDj {
-  id        String            @id @default(uuid())
+  id        String           @id @default(uuid())
   eventId   String
-  event     Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  djId      String            // User.id du DJ
-  status    InvitationStatus  @default(PENDING) // Statut de l'invitation
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  djId      String // User.id du DJ
+  status    InvitationStatus @default(PENDING) // Statut de l'invitation
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Messages liés à cette invitation
+  messages Message[]
+
   @@unique([eventId, djId])
   @@index([eventId])
   @@index([djId])
   @@index([status])
 }
 
+// Enum pour le type de message
+enum MessageType {
+  PRIVATE // Chat privé entre booker et un DJ (lié à EventDj)
+  GROUP // Chat de groupe pour tous les DJs d'un événement (lié à Event)
+}
+
+// Modèle pour les messages de chat entre DJ et Booker
+model Message {
+  id        String      @id @default(uuid())
+  type      MessageType @default(PRIVATE) // Type de message (PRIVATE ou GROUP)
+  eventDjId String? // ID de l'invitation (EventDj) - obligatoire si type=PRIVATE
+  eventDj   EventDj?    @relation(fields: [eventDjId], references: [id], onDelete: Cascade)
+  eventId   String? // ID de l'événement - obligatoire si type=GROUP
+  event     Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  senderId  String // User.id de l'expéditeur (DJ ou Booker)
+  content   String // Contenu du message
+  read      Boolean     @default(false) // Message lu ou non
+  deleted   Boolean     @default(false) // Message supprimé (contenu masqué)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([eventDjId])
+  @@index([eventId])
+  @@index([senderId])
+  @@index([type])
+  @@index([createdAt])
+}
+
 // Modèle pour les tickets
 model Ticket {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventId     String
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  price       Float
-  status      String   @default("valid") // 'valid', 'used', 'cancelled'
-  qrCode      String   @unique
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  price        Float
+  status       String   @default("valid") // 'valid', 'used', 'cancelled'
+  qrCode       String   @unique
   purchaseDate DateTime @default(now())
-  
+
   // Relations vers les notes
-  djRatings   DjRating[] @relation("DjRatingTickets")
+  djRatings    DjRating[]    @relation("DjRatingTickets")
   venueRatings VenueRating[] @relation("VenueRatingTickets")
-  
+
   @@index([userId])
   @@index([eventId])
 }
 
 // Modèle pour stocker les médias des DJs (photos, vidéos, audio)
 model DjMedia {
-  id          String   @id @default(uuid())
-  djId        String
-  dj          UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
-  type        String   // 'photo', 'video', 'audio'
-  url         String   // URL du fichier (pour l'instant, on stocke juste l'URI local, à remplacer par une vraie URL de stockage)
-  title       String?  // Titre optionnel
-  thumbnail   String?  // URL de la miniature (pour vidéos)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(uuid())
+  djId      String
+  dj        UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
+  type      String // 'photo', 'video', 'audio'
+  url       String // URL du fichier (pour l'instant, on stocke juste l'URI local, à remplacer par une vraie URL de stockage)
+  title     String? // Titre optionnel
+  thumbnail String? // URL de la miniature (pour vidéos)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([djId])
   @@index([type])
 }

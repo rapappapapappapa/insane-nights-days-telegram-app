@@ -7,6 +7,8 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import Colors from '../constants/colors';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const formatPurchaseDate = (dateString) => {
   if (!dateString) {
@@ -30,6 +32,7 @@ export default function TicketsPage() {
   const { language } = useLanguage();
   const { navigate } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicketQR, setSelectedTicketQR] = useState(null);
@@ -65,13 +68,11 @@ export default function TicketsPage() {
 
   const handleDeleteTicket = async (ticketId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.',
-      );
+      showError(language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.');
       return;
     }
 
+    // Pour la confirmation de suppression, on garde Alert.alert car c'est une action destructive
     Alert.alert(
       language === 'fr' ? 'Supprimer le ticket' : 'Delete ticket',
       language === 'fr'
@@ -89,24 +90,15 @@ export default function TicketsPage() {
             try {
               const response = await api.deleteTicket(user.token, ticketId);
               if (response && response.success) {
-                Alert.alert(
-                  language === 'fr' ? 'Ticket supprimé' : 'Ticket deleted',
-                  language === 'fr' ? 'Le ticket a été supprimé avec succès.' : 'Ticket deleted successfully.',
-                );
+                showSuccess(language === 'fr' ? 'Le ticket a été supprimé avec succès.' : 'Ticket deleted successfully.');
                 // Recharger la liste des tickets
                 fetchTickets();
               } else {
-                Alert.alert(
-                  language === 'fr' ? 'Erreur' : 'Error',
-                  response?.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'),
-                );
+                showError(response?.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'));
               }
             } catch (error) {
               console.error('Erreur suppression ticket:', error);
-              Alert.alert(
-                language === 'fr' ? 'Erreur' : 'Error',
-                error.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'),
-              );
+              showError(error.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'));
             }
           },
         },
@@ -320,6 +312,14 @@ export default function TicketsPage() {
             </View>
           </View>
         </Modal>
+
+        {/* Toast pour les notifications */}
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          visible={toast.visible}
+          onHide={hideToast}
+        />
       </View>
     );
   }

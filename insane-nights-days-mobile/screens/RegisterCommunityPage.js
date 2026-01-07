@@ -8,7 +8,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -16,11 +15,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 export default function RegisterCommunityPage() {
   const { language, t } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -104,21 +106,15 @@ export default function RegisterCommunityPage() {
 
     // Validation
     if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
-      Alert.alert(
-        language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.',
-      );
+      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
 
     // Validation de la date de naissance
     if (!validateDate(formData.dateNaissance)) {
-      Alert.alert(
-        language === 'fr' ? 'Date invalide' : 'Invalid date',
-        language === 'fr' 
-          ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
-          : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.',
-      );
+      showError(language === 'fr' 
+        ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
+        : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.');
       return;
     }
 
@@ -126,23 +122,17 @@ export default function RegisterCommunityPage() {
 
     try {
       if (!user?.id) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' 
-            ? 'Vous devez être connecté pour créer un profil.'
-            : 'You must be logged in to create a profile.',
-        );
+        showError(language === 'fr' 
+          ? 'Vous devez être connecté pour créer un profil.'
+          : 'You must be logged in to create a profile.');
         setLoading(false);
         return;
       }
 
       if (!user?.token) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr'
-            ? 'Token d\'authentification manquant. Veuillez vous reconnecter.'
-            : 'Authentication token missing. Please log in again.',
-        );
+        showError(language === 'fr'
+          ? 'Token d\'authentification manquant. Veuillez vous reconnecter.'
+          : 'Authentication token missing. Please log in again.');
         setLoading(false);
         return;
       }
@@ -158,21 +148,15 @@ export default function RegisterCommunityPage() {
       });
 
       if (!response) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur de connexion' : 'Connection error',
-          language === 'fr'
-            ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
-            : 'Unable to reach server. Check your connection.',
-        );
+        showError(language === 'fr'
+          ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
+          : 'Unable to reach server. Check your connection.');
         setLoading(false);
         return;
       }
 
       if (!response.success) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'),
-        );
+        showError(response.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
         setLoading(false);
         return;
       }
@@ -189,26 +173,14 @@ export default function RegisterCommunityPage() {
       }
 
       // Succès !
-      Alert.alert(
-        language === 'fr' ? 'Profil créé !' : 'Profile created!',
-        language === 'fr'
-          ? `Votre numéro ISN : ${response.profile?.isnNumber || 'N/A'}\n\nProfil Communauté créé avec succès !`
-          : `Your ISN number: ${response.profile?.isnNumber || 'N/A'}\n\nCommunity profile created successfully!`,
-        [
-          {
-            text: language === 'fr' ? 'Continuer' : 'Continue',
-            onPress: () => {
-              navigate('welcome');
-            },
-          },
-        ],
-      );
+      const successMessage = language === 'fr'
+        ? `Votre numéro ISN : ${response.profile?.isnNumber || 'N/A'}\n\nProfil Communauté créé avec succès !`
+        : `Your ISN number: ${response.profile?.isnNumber || 'N/A'}\n\nCommunity profile created successfully!`;
+      showSuccess(successMessage);
+      setTimeout(() => navigate('welcome'), 2000);
     } catch (error) {
       console.error('Erreur création profil Communauté:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
     } finally {
       setLoading(false);
     }
@@ -350,6 +322,14 @@ export default function RegisterCommunityPage() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 }

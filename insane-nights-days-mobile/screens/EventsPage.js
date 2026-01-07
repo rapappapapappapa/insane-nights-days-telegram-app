@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Alert,
   ActivityIndicator,
@@ -14,6 +14,9 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
+import { useDebounce } from '../hooks/useDebounce';
+import SkeletonLoader from '../components/SkeletonLoader';
+import EventCard from '../components/EventCard';
 
 const mockEvents = [
   {
@@ -67,6 +70,7 @@ export default function EventsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const fetchEvents = async (isRefresh = false) => {
     if (isRefresh) {
@@ -94,15 +98,19 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  const genres = ['all', ...new Set(events.map(event => event.genre))];
+  const genres = useMemo(() => {
+    return ['all', ...new Set(events.map(event => event.genre))];
+  }, [events]);
 
-  const filteredEvents = events.filter(event => {
-    const matchesGenre = selectedGenre === 'all' || event.genre === selectedGenre;
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesGenre && matchesSearch;
-  });
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      const matchesGenre = selectedGenre === 'all' || event.genre === selectedGenre;
+      const matchesSearch =
+        event.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      return matchesGenre && matchesSearch;
+    });
+  }, [events, selectedGenre, debouncedSearchTerm]);
 
   const getAvailabilityColor = (sold, capacity) => {
     const percentage = (sold / capacity) * 100;
@@ -113,10 +121,38 @@ export default function EventsPage() {
 
   if (loading && events.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.container}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#FF1744" />
-        <Text style={styles.loadingText}>Chargement des événements...</Text>
+        <View style={styles.eventsTopBar}>
+          <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
+            <Text style={styles.backButtonTopText}>← Retour</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.eventsScroll} contentContainerStyle={styles.eventsContent}>
+          <View style={styles.eventsHeader}>
+            <SkeletonLoader width="60%" height={28} style={{ marginBottom: 8 }} />
+            <SkeletonLoader width="80%" height={14} />
+          </View>
+          
+          <SkeletonLoader width="100%" height={50} style={{ marginBottom: 16, borderRadius: 12 }} />
+          
+          <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+            <SkeletonLoader width={80} height={36} style={{ marginRight: 8, borderRadius: 20 }} />
+            <SkeletonLoader width={100} height={36} style={{ marginRight: 8, borderRadius: 20 }} />
+            <SkeletonLoader width={90} height={36} style={{ borderRadius: 20 }} />
+          </View>
+          
+          {[1, 2, 3].map(i => (
+            <View key={i} style={styles.eventCard}>
+              <SkeletonLoader width="100%" height={200} style={{ marginBottom: 16 }} />
+              <SkeletonLoader width="80%" height={20} style={{ marginBottom: 8 }} />
+              <SkeletonLoader width="60%" height={16} style={{ marginBottom: 12 }} />
+              <SkeletonLoader width="100%" height={12} style={{ marginBottom: 4 }} />
+              <SkeletonLoader width="70%" height={12} style={{ marginBottom: 16 }} />
+              <SkeletonLoader width="100%" height={48} style={{ borderRadius: 12 }} />
+            </View>
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -179,98 +215,11 @@ export default function EventsPage() {
         </ScrollView>
 
         {filteredEvents.map(event => (
-          <TouchableOpacity
+          <EventCard
             key={event.id}
-            style={styles.eventCard}
-            activeOpacity={0.9}
-            onPress={() => navigate('eventDetail', { eventId: event.id })}
-          >
-            <View style={styles.eventImageContainer}>
-              <Image source={{ uri: event.image }} style={styles.eventImage} />
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceText}>{event.price}€</Text>
-              </View>
-              <View style={styles.genreBadge}>
-                <Text style={styles.genreText}>{event.genre}</Text>
-              </View>
-              {event.status && (
-                <View style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: event.status === 'UPCOMING' ? '#10b98120' : event.status === 'ONGOING' ? '#f59e0b20' : '#6b728020',
-                    borderColor: event.status === 'UPCOMING' ? '#10b981' : event.status === 'ONGOING' ? '#f59e0b' : '#6b7280',
-                  }
-                ]}>
-                  <Text style={[
-                    styles.statusBadgeText,
-                    {
-                      color: event.status === 'UPCOMING' ? '#10b981' : event.status === 'ONGOING' ? '#f59e0b' : '#6b7280',
-                    }
-                  ]}>
-                    {event.status === 'UPCOMING' ? 'À venir' : event.status === 'ONGOING' ? 'En cours' : 'Terminé'}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.eventContent}>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <Text style={styles.eventDescription}>{event.description}</Text>
-
-              <View style={styles.eventInfo}>
-                <View style={styles.eventInfoRow}>
-                  <Text style={styles.eventInfoIcon}>📅</Text>
-                  <Text style={styles.eventInfoText}>
-                    {event.date} à {event.time}
-                  </Text>
-                </View>
-                <View style={styles.eventInfoRow}>
-                  <Text style={styles.eventInfoIcon}>📍</Text>
-                  <Text style={styles.eventInfoText}>{event.location}</Text>
-                </View>
-                {event.djs && event.djs.length > 0 && (
-                  <View style={styles.eventInfoRow}>
-                    <Text style={styles.eventInfoIcon}>🎤</Text>
-                    <Text style={styles.eventInfoText}>
-                      {Array.isArray(event.djs) ? event.djs.join(', ') : event.djs}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.availabilityContainer}>
-                <View style={styles.availabilityHeader}>
-                  <Text style={styles.availabilityLabel}>Places disponibles</Text>
-                  <Text
-                    style={[
-                      styles.availabilityCount,
-                      { color: getAvailabilityColor(event.sold, event.capacity) },
-                    ]}
-                  >
-                    {event.capacity - event.sold} / {event.capacity}
-                  </Text>
-                </View>
-                <View style={styles.progressBarContainer}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${(event.sold / event.capacity) * 100}%`,
-                        backgroundColor: getAvailabilityColor(event.sold, event.capacity),
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.detailsButton}
-                onPress={() => navigate('eventDetail', { eventId: event.id })}
-              >
-                <Text style={styles.detailsButtonText}>🎟️ Voir les Détails</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+            event={event}
+            onPress={(eventId) => navigate('eventDetail', { eventId })}
+          />
         ))}
 
         {filteredEvents.length === 0 && (

@@ -13,13 +13,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
+import BackgroundVideo from '../components/BackgroundVideo';
 
 export default function WelcomePage() {
   const { language, t } = useLanguage();
   const { user, logout, updateUser } = useAuth();
   const { navigate } = useNavigation();
   const [loadingUserData, setLoadingUserData] = useState(false);
-
+  
   useEffect(() => {
     // Charger les données utilisateur complètes si connecté
     // Recharger aussi si on arrive sur la page pour s'assurer que activeProfileType est à jour
@@ -49,6 +50,11 @@ export default function WelcomePage() {
 
   return (
     <View style={styles.container}>
+      {/* Vidéo d'arrière-plan */}
+      <BackgroundVideo opacity={0.6} />
+      
+      {/* Contenu par-dessus la vidéo */}
+      <View style={styles.contentOverlay}>
       <StatusBar style="light" />
       <ScrollView
         style={styles.scrollView}
@@ -205,6 +211,7 @@ export default function WelcomePage() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+      </View>
     </View>
   );
 }
@@ -213,6 +220,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0b0b0e',
+  },
+  contentOverlay: {
+    flex: 1,
+    zIndex: 1,
   },
   scrollView: {
     flex: 1,

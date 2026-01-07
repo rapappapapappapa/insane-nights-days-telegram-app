@@ -8,7 +8,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -16,11 +15,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 export default function RegisterVenuePage() {
   const { language, t } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
 
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
@@ -206,21 +208,15 @@ export default function RegisterVenuePage() {
 
     // Validation
     if (!formData.pseudo || !formData.venueName || !formData.email || !formData.address) {
-      Alert.alert(
-        language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.',
-      );
+      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
     
     // Valider que l'adresse a été sélectionnée depuis les suggestions
     if (!selectedAddressId) {
-      Alert.alert(
-        language === 'fr' ? 'Adresse invalide' : 'Invalid address',
-        language === 'fr' 
-          ? 'Veuillez sélectionner une adresse depuis la liste de suggestions.' 
-          : 'Please select an address from the suggestions list.',
-      );
+      showError(language === 'fr' 
+        ? 'Veuillez sélectionner une adresse depuis la liste de suggestions.' 
+        : 'Please select an address from the suggestions list.');
       return;
     }
 
@@ -228,23 +224,17 @@ export default function RegisterVenuePage() {
 
     try {
       if (!user?.id) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr'
-            ? 'Vous devez être connecté pour créer un profil.'
-            : 'You must be logged in to create a profile.',
-        );
+        showError(language === 'fr'
+          ? 'Vous devez être connecté pour créer un profil.'
+          : 'You must be logged in to create a profile.');
         setLoading(false);
         return;
       }
 
       if (!user?.token) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr'
-            ? 'Token d\'authentification manquant. Veuillez vous reconnecter.'
-            : 'Authentication token missing. Please log in again.',
-        );
+        showError(language === 'fr'
+          ? 'Token d\'authentification manquant. Veuillez vous reconnecter.'
+          : 'Authentication token missing. Please log in again.');
         setLoading(false);
         return;
       }
@@ -258,21 +248,15 @@ export default function RegisterVenuePage() {
       });
 
       if (!response) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur de connexion' : 'Connection error',
-          language === 'fr'
-            ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
-            : 'Unable to reach server. Check your connection.',
-        );
+        showError(language === 'fr'
+          ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
+          : 'Unable to reach server. Check your connection.');
         setLoading(false);
         return;
       }
 
       if (!response.success) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'),
-        );
+        showError(response.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
         setLoading(false);
         return;
       }
@@ -289,26 +273,13 @@ export default function RegisterVenuePage() {
       }
 
       // Succès !
-      Alert.alert(
-        language === 'fr' ? 'Profil créé !' : 'Profile created!',
-        language === 'fr'
-          ? 'Profil Lieu créé avec succès !'
-          : 'Venue profile created successfully!',
-        [
-          {
-            text: language === 'fr' ? 'Continuer' : 'Continue',
-            onPress: () => {
-              navigate('welcome');
-            },
-          },
-        ],
-      );
+      showSuccess(language === 'fr'
+        ? 'Profil Lieu créé avec succès !'
+        : 'Venue profile created successfully!');
+      setTimeout(() => navigate('welcome'), 1500);
     } catch (error) {
       console.error('Erreur création profil Lieu:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
     } finally {
       setLoading(false);
     }
@@ -454,6 +425,14 @@ export default function RegisterVenuePage() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 }

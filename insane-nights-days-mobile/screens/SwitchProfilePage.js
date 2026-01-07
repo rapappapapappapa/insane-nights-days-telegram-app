@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const profileTypes = [
   {
@@ -57,6 +58,7 @@ export default function SwitchProfilePage() {
   const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   
   const [profiles, setProfiles] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -80,10 +82,7 @@ export default function SwitchProfilePage() {
       }
     } catch (error) {
       console.error('Erreur récupération profils:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de charger les profils' : 'Unable to load profiles',
-      );
+      showError(language === 'fr' ? 'Impossible de charger les profils' : 'Unable to load profiles');
     } finally {
       setLoading(false);
     }
@@ -111,30 +110,16 @@ export default function SwitchProfilePage() {
       if (response && response.success) {
         updateUser({ activeProfileType: profileType });
         await fetchProfiles();
-        Alert.alert(
-          language === 'fr' ? 'Profil changé' : 'Profile switched',
-          language === 'fr' 
-            ? `Profil basculé vers ${getProfileTitle(profileType)}` 
-            : `Profile switched to ${getProfileTitle(profileType)}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => goBack(),
-            },
-          ],
-        );
+        showSuccess(language === 'fr' 
+          ? `Profil basculé vers ${getProfileTitle(profileType)}` 
+          : `Profile switched to ${getProfileTitle(profileType)}`);
+        setTimeout(() => goBack(), 1500);
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile'),
-        );
+        showError(response?.message || (language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile'));
       }
     } catch (error) {
       console.error('Erreur bascule profil:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile',
-      );
+      showError(language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile');
     } finally {
       setSwitching(false);
     }
@@ -283,6 +268,14 @@ export default function SwitchProfilePage() {
           </View>
         )}
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </View>
   );
 }

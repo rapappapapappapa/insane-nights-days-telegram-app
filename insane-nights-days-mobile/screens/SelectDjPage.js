@@ -20,7 +20,7 @@ export default function SelectDjPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const { selectedDjIds = [] } = routeParams || {}; // IDs déjà sélectionnés
+  const { selectedDjIds = [], eventId = null, slotIndex = null, isSlotMode = false } = routeParams || {}; // IDs déjà sélectionnés + event cible éventuel + mode slot
   
   const [djs, setDjs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +52,12 @@ export default function SelectDjPage() {
 
   const handleDjPress = (dj) => {
     // Naviguer vers le profil DJ en mode sélection
+    console.log('[SelectDj] Navigation vers djProfile:', { 
+      djId: dj.id, 
+      slotIndex, 
+      isSlotMode,
+      selectedDjIds 
+    });
     navigate('djProfile', {
       djId: dj.id,
       djUserId: dj.userId,
@@ -59,6 +65,9 @@ export default function SelectDjPage() {
       selectionMode: true, // Mode sélection
       selectedDjIds: selectedDjIds, // Passer les IDs déjà sélectionnés
       returnTo: 'selectDj', // Retourner ici après sélection
+      eventId: eventId || undefined, // Propager l'eventId si présent
+      slotIndex: slotIndex, // Passer l'index du slot si en mode slot
+      isSlotMode: isSlotMode, // Indiquer qu'on est en mode slot
     });
   };
 

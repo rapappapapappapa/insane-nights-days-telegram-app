@@ -9,7 +9,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -17,11 +16,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import BackgroundVideo from '../components/BackgroundVideo';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 export default function HomePage() {
   const { language, changeLanguage, t } = useLanguage();
   const { user, login, register } = useAuth();
   const { navigate } = useNavigation();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [mode, setMode] = useState('login'); // 'login' ou 'register'
   
@@ -40,14 +43,13 @@ export default function HomePage() {
   const scrollViewRef = useRef(null);
   const passwordInputRef = useRef(null);
 
+  // Player vidéo d'arrière-plan - Supprimé, maintenant géré par BackgroundVideo
+
   const handleLogin = async () => {
     if (loginLoading) return;
 
     if (!loginEmail || !loginPassword) {
-      Alert.alert(
-        language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir email/pseudo et mot de passe.' : 'Please fill in email/username and password.',
-      );
+      showError(language === 'fr' ? 'Merci de remplir email/pseudo et mot de passe.' : 'Please fill in email/username and password.');
       return;
     }
 
@@ -58,12 +60,10 @@ export default function HomePage() {
     if (result.success) {
       setLoginEmail('');
       setLoginPassword('');
-      navigate('welcome');
+      showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
+      setTimeout(() => navigate('welcome'), 500);
     } else {
-      Alert.alert(
-        language === 'fr' ? 'Erreur de connexion' : 'Login error',
-        result.error ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'),
-      );
+      showError(result.error ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
     }
   };
 
@@ -72,28 +72,19 @@ export default function HomePage() {
 
     // Validation : pseudo et email sont requis
     if (!registerUsername || !registerEmail || !registerPassword) {
-      Alert.alert(
-        language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' ? 'Merci de remplir tous les champs (pseudo, email et mot de passe).' : 'Please fill in all fields (username, email and password).',
-      );
+      showError(language === 'fr' ? 'Merci de remplir tous les champs (pseudo, email et mot de passe).' : 'Please fill in all fields (username, email and password).');
       return;
     }
 
     // Validation du format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(registerEmail.trim())) {
-      Alert.alert(
-        language === 'fr' ? 'Email invalide' : 'Invalid email',
-        language === 'fr' ? 'Veuillez entrer une adresse email valide.' : 'Please enter a valid email address.',
-      );
+      showError(language === 'fr' ? 'Veuillez entrer une adresse email valide.' : 'Please enter a valid email address.');
       return;
     }
 
     if (registerPassword.length < 6) {
-      Alert.alert(
-        language === 'fr' ? 'Mot de passe trop court' : 'Password too short',
-        language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Password must be at least 6 characters.',
-      );
+      showError(language === 'fr' ? 'Le mot de passe doit contenir au moins 6 caractères.' : 'Password must be at least 6 characters.');
       return;
     }
 
@@ -109,30 +100,20 @@ export default function HomePage() {
       setRegisterEmail('');
       setRegisterUsername('');
       setRegisterPassword('');
-
-      Alert.alert(
-        language === 'fr' ? 'Inscription réussie' : 'Registration successful',
-        language === 'fr' ? 'Compte créé avec succès !' : 'Account created successfully!',
-        [
-          {
-            text: language === 'fr' ? 'Continuer' : 'Continue',
-            onPress: () => {
-              // Navigue vers la page de choix de type de compte
-              navigate('accountType');
-            },
-          },
-        ],
-      );
+      showSuccess(language === 'fr' ? 'Compte créé avec succès !' : 'Account created successfully!');
+      setTimeout(() => navigate('accountType'), 1500);
     } else {
-      Alert.alert(
-        language === 'fr' ? "Erreur d'inscription" : 'Registration error',
-        result.error ?? (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'),
-      );
+      showError(result.error ?? (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Vidéo d'arrière-plan */}
+      <BackgroundVideo opacity={0.6} />
+      
+      {/* Contenu par-dessus la vidéo */}
+      <View style={styles.contentOverlay}>
       <StatusBar style="light" />
       
       {/* Header avec Logo centré et Langue */}
@@ -369,6 +350,15 @@ export default function HomePage() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
+      </View>
     </View>
   );
 }
@@ -378,13 +368,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0b0b0e',
   },
+  contentOverlay: {
+    flex: 1,
+    zIndex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    marginBottom: 20,
   },
   logoContainer: {
     flex: 1,

@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
+// Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -60,8 +60,7 @@ export default function DjListPage() {
   const handleBack = async () => {
     try {
       // Couper tous les sons en cours
-      await Audio.setIsEnabledAsync(false);
-      await Audio.setIsEnabledAsync(true);
+      // Note: expo-audio ne nécessite plus setIsEnabledAsync
     } catch (e) {
       console.error("Erreur lors de l'arrêt de l'audio au retour:", e);
     }

@@ -1,9 +1,13 @@
 // Configuration API pour le backend
 import axios from 'axios';
+import { isTokenExpired } from '../utils/tokenStorage';
+import logger from '../utils/logger';
+import { apiCache } from '../utils/apiCache';
+import { retryApiCall, isRetryableError } from '../utils/retry';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://care-pack-wilderness-badge.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://buys-wisconsin-straight-sub.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -90,6 +94,22 @@ const getFileName = (uri) => {
 const apiRequest = async (endpoint, options = {}, token = null, customTimeout = null) => {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
   
+  // Déterminer la méthode HTTP (GET par défaut)
+  const method = options.method || 'GET';
+  const isGetRequest = method === 'GET' || !method;
+  
+  // Générer la clé de cache pour les requêtes GET
+  const cacheKey = isGetRequest ? apiCache.generateKey(endpoint, options, token) : null;
+  
+  // Vérifier le cache pour les requêtes GET
+  if (isGetRequest && cacheKey) {
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData !== null) {
+      logger.debug('[apiRequest] Données récupérées du cache pour:', endpoint);
+      return cachedData;
+    }
+  }
+  
   const defaultOptions = {
     method: 'GET',
     headers: {
@@ -100,6 +120,13 @@ const apiRequest = async (endpoint, options = {}, token = null, customTimeout = 
 
   // Ajouter le token JWT dans les headers si fourni
   if (token) {
+    // Vérifier si le token est expiré avant de faire la requête
+    if (isTokenExpired(token)) {
+      const expiredError = new Error('Token expiré. Veuillez vous reconnecter.');
+      expiredError.status = 401;
+      expiredError.isTokenExpired = true;
+      throw expiredError;
+    }
     defaultOptions.headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -112,58 +139,93 @@ const apiRequest = async (endpoint, options = {}, token = null, customTimeout = 
     },
   };
 
-  // Gérer le timeout avec AbortController
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+  // Fonction interne pour faire la requête (sera réessayée si nécessaire)
+  const performRequest = async () => {
+    // Gérer le timeout avec AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const contentType = response.headers.get('content-type') ?? '';
+      const isJson = contentType.includes('application/json');
+      let data;
+
+      if (isJson) {
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          logger.warn('API Response Warning: impossible de parser la réponse JSON.', parseError);
+          data = null;
+        }
+      } else {
+        data = await response.text();
+      }
+
+      if (!response.ok) {
+        const errorMessage =
+          (isJson && data && typeof data === 'object' && data.message) ||
+          `Erreur HTTP ${response.status}`;
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.payload = data;
+        
+        // Marquer les erreurs 401 comme token expiré
+        if (response.status === 401) {
+          error.isTokenExpired = true;
+        }
+        
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('Timeout: La requête a pris trop de temps');
+        timeoutError.status = 408;
+        throw timeoutError;
+      }
+      
+      throw error;
+    }
+  };
 
   try {
-    const response = await fetch(url, {
-      ...config,
-      signal: controller.signal,
+    // Réessayer la requête en cas d'erreur réseau ou timeout
+    const data = await retryApiCall(performRequest, {
+      maxRetries: 2, // 2 tentatives supplémentaires (3 au total)
+      delay: 500, // Délai initial de 500ms
+      shouldRetry: isRetryableError,
+      exponentialBackoff: true,
     });
     
-    clearTimeout(timeoutId);
-    
-    const contentType = response.headers.get('content-type') ?? '';
-    const isJson = contentType.includes('application/json');
-    let data;
-
-    if (isJson) {
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.warn('API Response Warning: impossible de parser la réponse JSON.', parseError);
-        data = null;
-      }
-    } else {
-      data = await response.text();
-    }
-
-    if (!response.ok) {
-      const errorMessage =
-        (isJson && data && typeof data === 'object' && data.message) ||
-        `Erreur HTTP ${response.status}`;
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.payload = data;
-      throw error;
+    // Mettre en cache les réponses GET réussies
+    if (isGetRequest && cacheKey && data) {
+      apiCache.set(cacheKey, data);
     }
 
     return data;
   } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      const timeoutError = new Error('Timeout: La requête a pris trop de temps');
-      timeoutError.status = 408;
-      throw timeoutError;
-    }
-    
     if (error?.message?.includes('Network request failed')) {
-      console.warn('API Request Warning: backend inaccessible, fallback local utilisé.');
+      logger.warn('API Request Warning: backend inaccessible après plusieurs tentatives, fallback local utilisé.');
       return null;
     }
-    console.error('API Request Error:', error);
+    // Logger l'erreur avec plus de détails
+    logger.error('API Request Error:', {
+      message: error?.message || 'Unknown error',
+      status: error?.status,
+      name: error?.name,
+      endpoint: endpoint,
+      isTokenExpired: error?.isTokenExpired,
+    });
     throw error;
   }
 };
@@ -481,10 +543,10 @@ const api = {
       ...additionalData // bio, genre, mainCity, languages, tarifs, disponibilités
     };
     
-    console.log('[api.updateDjProfile] Corps de la requête avant stringify:', requestBody);
-    console.log('[api.updateDjProfile] Clés dans requestBody:', Object.keys(requestBody));
-    console.log('[api.updateDjProfile] bio dans requestBody:', requestBody.bio);
-    console.log('[api.updateDjProfile] additionalData:', additionalData);
+    logger.debug('[api.updateDjProfile] Corps de la requête avant stringify:', requestBody);
+    logger.debug('[api.updateDjProfile] Clés dans requestBody:', Object.keys(requestBody));
+    logger.debug('[api.updateDjProfile] bio dans requestBody:', requestBody.bio);
+    logger.debug('[api.updateDjProfile] additionalData:', additionalData);
     
     return apiRequest(
       API_CONFIG.ENDPOINTS.USER_DJ_PROFILE,
@@ -520,7 +582,7 @@ const api = {
       throw new Error('Token d\'authentification requis.');
     }
     
-    console.log('[uploadDjMediaFile] Début upload:', { djId, type, fileUri: fileUri.substring(0, 50) + '...', title });
+    logger.debug('[uploadDjMediaFile] Début upload:', { djId, type, fileUri: fileUri.substring(0, 50) + '...', title });
     
     // Créer un FormData pour l'upload
     const formData = new FormData();
@@ -529,7 +591,7 @@ const api = {
       type: getMimeType(fileUri, type),
       name: getFileName(fileUri),
     };
-    console.log('[uploadDjMediaFile] File data:', { type: fileData.type, name: fileData.name });
+    logger.debug('[uploadDjMediaFile] File data:', { type: fileData.type, name: fileData.name });
     
     // IMPORTANT: Ne pas mettre 'file' comme clé, utiliser directement l'objet
     formData.append('file', fileData);
@@ -538,11 +600,11 @@ const api = {
     if (thumbnail) formData.append('thumbnail', thumbnail);
 
     const uploadUrl = `${API_CONFIG.BASE_URL}/api/dj/${djId}/media/upload`;
-    console.log('[uploadDjMediaFile] URL:', uploadUrl);
+    logger.debug('[uploadDjMediaFile] URL:', uploadUrl);
 
     // Utiliser fetch (plus robuste sur Android que axios pour FormData)
     try {
-      console.log('[uploadDjMediaFile] Envoi de la requête avec fetch...');
+      logger.debug('[uploadDjMediaFile] Envoi de la requête avec fetch...');
       const response = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
@@ -553,15 +615,15 @@ const api = {
       });
 
       const result = await response.json();
-      console.log('[uploadDjMediaFile] Réponse:', result);
-
+      logger.debug('[uploadDjMediaFile] Réponse:', result);
+      
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Échec de l\'upload du média.');
       }
 
       return result;
     } catch (error) {
-      console.error('[uploadDjMediaFile] Erreur catch:', { 
+      logger.error('[uploadDjMediaFile] Erreur catch:', { 
         name: error.name, 
         message: error.message,
         code: error.code,
@@ -603,7 +665,7 @@ const api = {
       throw new Error('Token d\'authentification requis.');
     }
 
-    console.log('[uploadVenueMediaFile] Début upload:', { venueId, type, fileUri: fileUri?.substring(0, 50) + '...', title });
+    logger.debug('[uploadVenueMediaFile] Début upload:', { venueId, type, fileUri: fileUri?.substring(0, 50) + '...', title });
 
     const formData = new FormData();
     const fileData = {
@@ -617,7 +679,7 @@ const api = {
     if (thumbnail) formData.append('thumbnail', thumbnail);
 
     const uploadUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.VENUE_MEDIA}/${venueId}/media/upload`;
-    console.log('[uploadVenueMediaFile] URL:', uploadUrl);
+    logger.debug('[uploadVenueMediaFile] URL:', uploadUrl);
 
     try {
       const response = await fetch(uploadUrl, {
@@ -630,7 +692,7 @@ const api = {
       });
 
       const result = await response.json();
-      console.log('[uploadVenueMediaFile] Réponse:', result);
+      logger.debug('[uploadVenueMediaFile] Réponse:', result);
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Échec de l\'upload du média.');
@@ -638,7 +700,7 @@ const api = {
 
       return result;
     } catch (error) {
-      console.error('[uploadVenueMediaFile] Erreur:', error);
+      logger.error('[uploadVenueMediaFile] Erreur:', error);
       throw error;
     }
   },
@@ -757,6 +819,24 @@ const api = {
     return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_EVENTS, {}, token);
   },
 
+  // Ajouter un DJ à un événement existant (Booker)
+  addDjToEvent: async (token, eventId, djId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!eventId || !djId) {
+      throw new Error('eventId et djId sont requis.');
+    }
+    return apiRequest(
+      `/api/booker/events/${eventId}/djs`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ djId }),
+      },
+      token
+    );
+  },
+
   // Créer un événement (booker)
   createEvent: async (token, eventData) => {
     if (!token) {
@@ -785,6 +865,118 @@ const api = {
       token
     );
   },
+
+  // ============================================
+  // CHAT - Communication DJ/Booker
+  // ============================================
+
+  // Envoyer un message dans une conversation
+  sendMessage: async (token, eventDjId, content) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!content || !content.trim()) {
+      throw new Error('Le contenu du message est requis.');
+    }
+    return apiRequest(
+      `/api/chat/${eventDjId}/messages`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ content: content.trim() }),
+      },
+      token
+    );
+  },
+
+  // Récupérer les messages d'une conversation
+  getMessages: async (token, eventDjId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/chat/${eventDjId}/messages`, {}, token);
+  },
+
+  // Marquer un message comme lu
+  markMessageAsRead: async (token, messageId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `/api/chat/messages/${messageId}/read`,
+      {
+        method: 'PUT',
+      },
+      token
+    );
+  },
+
+  // Supprimer un message (soft delete)
+  deleteMessage: async (token, messageId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `/api/chat/messages/${messageId}`,
+      {
+        method: 'DELETE',
+      },
+      token
+    );
+  },
+
+  // Récupérer toutes les conversations (pour DJ ou Booker)
+  getConversations: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest('/api/chat/conversations', {}, token);
+  },
+
+  // Récupérer le nombre total de messages non lus
+  getUnreadMessagesCount: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest('/api/chat/unread-count', {}, token);
+  },
+
+  // Marquer tous les messages non lus comme lus
+  markAllMessagesAsRead: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest('/api/chat/mark-all-read', { method: 'PUT' }, token);
+  },
+
+  // ============================================
+  // CHAT DE GROUPE - Communication entre tous les DJs d'un événement
+  // ============================================
+
+  // Envoyer un message dans le chat de groupe d'un événement
+  sendGroupMessage: async (token, eventId, content) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!content || !content.trim()) {
+      throw new Error('Le contenu du message est requis.');
+    }
+    return apiRequest(
+      `/api/chat/group/${eventId}/messages`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ content: content.trim() }),
+      },
+      token
+    );
+  },
+
+  // Récupérer les messages du chat de groupe d'un événement
+  getGroupMessages: async (token, eventId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/chat/group/${eventId}/messages`, {}, token);
+  },
 };
 
 // Fonction helper pour normaliser les URLs des médias
@@ -811,7 +1003,7 @@ export const normalizeMediaUrl = (url) => {
       if (isTunnelUrl && urlDomain !== baseUrlDomain) {
         // Remplacer uniquement le domaine, en conservant le chemin
         const normalizedUrl = url.replace(/^(https?:\/\/[^\/]+)/, baseUrlDomain);
-        console.log('[NORMALIZE URL] Ancienne URL tunnel remplacée:', { old: url, new: normalizedUrl });
+        logger.debug('[NORMALIZE URL] Ancienne URL tunnel remplacée:', { old: url, new: normalizedUrl });
         return normalizedUrl;
       }
     }

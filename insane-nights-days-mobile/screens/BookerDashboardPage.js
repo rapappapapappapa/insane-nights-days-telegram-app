@@ -11,6 +11,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -18,12 +19,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useEventForm } from '../contexts/EventFormContext';
-import { api } from '../api/config';
+import { api, normalizeMediaUrl } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
+import NotificationBadge from '../components/NotificationBadge';
+import { useNotifications } from '../hooks/useNotifications';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function BookerDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
+  const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
   const { formData, setFormData, eventDateTime, setEventDateTime, resetForm, addDj, removeDj, setVenue } = useEventForm();
 
   const [loading, setLoading] = useState(false);
@@ -34,8 +42,23 @@ export default function BookerDashboardPage() {
   const [creating, setCreating] = useState(false);
   const [myEvents, setMyEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [showMyEvents, setShowMyEvents] = useState(false);
+  // Ouvrir la section événements si demandé via routeParams (pour les notifications)
+  const [showMyEvents, setShowMyEvents] = useState(routeParams?.openBookings || false);
   const [deletingEventId, setDeletingEventId] = useState(null);
+  
+  // Slots DJ pour la création d'événement
+  const [djSlots, setDjSlots] = useState([null]); // Array de djIds ou null
+
+  // Chat
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [selectedChatEventDjId, setSelectedChatEventDjId] = useState(null);
+  const [selectedChatEventId, setSelectedChatEventId] = useState(null); // Pour les chats de groupe
+  const [isGroupChat, setIsGroupChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [loadingChatMessages, setLoadingChatMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [newMessageText, setNewMessageText] = useState('');
+  const chatScrollViewRef = useRef(null);
 
   // Date & heure avec sélecteurs stylés
   const [tempDate, setTempDate] = useState(eventDateTime);
@@ -100,21 +123,28 @@ export default function BookerDashboardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   
   // Gérer les sélections depuis routeParams - avec comparaison pour éviter les doublons
-  const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null });
+  const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, eventId: null, slotIndex: null });
+  const hasInitializedSlots = useRef(false);
   
   // Extraire les valeurs primitives pour éviter les re-renders
   const currentDjId = routeParams?.selectedDjId;
   const currentVenueId = routeParams?.selectedVenueId;
   const currentAction = routeParams?.action;
+  const currentEventId = routeParams?.eventId || null;
+  const currentSlotIndex = routeParams?.slotIndex;
   
   React.useLayoutEffect(() => {
-    // Vérifier si on a déjà traité ces paramètres
-    if (
-      currentDjId === lastProcessedParams.current.selectedDjId &&
-      currentVenueId === lastProcessedParams.current.selectedVenueId &&
-      currentAction === lastProcessedParams.current.action
-    ) {
-      return; // Déjà traité, ne rien faire
+    // Pour les mises à jour de slots (création d'événement), toujours permettre la mise à jour
+    const isSlotUpdate = currentSlotIndex !== undefined && currentSlotIndex !== null && !currentEventId;
+    
+    // Pour les autres cas, vérifier si on a déjà traité ces paramètres
+    if (!isSlotUpdate) {
+      const paramsKey = `${currentDjId}-${currentVenueId}-${currentAction}-${currentEventId}-${currentSlotIndex}`;
+      const lastParamsKey = `${lastProcessedParams.current.selectedDjId}-${lastProcessedParams.current.selectedVenueId}-${lastProcessedParams.current.action}-${lastProcessedParams.current.eventId}-${lastProcessedParams.current.slotIndex}`;
+      
+      if (paramsKey === lastParamsKey && paramsKey !== 'null-null-null-null-null') {
+        return; // Déjà traité, ne rien faire
+      }
     }
     
     // Mettre à jour la référence
@@ -122,14 +152,186 @@ export default function BookerDashboardPage() {
       selectedDjId: currentDjId,
       selectedVenueId: currentVenueId,
       action: currentAction,
+      eventId: currentEventId,
+      slotIndex: currentSlotIndex,
     };
     
     // Sélection de DJ
     if (currentDjId && currentAction === 'add') {
-      addDj(currentDjId);
-      setCurrentStep(4);
+      if (currentEventId) {
+        // Ajouter un DJ à un événement existant
+        (async () => {
+          try {
+            if (!user?.token) return;
+            const response = await api.addDjToEvent(user.token, currentEventId, currentDjId);
+            if (response && response.success) {
+              fetchMyEvents();
+            } else {
+              showError(response?.message || (language === 'fr'
+                ? 'Impossible d\'ajouter ce DJ à l\'événement.'
+                : 'Unable to add this DJ to the event.'));
+            }
+          } catch (error) {
+            console.error('Erreur ajout DJ à un événement existant:', error);
+            showError(language === 'fr'
+              ? 'Erreur lors de l\'ajout du DJ à l\'événement.'
+              : 'Error while adding DJ to event.');
+          }
+        })();
+      } else {
+        // Flux normal de création d'événement avec slots
+        if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
+          // Mode slot : mettre à jour le slot spécifique
+          console.log('[BookerDashboard] Mise à jour slot:', { 
+            currentSlotIndex, 
+            currentDjId, 
+            prevSlotsLength: djSlots.length,
+            prevSlots: djSlots 
+          });
+          setDjSlots(prev => {
+            console.log('[BookerDashboard] setDjSlots appelé:', { 
+              prev,
+              djSlots,
+              currentSlotIndex, 
+              currentDjId,
+              formDataDjIds: formData.djIds
+            });
+            
+            // Utiliser l'état précédent comme base, en préservant tous les slots existants
+            // Si prev est vide ou invalide, restaurer depuis formData.djIds ou utiliser djSlots actuel
+            let currentSlots = prev && prev.length > 0 ? [...prev] : null;
+            
+            // Si prev est vide mais que formData.djIds contient des DJs, restaurer depuis formData
+            if (!currentSlots || currentSlots.length === 0 || currentSlots.every(id => id === null)) {
+              if (formData.djIds.length > 0) {
+                // Restaurer depuis formData.djIds en préservant la structure des slots
+                // Si djSlots a une structure (plusieurs slots), la préserver
+                if (djSlots.length > formData.djIds.length) {
+                  // Préserver la structure existante et remplir les slots vides avec les DJs de formData
+                  currentSlots = [...djSlots];
+                  formData.djIds.forEach(djId => {
+                    const existingIndex = currentSlots.findIndex(id => id === djId);
+                    if (existingIndex === -1) {
+                      const firstEmptyIndex = currentSlots.findIndex(id => id === null);
+                      if (firstEmptyIndex !== -1) {
+                        currentSlots[firstEmptyIndex] = djId;
+                      } else {
+                        currentSlots.push(djId);
+                      }
+                    }
+                  });
+                } else {
+                  // Créer des slots pour chaque DJ + un slot vide
+                  // Mais préserver la structure si djSlots a plus de slots
+                  const maxLength = Math.max(formData.djIds.length + 1, djSlots.length);
+                  currentSlots = [...formData.djIds];
+                  while (currentSlots.length < maxLength) {
+                    currentSlots.push(null);
+                  }
+                }
+              } else {
+                // Utiliser djSlots actuel ou créer un slot vide
+                currentSlots = djSlots.length > 0 ? [...djSlots] : [null];
+              }
+            } else if (djSlots.length > currentSlots.length) {
+              // Si djSlots a plus de slots que currentSlots, préserver la structure de djSlots
+              currentSlots = [...djSlots];
+            }
+            
+            // S'assurer que tous les DJs de formData sont dans les slots
+            if (formData.djIds.length > 0) {
+              const currentDjIds = currentSlots.filter(id => id !== null);
+              const missingDjIds = formData.djIds.filter(id => !currentDjIds.includes(id));
+              
+              // Ajouter les DJs manquants dans les slots vides
+              missingDjIds.forEach(djId => {
+                const firstEmptyIndex = currentSlots.findIndex(id => id === null);
+                if (firstEmptyIndex !== -1) {
+                  currentSlots[firstEmptyIndex] = djId;
+                } else {
+                  currentSlots.push(djId);
+                }
+              });
+            }
+            
+            // S'assurer que le tableau est assez grand pour l'index
+            while (currentSlots.length <= currentSlotIndex) {
+              currentSlots.push(null);
+            }
+            
+            // Créer une copie pour la mise à jour
+            const newSlots = [...currentSlots];
+            
+            console.log('[BookerDashboard] Avant mise à jour:', { 
+              prev,
+              djSlots,
+              currentSlots, 
+              newSlots: [...newSlots], 
+              currentSlotIndex, 
+              currentDjId,
+              formDataDjIds: formData.djIds
+            });
+            
+            // Mettre à jour uniquement le slot spécifié
+            newSlots[currentSlotIndex] = currentDjId;
+            
+            console.log('[BookerDashboard] Après mise à jour:', { newSlots: [...newSlots] });
+            
+            // Mettre à jour formData.djIds avec tous les slots remplis
+            const newDjIds = newSlots.filter(id => id !== null);
+            setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
+            
+            return newSlots;
+          });
+          // Restaurer l'étape 3 après la sélection et empêcher la réinitialisation
+          hasInitializedSlots.current = true;
+          // Ne pas changer l'étape si on est déjà à l'étape 3 pour éviter de déclencher le useEffect
+          if (currentStep !== 3) {
+            setCurrentStep(3);
+          }
+        } else {
+          // Si on est déjà à l'étape 3 ou plus, rester à l'étape 3 après sélection
+          // Sinon, utiliser l'ancien flux (pour compatibilité)
+          if (currentStep >= 3) {
+            // On est dans le processus de création, utiliser le système de slots
+            // Mettre à jour les slots si nécessaire
+            setDjSlots(prev => {
+              const newSlots = [...prev];
+              // Trouver le premier slot vide ou ajouter un nouveau slot
+              const emptyIndex = newSlots.findIndex(id => id === null);
+              if (emptyIndex !== -1) {
+                newSlots[emptyIndex] = currentDjId;
+              } else {
+                newSlots.push(currentDjId);
+              }
+              // Mettre à jour formData.djIds avec tous les slots remplis
+              const newDjIds = newSlots.filter(id => id !== null);
+              setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
+              return newSlots;
+            });
+            setCurrentStep(3);
+          } else {
+            // Ancien flux (pour compatibilité)
+            addDj(currentDjId);
+            setCurrentStep(4);
+          }
+        }
+      }
     } else if (currentDjId && currentAction === 'remove') {
-      removeDj(currentDjId);
+      if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
+        // Mode slot : retirer le slot spécifique
+        setDjSlots(prev => {
+          const newSlots = [...prev];
+          newSlots[currentSlotIndex] = null;
+          // Mettre à jour formData.djIds avec tous les slots remplis
+          const newDjIds = newSlots.filter(id => id !== null);
+          setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
+          return newSlots;
+        });
+        setCurrentStep(3);
+      } else {
+        removeDj(currentDjId);
+      }
     }
     
     // Sélection de lieu
@@ -140,7 +342,7 @@ export default function BookerDashboardPage() {
       setVenue('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDjId, currentVenueId, currentAction]); // Seulement les valeurs primitives
+  }, [currentDjId, currentVenueId, currentAction, currentSlotIndex, currentEventId]); // Inclure currentEventId dans les dépendances
 
   useEffect(() => {
     if (user?.token) {
@@ -158,6 +360,28 @@ export default function BookerDashboardPage() {
     }
   }, [formData.date, currentStep, user?.token]);
 
+  // Initialiser les slots seulement la première fois qu'on arrive à l'étape 3
+  useEffect(() => {
+    if (currentStep === 3 && !hasInitializedSlots.current) {
+      // Si on a déjà des DJs sélectionnés, créer des slots pour eux + un slot vide
+      if (formData.djIds.length > 0) {
+        setDjSlots([...formData.djIds, null]);
+      } else if (djSlots.length === 0) {
+        // Si on n'a pas de slots du tout, créer un slot vide
+        setDjSlots([null]);
+      }
+      hasInitializedSlots.current = true;
+      console.log('[BookerDashboard] Initialisation slots étape 3:', { 
+        formDataDjIds: formData.djIds, 
+        djSlots: djSlots.length > 0 ? djSlots : (formData.djIds.length > 0 ? [...formData.djIds, null] : [null])
+      });
+    } else if (currentStep !== 3) {
+      // Réinitialiser le flag quand on quitte l'étape 3
+      hasInitializedSlots.current = false;
+    }
+    // Ne pas se déclencher si les slots sont déjà initialisés et qu'on est toujours à l'étape 3
+  }, [currentStep]); // Seulement dépendre de currentStep pour éviter les conflits
+
   const fetchMyEvents = async () => {
     if (!user?.token || loadingEvents) return;
     setLoadingEvents(true);
@@ -173,6 +397,101 @@ export default function BookerDashboardPage() {
     }
   };
 
+  // Fonctions de chat
+  const openChat = async (eventDjId) => {
+    setSelectedChatEventDjId(eventDjId);
+    setSelectedChatEventId(null);
+    setIsGroupChat(false);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventDjId, false);
+    // Rafraîchir le compteur après ouverture
+    refreshUnreadCount();
+  };
+
+  const openGroupChat = async (eventId) => {
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(eventId);
+    setIsGroupChat(true);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventId, true);
+    // Rafraîchir le compteur après ouverture
+    refreshUnreadCount();
+  };
+
+  const loadChatMessages = async (id, isGroup = false) => {
+    if (!user?.token || !id) return;
+    
+    setLoadingChatMessages(true);
+    try {
+      const response = isGroup 
+        ? await api.getGroupMessages(user.token, id)
+        : await api.getMessages(user.token, id);
+      if (response && response.success && response.messages) {
+        setChatMessages(response.messages);
+        setTimeout(() => {
+          if (chatScrollViewRef.current) {
+            chatScrollViewRef.current.scrollToEnd({ animated: true });
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+      showError(language === 'fr' ? 'Impossible de charger les messages.' : 'Unable to load messages.');
+    } finally {
+      setLoadingChatMessages(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!user?.token || !newMessageText.trim() || sendingMessage) return;
+    if (!isGroupChat && !selectedChatEventDjId) return;
+    if (isGroupChat && !selectedChatEventId) return;
+    
+    const messageText = newMessageText.trim();
+    setNewMessageText('');
+    setSendingMessage(true);
+    
+    try {
+      const response = isGroupChat
+        ? await api.sendGroupMessage(user.token, selectedChatEventId, messageText)
+        : await api.sendMessage(user.token, selectedChatEventDjId, messageText);
+      if (response && response.success) {
+        await loadChatMessages(isGroupChat ? selectedChatEventId : selectedChatEventDjId, isGroupChat);
+      } else {
+        showError(response?.message || (language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.'));
+        setNewMessageText(messageText);
+      }
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      showError(language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.');
+      setNewMessageText(messageText);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!user?.token || !messageId) return;
+    try {
+      await api.deleteMessage(user.token, messageId);
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, deleted: true, content: 'message supprimé' } : m
+        )
+      );
+    } catch (error) {
+      console.error('Erreur suppression message:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr'
+          ? 'Impossible de supprimer le message.'
+          : 'Unable to delete message.'
+      );
+    }
+  };
+
   const fetchAvailableDjs = async () => {
     if (!user?.token || loadingDjs) return;
     setLoadingDjs(true);
@@ -185,10 +504,7 @@ export default function BookerDashboardPage() {
       }
     } catch (error) {
       console.error('Erreur récupération DJs disponibles:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de charger les DJs disponibles.' : 'Unable to load available DJs.'
-      );
+      showError(language === 'fr' ? 'Impossible de charger les DJs disponibles.' : 'Unable to load available DJs.');
     } finally {
       setLoadingDjs(false);
     }
@@ -204,10 +520,7 @@ export default function BookerDashboardPage() {
       }
     } catch (error) {
       console.error('Erreur récupération lieux:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de charger les lieux.' : 'Unable to load venues.'
-      );
+      showError(language === 'fr' ? 'Impossible de charger les lieux.' : 'Unable to load venues.');
     } finally {
       setLoadingVenues(false);
     }
@@ -293,12 +606,9 @@ export default function BookerDashboardPage() {
         );
 
         if (eventDay < today) {
-          Alert.alert(
-            language === 'fr' ? 'Date invalide' : 'Invalid date',
-            language === 'fr'
-              ? 'Vous ne pouvez pas créer un événement à une date déjà passée.'
-              : 'You cannot create an event on a past date.'
-          );
+          showError(language === 'fr'
+            ? 'Vous ne pouvez pas créer un événement à une date déjà passée.'
+            : 'You cannot create an event on a past date.');
           return;
         }
       }
@@ -368,43 +678,26 @@ export default function BookerDashboardPage() {
             conflictMessage += `\n\n${language === 'fr' ? 'Événement en conflit' : 'Conflicting event'}: ${response.conflictingEvent.title} (${conflictDate}${response.conflictingEvent.time ? ' à ' + response.conflictingEvent.time : ''})`;
           }
           
-          Alert.alert(
-            language === 'fr' ? 'Conflit de réservation' : 'Booking conflict',
-            conflictMessage
-          );
+          showError(conflictMessage);
         } else {
-          Alert.alert(
-            language === 'fr' ? 'Erreur' : 'Error',
-            response.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.')
-          );
+          showError(response.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.'));
         }
         return;
       }
 
       // Succès
-      Alert.alert(
-        language === 'fr' ? 'Événement créé !' : 'Event created!',
-        language === 'fr'
-          ? 'L\'événement a été créé avec succès.'
-          : 'The event has been created successfully.',
-        [
-          {
-            text: language === 'fr' ? 'OK' : 'OK',
-            onPress: () => {
-              // Réinitialiser le formulaire et rafraîchir la liste
-              resetForm();
-              fetchMyEvents();
-              setShowMyEvents(true);
-            },
-          },
-        ]
-      );
+      showSuccess(language === 'fr'
+        ? 'L\'événement a été créé avec succès.'
+        : 'The event has been created successfully.');
+      // Réinitialiser le formulaire et rafraîchir la liste
+      setTimeout(() => {
+        resetForm();
+        fetchMyEvents();
+        setShowMyEvents(true);
+      }, 2000);
     } catch (error) {
       console.error('Erreur création événement:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.')
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.'));
     } finally {
       setCreating(false);
     }
@@ -468,6 +761,16 @@ export default function BookerDashboardPage() {
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}</Text>
+        <TouchableOpacity
+          style={styles.messagesButton}
+          onPress={() => {
+            setShowMyEvents(true);
+            refreshUnreadCount();
+          }}
+        >
+          <Ionicons name="chatbubbles" size={24} color="#fff" />
+          <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
+        </TouchableOpacity>
       </View>
 
       {/* Boutons de navigation */}
@@ -485,11 +788,16 @@ export default function BookerDashboardPage() {
           onPress={() => {
             setShowMyEvents(true);
             fetchMyEvents();
+            // Marquer les messages comme lus quand on ouvre la section événements
+            markAllAsRead();
           }}
         >
-          <Text style={[styles.tabButtonText, showMyEvents && styles.tabButtonTextActive]}>
-            {language === 'fr' ? 'Mes événements' : 'My Events'}
-          </Text>
+          <View style={styles.tabButtonContent}>
+            <Text style={[styles.tabButtonText, showMyEvents && styles.tabButtonTextActive]}>
+              {language === 'fr' ? 'Mes événements' : 'My Events'}
+            </Text>
+            <NotificationBadge count={unreadCount} />
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -525,11 +833,35 @@ export default function BookerDashboardPage() {
                   {event.venue && (
                     <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
                   )}
+                  {/* Bouton chat de groupe - placé en premier pour être plus visible */}
+                  <TouchableOpacity
+                    style={[styles.chatButton, { marginTop: 10, marginBottom: 10 }]}
+                    onPress={() => openGroupChat(event.id)}
+                  >
+                    <Text style={styles.chatButtonText}>
+                      💬 {language === 'fr' ? 'Chat de groupe' : 'Group chat'}
+                    </Text>
+                  </TouchableOpacity>
+                  
                   {event.djs && event.djs.length > 0 && (
                     <View style={styles.djsList}>
                       <Text style={styles.eventInfoLabel}>
                         🎧 {language === 'fr' ? 'DJs' : 'DJs'}:
-                      </Text>
+                    </Text>
+                      <TouchableOpacity
+                        style={styles.addDjButton}
+                        onPress={() => {
+                          // Aller sur la sélection de DJ pour ajouter un nouveau DJ à cet événement
+                          navigate('selectDj', {
+                            selectedDjIds: event.djIds || [],
+                            eventId: event.id,
+                          });
+                        }}
+                      >
+                        <Text style={styles.addDjButtonText}>
+                          {language === 'fr' ? '+ Ajouter un DJ' : '+ Add DJ'}
+                        </Text>
+                      </TouchableOpacity>
                       {event.djs.map((dj) => {
                         const statusColors = {
                           PENDING: '#FFA500',
@@ -545,10 +877,20 @@ export default function BookerDashboardPage() {
                         return (
                           <View key={dj.userId} style={styles.djItem}>
                             <Text style={styles.djName}>{dj.artistName}</Text>
-                            <View style={[styles.djStatusBadge, { backgroundColor: statusColors[status] + '20' }]}>
-                              <Text style={[styles.djStatusText, { color: statusColors[status] }]}>
-                                {statusLabels[status]}
-                              </Text>
+                            <View style={styles.djItemActions}>
+                              {dj.eventDjId && (
+                                <TouchableOpacity
+                                  style={styles.chatButtonSmall}
+                                  onPress={() => openChat(dj.eventDjId)}
+                                >
+                                  <Text style={styles.chatButtonSmallText}>💬</Text>
+                                </TouchableOpacity>
+                              )}
+                              <View style={[styles.djStatusBadge, { backgroundColor: statusColors[status] + '20' }]}>
+                                <Text style={[styles.djStatusText, { color: statusColors[status] }]}>
+                                  {statusLabels[status]}
+                                </Text>
+                              </View>
                             </View>
                           </View>
                         );
@@ -790,30 +1132,82 @@ export default function BookerDashboardPage() {
 
               <Text style={styles.stepDescription}>
                 {language === 'fr' 
-                  ? 'Sélectionne un ou plusieurs DJs disponibles pour cette date.'
-                  : 'Select one or more DJs available for this date.'}
+                  ? 'Ajoutez des slots et sélectionnez un DJ pour chaque slot.'
+                  : 'Add slots and select a DJ for each slot.'}
               </Text>
 
+              {/* Liste des slots DJ */}
+              {djSlots.map((djId, index) => {
+                const selectedDj = djId ? availableDjs.find(dj => dj.userId === djId) : null;
+                return (
+                  <View key={index} style={styles.djSlotContainer}>
+                    <View style={styles.djSlotHeader}>
+                      <Text style={styles.djSlotLabel}>
+                        {language === 'fr' ? `Slot ${index + 1}` : `Slot ${index + 1}`}
+                      </Text>
+                      {djSlots.length > 1 && (
+                        <TouchableOpacity
+                          style={styles.removeSlotButton}
+                          onPress={() => {
+                            const newSlots = djSlots.filter((_, i) => i !== index);
+                            setDjSlots(newSlots);
+                            // Mettre à jour formData.djIds
+                            const newDjIds = newSlots.filter(id => id !== null);
+                            setFormData(prev => ({ ...prev, djIds: newDjIds }));
+                          }}
+                        >
+                          <Text style={styles.removeSlotButtonText}>✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() => {
+                        // Passer tous les DJs déjà sélectionnés dans tous les slots (sauf celui du slot actuel)
+                        // Utiliser formData.djIds comme source de vérité pour inclure tous les DJs sélectionnés
+                        const currentSlotDjId = djSlots[index];
+                        const otherSelectedDjIds = formData.djIds.filter(id => id !== currentSlotDjId);
+                        console.log('[BookerDashboard] Navigation vers selectDj:', {
+                          slotIndex: index,
+                          currentSlotDjId,
+                          otherSelectedDjIds,
+                          allDjIds: formData.djIds,
+                          djSlots
+                        });
+                        navigate('selectDj', {
+                          selectedDjIds: otherSelectedDjIds,
+                          slotIndex: index,
+                          isSlotMode: true,
+                        });
+                      }}
+                    >
+                      <Text style={[styles.selectButtonText, !selectedDj && styles.placeholderText]}>
+                        {selectedDj
+                          ? `${selectedDj.artistName}${selectedDj.hourlyRate ? ` - ${selectedDj.hourlyRate}€/h` : ''}`
+                          : language === 'fr' ? 'Sélectionner un DJ' : 'Select a DJ'}
+                      </Text>
+                      <Text style={styles.chevron}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
+              {/* Bouton pour ajouter un slot */}
               <TouchableOpacity
-                style={styles.selectButton}
+                style={styles.addSlotButton}
                 onPress={() => {
-                  navigate('selectDj', {
-                    selectedDjIds: formData.djIds,
-                  });
+                  setDjSlots([...djSlots, null]);
                 }}
               >
-                <Text style={[styles.selectButtonText, selectedDjs.length === 0 && styles.placeholderText]}>
-                  {selectedDjs.length > 0
-                    ? selectedDjs.map((dj) => dj.artistName).join(', ')
-                    : language === 'fr' ? 'Sélectionner un ou plusieurs DJs' : 'Select one or more DJs'}
+                <Text style={styles.addSlotButtonText}>
+                  + {language === 'fr' ? 'Ajouter un slot DJ' : 'Add DJ slot'}
                 </Text>
-                <Text style={styles.chevron}>▼</Text>
               </TouchableOpacity>
 
-              {selectedDjs.length > 0 && (
+              {djSlots.filter(id => id !== null).length > 0 && (
                 <View style={styles.selectedInfo}>
                   <Text style={styles.selectedInfoText}>
-                    ✓ {language === 'fr' ? 'DJ(s) sélectionné(s)' : 'DJ(s) selected'}: {selectedDjs.length}
+                    ✓ {language === 'fr' ? 'DJ(s) sélectionné(s)' : 'DJ(s) selected'}: {djSlots.filter(id => id !== null).length}
                   </Text>
                 </View>
               )}
@@ -828,13 +1222,15 @@ export default function BookerDashboardPage() {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.nextButton, selectedDjs.length === 0 && styles.nextButtonDisabled]}
+                  style={[styles.nextButton, djSlots.filter(id => id !== null).length === 0 && styles.nextButtonDisabled]}
                   onPress={() => {
-                    if (selectedDjs.length > 0) {
+                    const selectedDjIds = djSlots.filter(id => id !== null);
+                    if (selectedDjIds.length > 0) {
+                      setFormData(prev => ({ ...prev, djIds: selectedDjIds }));
                       setCurrentStep(4);
                     }
                   }}
-                  disabled={selectedDjs.length === 0}
+                  disabled={djSlots.filter(id => id !== null).length === 0}
                 >
                   <Text style={styles.nextButtonText}>
                     {language === 'fr' ? 'Suivant →' : 'Next →'}
@@ -1261,6 +1657,210 @@ export default function BookerDashboardPage() {
         </TouchableOpacity>
       </Modal>
       )}
+
+      {/* Modal de chat */}
+      <Modal
+        visible={chatModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setChatModalVisible(false);
+          setSelectedChatEventDjId(null);
+          setSelectedChatEventId(null);
+          setIsGroupChat(false);
+          setChatMessages([]);
+          setNewMessageText('');
+          // Rafraîchir le compteur après fermeture
+          refreshUnreadCount();
+        }}
+      >
+        <View style={styles.chatModalContainer}>
+          <KeyboardAvoidingView
+            style={styles.chatModalContent}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            {/* Header du chat */}
+            <View style={styles.chatHeaderContainer}>
+            <View style={styles.chatHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  setChatModalVisible(false);
+                  setSelectedChatEventDjId(null);
+                  setSelectedChatEventId(null);
+                  setIsGroupChat(false);
+                  setChatMessages([]);
+                  setNewMessageText('');
+                  // Rafraîchir le compteur après fermeture
+                  refreshUnreadCount();
+                }}
+                style={styles.chatCloseButton}
+              >
+                <Text style={styles.chatCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+              <Text style={styles.chatHeaderTitle}>
+                {isGroupChat 
+                  ? (language === 'fr' ? 'Chat de groupe' : 'Group chat')
+                  : (language === 'fr' ? 'Chat' : 'Chat')
+                }
+              </Text>
+              <View style={{ width: 40 }} />
+            </View>
+            </View>
+
+            {/* Messages */}
+            {loadingChatMessages ? (
+              <View style={styles.chatLoadingContainer}>
+                <ActivityIndicator size="large" color="#FF1744" />
+              </View>
+            ) : (
+              <ScrollView
+                ref={chatScrollViewRef}
+                style={styles.chatMessagesContainer}
+                contentContainerStyle={styles.chatMessagesContent}
+                onContentSizeChange={() => {
+                  if (chatScrollViewRef.current) {
+                    chatScrollViewRef.current.scrollToEnd({ animated: true });
+                  }
+                }}
+              >
+                {chatMessages.length === 0 ? (
+                  <View style={styles.chatEmptyState}>
+                    <Text style={styles.chatEmptyStateText}>
+                      {language === 'fr' 
+                        ? 'Aucun message pour le moment. Commencez la conversation !' 
+                        : 'No messages yet. Start the conversation!'}
+                    </Text>
+                  </View>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <View
+                      key={msg.id}
+                      style={[
+                        styles.chatMessage,
+                        msg.isOwn ? styles.chatMessageOwn : styles.chatMessageOther,
+                      ]}
+                    >
+                      {!msg.isOwn && msg.senderInfo && (
+                        <TouchableOpacity
+                          style={styles.chatMessageSender}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            if (msg.senderInfo.type === 'DJ') {
+                              navigate('djProfile', { djId: msg.senderId });
+                            }
+                          }}
+                        >
+                          {msg.senderInfo.image ? (
+                            <Image
+                              source={{ uri: normalizeMediaUrl(msg.senderInfo.image) }}
+                              style={styles.chatMessageAvatar}
+                            />
+                          ) : (
+                            <View style={[styles.chatMessageAvatar, styles.chatMessageAvatarPlaceholder]}>
+                              <Text style={styles.chatMessageAvatarText}>
+                                {msg.senderInfo.name ? msg.senderInfo.name.charAt(0).toUpperCase() : '?'}
+                              </Text>
+                            </View>
+                          )}
+                          <Text style={styles.chatMessageSenderName}>
+                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Booker' : 'DJ')}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onLongPress={() => {
+                          if (!msg.isOwn || msg.deleted) return;
+                          Alert.alert(
+                            language === 'fr' ? 'Supprimer le message' : 'Delete message',
+                            language === 'fr'
+                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par \"message supprimé\".'
+                              : 'Do you want to delete this message? It will be replaced by \"message deleted\".',
+                            [
+                              { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+                              {
+                                text: language === 'fr' ? 'Supprimer' : 'Delete',
+                                style: 'destructive',
+                                onPress: () => handleDeleteMessage(msg.id),
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.chatMessageBubble,
+                            msg.isOwn ? styles.chatMessageBubbleOwn : styles.chatMessageBubbleOther,
+                            msg.deleted && styles.chatMessageBubbleDeleted,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chatMessageText,
+                              msg.isOwn ? styles.chatMessageTextOwn : styles.chatMessageTextOther,
+                              msg.deleted && styles.chatMessageTextDeleted,
+                            ]}
+                          >
+                            {msg.deleted
+                              ? language === 'fr'
+                                ? 'message supprimé'
+                                : 'message deleted'
+                              : msg.content}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.chatMessageTime,
+                              msg.isOwn ? styles.chatMessageTimeOwn : styles.chatMessageTimeOther,
+                            ]}
+                          >
+                            {new Date(msg.createdAt).toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+
+            {/* Input pour envoyer un message */}
+            <View style={styles.chatInputContainer}>
+              <TextInput
+                style={styles.chatInput}
+                value={newMessageText}
+                onChangeText={setNewMessageText}
+                placeholder={language === 'fr' ? 'Tapez votre message...' : 'Type your message...'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.chatSendButton, sendingMessage && styles.chatSendButtonDisabled]}
+                onPress={sendMessage}
+                disabled={!newMessageText.trim() || sendingMessage}
+              >
+                {sendingMessage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.chatSendButtonText}>➤</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+      
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -1271,6 +1871,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0b0e',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
@@ -1287,9 +1890,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
+    flex: 1,
     color: '#fff',
     fontSize: 28,
     fontWeight: '900',
+    textAlign: 'center',
+  },
+  messagesButton: {
+    position: 'relative',
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -1680,6 +2291,12 @@ const styles = StyleSheet.create({
   tabButtonActive: {
     backgroundColor: '#FF1744',
   },
+  tabButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
   tabButtonText: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
@@ -1878,5 +2495,264 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
+  djItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chatButtonSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatButtonSmallText: {
+    fontSize: 16,
+  },
+  chatButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  chatButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Chat Modal
+  chatModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  chatModalContent: {
+    flex: 1,
+    backgroundColor: '#0b0b0e',
+    marginTop: Platform.OS === 'ios' ? 50 : 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    justifyContent: 'flex-end',
+  },
+  chatHeaderContainer: {
+    zIndex: 10,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  chatCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatCloseButtonText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  chatHeaderTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  chatLoadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  chatMessagesContainer: {
+    flex: 1,
+    flexGrow: 1,
+  },
+  chatMessagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+    flexGrow: 1,
+  },
+  chatEmptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  chatEmptyStateText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  chatMessage: {
+    marginBottom: 16,
+  },
+  chatMessageOwn: {
+    alignItems: 'flex-end',
+  },
+  chatMessageOther: {
+    alignItems: 'flex-start',
+  },
+  chatMessageSender: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chatMessageAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  chatMessageAvatarPlaceholder: {
+    backgroundColor: '#FF1744',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatMessageAvatarText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chatMessageSenderName: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  chatMessageBubble: {
+    maxWidth: '75%',
+    padding: 12,
+    borderRadius: 16,
+  },
+  chatMessageBubbleOwn: {
+    backgroundColor: '#FF1744',
+    borderBottomRightRadius: 4,
+  },
+  chatMessageBubbleOther: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  chatMessageText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  chatMessageTextOwn: {
+    color: '#fff',
+  },
+  chatMessageTextOther: {
+    color: '#fff',
+  },
+  chatMessageTime: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  chatMessageTimeOwn: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  chatMessageTimeOther: {
+    color: 'rgba(255,255,255,0.6)',
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    paddingBottom: Platform.OS === 'android' ? 20 : 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    minHeight: 60,
+    zIndex: 10,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: '#0b0b0e',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 12 : 10,
+    maxHeight: 100,
+    minHeight: Platform.OS === 'android' ? 44 : 40,
+    color: '#fff',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+    textAlignVertical: 'center',
+  },
+  chatSendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FF1744',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  chatSendButtonDisabled: {
+    opacity: 0.5,
+  },
+  chatSendButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  // Styles pour les slots DJ
+  djSlotContainer: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.2)',
+  },
+  djSlotHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  djSlotLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removeSlotButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,23,68,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeSlotButtonText: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  addSlotButton: {
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255,23,68,0.1)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FF1744',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addSlotButtonText: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
-

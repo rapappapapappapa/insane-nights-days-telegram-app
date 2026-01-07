@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,11 +14,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import RatingModal from '../components/RatingModal';
 import StarRating from '../components/StarRating';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 export default function RateEventPage() {
   const { language } = useLanguage();
   const { routeParams, goBack } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const { eventId, eventTitle, eventDate, venueId, venueName, djIds = [] } = routeParams || {};
 
   const [loading, setLoading] = useState(false);
@@ -130,23 +132,14 @@ export default function RateEventPage() {
         if (!ratedDjIds.includes(ratingDjModal.djUserId)) {
           setRatedDjIds([...ratedDjIds, ratingDjModal.djUserId]);
         }
-        Alert.alert(
-          language === 'fr' ? 'Note enregistrée' : 'Rating saved',
-          language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
-          [{ text: 'OK', onPress: () => setRatingDjModal({ visible: false, djUserId: null, djName: null }) }],
-        );
+        showSuccess(language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!');
+        setTimeout(() => setRatingDjModal({ visible: false, djUserId: null, djName: null }), 1500);
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
-        );
+        showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'));
       }
     } catch (error) {
       console.error('Erreur notation DJ:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'));
     } finally {
       setLoading(false);
     }
@@ -168,23 +161,14 @@ export default function RateEventPage() {
       if (response && response.success) {
         // Mettre à jour le lieu noté
         setRatedVenueId(venueId);
-        Alert.alert(
-          language === 'fr' ? 'Note enregistrée' : 'Rating saved',
-          language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!',
-          [{ text: 'OK', onPress: () => setRatingVenueModal({ visible: false }) }],
-        );
+        showSuccess(language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!');
+        setTimeout(() => setRatingVenueModal({ visible: false }), 1500);
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
-        );
+        showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'));
       }
     } catch (error) {
       console.error('Erreur notation Lieu:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'));
     } finally {
       setLoading(false);
     }
@@ -306,8 +290,16 @@ export default function RateEventPage() {
                 : 'Nothing to rate for this event.'}
             </Text>
           </View>
-        )}
+        )        }
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
 
       {/* Modal pour noter un DJ */}
       <RatingModal

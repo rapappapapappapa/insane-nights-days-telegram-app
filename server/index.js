@@ -2354,6 +2354,1004 @@ app.put('/api/dj/invitations/:invitationId/reject', authenticateToken, async (re
   }
 });
 
+/**
+ * ============================================
+ * ENDPOINTS CHAT - Communication DJ/Booker
+ * ============================================
+ */
+
+/**
+ * Envoyer un message dans une conversation (DJ ou Booker)
+ * @route POST /api/chat/:eventDjId/messages
+ */
+app.post('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le contenu du message est requis.',
+      });
+    }
+
+    // Récupérer l'invitation
+    const invitation = await prisma.eventDj.findUnique({
+      where: { id: eventDjId },
+      include: {
+        event: {
+          include: {
+            booker: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation non trouvée.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est soit le DJ, soit le booker de l'événement
+    const isDj = invitation.djId === userId;
+    // bookerId dans Event pointe vers UserBooker.id, pas User.id
+    const isBooker = invitation.event.booker && invitation.event.booker.userId === userId;
+
+    if (!isDj && !isBooker) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à envoyer des messages dans cette conversation.',
+      });
+    }
+
+    // Créer le message (type PRIVATE)
+    const message = await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventDjId: eventDjId,
+        senderId: userId,
+        content: content.trim(),
+        read: false,
+        deleted: false,
+      },
+      include: {
+        eventDj: {
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Message envoyé avec succès.',
+      data: {
+        id: message.id,
+        content: message.content,
+        senderId: message.senderId,
+        read: message.read,
+        createdAt: message.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur envoi message:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer les messages d'une conversation
+ * @route GET /api/chat/:eventDjId/messages
+ */
+app.get('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+
+    console.log('[CHAT] GET messages - eventDjId:', eventDjId, 'userId:', userId);
+
+    // Récupérer l'invitation
+    const invitation = await prisma.eventDj.findUnique({
+      where: { id: eventDjId },
+      include: {
+        event: {
+          include: {
+            booker: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation non trouvée.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est soit le DJ, soit le booker
+    const isDj = invitation.djId === userId;
+    // bookerId dans Event pointe vers UserBooker.id, pas User.id
+    // Il faut vérifier via invitation.event.booker qui est déjà chargé
+    const isBooker = invitation.event.booker && invitation.event.booker.userId === userId;
+
+    if (!isDj && !isBooker) {
+      console.log('[CHAT] Accès refusé - isDj:', isDj, 'isBooker:', isBooker, 'userId:', userId, 'bookerId:', invitation.event.bookerId, 'booker.userId:', invitation.event.booker?.userId);
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à voir cette conversation.',
+      });
+    }
+
+    // Récupérer les messages privés
+    const messages = await prisma.message.findMany({
+      where: { 
+        eventDjId: eventDjId,
+        type: 'PRIVATE',
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        eventDj: {
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Enrichir avec les infos de l'expéditeur
+    const enrichedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        // Récupérer les infos de l'expéditeur
+        let senderInfo = null;
+        if (msg.senderId === invitation.djId) {
+          // C'est le DJ
+          const dj = await prisma.userDj.findFirst({
+            where: { userId: msg.senderId },
+            select: {
+              artistName: true,
+              profileImage: true,
+            },
+          });
+          senderInfo = {
+            type: 'DJ',
+            name: dj?.artistName || 'DJ',
+            image: dj?.profileImage || null,
+          };
+        } else if (invitation.event.booker && invitation.event.booker.userId === msg.senderId) {
+          // C'est le booker
+          senderInfo = {
+            type: 'BOOKER',
+            name: invitation.event.booker ? `${invitation.event.booker.prenom} ${invitation.event.booker.nom}` : 'Booker',
+            image: null,
+          };
+        }
+
+        return {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderInfo: senderInfo,
+          read: msg.read,
+          deleted: msg.deleted,
+          createdAt: msg.createdAt,
+          isOwn: msg.senderId === userId,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      messages: enrichedMessages,
+    });
+  } catch (error) {
+    console.error('Erreur récupération messages:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Marquer un message comme lu
+ * @route PUT /api/chat/messages/:messageId/read
+ */
+app.put('/api/chat/messages/:messageId/read', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+
+    // Récupérer le message
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        eventDj: {
+          include: {
+            event: {
+              include: {
+                booker: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message non trouvé.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est autorisé (DJ ou booker, mais pas l'expéditeur)
+    const isDj = message.eventDj.djId === userId;
+    // bookerId dans Event pointe vers UserBooker.id, pas User.id
+    const isBooker = message.eventDj.event.booker && message.eventDj.event.booker.userId === userId;
+
+    if (!isDj && !isBooker) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à marquer ce message comme lu.',
+      });
+    }
+
+    // Ne pas marquer comme lu si c'est l'expéditeur
+    if (message.senderId === userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous ne pouvez pas marquer votre propre message comme lu.',
+      });
+    }
+
+    // Marquer comme lu
+    await prisma.message.update({
+      where: { id: messageId },
+      data: { read: true },
+    });
+
+    res.json({
+      success: true,
+      message: 'Message marqué comme lu.',
+    });
+  } catch (error) {
+    console.error('Erreur marquage message lu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Supprimer (soft delete) un message
+ * @route DELETE /api/chat/messages/:messageId
+ */
+app.delete('/api/chat/messages/:messageId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message non trouvé.',
+      });
+    }
+
+    // Seul l'expéditeur peut supprimer son message
+    if (message.senderId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez supprimer que vos propres messages.',
+      });
+    }
+
+    const deletedMessage = await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        deleted: true,
+        content: 'message supprimé',
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Message supprimé.',
+      data: {
+        id: deletedMessage.id,
+        deleted: deletedMessage.deleted,
+        content: deletedMessage.content,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur suppression message:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer le nombre total de messages non lus
+ * @route GET /api/chat/unread-count
+ */
+app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer le profil actif
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeProfileType: true },
+    });
+
+    let totalUnread = 0;
+
+    if (user.activeProfileType === 'DJ') {
+      // Compter les messages privés non lus (reçus par le DJ)
+      const privateUnread = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          senderId: { not: userId },
+          eventDj: {
+            djId: userId,
+          },
+        },
+      });
+
+      // Compter les messages de groupe non lus pour les événements où le DJ est invité
+      const djEventIds = await prisma.eventDj.findMany({
+        where: { djId: userId },
+        select: { eventId: true },
+      });
+      const eventIds = [...new Set(djEventIds.map((e) => e.eventId))];
+
+      const groupUnread = await prisma.message.count({
+        where: {
+          type: 'GROUP',
+          read: false,
+          senderId: { not: userId },
+          eventId: { in: eventIds },
+        },
+      });
+
+      totalUnread = privateUnread + groupUnread;
+    } else if (user.activeProfileType === 'BOOKER') {
+      // Pour les bookers, compter les messages privés et de groupe de leurs événements
+      const booker = await prisma.userBooker.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+
+      if (booker) {
+        // Compter les messages privés non lus (reçus par le booker)
+        const privateUnread = await prisma.message.count({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventDj: {
+              event: {
+                bookerId: booker.id,
+              },
+            },
+          },
+        });
+
+        // Compter les messages de groupe non lus pour les événements du booker
+        const bookerEventIds = await prisma.event.findMany({
+          where: { bookerId: booker.id },
+          select: { id: true },
+        });
+        const eventIds = bookerEventIds.map((e) => e.id);
+
+        const groupUnread = await prisma.message.count({
+          where: {
+            type: 'GROUP',
+            read: false,
+            senderId: { not: userId },
+            eventId: { in: eventIds },
+          },
+        });
+
+        totalUnread = privateUnread + groupUnread;
+      }
+    }
+
+    res.json({
+      success: true,
+      count: totalUnread,
+    });
+  } catch (error) {
+    console.error('Erreur récupération nombre messages non lus:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Marquer tous les messages non lus comme lus pour l'utilisateur actuel
+ * @route PUT /api/chat/mark-all-read
+ */
+app.put('/api/chat/mark-all-read', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer le profil actif
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeProfileType: true },
+    });
+
+    if (user.activeProfileType === 'DJ') {
+      // Marquer tous les messages privés non lus comme lus (reçus par le DJ)
+      await prisma.message.updateMany({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          senderId: { not: userId },
+          eventDj: {
+            djId: userId,
+          },
+        },
+        data: { read: true },
+      });
+
+      // Marquer tous les messages de groupe non lus comme lus pour les événements où le DJ est invité
+      const djEventIds = await prisma.eventDj.findMany({
+        where: { djId: userId },
+        select: { eventId: true },
+      });
+      const eventIds = [...new Set(djEventIds.map((e) => e.eventId))];
+
+      if (eventIds.length > 0) {
+        await prisma.message.updateMany({
+          where: {
+            type: 'GROUP',
+            read: false,
+            senderId: { not: userId },
+            eventId: { in: eventIds },
+          },
+          data: { read: true },
+        });
+      }
+    } else if (user.activeProfileType === 'BOOKER') {
+      // Pour les bookers, marquer tous les messages privés et de groupe comme lus
+      const booker = await prisma.userBooker.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+
+      if (booker) {
+        // Marquer tous les messages privés non lus comme lus (reçus par le booker)
+        await prisma.message.updateMany({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventDj: {
+              event: {
+                bookerId: booker.id,
+              },
+            },
+          },
+          data: { read: true },
+        });
+
+        // Marquer tous les messages de groupe non lus comme lus pour les événements du booker
+        const bookerEventIds = await prisma.event.findMany({
+          where: { bookerId: booker.id },
+          select: { id: true },
+        });
+        const eventIds = bookerEventIds.map((e) => e.id);
+
+        if (eventIds.length > 0) {
+          await prisma.message.updateMany({
+            where: {
+              type: 'GROUP',
+              read: false,
+              senderId: { not: userId },
+              eventId: { in: eventIds },
+            },
+            data: { read: true },
+          });
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Tous les messages ont été marqués comme lus.',
+    });
+  } catch (error) {
+    console.error('Erreur marquage tous messages lus:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ============================================
+ * ENDPOINTS CHAT DE GROUPE - Communication entre tous les DJs d'un événement
+ * ============================================
+ */
+
+/**
+ * Envoyer un message dans le chat de groupe d'un événement
+ * @route POST /api/chat/group/:eventId/messages
+ */
+app.post('/api/chat/group/:eventId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le contenu du message est requis.',
+      });
+    }
+
+    // Récupérer l'événement
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        booker: true,
+        eventDjs: {
+          include: {
+            messages: {
+              where: { type: 'GROUP' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Événement non trouvé.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est soit le booker, soit un DJ invité à l'événement
+    const isBooker = event.booker && event.booker.userId === userId;
+    const isDj = event.eventDjs.some((inv) => inv.djId === userId);
+
+    if (!isBooker && !isDj) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à envoyer des messages dans ce chat de groupe.',
+      });
+    }
+
+    // Créer le message de groupe
+    // Pour les messages de groupe, eventDjId doit être explicitement null
+    const message = await prisma.message.create({
+      data: {
+        type: 'GROUP',
+        eventId: eventId,
+        eventDjId: null, // Explicitement null pour les messages de groupe
+        senderId: userId,
+        content: content.trim(),
+        read: false,
+        deleted: false,
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Message envoyé avec succès.',
+      data: {
+        id: message.id,
+        content: message.content,
+        senderId: message.senderId,
+        read: message.read,
+        createdAt: message.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur envoi message groupe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer les messages du chat de groupe d'un événement
+ * @route GET /api/chat/group/:eventId/messages
+ */
+app.get('/api/chat/group/:eventId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+
+    console.log('[CHAT GROUP] GET messages - eventId:', eventId, 'userId:', userId);
+
+    // Récupérer l'événement
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        booker: true,
+        eventDjs: true,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Événement non trouvé.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est soit le booker, soit un DJ invité
+    const isBooker = event.booker && event.booker.userId === userId;
+    const isDj = event.eventDjs.some((inv) => inv.djId === userId);
+
+    if (!isBooker && !isDj) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à voir ce chat de groupe.',
+      });
+    }
+
+    // Récupérer les messages de groupe
+    const messages = await prisma.message.findMany({
+      where: {
+        type: 'GROUP',
+        eventId: eventId,
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Enrichir avec les infos de l'expéditeur
+    const enrichedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        let senderInfo = null;
+
+        // Vérifier si c'est le booker
+        if (event.booker && event.booker.userId === msg.senderId) {
+          senderInfo = {
+            type: 'BOOKER',
+            name: `${event.booker.prenom} ${event.booker.nom}`,
+            image: null,
+          };
+        } else {
+          // C'est un DJ
+          const dj = await prisma.userDj.findFirst({
+            where: { userId: msg.senderId },
+            select: {
+              artistName: true,
+              profileImage: true,
+            },
+          });
+          senderInfo = {
+            type: 'DJ',
+            name: dj?.artistName || 'DJ',
+            image: dj?.profileImage || null,
+          };
+        }
+
+        return {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderInfo: senderInfo,
+          read: msg.read,
+          deleted: msg.deleted,
+          createdAt: msg.createdAt,
+          isOwn: msg.senderId === userId,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      messages: enrichedMessages,
+    });
+  } catch (error) {
+    console.error('Erreur récupération messages groupe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer toutes les conversations (pour DJ ou Booker)
+ * @route GET /api/chat/conversations
+ */
+app.get('/api/chat/conversations', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Récupérer le profil actif
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeProfileType: true },
+    });
+
+    let conversations = [];
+
+    if (user.activeProfileType === 'DJ') {
+      // Récupérer les conversations où le DJ est invité
+      const invitations = await prisma.eventDj.findMany({
+        where: { djId: userId },
+        include: {
+          event: {
+            include: {
+              booker: {
+                select: {
+                  id: true,
+                  nom: true,
+                  prenom: true,
+                },
+              },
+              venue: {
+                select: {
+                  id: true,
+                  venueName: true,
+                },
+              },
+            },
+          },
+          messages: {
+            where: { type: 'PRIVATE' },
+            orderBy: { createdAt: 'desc' },
+            take: 1, // Dernier message
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      conversations = invitations.map((inv) => {
+        const lastMessage = inv.messages[0] || null;
+        const unreadCount = inv.messages.filter(
+          (m) => !m.read && m.senderId !== userId
+        ).length;
+
+        return {
+          eventDjId: inv.id,
+          eventId: inv.event.id,
+          eventTitle: inv.event.title,
+          eventDate: inv.event.date,
+          invitationStatus: inv.status,
+          otherParty: {
+            type: 'BOOKER',
+            id: inv.event.booker?.id || null,
+            name: inv.event.booker
+              ? `${inv.event.booker.prenom} ${inv.event.booker.nom}`
+              : 'Booker',
+          },
+          venue: inv.event.venue
+            ? {
+                id: inv.event.venue.id,
+                name: inv.event.venue.venueName,
+              }
+            : null,
+          lastMessage: lastMessage
+            ? {
+                id: lastMessage.id,
+                content: lastMessage.content,
+                senderId: lastMessage.senderId,
+                createdAt: lastMessage.createdAt,
+              }
+            : null,
+          unreadCount: unreadCount,
+          updatedAt: inv.updatedAt,
+        };
+      });
+
+      // Ajouter les chats de groupe pour chaque événement où le DJ est invité
+      const eventIds = [...new Set(invitations.map((inv) => inv.event.id))];
+      const groupChats = await Promise.all(
+        eventIds.map(async (evId) => {
+          const event = await prisma.event.findUnique({
+            where: { id: evId },
+            include: {
+              venue: {
+                select: {
+                  id: true,
+                  venueName: true,
+                },
+              },
+            },
+          });
+
+          if (!event) return null;
+
+          const lastGroupMessage = await prisma.message.findFirst({
+            where: {
+              type: 'GROUP',
+              eventId: evId,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          const unreadGroupCount = await prisma.message.count({
+            where: {
+              type: 'GROUP',
+              eventId: evId,
+              read: false,
+              senderId: { not: userId },
+            },
+          });
+
+          return {
+            eventDjId: null,
+            eventId: evId,
+            eventTitle: event.title,
+            eventDate: event.date,
+            invitationStatus: null,
+            isGroupChat: true,
+            otherParty: {
+              type: 'GROUP',
+              name: `Groupe - ${event.title}`,
+              image: null,
+            },
+            venue: event.venue
+              ? {
+                  id: event.venue.id,
+                  name: event.venue.venueName,
+                }
+              : null,
+            lastMessage: lastGroupMessage
+              ? {
+                  id: lastGroupMessage.id,
+                  content: lastGroupMessage.content,
+                  senderId: lastGroupMessage.senderId,
+                  createdAt: lastGroupMessage.createdAt,
+                }
+              : null,
+            unreadCount: unreadGroupCount,
+            updatedAt: lastGroupMessage?.updatedAt || event.updatedAt,
+          };
+        })
+      );
+
+      conversations = [...conversations, ...groupChats.filter((g) => g !== null)];
+    } else if (user.activeProfileType === 'BOOKER') {
+      // Récupérer le profil booker de l'utilisateur
+      const booker = await prisma.userBooker.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
+
+      if (!booker) {
+        return res.status(404).json({
+          success: false,
+          message: 'Profil Booker non trouvé.',
+        });
+      }
+
+      // Récupérer les conversations où le booker a invité des DJs
+      const events = await prisma.event.findMany({
+        where: { bookerId: booker.id },
+        include: {
+          eventDjs: {
+            include: {
+              messages: {
+                where: { type: 'PRIVATE' },
+                orderBy: { createdAt: 'desc' },
+                take: 1, // Dernier message
+              },
+            },
+          },
+          venue: {
+            select: {
+              id: true,
+              venueName: true,
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+      });
+
+      conversations = events.flatMap((event) =>
+        event.eventDjs.map((inv) => {
+          const lastMessage = inv.messages && inv.messages.length > 0 ? inv.messages[0] : null;
+          const unreadCount = inv.messages ? inv.messages.filter(
+            (m) => !m.read && m.senderId !== userId
+          ).length : 0;
+
+          return {
+            eventDjId: inv.id,
+            eventId: event.id,
+            eventTitle: event.title,
+            eventDate: event.date,
+            invitationStatus: inv.status,
+            otherParty: {
+              type: 'DJ',
+              id: inv.djId,
+              name: 'DJ', // Sera enrichi plus tard si nécessaire
+            },
+            venue: event.venue
+              ? {
+                  id: event.venue.id,
+                  name: event.venue.venueName,
+                }
+              : null,
+            lastMessage: lastMessage
+              ? {
+                  id: lastMessage.id,
+                  content: lastMessage.content,
+                  senderId: lastMessage.senderId,
+                  createdAt: lastMessage.createdAt,
+                }
+              : null,
+            unreadCount: unreadCount,
+            updatedAt: inv.updatedAt,
+          };
+        })
+      );
+
+      // Enrichir avec les noms des DJs
+      const djIds = [...new Set(conversations.map((c) => c.otherParty.id))];
+      const djs = await prisma.userDj.findMany({
+        where: { userId: { in: djIds } },
+        select: {
+          userId: true,
+          artistName: true,
+          profileImage: true,
+        },
+      });
+
+      const djMap = {};
+      djs.forEach((dj) => {
+        djMap[dj.userId] = dj;
+      });
+
+      conversations = conversations.map((conv) => {
+        const dj = djMap[conv.otherParty.id];
+        if (dj) {
+          conv.otherParty.name = dj.artistName;
+          conv.otherParty.image = dj.profileImage;
+        }
+        return conv;
+      });
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les DJs et Bookers peuvent accéder aux conversations.',
+      });
+    }
+
+    res.json({
+      success: true,
+      conversations: conversations,
+    });
+  } catch (error) {
+    console.error('Erreur récupération conversations:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Endpoint pour récupérer les médias d'un DJ
 app.get('/api/dj/:identifier/media', async (req, res) => {
   try {
@@ -3010,10 +4008,12 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
     // Enrichir avec les infos des DJs et leurs statuts d'invitation
     const enrichedEvents = await Promise.all(
       events.map(async (event) => {
-        // Créer un map des statuts d'invitation par userId
+        // Créer un map des statuts d'invitation et eventDjId par userId
         const invitationStatusMap = {};
+        const eventDjIdMap = {};
         event.eventDjs.forEach((ed) => {
           invitationStatusMap[ed.djId] = ed.status;
+          eventDjIdMap[ed.djId] = ed.id; // ID de l'EventDj pour le chat
         });
 
         const djUserIds = event.eventDjs.map((ed) => ed.djId);
@@ -3049,6 +4049,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
             hourlyRate: dj.hourlyRate,
             performanceRate: dj.performanceRate,
             invitationStatus: invitationStatusMap[dj.userId] || 'PENDING', // Statut de l'invitation
+            eventDjId: eventDjIdMap[dj.userId], // ID de l'EventDj pour le chat
           })),
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
@@ -3148,7 +4149,7 @@ app.delete('/api/booker/events/:eventId', authenticateToken, async (req, res) =>
 app.post('/api/booker/events', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, date, time, venueId, djIds, price, capacity, genre, description, image } = req.body;
+    const { title, date, time, venueId, djIds, price, capacity, genre, description, image, durationHours } = req.body;
 
     // Validation des champs requis
     if (!title || !date || !time || !venueId || !djIds || !Array.isArray(djIds) || djIds.length === 0) {
@@ -3170,9 +4171,15 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Vérifier que le lieu existe
+    // Vérifier que le lieu existe et récupérer sa note moyenne
     const venue = await prisma.userVenue.findUnique({
       where: { id: venueId },
+      select: {
+        id: true,
+        venueName: true,
+        address: true,
+        averageRatingGlobal: true,
+      },
     });
 
     if (!venue) {
@@ -3182,11 +4189,17 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Vérifier que les DJs existent et sont disponibles
+    // Vérifier que les DJs existent et sont disponibles, et récupérer leurs tarifs
     const djs = await prisma.userDj.findMany({
       where: {
         userId: { in: djIds },
         availableStatus: true,
+      },
+      select: {
+        userId: true,
+        artistName: true,
+        hourlyRate: true,
+        performanceRate: true,
       },
     });
 
@@ -3195,6 +4208,28 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         success: false,
         message: 'Un ou plusieurs DJs ne sont pas disponibles ou n\'existent pas.',
       });
+    }
+
+    // Calculer le prix total automatiquement si durationHours est fourni
+    let calculatedPrice = price ? parseFloat(price) : 0;
+    if (durationHours && parseFloat(durationHours) > 0) {
+      const duration = parseFloat(durationHours);
+      
+      // Base pour le lieu (basée sur la note moyenne si disponible)
+      const venueBase = venue.averageRatingGlobal 
+        ? 50 + (venue.averageRatingGlobal * 10)
+        : 50;
+      
+      // Somme des tarifs horaires de tous les DJs
+      const djsTotal = djs.reduce((sum, dj) => {
+        // Utiliser hourlyRate en priorité, sinon performanceRate, sinon 0
+        const rate = dj.hourlyRate ?? dj.performanceRate ?? 0;
+        return sum + rate;
+      }, 0);
+      
+      // Prix total = base lieu + (somme des tarifs horaires × durée)
+      calculatedPrice = venueBase + (djsTotal * duration);
+      calculatedPrice = Math.max(0, Math.round(calculatedPrice));
     }
 
     // Vérifier les conflits de date/lieu
@@ -3314,7 +4349,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         date: eventDate,
         time: time.trim(),
         location: venue.address,
-        price: price ? parseFloat(price) : 0,
+        price: calculatedPrice,
         capacity: capacity ? parseInt(capacity) : 100,
         genre: genre ? genre.trim() : 'Mixed',
         description: description ? description.trim() : null,
@@ -3345,6 +4380,43 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       },
     });
 
+    // Créer automatiquement un message de bienvenue dans le chat de groupe
+    try {
+      await prisma.message.create({
+        data: {
+          type: 'GROUP',
+          eventId: event.id,
+          eventDjId: null, // Explicitement null pour les messages de groupe
+          senderId: userId,
+          content: `🎉 Événement "${event.title}" créé ! Bienvenue dans le chat de groupe. Vous pouvez discuter ici avec tous les participants.`,
+          read: false,
+          deleted: false,
+        },
+      });
+    } catch (groupChatError) {
+      console.error('Erreur création message chat de groupe:', groupChatError);
+      // Ne pas bloquer la création de l'événement si le chat échoue
+    }
+
+    // Créer automatiquement un message de bienvenue dans chaque chat privé
+    for (const eventDj of event.eventDjs) {
+      try {
+        await prisma.message.create({
+          data: {
+            type: 'PRIVATE',
+            eventDjId: eventDj.id,
+            senderId: userId,
+            content: `👋 Bonjour ! Vous avez été invité à l'événement "${event.title}". N'hésitez pas à me contacter si vous avez des questions.`,
+            read: false,
+            deleted: false,
+          },
+        });
+      } catch (privateChatError) {
+        console.error(`Erreur création message chat privé pour EventDj ${eventDj.id}:`, privateChatError);
+        // Ne pas bloquer la création de l'événement si un chat privé échoue
+      }
+    }
+
     // Récupérer les infos des DJs pour la réponse
     const eventDjsInfo = await prisma.userDj.findMany({
       where: {
@@ -3365,7 +4437,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         date: event.date,
         time: event.time,
         location: event.location,
-        price: event.price,
+        price: event.price, // Le prix calculé est déjà dans event.price
         capacity: event.capacity,
         genre: event.genre,
         description: event.description,
@@ -3388,6 +4460,103 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       success: false,
       message: 'Erreur lors de la création de l\'événement.',
     });
+  }
+});
+
+/**
+ * Ajouter un DJ à un événement existant (Booker)
+ * @route POST /api/booker/events/:eventId/djs
+ */
+app.post('/api/booker/events/:eventId/djs', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+    const { djId } = req.body;
+
+    if (!djId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le champ djId est requis.',
+      });
+    }
+
+    // Vérifier que le booker existe
+    const booker = await prisma.userBooker.findFirst({
+      where: { userId },
+    });
+
+    if (!booker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil Booker non trouvé.',
+      });
+    }
+
+    // Vérifier que l'événement existe et appartient au booker
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Événement non trouvé.',
+      });
+    }
+
+    if (event.bookerId !== booker.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez modifier que vos propres événements.',
+      });
+    }
+
+    // Vérifier que le DJ existe
+    const dj = await prisma.userDj.findFirst({
+      where: { userId: djId },
+    });
+
+    if (!dj) {
+      return res.status(404).json({
+        success: false,
+        message: 'DJ non trouvé.',
+      });
+    }
+
+    // Vérifier que ce DJ n'est pas déjà associé à cet événement
+    const existingEventDj = await prisma.eventDj.findUnique({
+      where: {
+        eventId_djId: {
+          eventId,
+          djId,
+        },
+      },
+    });
+
+    if (existingEventDj) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce DJ est déjà associé à cet événement.',
+      });
+    }
+
+    // Créer l'association EventDj avec statut en attente par défaut
+    const newEventDj = await prisma.eventDj.create({
+      data: {
+        eventId,
+        djId,
+        status: 'PENDING',
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'DJ ajouté à l\'événement avec succès.',
+      eventDj: newEventDj,
+    });
+  } catch (error) {
+    console.error('Erreur ajout DJ à un événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

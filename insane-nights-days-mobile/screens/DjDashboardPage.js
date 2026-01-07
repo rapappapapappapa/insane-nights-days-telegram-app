@@ -17,7 +17,7 @@ import {
   Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
+// Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -28,14 +28,21 @@ import Colors from '../constants/colors';
 import StarRating from '../components/StarRating';
 import VideoPlayer from '../components/VideoPlayer';
 import AudioPlayer from '../components/AudioPlayer';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
+import NotificationBadge from '../components/NotificationBadge';
+import { useNotifications } from '../hooks/useNotifications';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 280;
 
 export default function DjDashboardPage() {
   const { language } = useLanguage();
-  const { navigate, goBack } = useNavigation();
+  const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
+  const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [djProfile, setDjProfile] = useState(null);
@@ -44,8 +51,8 @@ export default function DjDashboardPage() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const sidebarAnimation = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   
-  // Section active
-  const [activeSection, setActiveSection] = useState('profil');
+  // Section active - ouvrir bookings si demandé via routeParams
+  const [activeSection, setActiveSection] = useState(routeParams?.openBookings ? 'bookings' : 'profil');
   
   // Formulaire
   const [artistName, setArtistName] = useState('');
@@ -101,11 +108,21 @@ export default function DjDashboardPage() {
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
+  // Chat
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [selectedChatEventDjId, setSelectedChatEventDjId] = useState(null);
+  const [selectedChatEventId, setSelectedChatEventId] = useState(null); // Pour les chats de groupe
+  const [isGroupChat, setIsGroupChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [loadingChatMessages, setLoadingChatMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [newMessageText, setNewMessageText] = useState('');
+  const chatScrollViewRef = useRef(null);
+
   const handleBack = async () => {
     try {
-      // Couper tous les sons en cours (dashboard + autres écrans)
-      await Audio.setIsEnabledAsync(false);
-      await Audio.setIsEnabledAsync(true);
+      // Note: expo-audio ne nécessite plus setIsEnabledAsync
+      // Les players audio se gèrent individuellement
     } catch (e) {
       console.error("Erreur lors de l'arrêt de l'audio au retour dashboard:", e);
     }
@@ -126,6 +143,103 @@ export default function DjDashboardPage() {
   }, [activeSection, user?.token]);
 
   const [processingInvitation, setProcessingInvitation] = useState(null);
+
+  // Fonctions de chat
+  const openChat = async (eventDjId) => {
+    setSelectedChatEventDjId(eventDjId);
+    setSelectedChatEventId(null);
+    setIsGroupChat(false);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventDjId, false);
+    // Rafraîchir le compteur après ouverture
+    refreshUnreadCount();
+  };
+
+  const openGroupChat = async (eventId) => {
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(eventId);
+    setIsGroupChat(true);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventId, true);
+    // Rafraîchir le compteur après ouverture
+    refreshUnreadCount();
+  };
+
+  const loadChatMessages = async (id, isGroup = false) => {
+    if (!user?.token || !id) return;
+    
+    setLoadingChatMessages(true);
+    try {
+      const response = isGroup 
+        ? await api.getGroupMessages(user.token, id)
+        : await api.getMessages(user.token, id);
+      if (response && response.success && response.messages) {
+        setChatMessages(response.messages);
+        // Scroll vers le bas après un court délai
+        setTimeout(() => {
+          if (chatScrollViewRef.current) {
+            chatScrollViewRef.current.scrollToEnd({ animated: true });
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr' ? 'Impossible de charger les messages.' : 'Unable to load messages.'
+      );
+    } finally {
+      setLoadingChatMessages(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!user?.token || !messageId) return;
+    try {
+      await api.deleteMessage(user.token, messageId);
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, deleted: true, content: 'message supprimé' } : m
+        )
+      );
+    } catch (error) {
+      console.error('Erreur suppression message:', error);
+      showError(language === 'fr'
+        ? 'Impossible de supprimer le message.'
+        : 'Unable to delete message.');
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!user?.token || !newMessageText.trim() || sendingMessage) return;
+    if (!isGroupChat && !selectedChatEventDjId) return;
+    if (isGroupChat && !selectedChatEventId) return;
+    
+    const messageText = newMessageText.trim();
+    setNewMessageText('');
+    setSendingMessage(true);
+    
+    try {
+      const response = isGroupChat
+        ? await api.sendGroupMessage(user.token, selectedChatEventId, messageText)
+        : await api.sendMessage(user.token, selectedChatEventDjId, messageText);
+      if (response && response.success) {
+        // Recharger les messages
+        await loadChatMessages(isGroupChat ? selectedChatEventId : selectedChatEventDjId, isGroupChat);
+      } else {
+        showError(response?.message || (language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.'));
+        setNewMessageText(messageText); // Remettre le texte en cas d'erreur
+      }
+    } catch (error) {
+      console.error('Erreur envoi message:', error);
+      showError(language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.');
+      setNewMessageText(messageText); // Remettre le texte en cas d'erreur
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   const fetchBookings = async () => {
     if (!user?.token || loadingBookings) return;
@@ -152,24 +266,15 @@ export default function DjDashboardPage() {
       if (response && response.success) {
         // Recharger les bookings pour mettre à jour l'affichage
         await fetchBookings();
-        Alert.alert(
-          language === 'fr' ? 'Invitation acceptée' : 'Invitation accepted',
-          language === 'fr' 
-            ? 'Vous avez accepté l\'invitation à cet événement.'
-            : 'You have accepted the invitation to this event.'
-        );
+        showSuccess(language === 'fr' 
+          ? 'Vous avez accepté l\'invitation à cet événement.'
+          : 'You have accepted the invitation to this event.');
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.')
-        );
+        showError(response?.message || (language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.'));
       }
     } catch (error) {
       console.error('Erreur acceptation invitation:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.'
-      );
+      showError(language === 'fr' ? 'Impossible d\'accepter l\'invitation.' : 'Unable to accept invitation.');
     } finally {
       setProcessingInvitation(null);
     }
@@ -198,24 +303,15 @@ export default function DjDashboardPage() {
               if (response && response.success) {
                 // Recharger les bookings pour mettre à jour l'affichage
                 await fetchBookings();
-                Alert.alert(
-                  language === 'fr' ? 'Invitation refusée' : 'Invitation rejected',
-                  language === 'fr' 
-                    ? 'Vous avez refusé l\'invitation à cet événement.'
-                    : 'You have rejected the invitation to this event.'
-                );
+                showSuccess(language === 'fr' 
+                  ? 'Vous avez refusé l\'invitation à cet événement.'
+                  : 'You have rejected the invitation to this event.');
               } else {
-                Alert.alert(
-                  language === 'fr' ? 'Erreur' : 'Error',
-                  response?.message || (language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.')
-                );
+                showError(response?.message || (language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.'));
               }
             } catch (error) {
               console.error('Erreur refus invitation:', error);
-              Alert.alert(
-                language === 'fr' ? 'Erreur' : 'Error',
-                language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.'
-              );
+              showError(language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.');
             } finally {
               setProcessingInvitation(null);
             }
@@ -308,10 +404,7 @@ export default function DjDashboardPage() {
     // On ne vérifie que les champs éditables
 
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Non authentifié' : 'Not authenticated'
-      );
+      showError(language === 'fr' ? 'Non authentifié' : 'Not authenticated');
       return;
     }
 
@@ -367,29 +460,19 @@ export default function DjDashboardPage() {
       if (response && response.success) {
         // Ne pas mettre à jour les champs locaux - garder ce que l'utilisateur a tapé
         // Les données sont sauvegardées dans la DB, pas besoin de recharger depuis le serveur
-        Alert.alert(
-          language === 'fr' ? 'Succès' : 'Success',
-          language === 'fr' 
-            ? 'Profil DJ mis à jour avec succès' 
-            : 'DJ profile updated successfully',
-          [{ text: 'OK' }]
-        );
+        showSuccess(language === 'fr' 
+          ? 'Profil DJ mis à jour avec succès' 
+          : 'DJ profile updated successfully');
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' 
-            ? 'Erreur lors de la mise à jour du profil' 
-            : 'Error updating profile'
-        );
+        showError(language === 'fr' 
+          ? 'Erreur lors de la mise à jour du profil' 
+          : 'Error updating profile');
       }
     } catch (error) {
       console.error('Erreur mise à jour profil DJ:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
-          ? 'Erreur lors de la mise à jour du profil' 
-          : 'Error updating profile'
-      );
+      showError(language === 'fr' 
+        ? 'Erreur lors de la mise à jour du profil' 
+        : 'Error updating profile');
     } finally {
       setSaving(false);
     }
@@ -412,22 +495,16 @@ export default function DjDashboardPage() {
           setDjProfile(response.dj);
         } else {
           console.error('[saveMedia] Impossible de récupérer le profil DJ');
-      Alert.alert(
-            language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
-              ? 'Impossible de sauvegarder le média. Assurez-vous d\'avoir un profil DJ actif.' 
-              : 'Unable to save media. Make sure you have an active DJ profile.'
-      );
-      return;
-    }
+          showError(language === 'fr' 
+            ? 'Impossible de sauvegarder le média. Assurez-vous d\'avoir un profil DJ actif.' 
+            : 'Unable to save media. Make sure you have an active DJ profile.');
+          return;
+        }
       } catch (error) {
         console.error('[saveMedia] Erreur récupération profil DJ:', error);
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' 
-            ? 'Erreur lors de la sauvegarde du média.' 
-            : 'Error saving media.'
-        );
+        showError(language === 'fr' 
+          ? 'Erreur lors de la sauvegarde du média.' 
+          : 'Error saving media.');
         return;
       }
     }
@@ -492,12 +569,9 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('[saveMedia] Erreur sauvegarde média:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
-          ? `Erreur lors de la sauvegarde: ${error.message || 'Erreur inconnue'}` 
-          : `Error saving: ${error.message || 'Unknown error'}`
-      );
+      showError(language === 'fr' 
+        ? `Erreur lors de la sauvegarde: ${error.message || 'Erreur inconnue'}` 
+        : `Error saving: ${error.message || 'Unknown error'}`);
       throw error;
     }
   };
@@ -505,10 +579,7 @@ export default function DjDashboardPage() {
   // Mettre à jour le titre d'un média
   const updateMediaTitle = async (mediaId, type, newTitle) => {
     if (!user?.token || !mediaId) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de mettre à jour le titre' : 'Unable to update title'
-      );
+      showError(language === 'fr' ? 'Impossible de mettre à jour le titre' : 'Unable to update title');
       return;
     }
 
@@ -525,10 +596,7 @@ export default function DjDashboardPage() {
             a.id === mediaId ? { ...a, title: newTitle } : a
           ));
         }
-        Alert.alert(
-          language === 'fr' ? 'Succès' : 'Success',
-          language === 'fr' ? 'Titre mis à jour avec succès' : 'Title updated successfully'
-        );
+        showSuccess(language === 'fr' ? 'Titre mis à jour avec succès' : 'Title updated successfully');
         setEditingTitle(null);
         setEditTitleValue('');
       } else {
@@ -536,22 +604,16 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('[updateMediaTitle] Erreur mise à jour titre:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
-          ? `Erreur lors de la mise à jour: ${error.message || 'Erreur inconnue'}` 
-          : `Error updating: ${error.message || 'Unknown error'}`
-      );
+      showError(language === 'fr' 
+        ? `Erreur lors de la mise à jour: ${error.message || 'Erreur inconnue'}` 
+        : `Error updating: ${error.message || 'Unknown error'}`);
     }
   };
 
   // Supprimer un média
   const deleteMedia = async (mediaId, type) => {
     if (!user?.token || !mediaId) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de supprimer le média' : 'Unable to delete media'
-      );
+      showError(language === 'fr' ? 'Impossible de supprimer le média' : 'Unable to delete media');
       return;
     }
 
@@ -716,7 +778,7 @@ export default function DjDashboardPage() {
       try {
         // Options minimales pour iOS - éviter l'erreur 3164
         // Utiliser MediaType (nouvelle API recommandée)
-    result = await ImagePicker.launchImageLibraryAsync({
+        result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Videos,
           allowsMultipleSelection: false,
           allowsEditing: false,
@@ -865,12 +927,75 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('[pickVideo] Erreur lors de la sélection vidéo:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' 
-          ? `Erreur lors de la sélection de la vidéo: ${error.message || 'Erreur inconnue'}` 
-          : `Error selecting video: ${error.message || 'Unknown error'}`
-      );
+      
+      // Gérer spécifiquement l'erreur 3164 iOS
+      const errorMessage = error.message || error.toString() || '';
+      if (errorMessage.includes('3164') || errorMessage.includes('PHPhotosErrorDomain')) {
+        Alert.alert(
+          language === 'fr' ? 'Accès à la galerie requis' : 'Gallery Access Required',
+          language === 'fr' 
+            ? 'Pour sélectionner des vidéos depuis la galerie Photos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres de l\'app (pas seulement les photos sélectionnées).' 
+            : 'To select videos from Photo Library, you must grant full access to all photos in app settings (not just selected photos).',
+          [
+            { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+            { 
+              text: language === 'fr' ? 'Paramètres' : 'Settings', 
+              onPress: () => {
+                Linking.openURL('app-settings:');
+              }
+            },
+            {
+              text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
+              onPress: async () => {
+                // Fallback vers DocumentPicker
+                try {
+                  const docResult = await DocumentPicker.getDocumentAsync({
+                    type: 'video/*',
+                    copyToCacheDirectory: true,
+                    multiple: false,
+                  });
+
+                  if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
+                    const videoUri = docResult.assets[0].uri;
+                    
+                    try {
+                      const response = await saveMedia('video', videoUri);
+                      if (response && response.success && response.media) {
+                        setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
+                        Alert.alert(
+                          language === 'fr' ? 'Succès' : 'Success',
+                          language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
+                        );
+                      } else {
+                        setVideos([...videos, { id: null, url: videoUri }]);
+                      }
+                    } catch (saveError) {
+                      console.error('[pickVideo] Erreur sauvegarde vidéo:', saveError);
+                      Alert.alert(
+                        language === 'fr' ? 'Erreur' : 'Error',
+                        language === 'fr' ? 'Impossible d\'ajouter la vidéo' : 'Unable to add video'
+                      );
+                    }
+                  }
+                } catch (docError) {
+                  console.error('[pickVideo] Erreur DocumentPicker:', docError);
+                  Alert.alert(
+                    language === 'fr' ? 'Erreur' : 'Error',
+                    language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
+                  );
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          language === 'fr' ? 'Erreur' : 'Error',
+          language === 'fr' 
+            ? `Erreur lors de la sélection de la vidéo: ${error.message || 'Erreur inconnue'}` 
+            : `Error selecting video: ${error.message || 'Unknown error'}`
+        );
+      }
     }
   };
 
@@ -987,6 +1112,7 @@ export default function DjDashboardPage() {
         if (response && response.success && response.media) {
           // Utiliser l'URL retournée par le serveur (URL publique)
           setBannerImage(normalizeMediaUrl(response.media.url));
+          
           Alert.alert(
             language === 'fr' ? 'Succès' : 'Success',
             language === 'fr' ? 'Bannière mise à jour' : 'Banner updated'
@@ -1473,7 +1599,7 @@ export default function DjDashboardPage() {
                     <Text style={styles.invitationsSectionTitle}>
                       {language === 'fr' ? '📩 Invitations en attente' : '📩 Pending invitations'}
                     </Text>
-                    <View style={styles.bookingsList}>
+              <View style={styles.bookingsList}>
                       {pendingInvitations.map((booking) => {
                         const eventDate = new Date(booking.eventDate);
                         const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
@@ -1533,32 +1659,59 @@ export default function DjDashboardPage() {
                             </View>
                             
                             <View style={styles.invitationActions}>
-                              <TouchableOpacity
-                                style={[styles.invitationButton, styles.rejectButton]}
-                                onPress={() => handleRejectInvitation(booking.id)}
-                                disabled={processingInvitation === booking.id}
-                              >
-                                {processingInvitation === booking.id ? (
-                                  <ActivityIndicator size="small" color="#fff" />
-                                ) : (
+                              {/* Première ligne : Chat et Groupe */}
+                              <View style={styles.invitationActionsRow}>
+                                <TouchableOpacity
+                                  style={[styles.invitationButton, styles.chatButton]}
+                                  onPress={() => openChat(booking.id)}
+                                >
                                   <Text style={styles.invitationButtonText}>
-                                    {language === 'fr' ? 'Refuser' : 'Reject'}
+                                    💬 {language === 'fr' ? 'Chat' : 'Chat'}
                                   </Text>
-                                )}
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[styles.invitationButton, styles.acceptButton]}
-                                onPress={() => handleAcceptInvitation(booking.id)}
-                                disabled={processingInvitation === booking.id}
-                              >
-                                {processingInvitation === booking.id ? (
-                                  <ActivityIndicator size="small" color="#fff" />
+                                </TouchableOpacity>
+                                {/* Bouton chat de groupe pour les invitations acceptées ou si l'invitation est acceptée */}
+                                {booking.eventId ? (
+                                  <TouchableOpacity
+                                    style={[styles.invitationButton, { backgroundColor: '#2196F3' }]}
+                                    onPress={() => openGroupChat(booking.eventId)}
+                                  >
+                                    <Text style={styles.invitationButtonText}>
+                                      👥 {language === 'fr' ? 'Groupe' : 'Group'}
+                                    </Text>
+                                  </TouchableOpacity>
                                 ) : (
-                                  <Text style={styles.invitationButtonText}>
-                                    {language === 'fr' ? 'Accepter' : 'Accept'}
-                                  </Text>
+                                  <View style={styles.invitationButtonPlaceholder} />
                                 )}
-                              </TouchableOpacity>
+                              </View>
+                              {/* Deuxième ligne : Refuser et Accepter - bien séparés */}
+                              <View style={styles.invitationActionsRowCritical}>
+                                <TouchableOpacity
+                                  style={[styles.invitationButtonCritical, styles.rejectButton]}
+                                  onPress={() => handleRejectInvitation(booking.id)}
+                                  disabled={processingInvitation === booking.id}
+                                >
+                                  {processingInvitation === booking.id ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                  ) : (
+                                    <Text style={styles.invitationButtonCriticalText}>
+                                      ✕ {language === 'fr' ? 'Refuser' : 'Reject'}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[styles.invitationButtonCritical, styles.acceptButton]}
+                                  onPress={() => handleAcceptInvitation(booking.id)}
+                                  disabled={processingInvitation === booking.id}
+                                >
+                                  {processingInvitation === booking.id ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                  ) : (
+                                    <Text style={styles.invitationButtonCriticalText}>
+                                      ✓ {language === 'fr' ? 'Accepter' : 'Accept'}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              </View>
                             </View>
                           </View>
                         );
@@ -1575,96 +1728,116 @@ export default function DjDashboardPage() {
                     </Text>
                     <View style={styles.bookingsList}>
                       {acceptedBookings.map((booking) => {
-                        const eventDate = new Date(booking.eventDate);
-                        const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        });
-                        
-                        const statusColors = {
-                          UPCOMING: Colors.primary,
-                          ONGOING: '#4CAF50',
-                          FINISHED: Colors.textSecondary,
-                        };
-                        
-                        const statusLabels = {
-                          UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
-                          ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
-                          FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
-                        };
-                        
-                        return (
-                          <View key={booking.id} style={styles.bookingCard}>
-                            <View style={styles.bookingHeader}>
-                              <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
-                              <View style={[styles.bookingStatus, { backgroundColor: statusColors[booking.eventStatus] + '20' }]}>
-                                <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] }]}>
-                                  {statusLabels[booking.eventStatus]}
-                                </Text>
-                              </View>
-                            </View>
+                  const eventDate = new Date(booking.eventDate);
+                  const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  });
+                  
+                  const statusColors = {
+                    UPCOMING: Colors.primary,
+                    ONGOING: '#4CAF50',
+                    FINISHED: Colors.textSecondary,
+                  };
+                  
+                  const statusLabels = {
+                    UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                    ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
+                    FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+                  };
+                  
+                  return (
+                    <View key={booking.id} style={styles.bookingCard}>
+                      <View style={styles.bookingHeader}>
+                        <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                        <View style={[styles.bookingStatus, { backgroundColor: statusColors[booking.eventStatus] + '20' }]}>
+                          <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] }]}>
+                            {statusLabels[booking.eventStatus]}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>
+                          📅 {language === 'fr' ? 'Date' : 'Date'}
+                        </Text>
+                        <Text style={styles.bookingInfoValue}>
+                          {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                        </Text>
+                      </View>
+                      
+                      {booking.venue && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>
+                            📍 {language === 'fr' ? 'Lieu' : 'Venue'}
+                          </Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {booking.venue.name}
+                            {booking.venue.address && ` - ${booking.venue.address}`}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {booking.booker && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>
+                            👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                          </Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {booking.booker.name} ({booking.booker.type})
+                          </Text>
+                        </View>
+                      )}
+                      
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>
+                          📍 {language === 'fr' ? 'Adresse' : 'Address'}
+                        </Text>
+                        <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
+                      </View>
                             
-                            <View style={styles.bookingInfo}>
-                              <Text style={styles.bookingInfoLabel}>
-                                📅 {language === 'fr' ? 'Date' : 'Date'}
+                            <TouchableOpacity
+                              style={[styles.invitationButton, styles.chatButton, { marginTop: 10, width: '100%' }]}
+                              onPress={() => openChat(booking.id)}
+                            >
+                              <Text style={styles.invitationButtonText}>
+                                💬 {language === 'fr' ? 'Chat avec le booker' : 'Chat with booker'}
                               </Text>
-                              <Text style={styles.bookingInfoValue}>
-                                {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
-                              </Text>
-                            </View>
-                            
-                            {booking.venue && (
-                              <View style={styles.bookingInfo}>
-                                <Text style={styles.bookingInfoLabel}>
-                                  📍 {language === 'fr' ? 'Lieu' : 'Venue'}
+                            </TouchableOpacity>
+                            {/* Bouton chat de groupe */}
+                            {booking.eventId && (
+                              <TouchableOpacity
+                                style={[styles.invitationButton, styles.chatButton, { marginTop: 10, width: '100%', backgroundColor: '#2196F3' }]}
+                                onPress={() => openGroupChat(booking.eventId)}
+                              >
+                                <Text style={styles.invitationButtonText}>
+                                  👥 {language === 'fr' ? 'Chat de groupe' : 'Group chat'}
                                 </Text>
-                                <Text style={styles.bookingInfoValue}>
-                                  {booking.venue.name}
-                                  {booking.venue.address && ` - ${booking.venue.address}`}
-                                </Text>
-                              </View>
+                              </TouchableOpacity>
                             )}
-                            
-                            {booking.booker && (
-                              <View style={styles.bookingInfo}>
-                                <Text style={styles.bookingInfoLabel}>
-                                  👤 {language === 'fr' ? 'Booker' : 'Booker'}
-                                </Text>
-                                <Text style={styles.bookingInfoValue}>
-                                  {booking.booker.name} ({booking.booker.type})
-                                </Text>
-                              </View>
-                            )}
-                            
-                            <View style={styles.bookingInfo}>
-                              <Text style={styles.bookingInfoLabel}>
-                                📍 {language === 'fr' ? 'Adresse' : 'Address'}
-                              </Text>
-                              <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
+    </View>
+  );
+                })}
+              </View>
                   </View>
                 )}
                 
                 {/* État vide */}
                 {pendingInvitations.length === 0 && acceptedBookings.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateIcon}>📅</Text>
-                    <Text style={styles.emptyStateText}>
-                      {language === 'fr' 
-                        ? 'Aucun booking pour le moment' 
-                        : 'No bookings yet'}
-                    </Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      {language === 'fr' 
-                        ? 'Vos réservations et demandes de booking apparaîtront ici.' 
-                        : 'Your bookings and booking requests will appear here.'}
-                    </Text>
-                  </View>
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateIcon}>📅</Text>
+                <Text style={styles.emptyStateText}>
+                  {language === 'fr' 
+                    ? 'Aucun booking pour le moment' 
+                    : 'No bookings yet'}
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {language === 'fr' 
+                    ? 'Vos réservations et demandes de booking apparaîtront ici.' 
+                    : 'Your bookings and booking requests will appear here.'}
+                </Text>
+              </View>
                 )}
               </>
             )}
@@ -2037,9 +2210,18 @@ export default function DjDashboardPage() {
               onPress={() => {
                 setActiveSection(item.id);
                 setSidebarVisible(false);
+                // Si on ouvre la section bookings, marquer les messages comme lus
+                if (item.id === 'bookings') {
+                  markAllAsRead();
+                }
               }}
             >
-              <Text style={styles.menuItemIcon}>{item.icon}</Text>
+              <View style={styles.menuItemIconContainer}>
+                <Text style={styles.menuItemIcon}>{item.icon}</Text>
+                {item.id === 'bookings' && (
+                  <NotificationBadge count={unreadCount} />
+                )}
+              </View>
               <Text style={[
                 styles.menuItemText,
                 activeSection === item.id && styles.menuItemTextActive
@@ -2080,9 +2262,21 @@ export default function DjDashboardPage() {
           >
             <Text style={styles.menuButtonText}>☰</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-          </TouchableOpacity>
+          <View style={styles.topBarRight}>
+            <TouchableOpacity
+              style={styles.messagesButton}
+              onPress={() => {
+                setActiveSection('bookings');
+                refreshUnreadCount();
+              }}
+            >
+              <Ionicons name="chatbubbles" size={24} color="#fff" />
+              <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {renderContent()}
@@ -2152,6 +2346,211 @@ export default function DjDashboardPage() {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal de chat */}
+      <Modal
+        visible={chatModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setChatModalVisible(false);
+          setSelectedChatEventDjId(null);
+          setSelectedChatEventId(null);
+          setIsGroupChat(false);
+          setChatMessages([]);
+          setNewMessageText('');
+          // Rafraîchir le compteur après fermeture
+          refreshUnreadCount();
+        }}
+        presentationStyle="overFullScreen"
+      >
+        <View style={styles.chatModalContainer}>
+          <KeyboardAvoidingView
+            style={styles.chatModalContent}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            {/* Header du chat */}
+            <View style={styles.chatHeaderContainer}>
+            <View style={styles.chatHeader}>
+              <TouchableOpacity
+                onPress={() => {
+                  setChatModalVisible(false);
+                  setSelectedChatEventDjId(null);
+                  setSelectedChatEventId(null);
+                  setIsGroupChat(false);
+                  setChatMessages([]);
+                  setNewMessageText('');
+                  // Rafraîchir le compteur après fermeture
+                  refreshUnreadCount();
+                }}
+                style={styles.chatCloseButton}
+              >
+                <Text style={styles.chatCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+              <Text style={styles.chatHeaderTitle}>
+                {isGroupChat 
+                  ? (language === 'fr' ? 'Chat de groupe' : 'Group chat')
+                  : (language === 'fr' ? 'Chat' : 'Chat')
+                }
+              </Text>
+              <View style={{ width: 40 }} />
+            </View>
+            </View>
+
+            {/* Messages */}
+            {loadingChatMessages ? (
+              <View style={styles.chatLoadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+              </View>
+            ) : (
+              <ScrollView
+                ref={chatScrollViewRef}
+                style={styles.chatMessagesContainer}
+                contentContainerStyle={styles.chatMessagesContent}
+                onContentSizeChange={() => {
+                  if (chatScrollViewRef.current) {
+                    chatScrollViewRef.current.scrollToEnd({ animated: true });
+                  }
+                }}
+              >
+                {chatMessages.length === 0 ? (
+                  <View style={styles.chatEmptyState}>
+                    <Text style={styles.chatEmptyStateText}>
+                      {language === 'fr' 
+                        ? 'Aucun message pour le moment. Commencez la conversation !' 
+                        : 'No messages yet. Start the conversation!'}
+                    </Text>
+                  </View>
+                ) : (
+                  chatMessages.map((msg) => (
+                    <View
+                      key={msg.id}
+                      style={[
+                        styles.chatMessage,
+                        msg.isOwn ? styles.chatMessageOwn : styles.chatMessageOther,
+                      ]}
+                    >
+                      {!msg.isOwn && msg.senderInfo && (
+                        <TouchableOpacity
+                          style={styles.chatMessageSender}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            if (msg.senderInfo.type === 'DJ') {
+                              navigate('djProfile', { djId: msg.senderId });
+                            }
+                          }}
+                        >
+                          {msg.senderInfo.image ? (
+                            <Image
+                              source={{ uri: normalizeMediaUrl(msg.senderInfo.image) }}
+                              style={styles.chatMessageAvatar}
+                            />
+                          ) : (
+                            <View style={[styles.chatMessageAvatar, styles.chatMessageAvatarPlaceholder]}>
+                              <Text style={styles.chatMessageAvatarText}>
+                                {msg.senderInfo.name ? msg.senderInfo.name.charAt(0).toUpperCase() : '?'}
+                              </Text>
+                            </View>
+                          )}
+                          <Text style={styles.chatMessageSenderName}>
+                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Booker' : 'DJ')}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onLongPress={() => {
+                          if (!msg.isOwn || msg.deleted) return;
+                          Alert.alert(
+                            language === 'fr' ? 'Supprimer le message' : 'Delete message',
+                            language === 'fr'
+                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par \"message supprimé\".'
+                              : 'Do you want to delete this message? It will be replaced by \"message deleted\".',
+                            [
+                              { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+                              {
+                                text: language === 'fr' ? 'Supprimer' : 'Delete',
+                                style: 'destructive',
+                                onPress: () => handleDeleteMessage(msg.id),
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.chatMessageBubble,
+                            msg.isOwn ? styles.chatMessageBubbleOwn : styles.chatMessageBubbleOther,
+                            msg.deleted && styles.chatMessageBubbleDeleted,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chatMessageText,
+                              msg.isOwn ? styles.chatMessageTextOwn : styles.chatMessageTextOther,
+                              msg.deleted && styles.chatMessageTextDeleted,
+                            ]}
+                          >
+                            {msg.deleted
+                              ? language === 'fr'
+                                ? 'message supprimé'
+                                : 'message deleted'
+                              : msg.content}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.chatMessageTime,
+                              msg.isOwn ? styles.chatMessageTimeOwn : styles.chatMessageTimeOther,
+                            ]}
+                          >
+                            {new Date(msg.createdAt).toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+
+            {/* Input pour envoyer un message */}
+            <View style={styles.chatInputContainer}>
+              <TextInput
+                style={styles.chatInput}
+                value={newMessageText}
+                onChangeText={setNewMessageText}
+                placeholder={language === 'fr' ? 'Tapez votre message...' : 'Type your message...'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                multiline
+                maxLength={500}
+                onFocus={() => {
+                  // Scroll vers le bas quand on focus l'input
+                  setTimeout(() => {
+                    if (chatScrollViewRef.current) {
+                      chatScrollViewRef.current.scrollToEnd({ animated: true });
+                    }
+                  }, 100);
+                }}
+              />
+              <TouchableOpacity
+                style={[styles.chatSendButton, sendingMessage && styles.chatSendButtonDisabled]}
+                onPress={sendMessage}
+                disabled={!newMessageText.trim() || sendingMessage}
+              >
+                {sendingMessage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.chatSendButtonText}>➤</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -2234,6 +2633,14 @@ export default function DjDashboardPage() {
           </View>
         </View>
       </Modal>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </View>
   );
 }
@@ -2309,9 +2716,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
   },
+  menuItemIconContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
   menuItemIcon: {
     fontSize: 20,
-    marginRight: 12,
   },
   menuItemText: {
     color: Colors.textSecondary,
@@ -2360,12 +2770,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: Colors.background,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   menuButton: {
     marginRight: 16,
@@ -2375,6 +2791,12 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 24,
     fontWeight: '700',
+  },
+  messagesButton: {
+    position: 'relative',
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backButton: {
     flex: 1,
@@ -3013,31 +3435,67 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   invitationActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 12,
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
+  invitationActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   invitationButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 50,
+  },
+  invitationButtonPlaceholder: {
+    flex: 1,
   },
   acceptButton: {
     backgroundColor: '#4CAF50',
+    borderColor: '#45a049',
   },
   rejectButton: {
     backgroundColor: '#F44336',
+    borderColor: '#d32f2f',
   },
   invitationButtonText: {
     color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  invitationActionsRowCritical: {
+    flexDirection: 'row',
+    gap: 20,
+    marginTop: 4,
+  },
+  invitationButtonCritical: {
+    flex: 1,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  invitationButtonCriticalText: {
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   bookingHeader: {
     flexDirection: 'row',
@@ -3097,5 +3555,188 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  chatButton: {
+    backgroundColor: '#4CAF50',
+    flex: 1,
+  },
+  // Chat Modal
+  chatModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  chatModalContent: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    marginTop: Platform.OS === 'ios' ? 50 : 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '100%',
+  },
+  chatHeaderContainer: {
+    zIndex: 10,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.backgroundCard,
+  },
+  chatCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatCloseButtonText: {
+    color: Colors.text,
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  chatHeaderTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  chatLoadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  chatMessagesContainer: {
+    flex: 1,
+    flexGrow: 1,
+  },
+  chatMessagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+    flexGrow: 1,
+  },
+  chatEmptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  chatEmptyStateText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  chatMessage: {
+    marginBottom: 16,
+  },
+  chatMessageOwn: {
+    alignItems: 'flex-end',
+  },
+  chatMessageOther: {
+    alignItems: 'flex-start',
+  },
+  chatMessageSender: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chatMessageAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  chatMessageAvatarPlaceholder: {
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatMessageAvatarText: {
+    color: Colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chatMessageSenderName: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  chatMessageBubble: {
+    maxWidth: '75%',
+    padding: 12,
+    borderRadius: 16,
+  },
+  chatMessageBubbleOwn: {
+    backgroundColor: Colors.primary,
+    borderBottomRightRadius: 4,
+  },
+  chatMessageBubbleOther: {
+    backgroundColor: Colors.backgroundCard,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chatMessageText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  chatMessageTextOwn: {
+    color: Colors.text,
+  },
+  chatMessageTextOther: {
+    color: Colors.text,
+  },
+  chatMessageTime: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  chatMessageTimeOwn: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  chatMessageTimeOther: {
+    color: Colors.textSecondary,
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    paddingBottom: Platform.OS === 'android' ? 20 : 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.backgroundCard,
+    minHeight: 60,
+    zIndex: 10,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'android' ? 12 : 10,
+    maxHeight: 100,
+    minHeight: Platform.OS === 'android' ? 44 : 40,
+    color: Colors.text,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    textAlignVertical: 'center',
+  },
+  chatSendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  chatSendButtonDisabled: {
+    opacity: 0.5,
+  },
+  chatSendButtonText: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

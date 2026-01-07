@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,110 +6,102 @@ import {
   Text,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function AudioPlayer({ audioUrl, title, onClose }) {
   const { language } = useLanguage();
-  const [sound, setSound] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    loadAudio();
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
+  
+  // Convertir l'URL si c'est un objet (require())
+  const audioSource = useMemo(() => {
+    if (!audioUrl) return null;
+    if (typeof audioUrl === 'object' && audioUrl !== null) {
+      return audioUrl.uri || audioUrl;
       }
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
+    return audioUrl;
   }, [audioUrl]);
 
-  const loadAudio = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Si on a déjà un son, le décharger
-      if (sound) {
-        await sound.unloadAsync();
-      }
+  // Si c'est YouTube, on ne peut pas le lire directement
+  const isValidSource = useMemo(() => {
+    if (!audioSource || typeof audioSource !== 'string') return true;
+    return !audioSource.includes('youtube.com') && !audioSource.includes('youtu.be');
+  }, [audioSource]);
 
-      // Configurer le mode audio
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-      });
+  // Ne créer le player que si on a une source valide
+  const shouldCreatePlayer = audioSource && isValidSource;
+  const player = useAudioPlayer(shouldCreatePlayer ? audioSource : null);
+  
+  // Vérifier que le player est valide avant d'accéder à ses propriétés
+  const isPlayerValid = player && typeof player === 'object' && 'playing' in player;
+  const isPlaying = isPlayerValid ? (player.playing ?? false) : false;
+  const duration = isPlayerValid && player.duration ? Math.floor(player.duration * 1000) : 0;
+  const position = isPlayerValid && player.currentTime ? Math.floor(player.currentTime * 1000) : 0;
 
-      // Convertir l'URL si c'est un objet (require())
-      let audioSource = audioUrl;
-      if (typeof audioUrl === 'object' && audioUrl !== null) {
-        audioSource = audioUrl.uri || audioUrl;
-      }
+  // Note: expo-audio gère automatiquement le nettoyage du player quand le composant est démonté
+  // Pas besoin de cleanup manuel qui peut causer des erreurs si le player est déjà libéré
 
-      // Si c'est YouTube, on ne peut pas le lire directement
-      if (typeof audioSource === 'string' && 
-          (audioSource.includes('youtube.com') || audioSource.includes('youtu.be'))) {
-        console.warn('Les URLs YouTube ne peuvent pas être lues directement en audio');
-        setIsLoading(false);
-        return;
-      }
-
-      // Charger le son
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: typeof audioSource === 'string' ? audioSource : audioSource },
-        { shouldPlay: false },
-        onPlaybackStatusUpdate
-      );
-
-      setSound(newSound);
+  useEffect(() => {
+    if (!isPlayerValid || !isValidSource || !audioSource) {
       setIsLoading(false);
-    } catch (error) {
-      console.error('Erreur chargement audio:', error);
-      setIsLoading(false);
+      return;
     }
-  };
-
-  const onPlaybackStatusUpdate = (status) => {
-    if (status.isLoaded) {
-      setIsPlaying(status.isPlaying);
-      setDuration(status.durationMillis || 0);
-      setPosition(status.positionMillis || 0);
+    
+    setIsLoading(true);
+    let timeoutId = null;
+    let isMounted = true;
+    
+    const checkLoaded = () => {
+      if (!isMounted) return;
       
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-        setPosition(0);
+      try {
+        if (isPlayerValid && player && player.duration && player.duration > 0) {
+          setIsLoading(false);
+        } else if (isPlayerValid && player) {
+          timeoutId = setTimeout(checkLoaded, 100);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        // Si le player est libéré, arrêter la vérification
+        console.warn('Player audio libéré pendant le chargement:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    }
-  };
+    };
+    
+    checkLoaded();
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [player, isValidSource, audioSource, isPlayerValid]);
 
-  const playPause = async () => {
-    if (!sound) return;
-
+  const playPause = () => {
+    if (!isPlayerValid || !player || !isValidSource) return;
     try {
-      if (isPlaying) {
-        await sound.pauseAsync();
+      if (player.playing) {
+        player.pause();
       } else {
-        await sound.playAsync();
+        player.play();
       }
     } catch (error) {
-      console.error('Erreur play/pause:', error);
+      console.warn('Erreur lors de la lecture/pause audio:', error);
     }
   };
 
-  const seek = async (value) => {
-    if (!sound) return;
+  const seek = (value) => {
+    if (!isPlayerValid || !player || !isValidSource) return;
     try {
-      await sound.setPositionAsync(value);
+      player.seekTo(value / 1000); // Convertir en secondes
     } catch (error) {
-      console.error('Erreur seek:', error);
+      console.warn('Erreur lors du seek audio:', error);
     }
   };
 
@@ -132,7 +124,7 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
     );
   }
 
-  if (!sound) {
+  if (!isPlayerValid || !player || !isValidSource || !audioSource) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>
@@ -154,11 +146,14 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
         <TouchableOpacity
           style={styles.playButton}
           onPress={playPause}
-          disabled={!sound}
+          disabled={!isPlayerValid || !player || !isValidSource}
         >
-          <Text style={styles.playIcon}>
-            {isPlaying ? '⏸' : '▶'}
-          </Text>
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={24}
+            color="#fff"
+            style={isPlaying ? styles.pauseIcon : styles.playIcon}
+          />
         </TouchableOpacity>
 
         <View style={styles.progressContainer}>
@@ -171,7 +166,7 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
             minimumTrackTintColor="#FF1744"
             maximumTrackTintColor="rgba(255,255,255,0.3)"
             thumbTintColor="#FF1744"
-            disabled={!sound || duration === 0}
+            disabled={!isPlayerValid || !player || !isValidSource || duration === 0}
           />
           <View style={styles.timeContainer}>
             <Text style={styles.timeText}>{formatTime(position)}</Text>
@@ -210,9 +205,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playIcon: {
-    color: '#fff',
-    fontSize: 20,
-    marginLeft: 2,
+    marginLeft: 2, // Décalage pour centrer le play
+  },
+  pauseIcon: {
+    marginLeft: 0, // Pas de décalage pour la pause
   },
   progressContainer: {
     flex: 1,

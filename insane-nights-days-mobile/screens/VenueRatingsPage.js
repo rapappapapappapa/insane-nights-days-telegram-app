@@ -6,17 +6,19 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
 import StarRating from '../components/StarRating';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 export default function VenueRatingsPage() {
   const { language } = useLanguage();
   const { routeParams, goBack } = useNavigation();
+  const { toast, showError, hideToast } = useToast();
   const { venueId, venueName } = routeParams || {};
   
   const [ratings, setRatings] = useState(null);
@@ -35,17 +37,11 @@ export default function VenueRatingsPage() {
       if (response && response.success) {
         setRatings(response.ratings);
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' ? 'Impossible de charger les notes.' : 'Unable to load ratings.',
-        );
+        showError(language === 'fr' ? 'Impossible de charger les notes.' : 'Unable to load ratings.');
       }
     } catch (error) {
       console.error('Erreur récupération notes:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Erreur lors du chargement des notes.' : 'Error loading ratings.',
-      );
+      showError(language === 'fr' ? 'Erreur lors du chargement des notes.' : 'Error loading ratings.');
     } finally {
       setLoading(false);
     }
@@ -165,6 +161,14 @@ export default function VenueRatingsPage() {
           </View>
         )}
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </View>
   );
 }

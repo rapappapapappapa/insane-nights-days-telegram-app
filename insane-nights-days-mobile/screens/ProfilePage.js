@@ -10,7 +10,6 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +22,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { api } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 /**
  * Composant principal de la page de profil
@@ -34,6 +35,7 @@ import { api } from '../api/config';
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const { user: authUser, updateUser: updateAuthUser } = useAuth();
   const { navigate } = useNavigation();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   
   // Utiliser authUser du contexte au lieu des props user (source de vérité)
   const username = authUser?.username || user?.username || 'Utilisateur';
@@ -98,13 +100,13 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       if (response && response.success) {
         updateAuthUser({ activeProfileType: profileType });
         await fetchProfiles();
-        Alert.alert('Succès', `Profil basculé vers ${profileType}`);
+        showSuccess(`Profil basculé vers ${profileType}`);
       } else {
-        Alert.alert('Erreur', response?.message || 'Impossible de basculer le profil');
+        showError(response?.message || 'Impossible de basculer le profil');
       }
     } catch (error) {
       console.error('Erreur bascule profil:', error);
-      Alert.alert('Erreur', 'Impossible de basculer le profil');
+      showError('Impossible de basculer le profil');
     } finally {
       setSwitchingProfile(false);
     }
@@ -116,7 +118,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const handleSave = () => {
     const normalized = form.username.trim();
     if (!normalized) {
-      Alert.alert('Info', 'Le nom ne peut pas être vide.');
+      showError('Le nom ne peut pas être vide.');
       return;
     }
 
@@ -130,7 +132,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       onUpdateUser({ username: normalized });
     }
     
-    Alert.alert('Succès', 'Profil mis à jour !');
+    showSuccess('Profil mis à jour !');
     setIsEditing(false);
   };
 
@@ -143,22 +145,22 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     
     // Validation
     if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Erreur', 'Tous les champs sont requis.');
+      showError('Tous les champs sont requis.');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Erreur', 'Le nouveau mot de passe et la confirmation ne correspondent pas.');
+      showError('Le nouveau mot de passe et la confirmation ne correspondent pas.');
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Erreur', 'Le nouveau mot de passe doit contenir au moins 6 caractères.');
+      showError('Le nouveau mot de passe doit contenir au moins 6 caractères.');
       return;
     }
 
     if (!authUser?.token) {
-      Alert.alert('Erreur', 'Vous devez être connecté pour changer votre mot de passe.');
+      showError('Vous devez être connecté pour changer votre mot de passe.');
       return;
     }
 
@@ -172,7 +174,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       );
       
       if (response && response.success) {
-        Alert.alert('Succès', 'Mot de passe modifié avec succès.');
+        showSuccess('Mot de passe modifié avec succès.');
         setIsChangingPassword(false);
         setPasswordForm({
           oldPassword: '',
@@ -180,11 +182,11 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
           confirmPassword: '',
         });
       } else {
-        Alert.alert('Erreur', response?.message || 'Impossible de modifier le mot de passe.');
+        showError(response?.message || 'Impossible de modifier le mot de passe.');
       }
     } catch (error) {
       console.error('Erreur changement mot de passe:', error);
-      Alert.alert('Erreur', error?.message || 'Impossible de modifier le mot de passe.');
+      showError(error?.message || 'Impossible de modifier le mot de passe.');
     } finally {
       setChangingPassword(false);
     }
@@ -511,6 +513,14 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         </View>
 
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </View>
   );
 }

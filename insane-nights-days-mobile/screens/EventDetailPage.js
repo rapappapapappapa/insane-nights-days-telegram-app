@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   Image,
   ScrollView,
@@ -17,6 +16,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const mockEvents = [
   {
@@ -67,6 +68,7 @@ export default function EventDetailPage() {
   const { language } = useLanguage();
   const { routeParams, navigate } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const [userProfiles, setUserProfiles] = useState(null);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   
@@ -123,19 +125,12 @@ export default function EventDetailPage() {
 
   const handleBuyTicket = async () => {
     if (!user?.isAuthenticated) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.',
-        [{ text: 'OK' }],
-      );
+      showError(language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.');
       return;
     }
 
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Token d\'authentification manquant.' : 'Authentication token missing.',
-      );
+      showError(language === 'fr' ? 'Token d\'authentification manquant.' : 'Authentication token missing.');
       return;
     }
 
@@ -143,31 +138,16 @@ export default function EventDetailPage() {
     try {
       const response = await api.buyTicket(user.token, eventId, 1);
       if (response && response.success) {
-        Alert.alert(
-          language === 'fr' ? 'Ticket acheté' : 'Ticket purchased',
-          response.message || (language === 'fr' ? 'Ticket acheté avec succès !' : 'Ticket purchased successfully!'),
-          [
-            {
-              text: language === 'fr' ? 'Voir mes tickets' : 'View my tickets',
-              onPress: () => navigate('tickets'),
-            },
-            { text: 'OK' },
-          ],
-        );
+        showSuccess(response.message || (language === 'fr' ? 'Ticket acheté avec succès !' : 'Ticket purchased successfully!'));
         // Rafraîchir les données de l'événement
         fetchEvent();
+        setTimeout(() => navigate('tickets'), 2000);
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'),
-        );
+        showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
       }
     } catch (error) {
       console.error('Erreur achat ticket:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
     } finally {
       setBuyingTicket(false);
     }
@@ -175,10 +155,7 @@ export default function EventDetailPage() {
 
   const handleChangeStatus = async () => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.',
-      );
+      showError(language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.');
       return;
     }
 
@@ -189,24 +166,15 @@ export default function EventDetailPage() {
     try {
       const response = await api.updateEventStatus(user.token, eventId, newStatus);
       if (response && response.success) {
-        Alert.alert(
-          language === 'fr' ? 'Statut modifié' : 'Status updated',
-          language === 'fr' 
-            ? `Statut changé: ${newStatus === 'UPCOMING' ? 'À venir' : 'Terminé'}`
-            : `Status changed: ${newStatus === 'UPCOMING' ? 'Upcoming' : 'Finished'}`,
-        );
+        showSuccess(language === 'fr' 
+          ? `Statut changé: ${newStatus === 'UPCOMING' ? 'À venir' : 'Terminé'}`
+          : `Status changed: ${newStatus === 'UPCOMING' ? 'Upcoming' : 'Finished'}`);
         fetchEvent();
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          response?.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'),
-        );
+        showError(response?.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'));
       }
     } catch (error) {
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'),
-      );
+      showError(error.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'));
     } finally {
       setChangingStatus(false);
     }
@@ -427,6 +395,14 @@ export default function EventDetailPage() {
           )}
         </View>
       </ScrollView>
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 }

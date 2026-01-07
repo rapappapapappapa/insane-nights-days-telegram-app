@@ -32,7 +32,8 @@
     },
     "plugins": [
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      "expo-asset"
     ]
   }
 }

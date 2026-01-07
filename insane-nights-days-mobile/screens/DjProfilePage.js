@@ -7,12 +7,11 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-  Alert,
   Dimensions,
   Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Audio } from 'expo-av';
+// Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +19,8 @@ import { api, API_CONFIG, normalizeMediaUrl } from '../api/config';
 import StarRating from '../components/StarRating';
 import VideoPlayer from '../components/VideoPlayer';
 import AudioPlayer from '../components/AudioPlayer';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const { width } = Dimensions.get('window');
 
@@ -56,7 +57,8 @@ export default function DjProfilePage() {
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
-  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo } = routeParams || {};
+  const { toast, showError, showSuccess, hideToast } = useToast();
+  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, isSlotMode = false } = routeParams || {};
   
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
@@ -82,8 +84,7 @@ export default function DjProfilePage() {
 
     const stopAllAudio = async () => {
       try {
-        await Audio.setIsEnabledAsync(false);
-        await Audio.setIsEnabledAsync(true);
+        // Note: expo-audio ne nécessite plus setIsEnabledAsync
       } catch (e) {
         console.error("Erreur lors de l'arrêt de l'audio en changeant d'onglet:", e);
       }
@@ -98,13 +99,8 @@ export default function DjProfilePage() {
 
   // Fonction pour arrêter l'audio et revenir en arrière
   const handleBack = async () => {
-    try {
-      // Couper tous les sons en cours
-      await Audio.setIsEnabledAsync(false);
-      await Audio.setIsEnabledAsync(true);
-    } catch (e) {
-      console.error("Erreur lors de l'arrêt de l'audio au retour:", e);
-    }
+    // Note: expo-audio gère automatiquement le nettoyage des players
+    // quand les composants sont démontés, pas besoin d'arrêter manuellement
     goBack();
   };
 
@@ -208,10 +204,7 @@ export default function DjProfilePage() {
       }
     } catch (error) {
       console.error('Erreur récupération profil DJ:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr' ? 'Impossible de charger le profil.' : 'Unable to load profile.',
-      );
+      showError(language === 'fr' ? 'Impossible de charger le profil.' : 'Unable to load profile.');
     } finally {
       setLoading(false);
     }
@@ -278,10 +271,13 @@ export default function DjProfilePage() {
               style={[styles.bookButton, selectedDjIds.includes(dj.userId) && styles.bookButtonSelected]}
               onPress={() => {
                 // Retourner au dashboard avec la sélection
+                const slotIndexToPass = (slotIndex !== null && slotIndex !== undefined) ? slotIndex : undefined;
                 navigate('bookerDashboard', {
                   selectedDjId: dj.userId,
                   selectedDjName: dj.artistName,
                   action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
+                  eventId: eventId || undefined,
+                  slotIndex: slotIndexToPass, // Toujours passer slotIndex s'il est défini
                 });
               }}
             >
@@ -302,12 +298,9 @@ export default function DjProfilePage() {
                   disabled={dj.availableStatus === false}
                   onPress={() => {
                     if (dj.availableStatus === false) {
-                      Alert.alert(
-                        language === 'fr' ? 'Indisponible' : 'Unavailable',
-                        language === 'fr'
-                          ? 'Ce DJ n\'est pas disponible pour le moment.'
-                          : 'This DJ is not available at the moment.'
-                      );
+                      showError(language === 'fr'
+                        ? 'Ce DJ n\'est pas disponible pour le moment.'
+                        : 'This DJ is not available at the moment.');
                       return;
                     }
                     // Ici on pourra brancher le flux de booking direct plus tard
@@ -658,23 +651,17 @@ export default function DjProfilePage() {
                     style={[styles.videoItem, isUnavailable && styles.videoItemUnavailable]}
                     onPress={async () => {
                       if (isUnavailable) {
-                        Alert.alert(
-                          language === 'fr' ? 'Vidéo non disponible' : 'Video unavailable',
-                          language === 'fr' 
-                            ? 'Cette vidéo a été uploadée depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de la re-uploader.' 
-                            : 'This video was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.'
-                        );
+                        showError(language === 'fr' 
+                          ? 'Cette vidéo a été uploadée depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de la re-uploader.' 
+                          : 'This video was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.');
                         return;
                       }
                       
                       if (!videoUrl || !finalVideoUrl) {
                         console.error('[VIDEO ERROR] URL invalide:', { videoUrl, finalVideoUrl });
-                        Alert.alert(
-                          language === 'fr' ? 'Erreur' : 'Error',
-                          language === 'fr' 
-                            ? 'URL vidéo invalide.' 
-                            : 'Invalid video URL.'
-                        );
+                        showError(language === 'fr' 
+                          ? 'URL vidéo invalide.' 
+                          : 'Invalid video URL.');
                         return;
                       }
                       
@@ -908,6 +895,14 @@ export default function DjProfilePage() {
           }}
         />
       )}
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </ScrollView>
   );
 }

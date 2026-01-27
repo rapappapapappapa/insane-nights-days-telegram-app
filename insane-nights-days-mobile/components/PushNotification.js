@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -25,9 +25,13 @@ export default function PushNotification({ visible, message, onPress, onClose })
   const { language } = useLanguage();
   const slideAnim = useRef(new Animated.Value(-100)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const [isAnimating, setIsAnimating] = useState(false); // ✅ AJOUT: State pour tracker l'animation
 
   useEffect(() => {
     if (visible) {
+      console.log('🔔 PushNotification: Affichage de la notification');
+      setIsAnimating(true);
+      
       // Animation d'entrée
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -41,7 +45,9 @@ export default function PushNotification({ visible, message, onPress, onClose })
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setIsAnimating(false);
+      });
 
       // Fermeture automatique après 5 secondes
       const timer = setTimeout(() => {
@@ -51,6 +57,7 @@ export default function PushNotification({ visible, message, onPress, onClose })
       return () => clearTimeout(timer);
     } else {
       // Animation de sortie
+      setIsAnimating(true);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: -100,
@@ -62,7 +69,9 @@ export default function PushNotification({ visible, message, onPress, onClose })
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setIsAnimating(false);
+      });
     }
   }, [visible]);
 
@@ -93,7 +102,11 @@ export default function PushNotification({ visible, message, onPress, onClose })
     }
   };
 
-  if (!visible) return null;
+  // ✅ CORRECTION: Ne pas retourner null immédiatement pour permettre l'animation de sortie
+  // On vérifie si le composant doit être rendu (visible OU en train de s'animer)
+  const shouldRender = visible || isAnimating;
+
+  if (!shouldRender) return null;
 
   return (
     <Animated.View

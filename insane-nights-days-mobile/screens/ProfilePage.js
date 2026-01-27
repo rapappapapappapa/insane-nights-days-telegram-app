@@ -33,7 +33,7 @@ import { useToast } from '../hooks/useToast';
  * @param {Function} props.onUpdateUser - Callback pour mettre à jour l'utilisateur (optionnel)
  */
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
-  const { user: authUser, updateUser: updateAuthUser } = useAuth();
+  const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser } = useAuth();
   const { navigate } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
@@ -99,6 +99,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       const response = await api.switchProfile(authUser.token, profileType);
       if (response && response.success) {
         updateAuthUser({ activeProfileType: profileType });
+        await refreshCurrentUser();
         await fetchProfiles();
         showSuccess(`Profil basculé vers ${profileType}`);
       } else {
@@ -106,7 +107,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       }
     } catch (error) {
       console.error('Erreur bascule profil:', error);
-      showError('Impossible de basculer le profil');
+      showError(error?.message || 'Impossible de basculer le profil');
     } finally {
       setSwitchingProfile(false);
     }

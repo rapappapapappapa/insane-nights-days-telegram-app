@@ -13,6 +13,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
+const Stripe = require('stripe');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -28,7 +29,15 @@ const PORT = process.env.PORT || 5000;
 
 // Configuration Express
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Augmenter la limite pour les vidéos
+// Note: Stripe webhooks ont besoin du body brut pour vérifier la signature.
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/webhooks/stripe')) {
+      req.rawBody = buf;
+    }
+  },
+})); // Augmenter la limite pour les vidéos
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Configuration Multer pour l'upload de fichiers
@@ -111,6 +120,20 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Initialisation Prisma
 const prisma = new PrismaClient();
+
+// ============================================================================
+// STRIPE
+// ============================================================================
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' }) : null;
+
+const eurosToCents = (eur) => {
+  const n = Number(eur);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.round(n * 100));
+};
 
 // Note: Les données sont maintenant stockées dans Prisma, plus besoin de tableaux en mémoire
 
@@ -849,8 +872,460 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/user/:userId/tickets', async (req, res) => {
+// ============================================================================
+// STRIPE PAIEMENT -> TICKETS
+// ============================================================================
+
+/**
+ * Stripe Webhook (source de vérité en prod)
+ * - Vérifie la signature
+ * - Met à jour Payment.status
+ * - Peut délivrer les tickets même si l'app se ferme après le paiement
+ */
+app.post('/api/webhooks/stripe', async (req, res) => {
   try {
+    if (!stripe || !stripeSecretKey) {
+      return res.status(500).send('Stripe n’est pas configuré côté serveur.');
+    }
+    if (!stripeWebhookSecret) {
+      return res.status(500).send('STRIPE_WEBHOOK_SECRET manquante côté serveur.');
+    }
+
+    const signature = req.headers['stripe-signature'];
+    if (!signature) {
+      return res.status(400).send('Header stripe-signature manquant.');
+    }
+    if (!req.rawBody) {
+      return res.status(400).send('rawBody manquant (configuration Express).');
+    }
+
+    const stripeEvent = stripe.webhooks.constructEvent(req.rawBody, signature, stripeWebhookSecret);
+
+    // On gère un sous-ensemble des events utiles à notre flow
+    if (stripeEvent.type === 'payment_intent.succeeded') {
+      const intent = stripeEvent.data.object;
+      const paymentIntentId = intent.id;
+
+      const payment = await prisma.payment.findUnique({ where: { paymentIntentId } });
+      if (!payment) {
+        console.warn('[STRIPE WEBHOOK] Payment introuvable pour intent:', paymentIntentId);
+        return res.json({ received: true });
+      }
+      if (payment.status === 'fulfilled') {
+        return res.json({ received: true });
+      }
+
+      // Revalidation de base
+      if (typeof intent.amount === 'number' && intent.amount !== payment.amount) {
+        console.warn('[STRIPE WEBHOOK] amount mismatch', { paymentIntentId, intentAmount: intent.amount, paymentAmount: payment.amount });
+        await prisma.payment.update({ where: { paymentIntentId }, data: { status: 'failed' } });
+        return res.json({ received: true });
+      }
+      if (intent.currency && intent.currency.toLowerCase() !== payment.currency.toLowerCase()) {
+        console.warn('[STRIPE WEBHOOK] currency mismatch', { paymentIntentId, intentCurrency: intent.currency, paymentCurrency: payment.currency });
+        await prisma.payment.update({ where: { paymentIntentId }, data: { status: 'failed' } });
+        return res.json({ received: true });
+      }
+
+      // Délivrance idempotente côté serveur
+      await prisma.$transaction(async (tx) => {
+        const freshPayment = await tx.payment.findUnique({
+          where: { paymentIntentId },
+          include: { tickets: true },
+        });
+        if (!freshPayment) return;
+        if (freshPayment.status === 'fulfilled') return;
+
+        const event = await tx.event.findUnique({ where: { id: freshPayment.eventId } });
+        if (!event) throw new Error('Événement non trouvé');
+        if (event.status !== 'UPCOMING') throw new Error('Événement non éligible (pas UPCOMING)');
+        if (event.sold + freshPayment.quantity > event.capacity) throw new Error('Pas assez de places disponibles');
+
+        // Status trace (optionnel)
+        await tx.payment.update({ where: { paymentIntentId }, data: { status: 'succeeded' } });
+
+        for (let i = 0; i < freshPayment.quantity; i++) {
+          await tx.ticket.create({
+            data: {
+              userId: freshPayment.userId,
+              eventId: freshPayment.eventId,
+              paymentIntentId,
+              price: event.price,
+              status: 'valid',
+              qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
+            },
+          });
+        }
+
+        await tx.event.update({
+          where: { id: freshPayment.eventId },
+          data: { sold: { increment: freshPayment.quantity } },
+        });
+
+        const user = await tx.user.findUnique({ where: { id: freshPayment.userId } });
+        const newScore = (user?.score || 0) + 50 * freshPayment.quantity;
+        const newLevel = Math.floor(newScore / 200) + 1;
+        await tx.user.update({
+          where: { id: freshPayment.userId },
+          data: { score: newScore, level: newLevel },
+        });
+
+        await tx.payment.update({ where: { paymentIntentId }, data: { status: 'fulfilled' } });
+      });
+    } else if (stripeEvent.type === 'payment_intent.payment_failed' || stripeEvent.type === 'payment_intent.canceled') {
+      const intent = stripeEvent.data.object;
+      const paymentIntentId = intent.id;
+      const payment = await prisma.payment.findUnique({ where: { paymentIntentId } });
+      if (payment && payment.status !== 'fulfilled') {
+        await prisma.payment.update({ where: { paymentIntentId }, data: { status: 'failed' } });
+      }
+    }
+
+    return res.json({ received: true });
+  } catch (err) {
+    console.error('[STRIPE WEBHOOK] Error:', err?.message || err);
+    // Stripe attend un 2xx pour considérer l'event comme traité. Ici, on renvoie 400/500 pour déclencher un retry.
+    return res.status(400).send(`Webhook Error: ${err?.message || 'unknown'}`);
+  }
+});
+
+/**
+ * Crée un PaymentIntent Stripe pour l'achat de tickets.
+ * ✅ Requiert un profil COMMUNITY actif (même règle que /api/tickets/buy)
+ */
+app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey) {
+      return res.status(500).json({ success: false, message: 'Stripe n’est pas configuré côté serveur.' });
+    }
+    if (!stripePublishableKey) {
+      return res.status(500).json({ success: false, message: 'STRIPE_PUBLISHABLE_KEY manquante côté serveur.' });
+    }
+
+    const { eventId, quantity = 1 } = req.body ?? {};
+    const userId = req.user.id;
+
+    if (!eventId || quantity < 1) {
+      return res.status(400).json({ success: false, message: 'eventId et quantity sont requis.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { communities: true },
+    });
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    if (user.activeProfileType !== 'COMMUNITY') {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les profils Community peuvent acheter des tickets. Veuillez basculer sur votre profil Community.',
+      });
+    }
+    if (!user.communities || user.communities.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous devez avoir un profil Community pour acheter des tickets. Créez-en un depuis votre profil.',
+      });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) return res.status(404).json({ success: false, message: 'Événement non trouvé' });
+    if (event.status !== 'UPCOMING') {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez acheter un ticket que pour un événement à venir.' });
+    }
+    if (event.sold + quantity > event.capacity) {
+      return res.status(400).json({ success: false, message: 'Pas assez de places disponibles' });
+    }
+
+    const unitAmount = eurosToCents(event.price);
+    if (unitAmount === null) return res.status(500).json({ success: false, message: 'Prix événement invalide.' });
+    const amount = unitAmount * quantity;
+    if (amount < 50) return res.status(400).json({ success: false, message: 'Montant trop faible pour Stripe.' });
+
+    const intent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'eur',
+      automatic_payment_methods: { enabled: true },
+      metadata: { userId, eventId, quantity: String(quantity) },
+    });
+
+    await prisma.payment.create({
+      data: {
+        userId,
+        eventId,
+        paymentIntentId: intent.id,
+        amount,
+        currency: 'eur',
+        quantity,
+        status: 'created',
+      },
+    });
+
+    res.json({
+      success: true,
+      publishableKey: stripePublishableKey,
+      paymentIntentClientSecret: intent.client_secret,
+      paymentIntentId: intent.id,
+      amount,
+      currency: 'eur',
+    });
+  } catch (error) {
+    console.error('Erreur création PaymentIntent:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Confirme côté serveur et délivre les tickets après paiement Stripe.
+ * Idempotent via Payment(paymentIntentId unique) + status fulfilled.
+ */
+app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey) {
+      return res.status(500).json({ success: false, message: 'Stripe n’est pas configuré côté serveur.' });
+    }
+
+    const { paymentIntentId } = req.body ?? {};
+    const userId = req.user.id;
+    if (!paymentIntentId) {
+      return res.status(400).json({ success: false, message: 'paymentIntentId est requis.' });
+    }
+
+    const httpError = (statusCode, message) => {
+      const err = new Error(message);
+      err.statusCode = statusCode;
+      return err;
+    };
+
+    const result = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({
+        where: { paymentIntentId },
+        include: { tickets: true },
+      });
+
+      if (!payment) throw httpError(404, 'Paiement introuvable.');
+      if (payment.userId !== userId) throw httpError(403, 'Paiement non autorisé.');
+
+      // ✅ Idempotence: si déjà délivré, renvoyer les tickets associés à ce paiement
+      if (payment.status === 'fulfilled') {
+        const existingTickets = (payment.tickets || []).map((t) => ({
+          id: t.id,
+          userId: t.userId,
+          eventId: t.eventId,
+          price: t.price,
+          status: t.status,
+          qrCode: t.qrCode,
+          purchaseDate: t.purchaseDate.toISOString(),
+        }));
+        return { alreadyFulfilled: true, payment, tickets: existingTickets };
+      }
+
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      // Si le paiement n'est pas "succeeded", on n'émet aucun ticket.
+      if (intent.status !== 'succeeded') {
+        await tx.payment.update({
+          where: { paymentIntentId },
+          data: { status: intent.status === 'canceled' ? 'failed' : 'created' },
+        });
+        throw httpError(400, `Paiement non validé (status: ${intent.status}).`);
+      }
+
+      // 🔒 Revalidation: correspondance metadata / montant / devise
+      if (intent.metadata?.userId && intent.metadata.userId !== userId) {
+        throw httpError(403, 'Paiement invalide (user mismatch).');
+      }
+      if (intent.metadata?.eventId && intent.metadata.eventId !== payment.eventId) {
+        throw httpError(400, 'Paiement invalide (event mismatch).');
+      }
+      if (intent.metadata?.quantity && Number(intent.metadata.quantity) !== payment.quantity) {
+        throw httpError(400, 'Paiement invalide (quantity mismatch).');
+      }
+      if (typeof intent.amount === 'number' && intent.amount !== payment.amount) {
+        throw httpError(400, 'Paiement invalide (amount mismatch).');
+      }
+      if (intent.currency && intent.currency.toLowerCase() !== payment.currency.toLowerCase()) {
+        throw httpError(400, 'Paiement invalide (currency mismatch).');
+      }
+
+      const event = await tx.event.findUnique({ where: { id: payment.eventId } });
+      if (!event) throw httpError(404, 'Événement non trouvé');
+      if (event.status !== 'UPCOMING') {
+        throw httpError(400, 'Vous ne pouvez acheter un ticket que pour un événement à venir.');
+      }
+      if (event.sold + payment.quantity > event.capacity) {
+        throw httpError(400, 'Pas assez de places disponibles');
+      }
+
+      // Marquer "succeeded" côté DB (trace) avant délivrance
+      await tx.payment.update({ where: { paymentIntentId }, data: { status: 'succeeded' } });
+
+      const newTickets = [];
+      for (let i = 0; i < payment.quantity; i++) {
+        const ticket = await tx.ticket.create({
+          data: {
+            userId,
+            eventId: payment.eventId,
+            paymentIntentId,
+            price: event.price,
+            status: 'valid',
+            qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
+          },
+        });
+        newTickets.push({
+          id: ticket.id,
+          userId: ticket.userId,
+          eventId: ticket.eventId,
+          price: ticket.price,
+          status: ticket.status,
+          qrCode: ticket.qrCode,
+          purchaseDate: ticket.purchaseDate.toISOString(),
+        });
+      }
+
+      // ✅ Incrément atomique (évite les écritures "stale")
+      await tx.event.update({
+        where: { id: payment.eventId },
+        data: { sold: { increment: payment.quantity } },
+      });
+
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      const newScore = (user?.score || 0) + 50 * payment.quantity;
+      const newLevel = Math.floor(newScore / 200) + 1;
+      await tx.user.update({
+        where: { id: userId },
+        data: { score: newScore, level: newLevel },
+      });
+
+      await tx.payment.update({ where: { paymentIntentId }, data: { status: 'fulfilled' } });
+
+      return { alreadyFulfilled: false, payment, tickets: newTickets, updatedUser: { score: newScore, level: newLevel } };
+    });
+
+    return res.json({
+      success: true,
+      message: result.alreadyFulfilled ? 'Déjà traité.' : `🎟️ ${result.payment.quantity} ticket(s) acheté(s) avec succès`,
+      tickets: result.tickets,
+      updatedUser: result.updatedUser,
+      paymentIntentId,
+    });
+  } catch (error) {
+    console.error('Erreur confirmation paiement:', error);
+    const statusCode = error?.statusCode || 500;
+    res.status(statusCode).json({ success: false, message: error?.message || 'Erreur serveur' });
+  }
+});
+
+/**
+ * Liste des paiements de l'utilisateur connecté (Mes achats)
+ * @route GET /api/payments/me
+ * @access Private (auth)
+ */
+app.get('/api/payments/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const payments = await prisma.payment.findMany({
+      where: { userId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            time: true,
+            location: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const formatted = payments.map((p) => ({
+      id: p.id,
+      paymentIntentId: p.paymentIntentId,
+      status: p.status,
+      amount: p.amount, // centimes
+      currency: p.currency,
+      quantity: p.quantity,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      event: p.event
+        ? {
+            id: p.event.id,
+            title: p.event.title,
+            date: p.event.date instanceof Date ? p.event.date.toISOString() : p.event.date,
+            time: p.event.time,
+            location: p.event.location,
+            status: p.event.status,
+          }
+        : null,
+    }));
+
+    res.json({ success: true, payments: formatted });
+  } catch (error) {
+    console.error('Erreur récupération paiements (me):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ✅ Version sécurisée: récupérer les tickets de l'utilisateur connecté
+app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userTickets = await prisma.ticket.findMany({
+      where: { userId },
+      include: {
+        event: {
+          include: {
+            eventDjs: true,
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        purchaseDate: 'desc',
+      },
+    });
+
+    const formattedTickets = userTickets.map((ticket) => ({
+      id: ticket.id,
+      userId: ticket.userId,
+      eventId: ticket.eventId,
+      eventTitle: ticket.event.title,
+      eventDate: ticket.event.date.toISOString().split('T')[0],
+      eventTime: ticket.event.time,
+      eventLocation: ticket.event.location,
+      eventGenre: ticket.event.genre,
+      eventStatus: ticket.event.status || 'UPCOMING',
+      djIds: ticket.event.eventDjs.map((ed) => ed.djId),
+      venueId: ticket.event.venueId,
+      venueName: ticket.event.venue?.venueName,
+      price: ticket.price,
+      status: ticket.status,
+      qrCode: ticket.qrCode,
+      purchaseDate: ticket.purchaseDate.toISOString(),
+    }));
+
+    res.json({ success: true, tickets: formattedTickets });
+  } catch (error) {
+    console.error('Erreur récupération tickets (me):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// 🔒 Sécurisé: récupérer les tickets d'un userId (uniquement si c'est l'utilisateur connecté)
+// (Conserver cette route pour compat, mais ne plus l'exposer publiquement.)
+app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user?.id || req.user.id !== req.params.userId) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
     const userTickets = await prisma.ticket.findMany({
       where: { userId: req.params.userId },
       include: {
@@ -2692,89 +3167,185 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Récupérer le profil actif
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { activeProfileType: true },
+    // ✅ Nouveau comportement: renvoyer un breakdown par "côté" (DJ vs BOOKER)
+    // Peu importe le profil actif -> permet d'afficher "d'où vient la notif" et de naviguer correctement.
+
+    // --- DJ side ---
+    const djEventIds = await prisma.eventDj.findMany({
+      where: { djId: userId },
+      select: { eventId: true },
+    });
+    const djEventIdList = [...new Set(djEventIds.map((e) => e.eventId))];
+
+    const djPrivateUnread = await prisma.message.count({
+      where: {
+        type: 'PRIVATE',
+        read: false,
+        deleted: false,
+        senderId: { not: userId },
+        eventDj: { djId: userId },
+      },
     });
 
-    let totalUnread = 0;
-
-    if (user.activeProfileType === 'DJ') {
-      // Compter les messages privés non lus (reçus par le DJ)
-      const privateUnread = await prisma.message.count({
-        where: {
-          type: 'PRIVATE',
-          read: false,
-          senderId: { not: userId },
-          eventDj: {
-            djId: userId,
-          },
-        },
-      });
-
-      // Compter les messages de groupe non lus pour les événements où le DJ est invité
-      const djEventIds = await prisma.eventDj.findMany({
-        where: { djId: userId },
-        select: { eventId: true },
-      });
-      const eventIds = [...new Set(djEventIds.map((e) => e.eventId))];
-
-      const groupUnread = await prisma.message.count({
-        where: {
-          type: 'GROUP',
-          read: false,
-          senderId: { not: userId },
-          eventId: { in: eventIds },
-        },
-      });
-
-      totalUnread = privateUnread + groupUnread;
-    } else if (user.activeProfileType === 'BOOKER') {
-      // Pour les bookers, compter les messages privés et de groupe de leurs événements
-      const booker = await prisma.userBooker.findFirst({
-        where: { userId: userId },
-        select: { id: true },
-      });
-
-      if (booker) {
-        // Compter les messages privés non lus (reçus par le booker)
-        const privateUnread = await prisma.message.count({
-          where: {
-            type: 'PRIVATE',
-            read: false,
-            senderId: { not: userId },
-            eventDj: {
-              event: {
-                bookerId: booker.id,
-              },
-            },
-          },
-        });
-
-        // Compter les messages de groupe non lus pour les événements du booker
-        const bookerEventIds = await prisma.event.findMany({
-          where: { bookerId: booker.id },
-          select: { id: true },
-        });
-        const eventIds = bookerEventIds.map((e) => e.id);
-
-        const groupUnread = await prisma.message.count({
+    const djGroupUnread = djEventIdList.length
+      ? await prisma.message.count({
           where: {
             type: 'GROUP',
             read: false,
+            deleted: false,
             senderId: { not: userId },
-            eventId: { in: eventIds },
+            eventId: { in: djEventIdList },
           },
-        });
+        })
+      : 0;
 
-        totalUnread = privateUnread + groupUnread;
-      }
+    const djTotalUnread = djPrivateUnread + djGroupUnread;
+
+    // Dernier message non lu côté DJ (private ou group)
+    const djLatestUnread = await prisma.message.findFirst({
+      where: {
+        read: false,
+        deleted: false,
+        senderId: { not: userId },
+        OR: [
+          {
+            type: 'PRIVATE',
+            eventDj: { djId: userId },
+          },
+          ...(djEventIdList.length
+            ? [
+                {
+                  type: 'GROUP',
+                  eventId: { in: djEventIdList },
+                },
+              ]
+            : []),
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        eventDj: {
+          include: {
+            event: { select: { id: true, title: true } },
+          },
+        },
+        event: { select: { id: true, title: true } },
+      },
+    });
+
+    // --- BOOKER side ---
+    const booker = await prisma.userBooker.findFirst({
+      where: { userId: userId },
+      select: { id: true },
+    });
+
+    let bookerTotalUnread = 0;
+    let bookerLatestUnread = null;
+
+    if (booker) {
+      const bookerPrivateUnread = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventDj: {
+            event: {
+              bookerId: booker.id,
+            },
+          },
+        },
+      });
+
+      const bookerEventIds = await prisma.event.findMany({
+        where: { bookerId: booker.id },
+        select: { id: true },
+      });
+      const bookerEventIdList = bookerEventIds.map((e) => e.id);
+
+      const bookerGroupUnread = bookerEventIdList.length
+        ? await prisma.message.count({
+            where: {
+              type: 'GROUP',
+              read: false,
+              deleted: false,
+              senderId: { not: userId },
+              eventId: { in: bookerEventIdList },
+            },
+          })
+        : 0;
+
+      bookerTotalUnread = bookerPrivateUnread + bookerGroupUnread;
+
+      bookerLatestUnread = await prisma.message.findFirst({
+        where: {
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          OR: [
+            {
+              type: 'PRIVATE',
+              eventDj: {
+                event: { bookerId: booker.id },
+              },
+            },
+            ...(bookerEventIdList.length
+              ? [
+                  {
+                    type: 'GROUP',
+                    eventId: { in: bookerEventIdList },
+                  },
+                ]
+              : []),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          eventDj: {
+            include: {
+              event: { select: { id: true, title: true } },
+            },
+          },
+          event: { select: { id: true, title: true } },
+        },
+      });
     }
+
+    const totalUnread = djTotalUnread + bookerTotalUnread;
+
+    const pickLatest = (a, b) => {
+      if (!a && !b) return null;
+      if (a && !b) return { profileType: 'DJ', msg: a };
+      if (!a && b) return { profileType: 'BOOKER', msg: b };
+      const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return aTime >= bTime ? { profileType: 'DJ', msg: a } : { profileType: 'BOOKER', msg: b };
+    };
+
+    const latest = pickLatest(djLatestUnread, bookerLatestUnread);
 
     res.json({
       success: true,
       count: totalUnread,
+      byProfileType: {
+        DJ: djTotalUnread,
+        BOOKER: bookerTotalUnread,
+      },
+      latest: latest
+        ? {
+            profileType: latest.profileType,
+            messageId: latest.msg.id,
+            messageType: latest.msg.type,
+            preview: (latest.msg.content || '').slice(0, 160),
+            createdAt: latest.msg.createdAt,
+            eventDjId: latest.msg.eventDjId ?? null,
+            eventId: latest.msg.eventId ?? null,
+            eventTitle:
+              latest.msg.event?.title ??
+              latest.msg.eventDj?.event?.title ??
+              null,
+          }
+        : null,
     });
   } catch (error) {
     console.error('Erreur récupération nombre messages non lus:', error);
@@ -3684,103 +4255,7 @@ app.get('/api/tickets/:ticketId/qr', async (req, res) => {
   }
 });
 
-// Endpoint TEMPORAIRE pour changer le statut d'un événement (à supprimer en production)
-app.post('/api/admin/event/:eventId/status', authenticateToken, async (req, res) => {
-  try {
-    const { status } = req.body;
-    if (!status || !['UPCOMING', 'ONGOING', 'FINISHED'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Statut invalide. Doit être UPCOMING, ONGOING ou FINISHED',
-      });
-    }
-
-    const event = await prisma.event.findUnique({
-      where: { id: req.params.eventId },
-    });
-
-    if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: 'Événement non trouvé',
-      });
-    }
-
-    const updatedEvent = await prisma.event.update({
-      where: { id: req.params.eventId },
-      data: { status },
-    });
-
-    res.json({
-      success: true,
-      message: `Statut modifié avec succès: ${status}`,
-      event: {
-        id: updatedEvent.id,
-        title: updatedEvent.title,
-        status: updatedEvent.status,
-      },
-    });
-  } catch (error) {
-    console.error('Erreur modification statut:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-// Endpoint TEMPORAIRE pour modifier la date d'un événement (à supprimer en production)
-app.post('/api/admin/event/:eventId/date', authenticateToken, async (req, res) => {
-  try {
-    const { year } = req.body;
-    if (!year) {
-      return res.status(400).json({
-        success: false,
-        message: 'L\'année est requise',
-      });
-    }
-
-    const yearNum = parseInt(year);
-    if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
-      return res.status(400).json({
-        success: false,
-        message: 'Année invalide (doit être entre 2000 et 2100)',
-      });
-    }
-
-    // Récupérer l'événement actuel
-    const currentEvent = await prisma.event.findUnique({
-      where: { id: req.params.eventId },
-    });
-
-    if (!currentEvent) {
-      return res.status(404).json({
-        success: false,
-        message: 'Événement non trouvé',
-      });
-    }
-
-    // Modifier seulement l'année en gardant le mois, jour et heure
-    const currentDate = new Date(currentEvent.date);
-    const newDate = new Date(currentDate);
-    newDate.setFullYear(yearNum);
-
-    const event = await prisma.event.update({
-      where: { id: req.params.eventId },
-      data: { date: newDate },
-    });
-
-    res.json({
-      success: true,
-      message: 'Année modifiée avec succès',
-      event: {
-        id: event.id,
-        title: event.title,
-        date: event.date,
-      },
-    });
-  } catch (error) {
-    console.error('Erreur modification date:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
+// (Nettoyage) Les endpoints admin temporaires de modification d'événements ont été retirés.
 
 /**
  * Récupère les statistiques globales de la plateforme
@@ -4595,6 +5070,889 @@ app.get('/api/djs/ranking', async (req, res) => {
     res.json({ success: true, djs: formattedDjs });
   } catch (error) {
     console.error('Erreur récupération classement DJs:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ============================================
+ * ENDPOINTS FEED D'ACTUALITÉ - Posts des DJs et annonces d'événements
+ * ============================================
+ */
+
+/**
+ * ✅ AJOUT: Uploader une image pour un post du feed
+ * @route POST /api/feed/post/upload-image
+ */
+app.post('/api/feed/post/upload-image', authenticateToken, upload.single('image'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Vérifier que l'utilisateur est un DJ ou un Booker
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeProfileType: true },
+    });
+
+    if (!user || (user.activeProfileType !== 'DJ' && user.activeProfileType !== 'BOOKER')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les DJs et les Bookers peuvent uploader des images.',
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune image fournie.',
+      });
+    }
+
+    // Vérifier que c'est bien une image
+    if (!req.file.mimetype.startsWith('image/')) {
+      // Supprimer le fichier si ce n'est pas une image
+      const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Le fichier doit être une image.',
+      });
+    }
+
+    // Construire l'URL publique du fichier
+    // ✅ IMPORTANT: pour les quick tunnels, PUBLIC_URL peut être obsolète.
+    // On préfère donc le Host de la requête (trycloudflare) et on force https.
+    const host = req.get('host');
+    const forwardedProto = req.get('x-forwarded-proto');
+    const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+    const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
+    const imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      imageUrl: imageUrl,
+    });
+  } catch (error) {
+    console.error('Erreur upload image post:', error);
+    // Supprimer le fichier en cas d'erreur
+    if (req.file) {
+      const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ MODIFICATION: Créer un nouveau post dans le feed (DJ et Booker)
+ * @route POST /api/feed/post
+ */
+app.post('/api/feed/post', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { content, imageUrl } = req.body;
+
+    // Vérifier que l'utilisateur est un DJ ou un Booker
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activeProfileType: true },
+    });
+
+    if (!user || (user.activeProfileType !== 'DJ' && user.activeProfileType !== 'BOOKER')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les DJs et les Bookers peuvent créer des posts.',
+      });
+    }
+
+    // Vérifier que le contenu est fourni
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le contenu du post est requis.',
+      });
+    }
+
+    // Initialiser postData avec les champs de base
+    let postData = {
+      authorId: userId,
+      content: content.trim(),
+    };
+
+    // Ajouter imageUrl seulement s'il est fourni
+    if (imageUrl) {
+      postData.imageUrl = imageUrl;
+    }
+
+    let includeData = {
+      author: {
+        select: {
+          username: true,
+        },
+      },
+    };
+
+    // Si c'est un DJ
+    if (user.activeProfileType === 'DJ') {
+      const djProfile = await prisma.userDj.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+
+      if (!djProfile) {
+        return res.status(404).json({
+          success: false,
+          message: 'Profil DJ introuvable.',
+        });
+      }
+
+      // ✅ CORRECTION: Ne définir que djId pour les DJs, pas bookerId
+      postData.djId = djProfile.id;
+      includeData.dj = {
+        select: {
+          artistName: true,
+          profileImage: true,
+          city: true,
+        },
+      };
+    }
+    // Si c'est un Booker
+    else if (user.activeProfileType === 'BOOKER') {
+      const bookerProfile = await prisma.userBooker.findFirst({
+        where: { userId: userId },
+        select: { id: true, nom: true, prenom: true },
+      });
+
+      if (!bookerProfile) {
+        return res.status(404).json({
+          success: false,
+          message: 'Profil Booker introuvable.',
+        });
+      }
+
+      // ✅ CORRECTION: Ne définir que bookerId pour les Bookers, pas djId
+      postData.bookerId = bookerProfile.id;
+      includeData.booker = {
+        select: {
+          nom: true,
+          prenom: true,
+          bookerType: true,
+        },
+      };
+    }
+    else {
+      return res.status(400).json({
+        success: false,
+        message: 'Type de profil invalide. Seuls les DJs et Bookers peuvent créer des posts.',
+      });
+    }
+
+    // Créer le post
+    const post = await prisma.feedPost.create({
+      data: postData,
+      include: includeData,
+    });
+
+    // Formater la réponse selon le type de profil
+    const responsePost = {
+      id: post.id,
+      content: post.content,
+      imageUrl: post.imageUrl,
+      likes: post.likes,
+      createdAt: post.createdAt,
+      author: {
+        username: post.author.username,
+      },
+      profileType: user.activeProfileType,
+    };
+
+    if (post.dj) {
+      responsePost.dj = {
+        id: post.djId,
+        artistName: post.dj.artistName,
+        profileImage: post.dj.profileImage,
+        city: post.dj.city,
+      };
+    }
+
+    if (post.booker) {
+      responsePost.booker = {
+        id: post.bookerId,
+        name: `${post.booker.nom} ${post.booker.prenom}`,
+        bookerType: post.booker.bookerType,
+      };
+    }
+
+    res.json({
+      success: true,
+      post: responsePost,
+    });
+  } catch (error) {
+    console.error('Erreur création post feed:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Supprimer un post du feed (uniquement par l'auteur)
+ * @route DELETE /api/feed/post/:postId
+ */
+app.delete('/api/feed/post/:postId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+
+    // Vérifier que le post existe
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        authorId: true,
+      },
+    });
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post introuvable.',
+      });
+    }
+
+    // Vérifier que l'utilisateur est l'auteur du post
+    if (post.authorId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'êtes pas autorisé à supprimer ce post.',
+      });
+    }
+
+    // Supprimer le post (les likes, commentaires et notifications seront supprimés automatiquement grâce à onDelete: Cascade)
+    await prisma.feedPost.delete({
+      where: { id: postId },
+    });
+
+    res.json({
+      success: true,
+      message: 'Post supprimé avec succès.',
+    });
+  } catch (error) {
+    console.error('Erreur suppression post:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Récupérer le feed d'actualité (posts + événements)
+ * @route GET /api/feed
+ * @query limit - Nombre d'éléments à récupérer (défaut: 20)
+ * @query offset - Offset pour la pagination (défaut: 0)
+ */
+app.get('/api/feed', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = parseInt(req.query.offset) || 0;
+
+    // Récupérer les posts récents (triés par date décroissante)
+    const posts = await prisma.feedPost.findMany({
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        dj: {
+          select: {
+            artistName: true,
+            profileImage: true,
+            city: true,
+          },
+        },
+        booker: {
+          select: {
+            nom: true,
+            prenom: true,
+            bookerType: true,
+          },
+        },
+        author: {
+          select: {
+            username: true,
+            activeProfileType: true,
+          },
+        },
+      },
+    });
+
+    // Récupérer les événements à venir (pour les annonces)
+    const upcomingEvents = await prisma.event.findMany({
+      where: {
+        status: 'UPCOMING',
+        date: {
+          gte: new Date(), // Événements futurs uniquement
+        },
+      },
+      take: 10, // Limiter à 10 événements récents
+      orderBy: { createdAt: 'desc' },
+      include: {
+        venue: {
+          select: {
+            venueName: true,
+            address: true,
+          },
+        },
+        booker: {
+          select: {
+            nom: true,
+            prenom: true,
+          },
+        },
+        eventDjs: {
+          include: {
+            event: false, // Éviter la récursion
+          },
+        },
+      },
+    });
+
+    // ✅ AJOUT: Helpers pour normaliser les URLs d'images
+    const getRequestBaseUrl = () => {
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return `${proto}://${host}`.replace(/\/$/, '');
+    };
+
+    const baseUrl = getRequestBaseUrl();
+
+    const normalizeImageUrl = (imageUrl) => {
+      if (!imageUrl) return null;
+      
+      // Si l'URL est relative (commence par /uploads/), construire l'URL complète
+      if (imageUrl.startsWith('/uploads/')) {
+        return `${baseUrl}${imageUrl}`;
+      }
+      
+      // Si l'URL est déjà complète (commence par http:// ou https://)
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        try {
+          const parsed = new URL(imageUrl);
+          const reqHost = req.get('host');
+          const isLocalHost =
+            parsed.hostname === 'localhost' ||
+            parsed.hostname === '127.0.0.1' ||
+            parsed.port === '5000';
+          const isOldTryCloudflareHost =
+            parsed.hostname.endsWith('trycloudflare.com') &&
+            reqHost &&
+            parsed.hostname !== reqHost;
+
+          // On ne réécrit que les URLs qui pointent vers nos fichiers uploads
+          const isUploadsPath = parsed.pathname.startsWith('/uploads/');
+
+          if ((isLocalHost || isOldTryCloudflareHost) && isUploadsPath) {
+            return `${baseUrl}${parsed.pathname}`;
+          }
+        } catch (e) {
+          // URL invalide -> on la retourne telle quelle
+        }
+        
+        // Si c'est une URL externe valide, la retourner telle quelle
+        return imageUrl;
+      }
+      
+      // Sinon, retourner l'URL telle quelle (pour les URLs externes)
+      return imageUrl;
+    };
+
+    // Formater les posts
+    const formattedPosts = posts.map((post) => {
+      const formattedPost = {
+        type: 'post',
+        id: post.id,
+        content: post.content,
+        imageUrl: normalizeImageUrl(post.imageUrl), // ✅ CORRECTION: Normaliser l'URL de l'image
+        likes: post.likes,
+        createdAt: post.createdAt,
+        profileType: post.author.activeProfileType, // ✅ AJOUT: Type de profil (DJ ou BOOKER)
+        author: {
+          id: post.authorId,
+          username: post.author.username,
+        },
+      };
+
+      // Si c'est un DJ
+      if (post.dj) {
+        formattedPost.dj = {
+          id: post.djId,
+          userId: post.authorId,
+          artistName: post.dj.artistName,
+          profileImage: normalizeImageUrl(post.dj.profileImage), // ✅ CORRECTION: Normaliser l'URL de l'image de profil
+          city: post.dj.city,
+        };
+      }
+
+      // Si c'est un Booker
+      if (post.booker) {
+        formattedPost.booker = {
+          id: post.bookerId,
+          userId: post.authorId,
+          name: `${post.booker.nom} ${post.booker.prenom}`,
+          bookerType: post.booker.bookerType,
+        };
+      }
+
+      return formattedPost;
+    });
+
+    // Formater les événements comme annonces
+    const formattedEvents = upcomingEvents.map((event) => ({
+      type: 'event',
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      price: event.price,
+      genre: event.genre,
+      image: normalizeImageUrl(event.image), // ✅ CORRECTION: Normaliser l'URL de l'image de l'événement
+      venue: event.venue
+        ? {
+            name: event.venue.venueName,
+            address: event.venue.address,
+          }
+        : null,
+      booker: event.booker
+        ? {
+            name: `${event.booker.nom} ${event.booker.prenom}`,
+          }
+        : null,
+      createdAt: event.createdAt,
+    }));
+
+    // Combiner et trier par date décroissante
+    const feedItems = [...formattedPosts, ...formattedEvents].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json({
+      success: true,
+      feed: feedItems.slice(0, limit), // Limiter au nombre demandé
+      total: feedItems.length,
+    });
+  } catch (error) {
+    console.error('Erreur récupération feed:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Liker ou unliker un post
+ * @route POST /api/feed/post/:postId/like
+ */
+app.post('/api/feed/post/:postId/like', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+
+    // Vérifier que le post existe
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post introuvable.',
+      });
+    }
+
+    // Vérifier si l'utilisateur a déjà liké ce post
+    const existingLike = await prisma.feedPostLike.findUnique({
+      where: {
+        postId_userId: {
+          postId: postId,
+          userId: userId,
+        },
+      },
+    });
+
+    if (existingLike) {
+      // Unliker : supprimer le like
+      await prisma.feedPostLike.delete({
+        where: {
+          id: existingLike.id,
+        },
+      });
+
+      // Décrémenter le compteur de likes
+      await prisma.feedPost.update({
+        where: { id: postId },
+        data: {
+          likes: {
+            decrement: 1,
+          },
+        },
+      });
+
+      res.json({
+        success: true,
+        liked: false,
+        likesCount: Math.max(0, post.likes - 1),
+      });
+    } else {
+      // Liker : créer le like
+      await prisma.feedPostLike.create({
+        data: {
+          postId: postId,
+          userId: userId,
+        },
+      });
+
+      // Incrémenter le compteur de likes
+      await prisma.feedPost.update({
+        where: { id: postId },
+        data: {
+          likes: {
+            increment: 1,
+          },
+        },
+      });
+
+      // ✅ AJOUT: Créer une notification pour le propriétaire du post (sauf si c'est lui-même)
+      if (post.authorId !== userId) {
+        try {
+          await prisma.feedNotification.create({
+            data: {
+              userId: post.authorId,
+              postId: postId,
+              actorId: userId,
+              type: 'like',
+            },
+          });
+        } catch (notifError) {
+          // Ignorer les erreurs de notification (ne pas bloquer le like)
+          console.error('Erreur création notification like:', notifError);
+        }
+      }
+
+      res.json({
+        success: true,
+        liked: true,
+        likesCount: post.likes + 1,
+      });
+    }
+  } catch (error) {
+    console.error('Erreur like/unlike post:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Vérifier si l'utilisateur a liké un post
+ * @route GET /api/feed/post/:postId/like
+ */
+app.get('/api/feed/post/:postId/like', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+
+    const like = await prisma.feedPostLike.findUnique({
+      where: {
+        postId_userId: {
+          postId: postId,
+          userId: userId,
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      liked: !!like,
+    });
+  } catch (error) {
+    console.error('Erreur vérification like:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Créer un commentaire sur un post
+ * @route POST /api/feed/post/:postId/comment
+ */
+app.post('/api/feed/post/:postId/comment', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+    const { content } = req.body;
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le contenu du commentaire est requis.',
+      });
+    }
+
+    // Vérifier que le post existe
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post introuvable.',
+      });
+    }
+
+    // Créer le commentaire
+    const comment = await prisma.feedPostComment.create({
+      data: {
+        postId: postId,
+        userId: userId,
+        content: content.trim(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            activeProfileType: true,
+          },
+        },
+      },
+    });
+
+    // ✅ AJOUT: Créer une notification pour le propriétaire du post (sauf si c'est lui-même)
+    if (post.authorId !== userId) {
+      try {
+        await prisma.feedNotification.create({
+          data: {
+            userId: post.authorId,
+            postId: postId,
+            actorId: userId,
+            type: 'comment',
+          },
+        });
+      } catch (notifError) {
+        // Ignorer les erreurs de notification (ne pas bloquer le commentaire)
+        console.error('Erreur création notification comment:', notifError);
+      }
+    }
+
+    res.json({
+      success: true,
+      comment: {
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: {
+          id: comment.user.id,
+          username: comment.user.username,
+          profileType: comment.user.activeProfileType,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Erreur création commentaire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Récupérer les commentaires d'un post
+ * @route GET /api/feed/post/:postId/comments
+ */
+app.get('/api/feed/post/:postId/comments', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const comments = await prisma.feedPostComment.findMany({
+      where: { postId: postId },
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            activeProfileType: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      comments: comments.map((comment) => ({
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        user: {
+          id: comment.user.id,
+          username: comment.user.username,
+          profileType: comment.user.activeProfileType,
+        },
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur récupération commentaires:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Récupérer les notifications du feed pour l'utilisateur connecté
+ * @route GET /api/feed/notifications
+ */
+app.get('/api/feed/notifications', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const notifications = await prisma.feedNotification.findMany({
+      where: { userId: userId },
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        post: {
+          select: {
+            id: true,
+            content: true,
+            imageUrl: true,
+          },
+        },
+        actor: {
+          select: {
+            id: true,
+            username: true,
+            activeProfileType: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      notifications: notifications.map((notif) => ({
+        id: notif.id,
+        type: notif.type,
+        read: notif.read,
+        createdAt: notif.createdAt,
+        post: {
+          id: notif.post.id,
+          content: notif.post.content,
+          imageUrl: notif.post.imageUrl,
+        },
+        actor: {
+          id: notif.actor.id,
+          username: notif.actor.username,
+          profileType: notif.actor.activeProfileType,
+        },
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur récupération notifications:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Récupérer le nombre de notifications non lues
+ * @route GET /api/feed/notifications/unread-count
+ */
+app.get('/api/feed/notifications/unread-count', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const count = await prisma.feedNotification.count({
+      where: {
+        userId: userId,
+        read: false,
+      },
+    });
+
+    res.json({
+      success: true,
+      count: count,
+    });
+  } catch (error) {
+    console.error('Erreur récupération nombre notifications:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Marquer une notification comme lue
+ * @route PUT /api/feed/notifications/:notificationId/read
+ */
+app.put('/api/feed/notifications/:notificationId/read', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { notificationId } = req.params;
+
+    const notification = await prisma.feedNotification.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification introuvable.',
+      });
+    }
+
+    if (notification.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Vous n\'avez pas accès à cette notification.',
+      });
+    }
+
+    await prisma.feedNotification.update({
+      where: { id: notificationId },
+      data: { read: true },
+    });
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error('Erreur marquage notification lue:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ AJOUT: Marquer toutes les notifications comme lues
+ * @route PUT /api/feed/notifications/mark-all-read
+ */
+app.put('/api/feed/notifications/mark-all-read', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await prisma.feedNotification.updateMany({
+      where: {
+        userId: userId,
+        read: false,
+      },
+      data: {
+        read: true,
+      },
+    });
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error('Erreur marquage toutes notifications lues:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -6,6 +6,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 const menuItems = [
   {
+    id: 'feed',
+    emoji: '📰',
+    title: 'Feed',
+    description: 'Actualités et posts',
+  },
+  {
     id: 'events',
     emoji: '🎵',
     title: 'Événements',

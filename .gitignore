@@ -23,4 +23,15 @@ expo.log
 # Uploaded media files
 server/uploads/
 
+# Cloudflare / local run artifacts
+cloudflare_url.txt
+stripe_webhook_url.txt
+backend.pid
+backend_manual.pid
+cloudflare_tunnel.pid
+server/backend_manual.pid
+
+# Local cloudflared binary (downloaded)
+cloudflared
+
 

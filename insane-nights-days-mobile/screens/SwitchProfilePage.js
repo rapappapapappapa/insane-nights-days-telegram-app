@@ -57,7 +57,7 @@ const profileTypes = [
 export default function SwitchProfilePage() {
   const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshCurrentUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
   const [profiles, setProfiles] = useState(null);
@@ -89,7 +89,10 @@ export default function SwitchProfilePage() {
   };
 
   const handleSwitchProfile = async (profileType) => {
-    if (!user?.token) return;
+    if (!user?.token) {
+      showError(language === 'fr' ? 'Token manquant. Veuillez vous reconnecter.' : 'Missing token. Please log in again.');
+      return;
+    }
     
     // Vérifier si le profil existe
     const hasProfile = checkIfProfileExists(profileType);
@@ -98,6 +101,11 @@ export default function SwitchProfilePage() {
       // Rediriger vers le formulaire de création
       const profileTypeData = profileTypes.find((p) => p.type === profileType);
       if (profileTypeData) {
+        showSuccess(
+          language === 'fr'
+            ? `Aucun profil ${getProfileTitle(profileType)} trouvé. Création…`
+            : `No ${getProfileTitle(profileType)} profile found. Creating…`
+        );
         navigate(profileTypeData.registerScreen);
       }
       return;
@@ -109,6 +117,9 @@ export default function SwitchProfilePage() {
       const response = await api.switchProfile(user.token, profileType);
       if (response && response.success) {
         updateUser({ activeProfileType: profileType });
+        await refreshCurrentUser();
+        // ✅ Mettre à jour l'UI immédiatement (le refresh API peut être en retard)
+        setProfiles((prev) => (prev ? { ...prev, activeProfileType: profileType } : prev));
         await fetchProfiles();
         showSuccess(language === 'fr' 
           ? `Profil basculé vers ${getProfileTitle(profileType)}` 
@@ -119,7 +130,10 @@ export default function SwitchProfilePage() {
       }
     } catch (error) {
       console.error('Erreur bascule profil:', error);
-      showError(language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile');
+      showError(
+        error?.message ||
+          (language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile')
+      );
     } finally {
       setSwitching(false);
     }
@@ -199,9 +213,9 @@ export default function SwitchProfilePage() {
               ? 'Sélectionne le profil que tu veux utiliser' 
               : 'Select the profile you want to use'}
           </Text>
-          {profiles?.activeProfileType && (
+          {user?.activeProfileType && (
             <Text style={styles.activeProfileText}>
-              {language === 'fr' ? 'Profil actif' : 'Active profile'}: {getProfileTitle(profiles.activeProfileType)}
+              {language === 'fr' ? 'Profil actif' : 'Active profile'}: {getProfileTitle(user.activeProfileType)}
             </Text>
           )}
         </View>
@@ -212,7 +226,7 @@ export default function SwitchProfilePage() {
           <View style={styles.profilesContainer}>
             {profileTypes.map((profileType) => {
               const exists = checkIfProfileExists(profileType.type);
-              const isActive = profiles?.activeProfileType === profileType.type;
+              const isActive = user?.activeProfileType === profileType.type;
               const profileData = exists
                 ? profiles.profiles[profileType.type.toLowerCase()]?.[0]
                 : null;

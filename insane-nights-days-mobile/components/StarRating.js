@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function StarRating({ rating, maxRating = 5, size = 20, onPress, editable = false, showStars = false }) {
+export default function StarRating({ rating, maxRating = 5, size = 20, onPress, editable = false, showStars = false, showValue = true }) {
   // Si showStars est false, afficher juste "X/5"
   if (!showStars) {
     if (editable) {
@@ -79,7 +79,7 @@ export default function StarRating({ rating, maxRating = 5, size = 20, onPress, 
       {Array.from({ length: fullStars }).map((_, i) => renderStar('full', i))}
       {hasHalfStar && renderStar('half', fullStars)}
       {Array.from({ length: emptyStars }).map((_, i) => renderStar('empty', fullStars + (hasHalfStar ? 1 : 0) + i))}
-      {rating > 0 && (
+      {showValue && rating > 0 && (
         <Text style={[styles.ratingText, { fontSize: size * 0.7 }]}>
           {' '}({rating.toFixed(1)})
         </Text>

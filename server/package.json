@@ -17,6 +17,7 @@
     "multer": "^2.0.2",
     "prisma": "^6.19.0",
     "qrcode": "^1.5.3",
+    "stripe": "^20.2.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

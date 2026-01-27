@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import { useDebounce } from '../hooks/useDebounce';
 import SkeletonLoader from '../components/SkeletonLoader';
@@ -65,12 +66,20 @@ const mockEvents = [
 
 export default function EventsPage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
   const [events, setEvents] = useState(mockEvents);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
+  useEffect(() => {
+    if (!user?.isAuthenticated) {
+      navigate('home');
+    }
+  }, [user?.isAuthenticated, navigate]);
 
   const fetchEvents = async (isRefresh = false) => {
     if (isRefresh) {

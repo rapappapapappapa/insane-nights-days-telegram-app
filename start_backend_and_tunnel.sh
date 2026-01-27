@@ -13,7 +13,8 @@ sleep 2
 echo ""
 echo "🚀 Démarrage du backend..."
 cd server
-node index.js > ../backend.log 2>&1 &
+# ✅ IMPORTANT: utiliser nohup pour que le process survive même si le shell appelant se termine
+nohup node index.js > ../backend.log 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > ../backend.pid
 sleep 3
@@ -32,7 +33,12 @@ echo "🌐 Démarrage du tunnel Cloudflare..."
 cd ..
 
 # Vérifier si cloudflared est installé
-if [ -f "/tmp/cloudflared" ]; then
+# ✅ Priorité au binaire du repo (plus fiable après reboot que /tmp)
+if [ -f "./cloudflared" ]; then
+  chmod +x ./cloudflared 2>/dev/null || true
+  CLOUDFLARED="./cloudflared"
+elif [ -f "/tmp/cloudflared" ]; then
+  chmod +x /tmp/cloudflared 2>/dev/null || true
   CLOUDFLARED="/tmp/cloudflared"
 elif command -v cloudflared >/dev/null 2>&1; then
   CLOUDFLARED="cloudflared"
@@ -43,7 +49,9 @@ else
   CLOUDFLARED="/tmp/cloudflared"
 fi
 
-$CLOUDFLARED tunnel --url http://localhost:5000 > cloudflare_tunnel.log 2>&1 &
+# ✅ IMPORTANT: utiliser nohup pour que le process survive même si le shell appelant se termine
+# ✅ IMPORTANT: forcer http2 (TCP) au lieu de quic (UDP) pour éviter les erreurs "network is unreachable" sur certains réseaux
+nohup $CLOUDFLARED tunnel --url http://localhost:5000 --protocol http2 > cloudflare_tunnel.log 2>&1 &
 TUNNEL_PID=$!
 echo $TUNNEL_PID > cloudflare_tunnel.pid
 sleep 8
@@ -60,12 +68,18 @@ if ps -p $TUNNEL_PID > /dev/null 2>&1; then
       if [ ! -z "$TUNNEL_URL" ]; then
         echo "✅ URL du tunnel: $TUNNEL_URL"
         echo "$TUNNEL_URL" > cloudflare_url.txt
+
+        # URL webhook Stripe (à coller dans Stripe Dashboard si l'URL change)
+        WEBHOOK_URL="${TUNNEL_URL}/api/webhooks/stripe"
+        echo "$WEBHOOK_URL" > stripe_webhook_url.txt
+        echo "🔔 Webhook Stripe (si besoin): $WEBHOOK_URL"
         
         # Mettre à jour config.js
         echo ""
         echo "📝 Mise à jour de api/config.js..."
         cd insane-nights-days-mobile/api
-        sed -i "s|BASE_URL: process\.env\.EXPO_PUBLIC_API_BASE ||.*|BASE_URL: process.env.EXPO_PUBLIC_API_BASE || '$TUNNEL_URL',|" config.js
+        # Utiliser un délimiteur différent (#) pour éviter les problèmes avec les URLs
+        sed -i "s#BASE_URL: process\.env\.EXPO_PUBLIC_API_BASE || '.*'#BASE_URL: process.env.EXPO_PUBLIC_API_BASE || '${TUNNEL_URL}'#" config.js
         echo "✅ Config mis à jour avec: $TUNNEL_URL"
         break
       fi

@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   TextInput,
+  RefreshControl, // ✅ AJOUT: Import de RefreshControl pour le pull-to-refresh
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
@@ -23,15 +24,29 @@ export default function DjListPage() {
   const { navigate, goBack } = useNavigation();
   const [djs, setDjs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // ✅ AJOUT: State pour gérer l'état de rafraîchissement (pull-to-refresh)
   const [searchQuery, setSearchQuery] = useState('');
+  const [styleQuery, setStyleQuery] = useState('');
   const [minRating, setMinRating] = useState(0);
 
   useEffect(() => {
     fetchDjs();
   }, []);
 
-  const fetchDjs = async () => {
-    setLoading(true);
+  /**
+   * Fonction pour récupérer la liste des DJs depuis l'API
+   * @param {boolean} isRefresh - Si true, utilise le state 'refreshing' au lieu de 'loading'
+   *                              Cela permet d'afficher un indicateur différent lors du pull-to-refresh
+   */
+  const fetchDjs = async (isRefresh = false) => {
+    // ✅ MODIFICATION: Utiliser 'refreshing' si c'est un rafraîchissement, sinon 'loading'
+    // Cela permet d'avoir deux indicateurs différents : un pour le chargement initial, un pour le refresh
+    if (isRefresh) {
+      setRefreshing(true); // Indicateur de pull-to-refresh (en haut de la liste)
+    } else {
+      setLoading(true); // Indicateur de chargement initial (centré)
+    }
+    
     try {
       const response = await api.getDjs();
       if (response && response.success && Array.isArray(response.djs)) {
@@ -43,7 +58,9 @@ export default function DjListPage() {
       console.error('Erreur récupération DJs:', error);
       setDjs([]);
     } finally {
+      // ✅ MODIFICATION: Réinitialiser le bon state selon le type de chargement
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -75,13 +92,18 @@ export default function DjListPage() {
         searchQuery === '' ||
         dj.artistName?.toLowerCase().includes(searchQuery.toLowerCase());
 
+      // Filtre par style (genre)
+      const djStyle = (dj.genre || dj.style || '').toString().toLowerCase();
+      const matchesStyle =
+        styleQuery === '' || djStyle.includes(styleQuery.toLowerCase());
+
       // Filtre par note minimale
       const matchesRating =
         minRating === 0 || (dj.averageRatingGlobal || 0) >= minRating;
 
-      return matchesSearch && matchesRating;
+      return matchesSearch && matchesStyle && matchesRating;
     });
-  }, [djs, searchQuery, minRating]);
+  }, [djs, searchQuery, styleQuery, minRating]);
 
   if (loading) {
     return (
@@ -127,6 +149,23 @@ export default function DjListPage() {
           )}
         </View>
 
+        {/* Filtre style */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="musical-notes" size={20} color="rgba(255,255,255,0.5)" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={language === 'fr' ? 'Rechercher par style (techno, afro, house...)' : 'Search by style (techno, afro, house...)'}
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={styleQuery}
+            onChangeText={setStyleQuery}
+          />
+          {styleQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setStyleQuery('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Filtre par note */}
         <View style={styles.ratingFilterContainer}>
           <Text style={styles.filterLabel}>
@@ -160,7 +199,19 @@ export default function DjListPage() {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      {/* ✅ AJOUT: RefreshControl permet le pull-to-refresh (tirer vers le bas pour rafraîchir) */}
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing} // État de rafraîchissement
+            onRefresh={() => fetchDjs(true)} // Fonction appelée quand l'utilisateur tire vers le bas
+            tintColor="#FF1744" // Couleur de l'indicateur (iOS)
+            colors={['#FF1744']} // Couleur de l'indicateur (Android)
+          />
+        }
+      >
         {filteredDjs.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
@@ -189,9 +240,20 @@ export default function DjListPage() {
                 </View>
                 <View style={styles.djInfo}>
                   <Text style={styles.djName}>{dj.artistName || 'DJ'}</Text>
-                  <Text style={styles.djCity}>
-                    📍 {dj.city || language === 'fr' ? 'Ville inconnue' : 'Unknown city'}
-                  </Text>
+                  <View style={styles.styleRow}>
+                    <View style={styles.stylePill}>
+                      <Text style={styles.stylePillText}>
+                        🎧 {(dj.genre || dj.style) ? (dj.genre || dj.style) : (language === 'fr' ? 'Style inconnu' : 'Unknown style')}
+                      </Text>
+                    </View>
+                    {dj.availableStatus === false ? (
+                      <View style={styles.unavailablePill}>
+                        <Text style={styles.unavailablePillText}>
+                          {language === 'fr' ? 'Indispo' : 'Unavailable'}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
                 <View style={styles.djRating}>
                   <StarRating rating={dj.averageRatingGlobal || 0} size={20} showStars={false} />
@@ -297,6 +359,39 @@ const styles = StyleSheet.create({
   djCity: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
+  },
+  styleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  stylePill: {
+    backgroundColor: 'rgba(255,23,68,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  stylePillText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  unavailablePill: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  unavailablePillText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '800',
   },
   djRating: {
     alignItems: 'flex-end',

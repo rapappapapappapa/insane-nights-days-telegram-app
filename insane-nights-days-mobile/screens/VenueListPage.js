@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  RefreshControl, // ✅ AJOUT: Import de RefreshControl pour le pull-to-refresh
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ export default function VenueListPage() {
   const { user } = useAuth();
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // ✅ AJOUT: State pour gérer l'état de rafraîchissement (pull-to-refresh)
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [minRating, setMinRating] = useState(0);
@@ -32,8 +34,20 @@ export default function VenueListPage() {
     }
   }, [user?.token]);
 
-  const fetchVenues = async () => {
-    setLoading(true);
+  /**
+   * Fonction pour récupérer la liste des lieux depuis l'API
+   * @param {boolean} isRefresh - Si true, utilise le state 'refreshing' au lieu de 'loading'
+   *                              Cela permet d'afficher un indicateur différent lors du pull-to-refresh
+   */
+  const fetchVenues = async (isRefresh = false) => {
+    // ✅ MODIFICATION: Utiliser 'refreshing' si c'est un rafraîchissement, sinon 'loading'
+    // Cela permet d'avoir deux indicateurs différents : un pour le chargement initial, un pour le refresh
+    if (isRefresh) {
+      setRefreshing(true); // Indicateur de pull-to-refresh (en haut de la liste)
+    } else {
+      setLoading(true); // Indicateur de chargement initial (centré)
+    }
+    
     try {
       const response = await api.getVenues(user.token);
       if (response && response.success && Array.isArray(response.venues)) {
@@ -45,7 +59,9 @@ export default function VenueListPage() {
       console.error('Erreur récupération lieux:', error);
       setVenues([]);
     } finally {
+      // ✅ MODIFICATION: Réinitialiser le bon state selon le type de chargement
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -173,7 +189,19 @@ export default function VenueListPage() {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      {/* ✅ AJOUT: RefreshControl permet le pull-to-refresh (tirer vers le bas pour rafraîchir) */}
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing} // État de rafraîchissement
+            onRefresh={() => fetchVenues(true)} // Fonction appelée quand l'utilisateur tire vers le bas
+            tintColor="#FF1744" // Couleur de l'indicateur (iOS)
+            colors={['#FF1744']} // Couleur de l'indicateur (Android)
+          />
+        }
+      >
         {filteredVenues.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>

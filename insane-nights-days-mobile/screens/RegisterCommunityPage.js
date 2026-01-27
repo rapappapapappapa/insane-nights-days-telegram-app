@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -24,6 +25,7 @@ export default function RegisterCommunityPage() {
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
+  // Drawer global géré dans App.js
   const [formData, setFormData] = useState({
     pseudo: user?.username || '',
     nom: '',
@@ -197,139 +199,140 @@ export default function RegisterCommunityPage() {
         <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>
+        <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {language === 'fr' ? 'Compte Communauté' : 'Community Account'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {language === 'fr'
-              ? 'Votre numéro ISN sera généré.'
-              : 'Your ISN number will be generated.'}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Pseudo' : 'Username'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.pseudo}
-            onChangeText={(value) => handleChange('pseudo', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Nom' : 'Last name'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton nom' : 'Your last name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.nom}
-            onChangeText={(value) => handleChange('nom', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Prénom' : 'First name'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton prénom' : 'Your first name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.prenom}
-            onChangeText={(value) => handleChange('prenom', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Email' : 'Email'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            value={formData.email}
-            onChangeText={(value) => handleChange('email', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Pays' : 'Country'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'France' : 'France'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.pays}
-            onChangeText={(value) => handleChange('pays', value)}
-            onFocus={() => {
-              if (Platform.OS === 'android') {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }
-            }}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Date de naissance' : 'Date of birth'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            maxLength={10}
-            value={formData.dateNaissance}
-            onChangeText={(value) => handleChange('dateNaissance', value)}
-            onFocus={() => {
-              if (Platform.OS === 'android') {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }
-            }}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          {loading ? (
-            <ActivityIndicator color="#0b0b0e" />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              {language === 'fr' ? 'Compte Communauté' : 'Community Account'}
             </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+            <Text style={styles.subtitle}>
+              {language === 'fr'
+                ? 'Votre numéro ISN sera généré.'
+                : 'Your ISN number will be generated.'}
+            </Text>
+          </View>
 
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
-      />
+          <View style={styles.form}>
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Pseudo' : 'Username'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              autoCapitalize="words"
+              value={formData.pseudo}
+              onChangeText={(value) => handleChange('pseudo', value)}
+            />
+
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Nom' : 'Last name'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'Ton nom' : 'Your last name'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              autoCapitalize="words"
+              value={formData.nom}
+              onChangeText={(value) => handleChange('nom', value)}
+            />
+
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Prénom' : 'First name'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'Ton prénom' : 'Your first name'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              autoCapitalize="words"
+              value={formData.prenom}
+              onChangeText={(value) => handleChange('prenom', value)}
+            />
+
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Email' : 'Email'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              value={formData.email}
+              onChangeText={(value) => handleChange('email', value)}
+            />
+
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Pays' : 'Country'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'France' : 'France'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              value={formData.pays}
+              onChangeText={(value) => handleChange('pays', value)}
+              onFocus={() => {
+                if (Platform.OS === 'android') {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 300);
+                }
+              }}
+            />
+
+            <Text style={styles.label}>
+              {language === 'fr' ? 'Date de naissance' : 'Date of birth'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              keyboardType="numeric"
+              maxLength={10}
+              value={formData.dateNaissance}
+              onChangeText={(value) => handleChange('dateNaissance', value)}
+              onFocus={() => {
+                if (Platform.OS === 'android') {
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 300);
+                }
+              }}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#0b0b0e" />
+            ) : (
+              <Text style={styles.submitButtonText}>
+                {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Toast pour les notifications */}
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          visible={toast.visible}
+          onHide={hideToast}
+        />
     </KeyboardAvoidingView>
   );
 }
@@ -340,6 +343,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0b0e',
   },
   topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
@@ -353,6 +359,18 @@ const styles = StyleSheet.create({
     color: '#FF1744',
     fontSize: 16,
     fontWeight: '600',
+  },
+  menuButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(11,11,14,0.65)',
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

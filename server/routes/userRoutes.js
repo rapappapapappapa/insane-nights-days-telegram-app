@@ -9,7 +9,9 @@ const userController = require('../controllers/userController');
 
 // Middleware de débogage pour tracer les requêtes
 router.use((req, res, next) => {
-  console.log(`[userRoutes] ${req.method} ${req.path}`);
+  if (process.env.DEBUG_LOGS === 'true') {
+    console.log(`[userRoutes] ${req.method} ${req.path}`);
+  }
   next();
 });
 

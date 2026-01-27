@@ -8,6 +8,10 @@ const { validatePassword } = require('../utils/validation');
 const { handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
+const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true';
+const dlog = (...args) => {
+  if (DEBUG_LOGS) console.log(...args);
+};
 
 /**
  * Récupère tous les profils d'un utilisateur (Community, DJ, Booker, Venue)
@@ -291,7 +295,7 @@ const getUserById = async (req, res) => {
  */
 const getCurrentUser = async (req, res) => {
   try {
-    console.log('[getCurrentUser] Début - req.user:', req.user ? { id: req.user.id, email: req.user.email } : 'undefined');
+    dlog('[getCurrentUser] Début - req.user:', req.user ? { id: req.user.id, email: req.user.email } : 'undefined');
     
     // Vérifier que req.user existe (devrait être défini par authenticateToken)
     if (!req.user || !req.user.id) {
@@ -300,7 +304,7 @@ const getCurrentUser = async (req, res) => {
     }
 
     const userId = req.user.id;
-    console.log('[getCurrentUser] userId:', userId, 'type:', typeof userId);
+    dlog('[getCurrentUser] userId:', userId, 'type:', typeof userId);
 
     // Validation supplémentaire pour s'assurer que userId est une string valide
     if (!userId || typeof userId !== 'string' || userId.trim() === '') {
@@ -309,7 +313,7 @@ const getCurrentUser = async (req, res) => {
     }
 
     const trimmedUserId = userId.trim();
-    console.log('[getCurrentUser] Recherche utilisateur avec id:', trimmedUserId);
+    dlog('[getCurrentUser] Recherche utilisateur avec id:', trimmedUserId);
 
     const user = await prisma.user.findUnique({
       where: { id: trimmedUserId },
@@ -334,11 +338,11 @@ const getCurrentUser = async (req, res) => {
       where: { userId: userId },
     });
 
-    console.log('[getCurrentUser] Nombre de tickets:', ticketsCount);
-    console.log('[getCurrentUser] Tickets récupérés:', user.tickets.length);
+    dlog('[getCurrentUser] Nombre de tickets:', ticketsCount);
+    dlog('[getCurrentUser] Tickets récupérés:', user.tickets.length);
     
     const lastTicket = user.tickets[0] || null;
-    console.log('[getCurrentUser] Dernier ticket:', lastTicket ? {
+    dlog('[getCurrentUser] Dernier ticket:', lastTicket ? {
       id: lastTicket.id,
       eventTitle: lastTicket.event?.title,
       eventLocation: lastTicket.event?.location,
@@ -367,7 +371,7 @@ const getCurrentUser = async (req, res) => {
         }
       : null;
 
-    console.log('[getCurrentUser] Ticket formaté:', formattedLastTicket);
+    dlog('[getCurrentUser] Ticket formaté:', formattedLastTicket);
 
     return sendSuccess(res, {
       user: {
@@ -396,7 +400,7 @@ const getCurrentUser = async (req, res) => {
  */
 const getCurrentDjProfile = async (req, res) => {
   try {
-    console.log('[getCurrentDjProfile] Début - req.user:', req.user ? { id: req.user.id, email: req.user.email } : 'undefined');
+    dlog('[getCurrentDjProfile] Début - req.user:', req.user ? { id: req.user.id, email: req.user.email } : 'undefined');
     
     if (!req.user || !req.user.id) {
       console.error('[getCurrentDjProfile] req.user ou req.user.id manquant');
@@ -404,7 +408,7 @@ const getCurrentDjProfile = async (req, res) => {
     }
 
     const userId = req.user.id;
-    console.log('[getCurrentDjProfile] userId:', userId);
+    dlog('[getCurrentDjProfile] userId:', userId);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -418,7 +422,7 @@ const getCurrentDjProfile = async (req, res) => {
       return sendError(res, 'Utilisateur non trouvé', 404);
     }
 
-    console.log('[getCurrentDjProfile] Nombre de profils DJ:', user.djs?.length || 0);
+    dlog('[getCurrentDjProfile] Nombre de profils DJ:', user.djs?.length || 0);
 
     if (!user.djs || user.djs.length === 0) {
       console.error('[getCurrentDjProfile] Aucun profil DJ trouvé pour userId:', userId);
@@ -427,7 +431,7 @@ const getCurrentDjProfile = async (req, res) => {
 
     // Si plusieurs profils DJ, prendre le premier (ou celui correspondant au profil actif)
     const djProfile = user.djs[0];
-    console.log('[getCurrentDjProfile] Profil DJ trouvé:', djProfile.artistName);
+    dlog('[getCurrentDjProfile] Profil DJ trouvé:', djProfile.artistName);
 
     return sendSuccess(res, {
       dj: {
@@ -486,14 +490,14 @@ const updateDjProfile = async (req, res) => {
       availableDays, availableStatus // Disponibilités
     } = req.body;
 
-    console.log('[updateDjProfile] ===== DÉBUT MISE À JOUR =====');
-    console.log('[updateDjProfile] User ID:', userId);
-    console.log('[updateDjProfile] Toutes les clés dans req.body:', Object.keys(req.body));
-    console.log('[updateDjProfile] req.body complet:', JSON.stringify(req.body, null, 2));
-    console.log('[updateDjProfile] bio dans req.body:', req.body.bio);
-    console.log('[updateDjProfile] genre dans req.body:', req.body.genre);
-    console.log('[updateDjProfile] "bio" in req.body:', 'bio' in req.body);
-    console.log('[updateDjProfile] req.body.hasOwnProperty("bio"):', req.body.hasOwnProperty('bio'));
+    dlog('[updateDjProfile] ===== DÉBUT MISE À JOUR =====');
+    dlog('[updateDjProfile] User ID:', userId);
+    dlog('[updateDjProfile] Toutes les clés dans req.body:', Object.keys(req.body));
+    dlog('[updateDjProfile] req.body complet:', JSON.stringify(req.body, null, 2));
+    dlog('[updateDjProfile] bio dans req.body:', req.body.bio);
+    dlog('[updateDjProfile] genre dans req.body:', req.body.genre);
+    dlog('[updateDjProfile] "bio" in req.body:', 'bio' in req.body);
+    dlog('[updateDjProfile] req.body.hasOwnProperty("bio"):', req.body.hasOwnProperty('bio'));
 
     // Validation - les champs de base doivent exister (mais ne seront pas modifiés)
     if (!artistName || !city) {
@@ -549,47 +553,47 @@ const updateDjProfile = async (req, res) => {
     // Matériel
     updateData.equipment = (req.body.equipment && typeof req.body.equipment === 'string' && req.body.equipment.trim()) ? req.body.equipment.trim() : null;
     
-    console.log('[updateDjProfile] updateData final (TOUS les champs):', JSON.stringify(updateData, null, 2));
+    dlog('[updateDjProfile] updateData final (TOUS les champs):', JSON.stringify(updateData, null, 2));
     
     // Note: artistName, city, phone, birthDate ne sont PAS modifiés (champs d'inscription)
     
-    console.log('[updateDjProfile] Données à mettre à jour:', JSON.stringify(updateData, null, 2));
-    console.log('[updateDjProfile] Nombre de champs à mettre à jour:', Object.keys(updateData).length);
+    dlog('[updateDjProfile] Données à mettre à jour:', JSON.stringify(updateData, null, 2));
+    dlog('[updateDjProfile] Nombre de champs à mettre à jour:', Object.keys(updateData).length);
     
     // Si aucun champ à mettre à jour, on continue quand même
     if (Object.keys(updateData).length === 0) {
       console.warn('[updateDjProfile] ⚠️ Aucun champ éitable à mettre à jour');
     }
     
-    console.log('[updateDjProfile] Exécution de la mise à jour Prisma...');
-    console.log('[updateDjProfile] ID du DJ:', djProfile.id);
-    console.log('[updateDjProfile] updateData avant Prisma:', JSON.stringify(updateData, null, 2));
+    dlog('[updateDjProfile] Exécution de la mise à jour Prisma...');
+    dlog('[updateDjProfile] ID du DJ:', djProfile.id);
+    dlog('[updateDjProfile] updateData avant Prisma:', JSON.stringify(updateData, null, 2));
     
     const updatedDj = await prisma.userDj.update({
       where: { id: djProfile.id },
       data: updateData,
     });
     
-    console.log('[updateDjProfile] ✅ Mise à jour Prisma réussie');
-    console.log('[updateDjProfile] Bio après update:', updatedDj.bio || '(null)');
+    dlog('[updateDjProfile] ✅ Mise à jour Prisma réussie');
+    dlog('[updateDjProfile] Bio après update:', updatedDj.bio || '(null)');
 
-    console.log('[updateDjProfile] Profil mis à jour dans la DB:');
-    console.log('  - bio:', updatedDj.bio || '(null)');
-    console.log('  - genre:', updatedDj.genre || '(null)');
-    console.log('  - mainCity:', updatedDj.mainCity || '(null)');
-    console.log('  - languages:', updatedDj.languages || '(null)');
-    console.log('  - hourlyRate:', updatedDj.hourlyRate || '(null)');
-    console.log('  - performanceRate:', updatedDj.performanceRate || '(null)');
+    dlog('[updateDjProfile] Profil mis à jour dans la DB:');
+    dlog('  - bio:', updatedDj.bio || '(null)');
+    dlog('  - genre:', updatedDj.genre || '(null)');
+    dlog('  - mainCity:', updatedDj.mainCity || '(null)');
+    dlog('  - languages:', updatedDj.languages || '(null)');
+    dlog('  - hourlyRate:', updatedDj.hourlyRate || '(null)');
+    dlog('  - performanceRate:', updatedDj.performanceRate || '(null)');
 
     // Récupérer le profil complet depuis la DB pour être sûr
     const finalDj = await prisma.userDj.findUnique({
       where: { id: updatedDj.id },
     });
 
-    console.log('[updateDjProfile] Profil final récupéré de la DB:');
-    console.log('  - bio:', finalDj.bio || '(null)');
-    console.log('  - genre:', finalDj.genre || '(null)');
-    console.log('  - mainCity:', finalDj.mainCity || '(null)');
+    dlog('[updateDjProfile] Profil final récupéré de la DB:');
+    dlog('  - bio:', finalDj.bio || '(null)');
+    dlog('  - genre:', finalDj.genre || '(null)');
+    dlog('  - mainCity:', finalDj.mainCity || '(null)');
 
     return sendSuccess(res, {
       message: 'Profil DJ mis à jour avec succès',

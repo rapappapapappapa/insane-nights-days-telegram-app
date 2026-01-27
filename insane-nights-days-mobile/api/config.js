@@ -7,7 +7,7 @@ import { retryApiCall, isRetryableError } from '../utils/retry';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://buys-wisconsin-straight-sub.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://touch-drug-contractor-buildings.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -31,9 +31,12 @@ const API_CONFIG = {
     DJS_LIST: '/api/djs',
     DJ_RATINGS: '/api/dj',
     VENUE_RATINGS: '/api/venue',
-    ADMIN_EVENT_DATE: '/api/admin/event',
     TICKETS_BUY: '/api/tickets/buy',
+    PAYMENTS_CREATE_TICKET_INTENT: '/api/payments/create-ticket-intent',
+    PAYMENTS_CONFIRM_TICKET_PURCHASE: '/api/payments/confirm-ticket-purchase',
+    PAYMENTS_ME: '/api/payments/me',
     TICKETS_USER: '/api/user',
+    TICKETS_ME: '/api/user/me/tickets',
     TICKET_QR: '/api/tickets',
     TICKET_DELETE: '/api/tickets',
     STATS: '/api/stats',
@@ -91,6 +94,7 @@ const getFileName = (uri) => {
 };
 
 // Fonction helper pour faire des requêtes
+// options.noCache: si true, bypass cache GET (utile pour /user/me après switchProfile)
 const apiRequest = async (endpoint, options = {}, token = null, customTimeout = null) => {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
   
@@ -98,8 +102,11 @@ const apiRequest = async (endpoint, options = {}, token = null, customTimeout = 
   const method = options.method || 'GET';
   const isGetRequest = method === 'GET' || !method;
   
+  // Extraire les options internes (ne doivent pas partir dans fetch)
+  const { noCache, ...optionsForFetch } = options || {};
+
   // Générer la clé de cache pour les requêtes GET
-  const cacheKey = isGetRequest ? apiCache.generateKey(endpoint, options, token) : null;
+  const cacheKey = (isGetRequest && !noCache) ? apiCache.generateKey(endpoint, optionsForFetch, token) : null;
   
   // Vérifier le cache pour les requêtes GET
   if (isGetRequest && cacheKey) {
@@ -132,10 +139,10 @@ const apiRequest = async (endpoint, options = {}, token = null, customTimeout = 
 
   const config = {
     ...defaultOptions,
-    ...options,
+    ...optionsForFetch,
     headers: {
       ...defaultOptions.headers,
-      ...options.headers,
+      ...(optionsForFetch?.headers || {}),
     },
   };
 
@@ -176,8 +183,13 @@ const apiRequest = async (endpoint, options = {}, token = null, customTimeout = 
         error.status = response.status;
         error.payload = data;
         
-        // Marquer les erreurs 401 comme token expiré
-        if (response.status === 401) {
+        // Marquer les erreurs 401 et 403 (token invalide/expiré) comme token expiré
+        if (response.status === 401 || 
+            (response.status === 403 && (
+              errorMessage.includes('Token invalide') || 
+              errorMessage.includes('Token expiré') ||
+              errorMessage.includes('Token d\'authentification')
+            ))) {
           error.isTokenExpired = true;
         }
         
@@ -326,7 +338,8 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/me`, {}, token);
+    // ✅ Ne jamais mettre en cache: change après switchProfile / achats / etc.
+    return apiRequest(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/me`, { noCache: true }, token);
   },
 
   // Récupérer tous les événements
@@ -354,6 +367,36 @@ const api = {
       {
         method: 'POST',
         body: JSON.stringify({ eventId, quantity }),
+      },
+      token
+    );
+  },
+
+  // ✅ Stripe: créer un PaymentIntent pour acheter des tickets
+  createTicketPaymentIntent: async (token, eventId, quantity = 1) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis pour payer un ticket.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.PAYMENTS_CREATE_TICKET_INTENT,
+      {
+        method: 'POST',
+        body: JSON.stringify({ eventId, quantity }),
+      },
+      token
+    );
+  },
+
+  // ✅ Stripe: confirmer le paiement et délivrer les tickets
+  confirmTicketPurchase: async (token, paymentIntentId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.PAYMENTS_CONFIRM_TICKET_PURCHASE,
+      {
+        method: 'POST',
+        body: JSON.stringify({ paymentIntentId }),
       },
       token
     );
@@ -418,39 +461,22 @@ const api = {
     return apiRequest(`${API_CONFIG.ENDPOINTS.RATINGS_CHECK}/${eventId}`, {}, token);
   },
 
-  // Changer le statut d'un événement (TEMPORAIRE - à supprimer en production)
-  updateEventStatus: async (token, eventId, status) => {
+  // (Nettoyage) Endpoints admin temporaires supprimés.
+
+  // Récupérer les tickets de l'utilisateur connecté (recommandé)
+  getMyTickets: async (token) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(
-      `${API_CONFIG.ENDPOINTS.ADMIN_EVENT_DATE}/${eventId}/status`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ status }),
-      },
-      token
-    );
+    return apiRequest(API_CONFIG.ENDPOINTS.TICKETS_ME, {}, token);
   },
 
-  // Modifier la date d'un événement (TEMPORAIRE - à supprimer en production)
-  updateEventDate: async (token, eventId, year) => {
+  // Récupérer les paiements de l'utilisateur connecté (Mes achats)
+  getMyPayments: async (token) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(
-      `${API_CONFIG.ENDPOINTS.ADMIN_EVENT_DATE}/${eventId}/date`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ year }),
-      },
-      token
-    );
-  },
-
-  // Récupérer les tickets d'un utilisateur
-  getUserTickets: async (userId) => {
-    return apiRequest(`${API_CONFIG.ENDPOINTS.TICKETS_USER}/${userId}/tickets`);
+    return apiRequest(API_CONFIG.ENDPOINTS.PAYMENTS_ME, {}, token);
   },
 
   // Générer QR code pour un ticket
@@ -487,7 +513,8 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(API_CONFIG.ENDPOINTS.USER_PROFILES, {}, token);
+    // ✅ Ne jamais mettre en cache: doit refléter instantanément le profil actif
+    return apiRequest(API_CONFIG.ENDPOINTS.USER_PROFILES, { noCache: true }, token);
   },
 
   // Basculer entre profils
@@ -495,7 +522,7 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(
+    const res = await apiRequest(
       API_CONFIG.ENDPOINTS.USER_SWITCH_PROFILE,
       {
         method: 'POST',
@@ -503,6 +530,18 @@ const api = {
       },
       token
     );
+    // ✅ Invalidation cache (au cas où /me ou /profiles ont été mis en cache avant)
+    if (res?.success) {
+      try {
+        const meEndpoint = `${API_CONFIG.ENDPOINTS.USER_PROFILE}/me`;
+        const profilesEndpoint = API_CONFIG.ENDPOINTS.USER_PROFILES;
+        apiCache.delete(apiCache.generateKey(meEndpoint, {}, token));
+        apiCache.delete(apiCache.generateKey(profilesEndpoint, {}, token));
+      } catch (e) {
+        logger.warn('[api.switchProfile] cache invalidation failed:', e?.message ?? e);
+      }
+    }
+    return res;
   },
 
   // Changer le mot de passe
@@ -893,7 +932,8 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(`/api/chat/${eventDjId}/messages`, {}, token);
+    // ✅ Jamais de cache pour le chat (sinon les nouveaux messages n'apparaissent pas)
+    return apiRequest(`/api/chat/${eventDjId}/messages`, { noCache: true }, token);
   },
 
   // Marquer un message comme lu
@@ -929,7 +969,8 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest('/api/chat/conversations', {}, token);
+    // ✅ Jamais de cache pour le chat
+    return apiRequest('/api/chat/conversations', { noCache: true }, token);
   },
 
   // Récupérer le nombre total de messages non lus
@@ -937,7 +978,8 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest('/api/chat/unread-count', {}, token);
+    // ✅ Ne jamais mettre en cache (doit refléter instantanément l'état)
+    return apiRequest('/api/chat/unread-count', { noCache: true }, token);
   },
 
   // Marquer tous les messages non lus comme lus
@@ -975,7 +1017,184 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(`/api/chat/group/${eventId}/messages`, {}, token);
+    // ✅ Jamais de cache pour le chat
+    return apiRequest(`/api/chat/group/${eventId}/messages`, { noCache: true }, token);
+  },
+
+  // ============================================
+  // ✅ AJOUT: FEED D'ACTUALITÉ - Posts des DJs et annonces d'événements
+  // ============================================
+
+  // Créer un nouveau post dans le feed (DJ uniquement)
+  createFeedPost: async (token, content, imageUrl = null) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!content || !content.trim()) {
+      throw new Error('Le contenu du post est requis.');
+    }
+    return apiRequest(
+      '/api/feed/post',
+      {
+        method: 'POST',
+        body: JSON.stringify({ content: content.trim(), imageUrl }),
+      },
+      token
+    );
+  },
+
+  // Récupérer le feed d'actualité (posts + événements)
+  getFeed: async (limit = 20, offset = 0) => {
+    return apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, {});
+  },
+
+  // ✅ AJOUT: Uploader une image pour un post du feed
+  uploadFeedPostImage: async (token, imageUri) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!imageUri) {
+      throw new Error('L\'URI de l\'image est requise.');
+    }
+
+    logger.debug('[uploadFeedPostImage] Début upload:', { imageUri: imageUri.substring(0, 50) + '...' });
+
+    // Créer un FormData pour l'upload (format React Native)
+    const formData = new FormData();
+    const fileData = {
+      uri: imageUri,
+      type: getMimeType(imageUri, 'photo'),
+      name: getFileName(imageUri),
+    };
+    logger.debug('[uploadFeedPostImage] File data:', { type: fileData.type, name: fileData.name });
+
+    formData.append('image', fileData);
+
+    const uploadUrl = `${API_CONFIG.BASE_URL}/api/feed/post/upload-image`;
+    logger.debug('[uploadFeedPostImage] URL:', uploadUrl);
+
+    // Utiliser fetch (plus robuste sur Android que axios pour FormData)
+    try {
+      logger.debug('[uploadFeedPostImage] Envoi de la requête avec fetch...');
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          // Ne pas définir Content-Type manuellement, React Native le fera automatiquement avec la boundary
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      logger.debug('[uploadFeedPostImage] Réponse:', result);
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Échec de l\'upload de l\'image.');
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('[uploadFeedPostImage] Erreur catch:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack?.substring(0, 200)
+      });
+
+      if (error.message && (error.message.includes('Network request failed') || error.message.includes('Network Error'))) {
+        throw new Error('Erreur réseau - Vérifiez votre connexion internet et réessayez. Si le problème persiste, l\'image est peut-être trop volumineuse.');
+      }
+      throw error;
+    }
+  },
+
+  // ✅ AJOUT: Supprimer un post du feed (uniquement par l'auteur)
+  deleteFeedPost: async (token, postId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/post/${postId}`, {
+      method: 'DELETE',
+    }, token);
+  },
+
+  // ✅ AJOUT: Liker ou unliker un post
+  toggleLikePost: async (token, postId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/post/${postId}/like`, {
+      method: 'POST',
+    }, token);
+  },
+
+  // ✅ AJOUT: Vérifier si l'utilisateur a liké un post
+  checkPostLiked: async (token, postId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/post/${postId}/like`, {}, token);
+  },
+
+  // ✅ AJOUT: Créer un commentaire sur un post
+  createComment: async (token, postId, content) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!content || !content.trim()) {
+      throw new Error('Le contenu du commentaire est requis.');
+    }
+    return apiRequest(`/api/feed/post/${postId}/comment`, {
+      method: 'POST',
+      body: JSON.stringify({ content: content.trim() }),
+    }, token);
+  },
+
+  // ✅ AJOUT: Récupérer les commentaires d'un post
+  getPostComments: async (postId, limit = 20, offset = 0) => {
+    return apiRequest(`/api/feed/post/${postId}/comments?limit=${limit}&offset=${offset}`, {});
+  },
+
+  // ============================================
+  // ✅ AJOUT: NOTIFICATIONS DU FEED - Interactions sur les posts
+  // ============================================
+
+  // Récupérer les notifications du feed
+  getFeedNotifications: async (token, limit = 20, offset = 0) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/notifications?limit=${limit}&offset=${offset}`, {}, token);
+  },
+
+  // Récupérer le nombre de notifications non lues
+  getFeedNotificationsUnreadCount: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    // ✅ Ne jamais mettre en cache
+    return apiRequest('/api/feed/notifications/unread-count', { noCache: true }, token);
+  },
+
+  // Marquer une notification comme lue
+  markFeedNotificationRead: async (token, notificationId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/notifications/${notificationId}/read`, {
+      method: 'PUT',
+    }, token);
+  },
+
+  // Marquer toutes les notifications comme lues
+  markAllFeedNotificationsRead: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest('/api/feed/notifications/mark-all-read', {
+      method: 'PUT',
+    }, token);
   },
 };
 

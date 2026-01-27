@@ -45,9 +45,14 @@ export default function TicketsPage() {
 
   const fetchTickets = async () => {
     if (!user?.id) return;
+    if (!user?.token) {
+      setLoading(false);
+      showError(language === 'fr' ? 'Token manquant. Veuillez vous reconnecter.' : 'Missing token. Please log in again.');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await api.getUserTickets(user.id);
+      const response = await api.getMyTickets(user.token);
       if (response && response.success && Array.isArray(response.tickets)) {
         console.log('[TicketsPage] Tickets reçus:', response.tickets.length);
         if (response.tickets.length > 0) {

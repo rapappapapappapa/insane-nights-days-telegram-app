@@ -46,13 +46,19 @@ export default function DjDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [djProfile, setDjProfile] = useState(null);
+
+  // Avis & notes (DJ)
+  const [ratingsData, setRatingsData] = useState(null); // { dj, ratings, media }
+  const [loadingRatings, setLoadingRatings] = useState(false);
   
   // Menu latéral
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const sidebarAnimation = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   
   // Section active - ouvrir bookings si demandé via routeParams
-  const [activeSection, setActiveSection] = useState(routeParams?.openBookings ? 'bookings' : 'profil');
+  const shouldOpenBookings =
+    !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
+  const [activeSection, setActiveSection] = useState(shouldOpenBookings ? 'bookings' : 'profil');
   
   // Formulaire
   const [artistName, setArtistName] = useState('');
@@ -142,6 +148,33 @@ export default function DjDashboardPage() {
     }
   }, [activeSection, user?.token]);
 
+  // Charger les avis quand on accède à la section
+  useEffect(() => {
+    if (activeSection === 'avis' && user?.token && user?.id && !loadingRatings) {
+      fetchRatings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, user?.token, user?.id]);
+
+  const fetchRatings = async () => {
+    if (!user?.token || !user?.id) return;
+    setLoadingRatings(true);
+    try {
+      // Endpoint public, mais on l'utilise pour afficher les avis du DJ connecté
+      const res = await api.getDjRatings(user.id);
+      if (res?.success) {
+        setRatingsData(res);
+      } else {
+        setRatingsData(null);
+      }
+    } catch (e) {
+      console.error('Erreur récupération avis DJ:', e);
+      setRatingsData(null);
+    } finally {
+      setLoadingRatings(false);
+    }
+  };
+
   const [processingInvitation, setProcessingInvitation] = useState(null);
 
   // Fonctions de chat
@@ -152,8 +185,8 @@ export default function DjDashboardPage() {
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventDjId, false);
-    // Rafraîchir le compteur après ouverture
-    refreshUnreadCount();
+    // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
+    await markAllAsRead();
   };
 
   const openGroupChat = async (eventId) => {
@@ -163,9 +196,24 @@ export default function DjDashboardPage() {
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventId, true);
-    // Rafraîchir le compteur après ouverture
-    refreshUnreadCount();
+    // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
+    await markAllAsRead();
   };
+
+  // ✅ Ouvrir automatiquement la conversation depuis une notification (DJ)
+  useEffect(() => {
+    if (!user?.token) return;
+    const type = routeParams?.openChatType;
+    const eventDjId = routeParams?.openChatEventDjId;
+    const eventId = routeParams?.openChatEventId;
+
+    if (type === 'PRIVATE' && eventDjId) {
+      openChat(eventDjId);
+    } else if (type === 'GROUP' && eventId) {
+      openGroupChat(eventId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventId]);
 
   const loadChatMessages = async (id, isGroup = false) => {
     if (!user?.token || !id) return;
@@ -1850,9 +1898,109 @@ export default function DjDashboardPage() {
             <Text style={styles.sectionTitle}>
               {language === 'fr' ? 'AVIS & NOTES' : 'REVIEWS & RATINGS'}
             </Text>
-            <Text style={styles.comingSoon}>
-              {language === 'fr' ? 'Cette section affichera les avis et notes reçus sur votre profil DJ.' : 'This section will display reviews and ratings received on your DJ profile.'}
+            {loadingRatings ? (
+              <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                <ActivityIndicator color={Colors.primary} />
+                <Text style={styles.loadingText}>
+                  {language === 'fr' ? 'Chargement des avis...' : 'Loading reviews...'}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.reviewSummaryCard}>
+                  <View style={styles.reviewSummaryTop}>
+                    <Text style={styles.reviewSummaryTitle}>
+                      {language === 'fr' ? 'Note globale' : 'Overall rating'}
+                    </Text>
+                    <TouchableOpacity onPress={fetchRatings} activeOpacity={0.8}>
+                      <Text style={styles.reviewRefresh}>
+                        {language === 'fr' ? 'Rafraîchir' : 'Refresh'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.reviewSummaryRow}>
+                    <Text style={styles.reviewSummaryScore}>
+                      {ratingsData?.ratings?.averageRatingGlobal?.toFixed
+                        ? ratingsData.ratings.averageRatingGlobal.toFixed(1)
+                        : (ratingsData?.ratings?.averageRatingGlobal ?? '—')}
+                      /5
+                    </Text>
+                    <StarRating
+                      rating={Number(ratingsData?.ratings?.averageRatingGlobal || 0)}
+                      size={18}
+                      showStars={true}
+                    />
+                  </View>
+
+                  <Text style={styles.reviewSummaryMeta}>
+                    {language === 'fr' ? 'Communauté' : 'Community'}: {ratingsData?.ratings?.totalRatingsCommunity ?? 0} •{' '}
+                    Booker: {ratingsData?.ratings?.totalRatingsBooker ?? 0} •{' '}
+                    {language === 'fr' ? 'Lieu' : 'Venue'}: {ratingsData?.ratings?.totalRatingsVenue ?? 0}
+                  </Text>
+                </View>
+
+                {Array.isArray(ratingsData?.ratings?.allRatings) && ratingsData.ratings.allRatings.length > 0 ? (
+                  <View style={{ gap: 12 }}>
+                    {ratingsData.ratings.allRatings.slice(0, 20).map((r) => (
+                      <View key={r.id} style={styles.reviewCard}>
+                        <View style={styles.reviewCardTop}>
+                          <Text style={styles.reviewCardType}>
+                            {r.raterType === 'COMMUNITY'
+                              ? (language === 'fr' ? 'Communauté' : 'Community')
+                              : r.raterType === 'BOOKER'
+                                ? 'Booker'
+                                : (language === 'fr' ? 'Lieu' : 'Venue')}
+                          </Text>
+                          <StarRating rating={Number(r.rating || 0)} size={16} showStars={true} />
+                        </View>
+                        <Text style={styles.reviewCardEvent} numberOfLines={2}>
+                          {r.eventTitle || (language === 'fr' ? 'Événement' : 'Event')}
+                        </Text>
+                        {r.comment ? (
+                          <Text style={styles.reviewCardComment}>{r.comment}</Text>
+                        ) : (
+                          <Text style={styles.reviewCardCommentEmpty}>
+                            {language === 'fr' ? 'Aucun commentaire.' : 'No comment.'}
+                          </Text>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateIcon}>⭐</Text>
+                    <Text style={styles.emptyStateText}>
+                      {language === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'}
+                    </Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      {language === 'fr'
+                        ? 'Les avis apparaîtront ici après des événements notés.'
+                        : 'Reviews will appear here after rated events.'}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </ScrollView>
+        );
+
+      case 'paiements':
+        return (
+          <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
+            <Text style={styles.sectionTitle}>
+              {language === 'fr' ? 'PAIEMENTS' : 'PAYMENTS'}
             </Text>
+            <Text style={styles.comingSoon}>
+              {language === 'fr'
+                ? 'Pour le moment, cette section affiche vos achats (tickets). Les paiements “DJ” (revenus) seront ajoutés plus tard.'
+                : 'For now, this section shows your purchases (tickets). DJ payouts/earnings will be added later.'}
+            </Text>
+            <TouchableOpacity style={styles.saveButton} onPress={() => navigate('purchases')}>
+              <Text style={styles.saveButtonText}>
+                {language === 'fr' ? 'Voir mes achats' : 'View my purchases'}
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         );
 
@@ -2178,90 +2326,88 @@ export default function DjDashboardPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Menu latéral */}
-      <Animated.View
-        style={[
-          styles.sidebar,
-          {
-            transform: [{ translateX: sidebarAnimation }],
-          },
-        ]}
-      >
-        <View style={styles.sidebarHeader}>
-          <Text style={styles.sidebarTitle}>
-            {language === 'fr' ? 'DASHBOARD DJ' : 'DASHBOARD DJ'}
-          </Text>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setSidebarVisible(false)}
+      {/* ✅ Menu latéral DJ désactivé: on garde uniquement le menu principal (drawer global) */}
+      {false && (
+        <>
+          <Animated.View
+            style={[
+              styles.sidebar,
+              {
+                transform: [{ translateX: sidebarAnimation }],
+              },
+            ]}
           >
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.sidebarContent}>
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.menuItem,
-                activeSection === item.id && styles.menuItemActive
-              ]}
-              onPress={() => {
-                setActiveSection(item.id);
-                setSidebarVisible(false);
-                // Si on ouvre la section bookings, marquer les messages comme lus
-                if (item.id === 'bookings') {
-                  markAllAsRead();
-                }
-              }}
-            >
-              <View style={styles.menuItemIconContainer}>
-                <Text style={styles.menuItemIcon}>{item.icon}</Text>
-                {item.id === 'bookings' && (
-                  <NotificationBadge count={unreadCount} />
-                )}
-              </View>
-              <Text style={[
-                styles.menuItemText,
-                activeSection === item.id && styles.menuItemTextActive
-              ]}>
-                {item.label}
+            <View style={styles.sidebarHeader}>
+              <Text style={styles.sidebarTitle}>
+                {language === 'fr' ? 'DASHBOARD DJ' : 'DASHBOARD DJ'}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSidebarVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.sidebarFooter}>
-          <Text style={styles.sidebarFooterTitle}>
-            {language === 'fr' ? 'Liens & réseaux' : 'Links & Networks'}
-          </Text>
-          <TouchableOpacity style={styles.addAudioSetButton} onPress={pickAudio}>
-            <Text style={styles.addAudioSetButtonText}>
-              + {language === 'fr' ? 'Ajouter un set audio' : 'Add an audio set'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+            <ScrollView style={styles.sidebarContent}>
+              {menuItems.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.menuItem,
+                    activeSection === item.id && styles.menuItemActive
+                  ]}
+                  onPress={() => {
+                    setActiveSection(item.id);
+                    setSidebarVisible(false);
+                    if (item.id === 'bookings') {
+                      markAllAsRead();
+                    }
+                  }}
+                >
+                  <View style={styles.menuItemIconContainer}>
+                    <Text style={styles.menuItemIcon}>{item.icon}</Text>
+                    {item.id === 'bookings' && (
+                      <NotificationBadge count={unreadCount} />
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.menuItemText,
+                    activeSection === item.id && styles.menuItemTextActive
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-      {/* Overlay pour fermer le menu */}
-      {sidebarVisible && (
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setSidebarVisible(false)}
-        />
+            <View style={styles.sidebarFooter}>
+              <Text style={styles.sidebarFooterTitle}>
+                {language === 'fr' ? 'Liens & réseaux' : 'Links & Networks'}
+              </Text>
+              <TouchableOpacity style={styles.addAudioSetButton} onPress={pickAudio}>
+                <Text style={styles.addAudioSetButtonText}>
+                  + {language === 'fr' ? 'Ajouter un set audio' : 'Add an audio set'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          {sidebarVisible && (
+            <TouchableOpacity
+              style={styles.overlay}
+              activeOpacity={1}
+              onPress={() => setSidebarVisible(false)}
+            />
+          )}
+        </>
       )}
 
       {/* Contenu principal */}
       <View style={styles.mainContent}>
         <View style={styles.topBar}>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setSidebarVisible(true)}
-          >
-            <Text style={styles.menuButtonText}>☰</Text>
-          </TouchableOpacity>
+          {/* ✅ Ancien bouton sidebar DJ désactivé */}
+          <View style={{ width: 40 }} />
           <View style={styles.topBarRight}>
             <TouchableOpacity
               style={styles.messagesButton}
@@ -2278,6 +2424,45 @@ export default function DjDashboardPage() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ✅ Sections DJ: onglets horizontaux (remplace le sidebar DJ) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.sectionTabs}
+          contentContainerStyle={styles.sectionTabsContent}
+        >
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.sectionTab,
+                activeSection === item.id && styles.sectionTabActive,
+              ]}
+              onPress={() => {
+                setActiveSection(item.id);
+                if (item.id === 'bookings') markAllAsRead();
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.sectionTabIconWrap}>
+                <Text style={styles.sectionTabIcon}>{item.icon}</Text>
+                {item.id === 'bookings' && unreadCount > 0 && (
+                  <NotificationBadge count={unreadCount} />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.sectionTabText,
+                  activeSection === item.id && styles.sectionTabTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {renderContent()}
       </View>
@@ -2778,6 +2963,53 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  sectionTabs: {
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    maxHeight: 54,
+  },
+  sectionTabsContent: {
+    gap: 8,
+    paddingVertical: 4,
+    paddingRight: 12,
+    alignItems: 'center',
+  },
+  sectionTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 36,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    maxWidth: 150,
+  },
+  sectionTabActive: {
+    borderColor: 'rgba(255,23,68,0.55)',
+    backgroundColor: 'rgba(255,23,68,0.12)',
+  },
+  sectionTabIconWrap: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginRight: 6,
+  },
+  sectionTabIcon: {
+    fontSize: 14,
+  },
+  sectionTabText: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  sectionTabTextActive: {
+    color: '#fff',
+  },
   topBarRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2951,6 +3183,82 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '700',
+  },
+  // Avis & notes
+  reviewSummaryCard: {
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderActive,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+  },
+  reviewSummaryTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  reviewSummaryTitle: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  reviewRefresh: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  reviewSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewSummaryScore: {
+    color: Colors.primary,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  reviewSummaryMeta: {
+    marginTop: 10,
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    padding: 14,
+  },
+  reviewCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  reviewCardType: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  reviewCardEvent: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  reviewCardComment: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  reviewCardCommentEmpty: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   switchContainer: {
     flexDirection: 'row',

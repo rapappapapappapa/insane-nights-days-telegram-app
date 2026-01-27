@@ -189,15 +189,45 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateUser = useCallback(async (partialUser) => {
-    const updatedUser = {
-      ...user,
-      ...partialUser,
-    };
-    setUser(updatedUser);
-    
-    // Sauvegarder les données utilisateur mises à jour (sans le token)
-    await saveUserData(updatedUser);
-  }, [user]);
+    // ✅ Utiliser une mise à jour fonctionnelle pour éviter les valeurs "stales"
+    // (ex: switchProfile qui se fait écraser par un autre updateUser quasi simultané).
+    setUser((prev) => {
+      const next = { ...prev, ...partialUser };
+      // Persistance best-effort (pas besoin de bloquer l'UI)
+      saveUserData(next).catch((e) => logger.warn('[AuthContext] Erreur saveUserData:', e?.message ?? e));
+      return next;
+    });
+  }, []);
+
+  // Re-synchroniser l'utilisateur depuis le backend (utile après switchProfile)
+  const refreshCurrentUser = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token || isTokenExpired(token)) {
+        return;
+      }
+      const currentUser = await api.getCurrentUser(token);
+      if (currentUser && currentUser.success) {
+        setUser((prev) => {
+          const next = {
+            ...prev,
+            id: currentUser.user?.id ?? prev.id,
+            email: currentUser.user?.email ?? prev.email,
+            username: currentUser.user?.username ?? prev.username,
+            score: currentUser.user?.score ?? prev.score,
+            level: currentUser.user?.level ?? prev.level,
+            activeProfileType: currentUser.user?.activeProfileType ?? prev.activeProfileType,
+            isAuthenticated: true,
+            token,
+          };
+          saveUserData(next).catch((e) => logger.warn('[AuthContext] Erreur saveUserData:', e?.message ?? e));
+          return next;
+        });
+      }
+    } catch (e) {
+      logger.warn('[AuthContext] refreshCurrentUser failed:', e?.message ?? e);
+    }
+  }, []);
 
   // Fonction pour gérer le logout automatique en cas de token expiré
   const handleTokenExpired = useCallback(async () => {
@@ -213,7 +243,8 @@ export function AuthProvider({ children }) {
       logout, 
       updateUser, 
       isInitializing,
-      handleTokenExpired 
+      handleTokenExpired,
+      refreshCurrentUser,
     }}>
       {children}
     </AuthContext.Provider>

@@ -34,6 +34,7 @@ export default function BookerDashboardPage() {
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
   const { formData, setFormData, eventDateTime, setEventDateTime, resetForm, addDj, removeDj, setVenue } = useEventForm();
 
+  // Drawer global géré dans App.js
   const [loading, setLoading] = useState(false);
   const [availableDjs, setAvailableDjs] = useState([]);
   const [venues, setVenues] = useState([]);
@@ -43,7 +44,9 @@ export default function BookerDashboardPage() {
   const [myEvents, setMyEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
-  const [showMyEvents, setShowMyEvents] = useState(routeParams?.openBookings || false);
+  const shouldOpenBookings =
+    !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
+  const [showMyEvents, setShowMyEvents] = useState(shouldOpenBookings || false);
   const [deletingEventId, setDeletingEventId] = useState(null);
   
   // Slots DJ pour la création d'événement
@@ -405,8 +408,8 @@ export default function BookerDashboardPage() {
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventDjId, false);
-    // Rafraîchir le compteur après ouverture
-    refreshUnreadCount();
+    // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
+    await markAllAsRead();
   };
 
   const openGroupChat = async (eventId) => {
@@ -416,9 +419,28 @@ export default function BookerDashboardPage() {
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventId, true);
-    // Rafraîchir le compteur après ouverture
-    refreshUnreadCount();
+    // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
+    await markAllAsRead();
   };
+
+  // ✅ Ouvrir automatiquement la conversation depuis une notification (BOOKER)
+  useEffect(() => {
+    if (!user?.token) return;
+    const type = routeParams?.openChatType;
+    const eventDjId = routeParams?.openChatEventDjId;
+    const eventId = routeParams?.openChatEventId;
+
+    if (shouldOpenBookings) {
+      setShowMyEvents(true);
+    }
+
+    if (type === 'PRIVATE' && eventDjId) {
+      openChat(eventDjId);
+    } else if (type === 'GROUP' && eventId) {
+      openGroupChat(eventId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventId]);
 
   const loadChatMessages = async (id, isGroup = false) => {
     if (!user?.token || !id) return;
@@ -750,28 +772,31 @@ export default function BookerDashboardPage() {
   }, [autoPrice]); // Seulement autoPrice
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-    >
-      <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}</Text>
-        <TouchableOpacity
-          style={styles.messagesButton}
-          onPress={() => {
-            setShowMyEvents(true);
-            refreshUnreadCount();
-          }}
-        >
-          <Ionicons name="chatbubbles" size={24} color="#fff" />
-          <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
-        </TouchableOpacity>
-      </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <StatusBar style="light" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>{language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.messagesButton}
+              onPress={() => {
+                setShowMyEvents(true);
+                refreshUnreadCount();
+              }}
+            >
+              <Ionicons name="chatbubbles" size={24} color="#fff" />
+              <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
+            </TouchableOpacity>
+            <View style={{ width: 44 }} />
+          </View>
+        </View>
 
       {/* Boutons de navigation */}
       <View style={styles.tabButtons}>
@@ -1861,7 +1886,7 @@ export default function BookerDashboardPage() {
         visible={toast.visible}
         onHide={hideToast}
       />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
   );
 }
 
@@ -1882,7 +1907,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 0,
   },
   backButtonText: {
     color: '#FF1744',
@@ -1901,6 +1926,23 @@ const styles = StyleSheet.create({
     padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  menuButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(11,11,14,0.65)',
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,

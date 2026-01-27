@@ -24,6 +24,7 @@ import VideoPlayer from '../components/VideoPlayer';
 import StarRating from '../components/StarRating';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ export default function VenueDashboardPage() {
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { user } = useAuth();
 
+  // Drawer global géré dans App.js
   const [loading, setLoading] = useState(true);
   const [savingMedia, setSavingMedia] = useState(false);
   const [venue, setVenue] = useState(null);
@@ -467,15 +469,16 @@ export default function VenueDashboardPage() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+      <View style={styles.container}>
+        <StatusBar style="light" />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}</Text>
-      </View>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
       <View style={styles.tabs}>
         {[
@@ -632,7 +635,7 @@ export default function VenueDashboardPage() {
         visible={toast.visible}
         onHide={hideToast}
       />
-    </View>
+      </View>
   );
 }
 
@@ -650,9 +653,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
+    flex: 1,
     color: '#fff',
     fontSize: 20,
     fontWeight: '800',
+    textAlign: 'center',
   },
   backButton: {
     padding: 8,
@@ -661,6 +666,18 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  menuButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(11,11,14,0.65)',
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabs: {
     flexDirection: 'row',

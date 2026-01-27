@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -86,7 +87,13 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [buyingTicket, setBuyingTicket] = useState(false);
-  const [changingStatus, setChangingStatus] = useState(false);
+
+  // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
+  useEffect(() => {
+    if (!user?.isAuthenticated) {
+      navigate('home');
+    }
+  }, [user?.isAuthenticated, navigate]);
 
   // Utiliser le statut de l'événement plutôt que de calculer depuis la date
   const isEventPast = () => {
@@ -136,49 +143,113 @@ export default function EventDetailPage() {
 
     setBuyingTicket(true);
     try {
-      const response = await api.buyTicket(user.token, eventId, 1);
-      if (response && response.success) {
-        showSuccess(response.message || (language === 'fr' ? 'Ticket acheté avec succès !' : 'Ticket purchased successfully!'));
-        // Rafraîchir les données de l'événement
+      // 2) Ouvrir PaymentSheet (⚠️ nécessite dev build/EAS, pas Expo Go)
+      let stripeModule;
+      try {
+        // eslint-disable-next-line global-require
+        stripeModule = require('@stripe/stripe-react-native');
+      } catch (e) {
+        // ✅ Fallback Expo Go: achat direct (sans Stripe) pour continuer à tester l'app
+        Alert.alert(
+          language === 'fr' ? 'Paiement Stripe indisponible (Expo Go)' : 'Stripe unavailable (Expo Go)',
+          language === 'fr'
+            ? 'Stripe nécessite un Dev Build / EAS. Voulez-vous continuer en mode test (achat ticket sans paiement) ?'
+            : 'Stripe requires a Dev Build / EAS. Continue in test mode (buy ticket without payment)?',
+          [
+            { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+            {
+              text: language === 'fr' ? 'Continuer' : 'Continue',
+              onPress: async () => {
+                const response = await api.buyTicket(user.token, eventId, 1);
+                if (response && response.success) {
+                  showSuccess(response.message || (language === 'fr' ? 'Ticket acheté (mode test).' : 'Ticket bought (test mode).'));
+                  fetchEvent();
+                  // ✅ Écran succès
+                  setTimeout(() => {
+                    navigate('purchaseSuccess', {
+                      eventId,
+                      eventTitle: event?.title,
+                      quantity: 1,
+                      amount: event?.price,
+                    });
+                  }, 600);
+                } else {
+                  showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      const { initStripe, initPaymentSheet, presentPaymentSheet } = stripeModule;
+
+      // 1) Créer PaymentIntent côté backend (uniquement si Stripe est dispo)
+      const intentRes = await api.createTicketPaymentIntent(user.token, eventId, 1);
+      if (!intentRes?.success || !intentRes?.paymentIntentClientSecret || !intentRes?.paymentIntentId) {
+        showError(intentRes?.message || (language === 'fr' ? 'Impossible de démarrer le paiement.' : 'Unable to start payment.'));
+        return;
+      }
+
+      // 2) Initialiser Stripe (nécessaire même si on n'utilise pas StripeProvider)
+      try {
+        await initStripe({
+          publishableKey: intentRes.publishableKey,
+          urlScheme: 'insane-nights-days-mobile',
+        });
+      } catch (e) {
+        showError(
+          e?.message ||
+            (language === 'fr'
+              ? 'Erreur initialisation Stripe.'
+              : 'Stripe initialization error.')
+        );
+        return;
+      }
+
+      const init = await initPaymentSheet({
+        merchantDisplayName: 'Insane Nights & Days',
+        paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
+        allowsDelayedPaymentMethods: true,
+        returnURL: 'insane-nights-days-mobile://stripe-redirect',
+      });
+      if (init?.error) {
+        showError(init.error.message || (language === 'fr' ? 'Erreur initialisation paiement.' : 'Payment init error.'));
+        return;
+      }
+
+      const presented = await presentPaymentSheet();
+      if (presented?.error) {
+        showError(presented.error.message || (language === 'fr' ? 'Paiement annulé.' : 'Payment cancelled.'));
+        return;
+      }
+
+      // 3) Confirmer côté backend et délivrer les tickets (idempotent)
+      const confirmRes = await api.confirmTicketPurchase(user.token, intentRes.paymentIntentId);
+      if (confirmRes?.success) {
+        showSuccess(confirmRes.message || (language === 'fr' ? 'Paiement validé, ticket créé !' : 'Payment succeeded, ticket created!'));
         fetchEvent();
-        setTimeout(() => navigate('tickets'), 2000);
+        // ✅ Écran succès
+        setTimeout(() => {
+          navigate('purchaseSuccess', {
+            eventId,
+            eventTitle: event?.title,
+            quantity: 1,
+            amount: event?.price,
+          });
+        }, 600);
       } else {
-        showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
+        showError(confirmRes?.message || (language === 'fr' ? 'Paiement validé, mais erreur lors de la délivrance du ticket.' : 'Payment succeeded but ticket delivery failed.'));
       }
     } catch (error) {
-      console.error('Erreur achat ticket:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
+      console.error('Erreur paiement ticket:', error);
+      showError(error.message || (language === 'fr' ? 'Erreur lors du paiement.' : 'Payment error.'));
     } finally {
       setBuyingTicket(false);
     }
   };
 
-  const handleChangeStatus = async () => {
-    if (!user?.token) {
-      showError(language === 'fr' ? 'Vous devez être connecté.' : 'You must be logged in.');
-      return;
-    }
-
-    // Basculer entre UPCOMING et FINISHED
-    const newStatus = event.status === 'UPCOMING' ? 'FINISHED' : 'UPCOMING';
-
-    setChangingStatus(true);
-    try {
-      const response = await api.updateEventStatus(user.token, eventId, newStatus);
-      if (response && response.success) {
-        showSuccess(language === 'fr' 
-          ? `Statut changé: ${newStatus === 'UPCOMING' ? 'À venir' : 'Terminé'}`
-          : `Status changed: ${newStatus === 'UPCOMING' ? 'Upcoming' : 'Finished'}`);
-        fetchEvent();
-      } else {
-        showError(response?.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'));
-      }
-    } catch (error) {
-      showError(error.message || (language === 'fr' ? 'Erreur lors de la modification.' : 'Error updating status.'));
-    } finally {
-      setChangingStatus(false);
-    }
-  };
 
   const fetchEvent = async () => {
     setLoading(true);
@@ -375,24 +446,6 @@ export default function EventDetailPage() {
             </View>
           )}
 
-          {/* Bouton TEMPORAIRE pour changer le statut */}
-          {user?.isAuthenticated && (
-            <TouchableOpacity
-              style={[styles.tempDateButton, changingStatus && styles.tempDateButtonDisabled]}
-              onPress={handleChangeStatus}
-              disabled={changingStatus}
-            >
-              {changingStatus ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.tempDateButtonText}>
-                  {language === 'fr' 
-                    ? `⚙️ Changer statut: ${event.status === 'UPCOMING' ? 'UPCOMING → FINISHED' : 'FINISHED → UPCOMING'} (TEMPORAIRE)`
-                    : `⚙️ Change status: ${event.status === 'UPCOMING' ? 'UPCOMING → FINISHED' : 'FINISHED → UPCOMING'} (TEMPORARY)`}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
 
@@ -558,24 +611,6 @@ const styles = StyleSheet.create({
     color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
-  },
-  tempDateButton: {
-    marginTop: 16,
-    backgroundColor: 'rgba(255,23,68,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  tempDateButtonText: {
-    color: '#FF1744',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tempDateButtonDisabled: {
-    opacity: 0.5,
   },
   dateEditor: {
     marginTop: 16,

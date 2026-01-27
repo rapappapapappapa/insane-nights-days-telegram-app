@@ -30,6 +30,16 @@ model User {
 
   // Relations vers les tickets
   tickets Ticket[]
+  // ✅ Paiements
+  payments Payment[]
+  // Relations vers les posts du feed
+  feedPosts FeedPost[]
+  // ✅ AJOUT: Relations vers les likes et commentaires
+  postLikes FeedPostLike[]
+  postComments FeedPostComment[]
+  // ✅ AJOUT: Relations vers les notifications
+  feedNotifications FeedNotification[] // Notifications reçues
+  feedNotificationsAsActor FeedNotification[] @relation("NotificationActor") // Notifications créées (en tant qu'acteur)
 }
 
 model UserCommunity {
@@ -88,6 +98,8 @@ model UserDj {
   ratings DjRating[]
   // Relations vers les médias
   media   DjMedia[]
+  // Relations vers les posts du feed
+  feedPosts FeedPost[]
 
   @@index([userId])
 }
@@ -101,10 +113,12 @@ model UserBooker {
   phonePro   String
   bookerType String
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   // Relations vers les événements organisés
   events Event[]
+  // Relations vers les posts du feed
+  feedPosts FeedPost[]
 
   @@index([userId])
 }
@@ -235,6 +249,8 @@ model Event {
 
   // Relations vers les tickets et notes
   tickets      Ticket[]
+  // ✅ Paiements
+  payments     Payment[]
   djRatings    DjRating[]
   venueRatings VenueRating[]
 
@@ -299,6 +315,10 @@ model Ticket {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   eventId      String
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  // 🔒 Lien optionnel vers un paiement Stripe (idempotence / traçabilité)
+  // On référence Payment.paymentIntentId (unique) pour pouvoir retrouver les tickets d'un achat.
+  paymentIntentId String?
+  payment         Payment? @relation(fields: [paymentIntentId], references: [paymentIntentId], onDelete: SetNull)
   price        Float
   status       String   @default("valid") // 'valid', 'used', 'cancelled'
   qrCode       String   @unique
@@ -307,6 +327,27 @@ model Ticket {
   // Relations vers les notes
   djRatings    DjRating[]    @relation("DjRatingTickets")
   venueRatings VenueRating[] @relation("VenueRatingTickets")
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([paymentIntentId])
+}
+
+// ✅ Paiements Stripe (idempotence + traçabilité)
+model Payment {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  paymentIntentId String   @unique
+  tickets         Ticket[]
+  amount          Int      // en centimes
+  currency        String   @default("eur")
+  quantity        Int      @default(1)
+  status          String   @default("created") // created | succeeded | fulfilled | failed
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
   @@index([eventId])
@@ -326,4 +367,81 @@ model DjMedia {
 
   @@index([djId])
   @@index([type])
+}
+
+// ✅ AJOUT: Modèle pour les posts du feed d'actualité
+// Les DJs et Bookers peuvent créer des posts qui apparaissent dans le feed
+model FeedPost {
+  id        String    @id @default(uuid())
+  authorId  String    // User.id de l'auteur (DJ ou Booker)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  djId      String?   // UserDj.id pour récupérer les infos du DJ (optionnel si c'est un DJ)
+  dj        UserDj?   @relation(fields: [djId], references: [id], onDelete: Cascade)
+  bookerId  String?   // UserBooker.id pour récupérer les infos du Booker (optionnel si c'est un Booker)
+  booker    UserBooker? @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  content   String    // Contenu textuel du post
+  imageUrl  String?   // URL de l'image (optionnel)
+  likes     Int       @default(0) // Compteur de likes (déprécié, utiliser FeedPostLike)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // ✅ AJOUT: Relations vers les likes et commentaires
+  postLikes    FeedPostLike[]
+  comments     FeedPostComment[]
+  // ✅ AJOUT: Relations vers les notifications
+  notifications FeedNotification[]
+
+  @@index([authorId])
+  @@index([djId])
+  @@index([bookerId])
+  @@index([createdAt]) // Pour trier par date décroissante
+}
+
+// ✅ AJOUT: Modèle pour tracker qui a liké quel post
+model FeedPostLike {
+  id        String   @id @default(uuid())
+  postId    String   // FeedPost.id
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String   // User.id de l'utilisateur qui a liké
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId]) // Un utilisateur ne peut liker qu'une fois par post
+  @@index([postId])
+  @@index([userId])
+}
+
+// ✅ AJOUT: Modèle pour les commentaires sur les posts
+model FeedPostComment {
+  id        String   @id @default(uuid())
+  postId    String   // FeedPost.id
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String   // User.id de l'utilisateur qui commente
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   // Contenu du commentaire
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt]) // Pour trier par date
+}
+
+// ✅ AJOUT: Modèle pour les notifications d'interactions sur les posts
+model FeedNotification {
+  id        String   @id @default(uuid())
+  userId    String   // User.id du propriétaire du post (qui reçoit la notification)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String   // FeedPost.id du post concerné
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  actorId   String   // User.id de la personne qui a interagi (like ou commentaire)
+  actor     User     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  type      String   // 'like' ou 'comment'
+  read      Boolean  @default(false) // Si la notification a été lue
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([postId])
+  @@index([read])
+  @@index([createdAt]) // Pour trier par date décroissante
 }

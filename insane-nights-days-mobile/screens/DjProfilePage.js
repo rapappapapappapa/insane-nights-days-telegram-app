@@ -9,18 +9,21 @@ import {
   Image,
   Dimensions,
   Linking,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { api, API_CONFIG, normalizeMediaUrl } from '../api/config';
 import StarRating from '../components/StarRating';
 import VideoPlayer from '../components/VideoPlayer';
-import AudioPlayer from '../components/AudioPlayer';
+// AudioPlayer retiré: plus d'audio mp3 dans le profil DJ
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +57,7 @@ const getDjBackgroundImage = (djName) => {
 };
 
 export default function DjProfilePage() {
+  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
@@ -63,14 +67,17 @@ export default function DjProfilePage() {
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('audio');
+  const [activeTab, setActiveTab] = useState('media');
   const [media, setMedia] = useState({ photos: [], videos: [], audio: [] });
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(null);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [events, setEvents] = useState({ upcomingEvents: [], pastEvents: [] });
   const previousTabRef = useRef(activeTab);
+  // Drawer global géré dans App.js
 
   useEffect(() => {
     if (djId || djUserId) {
@@ -78,24 +85,7 @@ export default function DjProfilePage() {
     }
   }, [djId, djUserId]);
 
-  // Couper tous les sons quand on QUITTE l'onglet audio (pour éviter les doublons)
-  useEffect(() => {
-    const previousTab = previousTabRef.current;
-
-    const stopAllAudio = async () => {
-      try {
-        // Note: expo-audio ne nécessite plus setIsEnabledAsync
-      } catch (e) {
-        console.error("Erreur lors de l'arrêt de l'audio en changeant d'onglet:", e);
-      }
-    };
-
-    if (previousTab === 'audio' && activeTab !== 'audio') {
-      stopAllAudio();
-    }
-
-    previousTabRef.current = activeTab;
-  }, [activeTab]);
+  // Note: plus d'onglet audio, rien à stopper au changement d'onglet
 
   // Fonction pour arrêter l'audio et revenir en arrière
   const handleBack = async () => {
@@ -147,7 +137,7 @@ export default function DjProfilePage() {
             setMedia({
               photos: allMedia.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
               videos: allMedia.filter(m => m.type === 'video'),
-              audio: allMedia.filter(m => m.type === 'audio'),
+              audio: [], // audio supprimé
             });
             
             // Photo de profil et bannière
@@ -164,7 +154,7 @@ export default function DjProfilePage() {
                 setMedia({
                   photos: mediaList.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
                   videos: mediaList.filter(m => m.type === 'video'),
-                  audio: mediaList.filter(m => m.type === 'audio'),
+                  audio: [], // audio supprimé
                 });
                 
                 const profileImg = mediaList.find(m => m.type === 'photo' && m.title === 'profile');
@@ -238,18 +228,18 @@ export default function DjProfilePage() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <StatusBar style="light" />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <StatusBar style="light" />
       
-      {/* Bouton retour */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>
-          ← {language === 'fr' ? 'Retour' : 'Back'}
-        </Text>
-      </TouchableOpacity>
+        {/* Bouton retour */}
+        <TouchableOpacity style={[styles.backButton, { top: (insets?.top ?? 0) + 10 }]} onPress={handleBack}>
+          <Text style={styles.backButtonText}>
+            ← {language === 'fr' ? 'Retour' : 'Back'}
+          </Text>
+        </TouchableOpacity>
       
       {/* Header avec photo de profil et background */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: (insets?.top ?? 0) + 70 }]}>
         <View style={styles.backgroundImage}>
           <Image
             source={{ uri: bannerImage || getDjBackgroundImage(dj.artistName) }}
@@ -266,6 +256,42 @@ export default function DjProfilePage() {
           </View>
           <Text style={styles.djName}>{dj.artistName}</Text>
           <Text style={styles.djLocation}>📍 {dj.mainCity || dj.city || 'Ville inconnue'}, France</Text>
+
+          {/* Stats rapides */}
+          <View style={styles.quickStatsRow}>
+            <View style={styles.quickStatPill}>
+              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Note' : 'Rating'}</Text>
+              <View style={styles.quickStatValueRow}>
+                <Text style={styles.quickStatValue}>
+                  {(ratings?.averageRatingGlobal ?? 0).toFixed ? ratings.averageRatingGlobal.toFixed(1) : (ratings?.averageRatingGlobal ?? '0.0')}
+                </Text>
+                <View style={styles.quickStatStars}>
+                  <StarRating rating={Number(ratings?.averageRatingGlobal || 0)} size={14} showStars={true} showValue={false} />
+                </View>
+              </View>
+            </View>
+
+            <View style={[styles.quickStatPill, dj.availableStatus === false && styles.quickStatPillMuted]}>
+              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Dispo' : 'Avail.'}</Text>
+              <Text style={styles.quickStatValueSmall}>
+                {dj.availableStatus === false
+                  ? (language === 'fr' ? 'Indisponible' : 'Unavailable')
+                  : (language === 'fr' ? 'Disponible' : 'Available')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Badges principaux (style + langues) */}
+          <View style={styles.headerBadgesRow}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>🎧 {dj.genre || (language === 'fr' ? 'Style' : 'Style')}</Text>
+            </View>
+            {dj.languages ? (
+              <View style={styles.badgeSecondary}>
+                <Text style={styles.badgeSecondaryText}>🗣️ {dj.languages}</Text>
+              </View>
+            ) : null}
+          </View>
           {selectionMode ? (
             <TouchableOpacity 
               style={[styles.bookButton, selectedDjIds.includes(dj.userId) && styles.bookButtonSelected]}
@@ -334,437 +360,224 @@ export default function DjProfilePage() {
         </View>
       </View>
 
-      {/* Section Infos clés et Bio */}
-      <View style={styles.infoSection}>
-        <View style={styles.infoColumn}>
-          <Text style={styles.sectionTitle}>
-            {language === 'fr' ? 'Infos clés' : 'Key Info'}
-          </Text>
-          {dj.genre && (
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-                {language === 'fr' ? 'Genre:' : 'Genre:'}
-            </Text>
-              <Text style={styles.infoValue}>{dj.genre}</Text>
-          </View>
-          )}
-          {dj.hourlyRate && (
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-                {language === 'fr' ? 'Tarif horaire:' : 'Hourly Rate:'}
-            </Text>
-              <Text style={styles.infoValue}>{dj.hourlyRate} € / {language === 'fr' ? 'heure' : 'hour'}</Text>
-          </View>
-          )}
-          {dj.performanceRate && (
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>
-                {language === 'fr' ? 'Tarif prestation:' : 'Performance Rate:'}
-              </Text>
-              <Text style={styles.infoValue}>{dj.performanceRate} €</Text>
-            </View>
-          )}
-          {dj.availableStatus !== undefined && (
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Disponibilité:' : 'Availability:'}
-            </Text>
-            <Text style={styles.infoValue}>
-                {dj.availableStatus 
-                  ? (language === 'fr' ? 'Disponible' : 'Available')
-                  : (language === 'fr' ? 'Indisponible' : 'Unavailable')}
-            </Text>
-          </View>
-          )}
-          {dj.languages && (
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>
-              {language === 'fr' ? 'Langues:' : 'Languages:'}
-            </Text>
-              <Text style={styles.infoValue}>{dj.languages}</Text>
-          </View>
-          )}
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.bioColumn}>
-          <Text style={styles.sectionTitle}>
-            {language === 'fr' ? 'Bio du DJ' : 'DJ Bio'}
-          </Text>
-          <Text style={styles.bioText}>
-            {dj.bio || (language === 'fr'
-              ? 'Aucune biographie disponible.'
-              : 'No biography available.')}
-          </Text>
-        </View>
+      {/* Bio (simplifiée) */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>
+          {language === 'fr' ? 'BIO' : 'BIO'}
+        </Text>
+        <Text style={[styles.bioText, !dj.bio && styles.bioTextEmpty]}>
+          {dj.bio || (language === 'fr'
+            ? 'Ce DJ n’a pas encore ajouté de bio.'
+            : 'This DJ has not added a bio yet.')}
+        </Text>
       </View>
 
-      {/* Réseaux sociaux */}
-      <View style={styles.socialSection}>
+      {/* SoundCloud (call-to-action) */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>SOUNDCLOUD</Text>
         {dj.soundcloudUrl ? (
-          <TouchableOpacity 
-            style={styles.socialButton}
-            onPress={() => Linking.openURL(dj.soundcloudUrl)}
-          >
-          <Text style={styles.socialIcon}>🎵</Text>
-        </TouchableOpacity>
-        ) : null}
-        {dj.spotifyUrl ? (
-          <TouchableOpacity 
-            style={styles.socialButton}
-            onPress={() => Linking.openURL(dj.spotifyUrl)}
-          >
-          <Text style={styles.socialIcon}>☁️</Text>
-        </TouchableOpacity>
-        ) : null}
-        {dj.youtubeUrl ? (
-          <TouchableOpacity 
-            style={styles.socialButton}
-            onPress={() => Linking.openURL(dj.youtubeUrl)}
-          >
-          <Text style={styles.socialIcon}>▶️</Text>
-        </TouchableOpacity>
-        ) : null}
-        {dj.instagramUrl ? (
-          <TouchableOpacity 
-            style={styles.socialButton}
-            onPress={() => Linking.openURL(dj.instagramUrl)}
-          >
-          <Text style={styles.socialIcon}>📷</Text>
-        </TouchableOpacity>
-        ) : null}
-        {dj.tiktokUrl ? (
-          <TouchableOpacity 
-            style={styles.socialButton}
-            onPress={() => Linking.openURL(dj.tiktokUrl)}
-          >
-            <Text style={styles.socialIcon}>🎬</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {/* Tabs pour Sets Audio, Vidéos, Photos, Stories */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'audio' && styles.tabActive]}
-          onPress={() => setActiveTab('audio')}
-        >
-          <Text style={[styles.tabText, activeTab === 'audio' && styles.tabTextActive]}>
-            {language === 'fr' ? 'SETS AUDIO' : 'AUDIO SETS'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'video' && styles.tabActive]}
-          onPress={() => setActiveTab('video')}
-        >
-          <Text style={[styles.tabText, activeTab === 'video' && styles.tabTextActive]}>
-            {language === 'fr' ? 'VIDÉOS' : 'VIDEOS'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'photo' && styles.tabActive]}
-          onPress={() => setActiveTab('photo')}
-        >
-          <Text style={[styles.tabText, activeTab === 'photo' && styles.tabTextActive]}>
-            {language === 'fr' ? 'PHOTOS' : 'PHOTOS'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stories' && styles.tabActive]}
-          onPress={() => setActiveTab('stories')}
-        >
-          <Text style={[styles.tabText, activeTab === 'stories' && styles.tabTextActive]}>
-            {language === 'fr' ? 'STORIES' : 'STORIES'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Contenu des tabs */}
-      {activeTab === 'audio' && (
-        <View style={styles.mediaContent}>
-          {media.audio && media.audio.length > 0 ? (
-            media.audio
-              .filter(audio => {
-                // Filtrer les fichiers audio invalides
-                const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
-                return audioUrl && typeof audioUrl === 'string';
-              })
-              .map((audio, index) => {
-                const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
-                const audioTitle = audio?.title || `${language === 'fr' ? 'Set audio' : 'Audio Set'} ${index + 1}`;
-                
-                if (!audioUrl || typeof audioUrl !== 'string') {
-                  return null;
-                }
-
-                // Détecter si c'est un fichier local (URI locale qui n'existe que sur l'appareil qui l'a uploadé)
-                const isLocalFileUri = audioUrl.startsWith('file://') || audioUrl.startsWith('content://') || 
-                  audioUrl.startsWith('ph://') || audioUrl.startsWith('assets-library://');
-                
-                // Détecter si c'est un fichier local spécial (assets de l'app)
-                const isLocalAsset = audioUrl.startsWith('local:') ||
-                  (audioTitle && typeof audioTitle === 'string' && (
-                    audioTitle.toLowerCase().includes('tracer') || 
-                    audioTitle.toLowerCase().includes('gogg')
-                  ) && !audioUrl.startsWith('http'));
-
-                // Pour les fichiers locaux uniquement, utiliser require pour charger depuis assets
-                let finalAudioUrl = audioUrl;
-                let isUnavailable = false;
-                
-                if (isLocalFileUri) {
-                  // C'est une URI locale (file://, content://, etc.) - ne fonctionnera pas sur d'autres appareils
-                  isUnavailable = true;
-                  console.warn('[AUDIO] URI locale détectée - non accessible sur d\'autres appareils:', audioUrl);
-                } else if (isLocalAsset) {
-                  // Fichier local dans les assets de l'app
-                  try {
-                    if (audioUrl.includes('gogg') || audioUrl.includes('tracer') || 
-                        (audioTitle && typeof audioTitle === 'string' && audioTitle.toLowerCase().includes('tracer'))) {
-                      // Pour les assets locaux, on peut essayer de les charger
-                      finalAudioUrl = audioUrl;
-                    } else {
-                      finalAudioUrl = audioUrl;
-                    }
-                  } catch (e) {
-                    console.error('Erreur chargement audio local:', e);
-                    finalAudioUrl = audioUrl;
-                  }
-                } else {
-                    // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
-                    finalAudioUrl = normalizeMediaUrl(audioUrl);
-                }
-
-                // Si le fichier est indisponible, afficher un message au lieu du lecteur
-                if (isUnavailable) {
-                  return (
-                    <View key={audio?.id || index} style={styles.audioUnavailableContainer}>
-                      <Text style={styles.audioUnavailableTitle}>{audioTitle}</Text>
-                      <Text style={styles.audioUnavailableText}>
-                        {language === 'fr' 
-                          ? 'Ce fichier audio a été uploadé depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de le re-uploader.' 
-                          : 'This audio file was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.'}
-                      </Text>
-              </View>
-                  );
-                }
-
-                return (
-                  <AudioPlayer
-                    key={audio?.id || index}
-                    audioUrl={finalAudioUrl}
-                    title={audioTitle}
-                  />
-                );
-              })
-          ) : (
-            <Text style={styles.noMedia}>
-              {language === 'fr' ? 'Aucun set audio disponible' : 'No audio sets available'}
+          <TouchableOpacity style={styles.soundcloudButton} onPress={() => Linking.openURL(dj.soundcloudUrl)}>
+            <Text style={styles.soundcloudButtonText}>
+              🎵 {language === 'fr' ? 'Ouvrir SoundCloud' : 'Open SoundCloud'}
             </Text>
-          )}
-            </View>
-      )}
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.emptyHint}>
+            {language === 'fr' ? 'Aucun lien SoundCloud renseigné.' : 'No SoundCloud link provided.'}
+          </Text>
+        )}
+      </View>
 
-      {activeTab === 'video' && (
-        <View style={styles.mediaContent}>
-          {media.videos && media.videos.length > 0 ? (
-            <View style={styles.videoGrid}>
-              {media.videos
-                .filter(video => {
-                  // Filtrer les vidéos invalides
-                  const videoUrl = video?.url || (typeof video === 'string' ? video : null);
-                  return videoUrl && typeof videoUrl === 'string';
-                })
-                .map((video, index) => {
-                const videoUrl = video?.url || (typeof video === 'string' ? video : null);
-                const videoTitle = video?.title || `${language === 'fr' ? 'Vidéo' : 'Video'} ${index + 1}`;
-                
-                // Double vérification (déjà filtré mais sécurité supplémentaire)
-                if (!videoUrl || typeof videoUrl !== 'string') {
-                  return null;
-                }
-                
-                const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-                
-                // Détecter si c'est un fichier local (URI locale qui n'existe que sur l'appareil qui l'a uploadé)
-                const isLocalFileUri = videoUrl.startsWith('file://') || videoUrl.startsWith('content://') || 
-                  videoUrl.startsWith('ph://') || videoUrl.startsWith('assets-library://');
-                
-                // Détecter si c'est un fichier local spécial (assets de l'app)
-                const isLocalAsset = videoUrl.startsWith('local:') ||
-                  (videoTitle && typeof videoTitle === 'string' && (
-                    videoTitle.toLowerCase().includes('tracer') || 
-                    videoTitle.toLowerCase().includes('gogg')
-                  ) && !videoUrl.startsWith('http'));
-                
-                // Pour les fichiers locaux uniquement, utiliser require pour charger depuis assets
-                let finalVideoUrl = videoUrl;
-                let isUnavailable = false;
-                
-                if (isLocalFileUri) {
-                  // C'est une URI locale (file://, content://, etc.) - ne fonctionnera pas sur d'autres appareils
-                  isUnavailable = true;
-                  console.warn('[VIDEO] URI locale détectée - non accessible sur d\'autres appareils:', videoUrl);
-                } else if (isLocalAsset) {
-                  // Fichier local dans les assets de l'app
-                  try {
-                    if (videoUrl.includes('gogg') || videoUrl.includes('tracer') || 
-                        (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
-                      finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
-                    } else {
-                      finalVideoUrl = videoUrl;
-                    }
-                  } catch (e) {
-                    console.error('Erreur chargement vidéo locale:', e);
-                    finalVideoUrl = videoUrl;
-                  }
-                } else {
-                  // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
-                  finalVideoUrl = normalizeMediaUrl(videoUrl);
-                }
-                
-                console.log('[VIDEO DEBUG]', {
-                  originalUrl: videoUrl,
-                  finalUrl: finalVideoUrl,
-                  isYouTube,
-                  isLocalFileUri,
-                  isLocalAsset,
-                  isUnavailable,
-                  title: videoTitle
-                });
-                
-                // Extraire l'ID YouTube pour la miniature
-                let youtubeId = null;
-                if (isYouTube) {
-                  const match = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-                  if (match) youtubeId = match[1];
-                }
-                
-                const thumbnailUrl = youtubeId 
-                  ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
-                  : null;
-                
-                return (
-                  <TouchableOpacity
-                    key={video?.id || index}
-                    style={[styles.videoItem, isUnavailable && styles.videoItemUnavailable]}
-                    onPress={async () => {
-                      if (isUnavailable) {
-                        showError(language === 'fr' 
-                          ? 'Cette vidéo a été uploadée depuis un autre appareil et n\'est pas accessible. Veuillez demander au DJ de la re-uploader.' 
-                          : 'This video was uploaded from another device and is not accessible. Please ask the DJ to re-upload it.');
-                        return;
+      {/* Médias: un seul bouton qui regroupe photos + vidéos */}
+      <View style={styles.mediaSection}>
+        <TouchableOpacity
+          style={[styles.mediaButton, activeTab === 'media' && styles.mediaButtonActive]}
+          onPress={() => setActiveTab(activeTab === 'media' ? 'none' : 'media')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.mediaButtonText}>
+            📸 {language === 'fr' ? 'Médias (photos & vidéos)' : 'Media (photos & videos)'}
+          </Text>
+          <Text style={styles.mediaButtonSub}>
+            {language === 'fr'
+              ? `${media.photos.length} photo(s) • ${media.videos.length} vidéo(s)`
+              : `${media.photos.length} photo(s) • ${media.videos.length} video(s)`}
+          </Text>
+        </TouchableOpacity>
+
+        {activeTab === 'media' && (
+          <View style={styles.mediaContent}>
+            {/* Vidéos */}
+            {media.videos && media.videos.length > 0 ? (
+              <>
+                <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'VIDÉOS' : 'VIDEOS'}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoRow}>
+                  {media.videos
+                    .filter(video => {
+                      const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+                      return videoUrl && typeof videoUrl === 'string';
+                    })
+                    .map((video, index) => {
+                      const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+                      const videoTitle = video?.title || `${language === 'fr' ? 'Vidéo' : 'Video'} ${index + 1}`;
+                      if (!videoUrl || typeof videoUrl !== 'string') return null;
+
+                      const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+                      const isLocalFileUri = videoUrl.startsWith('file://') || videoUrl.startsWith('content://') ||
+                        videoUrl.startsWith('ph://') || videoUrl.startsWith('assets-library://');
+                      const isLocalAsset = videoUrl.startsWith('local:') ||
+                        (videoTitle && typeof videoTitle === 'string' && (
+                          videoTitle.toLowerCase().includes('tracer') ||
+                          videoTitle.toLowerCase().includes('gogg')
+                        ) && !videoUrl.startsWith('http'));
+
+                      let finalVideoUrl = videoUrl;
+                      let isUnavailable = false;
+                      if (isLocalFileUri) {
+                        isUnavailable = true;
+                      } else if (isLocalAsset) {
+                        try {
+                          if (videoUrl.includes('gogg') || videoUrl.includes('tracer') ||
+                              (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
+                            finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
+                          }
+                        } catch {
+                          finalVideoUrl = videoUrl;
+                        }
+                      } else {
+                        finalVideoUrl = normalizeMediaUrl(videoUrl);
                       }
-                      
-                      if (!videoUrl || !finalVideoUrl) {
-                        console.error('[VIDEO ERROR] URL invalide:', { videoUrl, finalVideoUrl });
-                        showError(language === 'fr' 
-                          ? 'URL vidéo invalide.' 
-                          : 'Invalid video URL.');
-                        return;
+
+                      let youtubeId = null;
+                      if (isYouTube) {
+                        const match = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+                        if (match) youtubeId = match[1];
                       }
-                      
-                      console.log('[VIDEO PLAY] Ouverture vidéo:', {
-                        originalUrl: videoUrl,
-                        finalUrl: finalVideoUrl,
-                        isYouTube,
-                        title: videoTitle
-                      });
-                      
-                      // Ouvrir toutes les vidéos dans le lecteur intégré
-                      setSelectedVideo({
-                        url: isYouTube ? videoUrl : finalVideoUrl,
-                        title: videoTitle,
-                        thumbnail: thumbnailUrl,
-                        isYouTube: isYouTube,
-                      });
-                      setVideoPlayerVisible(true);
-                    }}
-                    activeOpacity={0.7}
-                    disabled={isUnavailable}
-                  >
-                    <View style={styles.videoThumbnail}>
-                      {thumbnailUrl ? (
-            <Image
-                          source={{ uri: thumbnailUrl }}
-                          style={styles.videoThumbnailImage}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View style={styles.videoPlaceholder}>
-                          <Text style={styles.videoPlaceholderIcon}>🎬</Text>
-                          <Text style={styles.videoPlaceholderText} numberOfLines={2}>
+                      const thumbnailUrl = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null;
+
+                      return (
+                        <TouchableOpacity
+                          key={video?.id || index}
+                          style={[styles.videoCard, isUnavailable && styles.videoItemUnavailable]}
+                          onPress={() => {
+                            if (isUnavailable) {
+                              showError(language === 'fr'
+                                ? 'Vidéo non accessible (upload local).'
+                                : 'Video not accessible (local upload).');
+                              return;
+                            }
+                            setSelectedVideo({
+                              url: isYouTube ? videoUrl : finalVideoUrl,
+                              title: videoTitle,
+                              thumbnail: thumbnailUrl,
+                              isYouTube: isYouTube,
+                            });
+                            setVideoPlayerVisible(true);
+                          }}
+                          activeOpacity={0.7}
+                          disabled={isUnavailable}
+                        >
+                          <View style={styles.videoThumbnail}>
+                            {thumbnailUrl ? (
+                              <Image
+                                source={{ uri: thumbnailUrl }}
+                                style={styles.videoThumbnailImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={styles.videoPlaceholder}>
+                                <Text style={styles.videoPlaceholderIcon}>🎬</Text>
+                                <Text style={styles.videoPlaceholderText} numberOfLines={2}>
+                                  {videoTitle}
+                                </Text>
+                              </View>
+                            )}
+                            {!isUnavailable && (
+                              <View style={styles.playButtonOverlay}>
+                                <Text style={styles.playIconWhite}>▶</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]} numberOfLines={2}>
                             {videoTitle}
                           </Text>
-            </View>
-                      )}
-                      {isUnavailable && (
-                        <View style={styles.unavailableOverlay}>
-                          <Text style={styles.unavailableText}>
-                            {language === 'fr' ? 'Non disponible' : 'Unavailable'}
-                          </Text>
-                        </View>
-                      )}
-                      {!isUnavailable && (
-                        <View style={styles.playButtonOverlay}>
-                          <Text style={styles.playIconWhite}>▶</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]} numberOfLines={2}>
-                      {videoTitle}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.noMedia}>
-              {language === 'fr' ? 'Aucune vidéo disponible' : 'No videos available'}
-            </Text>
-          )}
-        </View>
-      )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                </ScrollView>
+              </>
+            ) : null}
 
-      {activeTab === 'photo' && (
-        <View style={styles.mediaContent}>
-          {media.photos && media.photos.length > 0 ? (
-            <View style={styles.photoGrid}>
-              {media.photos
-                .filter(photo => {
-                  // Filtrer les photos invalides
-                  const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
-                  return photoUrl && typeof photoUrl === 'string';
-                })
-                .map((photo, index) => {
-                  // Gérer les deux formats : objet { url } ou string
-                  let photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
-                  
-                  if (!photoUrl || typeof photoUrl !== 'string') {
-                    return null;
-                  }
-                  
-                  // Normaliser l'URL (remplace les anciennes URLs de tunnel et convertit les URLs relatives)
-                  photoUrl = normalizeMediaUrl(photoUrl);
-                  
-                  return (
-            <Image
-                      key={photo?.id || index}
-                      source={{ uri: photoUrl }}
-                      style={styles.photoItem}
-                      resizeMode="cover"
-                    />
-                  );
-                })}
+            {/* Photos */}
+            {media.photos && media.photos.length > 0 ? (
+              <>
+                <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'PHOTOS' : 'PHOTOS'}</Text>
+                <View style={styles.photoGrid}>
+                  {media.photos
+                    .filter(photo => {
+                      const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
+                      return photoUrl && typeof photoUrl === 'string';
+                    })
+                    .map((photo, index) => {
+                      let photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
+                      if (!photoUrl || typeof photoUrl !== 'string') return null;
+                      photoUrl = normalizeMediaUrl(photoUrl);
+                      return (
+                        <TouchableOpacity
+                          key={photo?.id || index}
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            setSelectedPhotoUrl(photoUrl);
+                            setPhotoModalVisible(true);
+                          }}
+                        >
+                          <Image
+                          key={photo?.id || index}
+                          source={{ uri: photoUrl }}
+                          style={styles.photoItem}
+                          resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                </View>
+              </>
+            ) : null}
+
+            {(!media.photos?.length && !media.videos?.length) ? (
+              <Text style={styles.noMedia}>
+                {language === 'fr' ? 'Aucun média disponible' : 'No media available'}
+              </Text>
+            ) : null}
           </View>
-          ) : (
-            <Text style={styles.noMedia}>
-              {language === 'fr' ? 'Aucune photo disponible' : 'No photos available'}
-            </Text>
-          )}
+        )}
+      </View>
+
+      {/* Photo en plein écran */}
+      <Modal
+        visible={photoModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setPhotoModalVisible(false);
+          setSelectedPhotoUrl(null);
+        }}
+      >
+        <View style={styles.photoModalOverlay}>
+          <TouchableOpacity
+            style={styles.photoModalClose}
+            onPress={() => {
+              setPhotoModalVisible(false);
+              setSelectedPhotoUrl(null);
+            }}
+          >
+            <Text style={styles.photoModalCloseText}>✕</Text>
+          </TouchableOpacity>
+          {selectedPhotoUrl ? (
+            <Image source={{ uri: selectedPhotoUrl }} style={styles.photoModalImage} resizeMode="contain" />
+          ) : null}
         </View>
-      )}
+      </Modal>
 
       {/* Section Avis et Matériel */}
       <View style={styles.bottomSection}>
@@ -903,7 +716,7 @@ export default function DjProfilePage() {
         visible={toast.visible}
         onHide={hideToast}
       />
-    </ScrollView>
+      </ScrollView>
   );
 }
 
@@ -931,7 +744,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   header: {
-    height: 300,
     position: 'relative',
   },
   backgroundImage: {
@@ -947,10 +759,64 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   profileSection: {
-    flex: 1,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 20,
+  },
+  quickStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+  },
+  quickStatPill: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 11, 14, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  quickStatPillMuted: {
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  quickStatLabel: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  quickStatValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quickStatStars: {
+    flexShrink: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  quickStatValue: {
+    color: '#FF1744',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  quickStatValueSmall: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  headerBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    marginTop: 4,
   },
   profileImageContainer: {
     width: 120,
@@ -1000,23 +866,14 @@ const styles = StyleSheet.create({
   bookButtonTextDisabled: {
     color: 'rgba(255,255,255,0.6)',
   },
-  infoSection: {
-    flexDirection: 'row',
-    padding: 20,
+  card: {
+    marginHorizontal: 20,
+    marginTop: 16,
     backgroundColor: '#1a1a1f',
-  },
-  infoColumn: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  bioColumn: {
-    flex: 1,
-    paddingLeft: 10,
-  },
-  divider: {
-    width: 1,
-    backgroundColor: 'rgba(255,23,68,0.3)',
-    marginHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.22)',
+    borderRadius: 18,
+    padding: 18,
   },
   sectionTitle: {
     color: '#FF1744',
@@ -1049,48 +906,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  socialSection: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 12,
+  bioTextEmpty: {
+    color: 'rgba(255,255,255,0.55)',
+    fontStyle: 'italic',
   },
-  socialButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 12,
+  },
+  badge: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,23,68,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
-    backgroundColor: 'rgba(255,23,68,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: 'rgba(255,23,68,0.28)',
   },
-  socialIcon: {
-    fontSize: 24,
+  badgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  badgeSecondary: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    alignItems: 'center',
+  badgeSecondaryText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
   },
-  tabActive: {
-    borderBottomColor: '#FF1744',
-    backgroundColor: 'rgba(255,23,68,0.1)',
-  },
-  tabText: {
+  badgesHint: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginBottom: 12,
   },
-  tabTextActive: {
+  soundcloudButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.45)',
+    backgroundColor: 'rgba(255,23,68,0.10)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  soundcloudButtonText: {
     color: '#FF1744',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  emptyHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontStyle: 'italic',
   },
   audioPlayer: {
     flexDirection: 'row',
@@ -1158,6 +1033,55 @@ const styles = StyleSheet.create({
   mediaContent: {
     paddingHorizontal: 20,
     marginBottom: 30,
+  },
+  videoRow: {
+    gap: 12,
+    paddingBottom: 6,
+    paddingRight: 10,
+  },
+  videoCard: {
+    width: 190,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 16,
+    padding: 10,
+  },
+  mediaSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  mediaButton: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
+  mediaButtonActive: {
+    borderColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(255,23,68,0.08)',
+  },
+  mediaButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  mediaButtonSub: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mediaSubtitle: {
+    color: '#FF1744',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 16,
+    marginBottom: 10,
+    textTransform: 'uppercase',
   },
   noMedia: {
     color: 'rgba(255,255,255,0.5)',
@@ -1280,6 +1204,36 @@ const styles = StyleSheet.create({
     height: (width - 60) / 3,
     borderRadius: 8,
     backgroundColor: '#1a1a1f',
+  },
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  photoModalImage: {
+    width: '100%',
+    height: '80%',
+    borderRadius: 18,
+  },
+  photoModalClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalCloseText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '900',
   },
   bottomSection: {
     flexDirection: 'row',
@@ -1415,6 +1369,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: 'rgba(11, 11, 14, 0.7)',
     borderRadius: 8,
+  },
+  menuButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1000,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(11, 11, 14, 0.7)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButtonText: {
     color: '#FF1744',

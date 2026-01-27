@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.insanenightsdays.mobile",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sélectionner des images et vidéos.",
         "NSPhotoLibraryAddUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sauvegarder des images.",
@@ -21,11 +22,16 @@
       }
     },
     "android": {
+      "package": "com.insanenightsdays.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -33,7 +39,18 @@
     "plugins": [
       "expo-audio",
       "expo-video",
-      "expo-asset"
-    ]
+      "expo-asset",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.insanenightsdays.mobile"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a1612b7f-f046-4ead-9ca4-584c238abb20"
+      }
+    }
   }
 }

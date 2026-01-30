@@ -83,6 +83,18 @@ Votre code React actuel peut être adapté pour React Native, mais il faudra :
    npx expo start
    ```
 
+#### ⚠️ Android: erreur “Invalid input to toASCII”
+Si sur Android tu n’arrives pas à ouvrir le QR code en **Tunnel** avec une erreur du type **“Invalid input to toASCII”**, c’est généralement parce que le sous-domaine du tunnel contient un caractère invalide pour un hostname (ex: `_`).
+
+➡️ Solution (automatique) :
+
+```bash
+cd insane-nights-days-mobile
+npm run tunnel:android
+```
+
+Puis scanne le QR code avec **Expo Go**.
+
 3. **Scanner le QR code** :
    - Android : Ouvrir Expo Go et scanner le QR code
    - iOS : Ouvrir l'app Caméra et scanner le QR code, puis ouvrir dans Expo Go

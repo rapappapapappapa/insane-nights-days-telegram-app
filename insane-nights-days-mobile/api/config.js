@@ -7,7 +7,8 @@ import { retryApiCall, isRetryableError } from '../utils/retry';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://trek-fort-split-warren.trycloudflare.com',
+  // En prod, on utilise Railway (Cloudflare tunnel = uniquement dev local et instable).
+  BASE_URL: (process.env.EXPO_PUBLIC_API_BASE || 'https://insane-nights-days-telegram-app-production.up.railway.app').replace(/\/$/, ''),
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,

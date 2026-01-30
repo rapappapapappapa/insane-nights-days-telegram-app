@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiBase } from '../apiBase';
 
 const HomePage = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -20,7 +21,7 @@ const HomePage = () => {
       console.log('Debug: walletAddress généré:', walletAddress); // TODO: Supprimer ce log en prod
       
       // Appel à l'API backend
-      const response = await fetch('http://172.20.10.7:5000/api/wallet/connect', {
+      const response = await fetch(`${getApiBase()}/api/wallet/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

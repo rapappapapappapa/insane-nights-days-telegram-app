@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getApiBase } from '../apiBase';
 
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
@@ -14,7 +15,7 @@ const EventsPage = () => {
   const fetchEvents = async () => {
     try {
       console.log('Fetching events...'); // Debug log
-      const response = await fetch('http://172.20.10.7:5000/api/events');
+      const response = await fetch(`${getApiBase()}/api/events`);
       const data = await response.json();
       
       if (data.success) {

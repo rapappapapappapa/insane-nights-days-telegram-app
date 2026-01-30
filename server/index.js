@@ -32,7 +32,7 @@ const {
 } = require('./utils/mediaStorage');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 8080;
 
 // Derrière Railway/Cloudflare: utiliser X-Forwarded-*
 app.set('trust proxy', 1);
@@ -6544,7 +6544,8 @@ updateEventStatuses();
 // Mettre à jour les statuts toutes les 5 minutes
 setInterval(updateEventStatuses, 5 * 60 * 1000);
 
-app.listen(PORT, '0.0.0.0', () => {
+// IMPORTANT (Railway): don't force IPv4-only bind; let Node bind all interfaces.
+app.listen(PORT, () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   console.log(`⏰ Mise à jour automatique des statuts d'événements activée (toutes les 5 minutes)`);

@@ -191,11 +191,9 @@ export default function SelectDjPage() {
                   </View>
                   <View style={styles.djInfo}>
                     <Text style={styles.djName}>{dj.artistName || 'DJ'}</Text>
-                    {dj.hourlyRate && (
-                      <Text style={styles.djRate}>
-                        💰 {dj.hourlyRate} €/h
-                      </Text>
-                    )}
+                    <Text style={styles.djRate}>
+                      🤝 {language === 'fr' ? 'Prix à convenir' : 'Price to agree'}
+                    </Text>
                   </View>
                   {isSelected && (
                     <View style={styles.selectedBadge}>

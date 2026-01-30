@@ -41,6 +41,7 @@ const authenticateToken = async (req, res, next) => {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role || 'USER',
     };
     
     next();
@@ -52,7 +53,21 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware admin
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Non authentifié.' });
+  }
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ success: false, message: 'Accès admin requis.' });
+  }
+  return next();
+};
+
 module.exports = {
   authenticateToken,
+  requireAdmin,
 };
 

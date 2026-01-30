@@ -19,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../api/config';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import * as Stripe from '../utils/stripe';
 
 const mockEvents = [
   {
@@ -143,18 +144,13 @@ export default function EventDetailPage() {
 
     setBuyingTicket(true);
     try {
-      // 2) Ouvrir PaymentSheet (⚠️ nécessite dev build/EAS, pas Expo Go)
-      let stripeModule;
-      try {
-        // eslint-disable-next-line global-require
-        stripeModule = require('@stripe/stripe-react-native');
-      } catch (e) {
-        // ✅ Fallback Expo Go: achat direct (sans Stripe) pour continuer à tester l'app
+      // ✅ Web: Stripe natif indisponible -> fallback mode test
+      if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
         Alert.alert(
-          language === 'fr' ? 'Paiement Stripe indisponible (Expo Go)' : 'Stripe unavailable (Expo Go)',
+          language === 'fr' ? 'Paiement Stripe indisponible (Web)' : 'Stripe unavailable (Web)',
           language === 'fr'
-            ? 'Stripe nécessite un Dev Build / EAS. Voulez-vous continuer en mode test (achat ticket sans paiement) ?'
-            : 'Stripe requires a Dev Build / EAS. Continue in test mode (buy ticket without payment)?',
+            ? 'Stripe natif n’est pas disponible sur la version web. Voulez-vous continuer en mode démo (achat ticket sans paiement) ?'
+            : 'Native Stripe is not available on web. Continue in demo mode (buy ticket without payment)?',
           [
             { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
             {
@@ -183,8 +179,6 @@ export default function EventDetailPage() {
         return;
       }
 
-      const { initStripe, initPaymentSheet, presentPaymentSheet } = stripeModule;
-
       // 1) Créer PaymentIntent côté backend (uniquement si Stripe est dispo)
       const intentRes = await api.createTicketPaymentIntent(user.token, eventId, 1);
       if (!intentRes?.success || !intentRes?.paymentIntentClientSecret || !intentRes?.paymentIntentId) {
@@ -194,7 +188,7 @@ export default function EventDetailPage() {
 
       // 2) Initialiser Stripe (nécessaire même si on n'utilise pas StripeProvider)
       try {
-        await initStripe({
+        await Stripe.initStripe({
           publishableKey: intentRes.publishableKey,
           urlScheme: 'insane-nights-days-mobile',
         });
@@ -208,7 +202,7 @@ export default function EventDetailPage() {
         return;
       }
 
-      const init = await initPaymentSheet({
+      const init = await Stripe.initPaymentSheet({
         merchantDisplayName: 'Insane Nights & Days',
         paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
         allowsDelayedPaymentMethods: true,
@@ -219,7 +213,7 @@ export default function EventDetailPage() {
         return;
       }
 
-      const presented = await presentPaymentSheet();
+      const presented = await Stripe.presentPaymentSheet();
       if (presented?.error) {
         showError(presented.error.message || (language === 'fr' ? 'Paiement annulé.' : 'Payment cancelled.'));
         return;

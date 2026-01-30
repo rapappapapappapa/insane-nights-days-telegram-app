@@ -6,8 +6,14 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ✅ Rôles pour administration (prod)
+enum UserRole {
+  USER
+  ADMIN
 }
 
 model User {
@@ -15,6 +21,7 @@ model User {
   email             String   @unique
   username          String
   password          String
+  role              UserRole @default(USER)
   score             Int      @default(0)
   level             Int      @default(1)
   accountType       String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)
@@ -200,6 +207,7 @@ model VenueMedia {
   venue     UserVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
   type      String // 'photo' ou 'video'
   url       String
+  storageKey String? // ✅ clé objet (R2/S3) si stockage externe
   title     String?
   thumbnail String?
   createdAt DateTime  @default(now())
@@ -268,6 +276,24 @@ model EventDj {
   event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
   djId      String // User.id du DJ
   status    InvitationStatus @default(PENDING) // Statut de l'invitation
+
+  // ✅ Paiement booking (Booker -> DJ) - MVP: statut + facture
+  paymentStatus BookingPaymentStatus @default(UPCOMING)
+  paymentAmount Int?                // en centimes (ex: 50000 = 500€)
+  paymentCurrency String            @default("eur")
+  paidAt        DateTime?
+  invoiceNumber String?
+
+  // ✅ Contrat booking (Booker <-> DJ) - MVP intégré au chat privé
+  contractStatus BookingContractStatus @default(DRAFT)
+  contractVersion Int                 @default(1)
+  contractPayload Json?
+  contractHash    String?
+  contractSentAt  DateTime?
+  contractSentBy  ContractParty?
+  bookerAcceptedAt DateTime?
+  djAcceptedAt     DateTime?
+
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
@@ -278,6 +304,26 @@ model EventDj {
   @@index([eventId])
   @@index([djId])
   @@index([status])
+}
+
+// ✅ Statut de paiement d'un booking (Booker -> DJ)
+enum BookingPaymentStatus {
+  UPCOMING // à venir (pas encore dû / event à venir)
+  PENDING  // en attente (dû mais non payé)
+  PAID     // payé
+}
+
+// ✅ Statut de contrat d'un booking
+enum BookingContractStatus {
+  DRAFT // brouillon (modifiable par booker)
+  SENT  // envoyé (dernière proposition en attente de l'autre partie)
+  SIGNED // signé par les deux parties (booker + DJ)
+}
+
+// ✅ Qui a envoyé la dernière proposition
+enum ContractParty {
+  BOOKER
+  DJ
 }
 
 // Enum pour le type de message
@@ -360,6 +406,7 @@ model DjMedia {
   dj        UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
   type      String // 'photo', 'video', 'audio'
   url       String // URL du fichier (pour l'instant, on stocke juste l'URI local, à remplacer par une vraie URL de stockage)
+  storageKey String? // ✅ clé objet (R2/S3) si stockage externe
   title     String? // Titre optionnel
   thumbnail String? // URL de la miniature (pour vidéos)
   createdAt DateTime @default(now())
@@ -381,6 +428,7 @@ model FeedPost {
   booker    UserBooker? @relation(fields: [bookerId], references: [id], onDelete: Cascade)
   content   String    // Contenu textuel du post
   imageUrl  String?   // URL de l'image (optionnel)
+  imageStorageKey String? // ✅ clé objet (R2/S3) si stockage externe
   likes     Int       @default(0) // Compteur de likes (déprécié, utiliser FeedPostLike)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

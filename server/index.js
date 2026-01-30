@@ -21,14 +21,31 @@ const fs = require('fs');
 // Import des routes modulaires
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
-const { authenticateToken } = require('./middleware/auth');
+const { authenticateToken, requireAdmin } = require('./middleware/auth');
 const authController = require('./controllers/authController');
+const bcrypt = require('bcryptjs');
+const {
+  MEDIA_STORAGE,
+  makeObjectKey,
+  uploadToR2,
+  deleteFromR2,
+} = require('./utils/mediaStorage');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Derrière Railway/Cloudflare: utiliser X-Forwarded-*
+app.set('trust proxy', 1);
+
 // Configuration Express
-app.use(cors());
+// ✅ CORS (indispensable pour la Web App / pages.dev)
+// On utilise un CORS large (demo) car l'app utilise des Bearer tokens (pas de cookies).
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.options('*', cors());
 // Note: Stripe webhooks ont besoin du body brut pour vérifier la signature.
 app.use(express.json({
   limit: '50mb',
@@ -40,8 +57,82 @@ app.use(express.json({
 })); // Augmenter la limite pour les vidéos
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// ✅ Healthcheck Railway
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, status: 'ok' });
+});
+
+/**
+ * ✅ Admin bootstrap (1ère mise en place)
+ * Permet de créer/promouvoir un ADMIN sans accès DB direct.
+ * Protégé par ADMIN_BOOTSTRAP_KEY (à mettre dans Railway env).
+ *
+ * POST /api/admin/bootstrap
+ * headers: x-admin-bootstrap-key
+ * body: { email, username?, password? }
+ */
+app.post('/api/admin/bootstrap', async (req, res) => {
+  try {
+    const key = req.get('x-admin-bootstrap-key') || req.body?.bootstrapKey;
+    const expected = process.env.ADMIN_BOOTSTRAP_KEY;
+    if (!expected || key !== expected) {
+      return res.status(403).json({ success: false, message: 'Clé bootstrap invalide.' });
+    }
+
+    const { email, username, password } = req.body ?? {};
+    if (!email) return res.status(400).json({ success: false, message: 'email requis.' });
+
+    const existing = await prisma.user.findUnique({ where: { email: String(email).toLowerCase().trim() } });
+    if (existing) {
+      const updated = await prisma.user.update({
+        where: { id: existing.id },
+        data: { role: 'ADMIN' },
+      });
+      return res.json({ success: true, message: 'Utilisateur promu ADMIN.', userId: updated.id });
+    }
+
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ success: false, message: 'password requis (min 6) pour créer un admin.' });
+    }
+
+    const hashed = await bcrypt.hash(String(password), 10);
+    const created = await prisma.user.create({
+      data: {
+        email: String(email).toLowerCase().trim(),
+        username: (username || 'admin').toString().trim(),
+        password: hashed,
+        role: 'ADMIN',
+      },
+    });
+
+    return res.status(201).json({ success: true, message: 'Admin créé.', userId: created.id });
+  } catch (e) {
+    console.error('Erreur admin bootstrap:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Exemple endpoints admin
+app.get('/api/admin/me', authenticateToken, requireAdmin, async (req, res) => {
+  res.json({ success: true, admin: { id: req.user.id, email: req.user.email, username: req.user.username } });
+});
+
+app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, username: true, role: true, activeProfileType: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    res.json({ success: true, users });
+  } catch (e) {
+    console.error('Erreur admin users:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Configuration Multer pour l'upload de fichiers
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, 'uploads', 'media');
     // Créer le dossier s'il n'existe pas
@@ -57,8 +148,8 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
-  storage: storage,
+const uploadLocal = multer({
+  storage: diskStorage,
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB max
   },
@@ -115,8 +206,31 @@ const upload = multer({
   },
 });
 
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // même filtre que local
+    const allowedMimes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence',
+      'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo',
+      'video/3gpp', 'video/3gpp2',
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/x-m4a',
+    ];
+    if (allowedMimes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error(`Type de fichier non autorisé: ${file.mimetype}`));
+  },
+});
+
+// Servir les fichiers statiques uniquement en mode local
+if (MEDIA_STORAGE === 'local') {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 // Servir les fichiers uploadés de manière statique
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// (déplacé plus haut: conditionnel selon MEDIA_STORAGE)
 
 // Initialisation Prisma
 const prisma = new PrismaClient();
@@ -2130,7 +2244,12 @@ app.get('/api/dj/:identifier/events', async (req, res) => {
 });
 
 // Endpoint pour uploader des fichiers médias pour un DJ
-app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'), async (req, res) => {
+app.post(
+  '/api/dj/:djId/media/upload',
+  authenticateToken,
+  (req, res, next) =>
+    (MEDIA_STORAGE === 'r2' ? uploadMemory.single('file') : uploadLocal.single('file'))(req, res, next),
+  async (req, res) => {
   try {
     const { djId } = req.params;
     const { type, title, thumbnail } = req.body;
@@ -2177,15 +2296,25 @@ app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'),
       });
     }
 
-    // Construire l'URL publique du fichier
-    // Priorité : PUBLIC_URL (variable d'environnement) > Origin/Referer > Host de la requête
-    // Cela garantit que les médias sont toujours accessibles via le tunnel Cloudflare
-    const publicUrl = process.env.PUBLIC_URL;
-    const origin = req.get('origin') || req.get('referer');
-    const baseUrl = publicUrl 
-      ? publicUrl.replace(/\/$/, '') 
-      : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
-    const fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+    let fileUrl = null;
+    let storageKey = null;
+    if (MEDIA_STORAGE === 'r2') {
+      const key = makeObjectKey('media', req.file.originalname);
+      const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
+      fileUrl = uploaded.url;
+      storageKey = uploaded.key;
+    } else {
+      // Construire l'URL publique du fichier
+      // Priorité : PUBLIC_URL (variable d'environnement) > Origin/Referer > Host de la requête
+      // Cela garantit que les médias sont toujours accessibles via le tunnel Cloudflare
+      const publicUrl = process.env.PUBLIC_URL;
+      const origin = req.get('origin') || req.get('referer');
+      const baseUrl = publicUrl
+        ? publicUrl.replace(/\/$/, '')
+        : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
+      fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+      storageKey = `uploads/media/${req.file.filename}`;
+    }
 
     // Si c'est une photo de profil ou bannière, supprimer l'ancienne
     if (title === 'profile' || title === 'banner') {
@@ -2197,9 +2326,15 @@ app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'),
         },
       });
       
-      // Supprimer les anciens fichiers du disque
+      // Supprimer les anciens fichiers (local) / objets (R2)
       for (const old of oldMedia) {
-        if (old.url && old.url.includes('/uploads/media/')) {
+        if (MEDIA_STORAGE === 'r2') {
+          try {
+            await deleteFromR2({ key: old.storageKey, url: old.url });
+          } catch (e) {
+            // best-effort
+          }
+        } else if (old.url && old.url.includes('/uploads/media/')) {
           const oldFilePath = path.join(__dirname, 'uploads', 'media', path.basename(old.url));
           if (fs.existsSync(oldFilePath)) {
             fs.unlinkSync(oldFilePath);
@@ -2221,6 +2356,7 @@ app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'),
         djId,
         type,
         url: fileUrl,
+        storageKey,
         title: title || null,
         thumbnail: thumbnail || null,
       },
@@ -2253,7 +2389,12 @@ app.post('/api/dj/:djId/media/upload', authenticateToken, upload.single('file'),
 });
 
 // Endpoint pour uploader des fichiers médias pour un lieu
-app.post('/api/venue/:venueId/media/upload', authenticateToken, upload.single('file'), async (req, res) => {
+app.post(
+  '/api/venue/:venueId/media/upload',
+  authenticateToken,
+  (req, res, next) =>
+    (MEDIA_STORAGE === 'r2' ? uploadMemory.single('file') : uploadLocal.single('file'))(req, res, next),
+  async (req, res) => {
   try {
     const { venueId } = req.params;
     const { type, title, thumbnail } = req.body;
@@ -2300,19 +2441,30 @@ app.post('/api/venue/:venueId/media/upload', authenticateToken, upload.single('f
       });
     }
 
-    // Construire l'URL publique du fichier (utilise PUBLIC_URL ou l'origine de la requête)
-    const publicUrl = process.env.PUBLIC_URL;
-    const origin = req.get('origin') || req.get('referer');
-    const baseUrl = publicUrl
-      ? publicUrl.replace(/\/$/, '')
-      : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
-    const fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+    let fileUrl = null;
+    let storageKey = null;
+    if (MEDIA_STORAGE === 'r2') {
+      const key = makeObjectKey('media', req.file.originalname);
+      const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
+      fileUrl = uploaded.url;
+      storageKey = uploaded.key;
+    } else {
+      // Construire l'URL publique du fichier (utilise PUBLIC_URL ou l'origine de la requête)
+      const publicUrl = process.env.PUBLIC_URL;
+      const origin = req.get('origin') || req.get('referer');
+      const baseUrl = publicUrl
+        ? publicUrl.replace(/\/$/, '')
+        : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
+      fileUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+      storageKey = `uploads/media/${req.file.filename}`;
+    }
 
     const media = await prisma.venueMedia.create({
       data: {
         venueId,
         type,
         url: fileUrl,
+        storageKey,
         title: title || null,
         thumbnail: thumbnail || null,
       },
@@ -2334,7 +2486,7 @@ app.post('/api/venue/:venueId/media/upload', authenticateToken, upload.single('f
   } catch (error) {
     console.error('[UPLOAD VENUE MEDIA FILE] Erreur upload média:', error);
     // Supprimer le fichier en cas d'erreur
-    if (req.file) {
+    if (MEDIA_STORAGE === 'local' && req.file && req.file.filename) {
       const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -2435,8 +2587,14 @@ app.delete('/api/venue/:venueId/media/:mediaId', authenticateToken, async (req, 
 
     await prisma.venueMedia.delete({ where: { id: mediaId } });
 
-    // Supprimer le fichier local s'il provient du dossier uploads/media
-    if (media.url && media.url.includes('/uploads/media/')) {
+    // Supprimer le fichier/objet
+    if (MEDIA_STORAGE === 'r2') {
+      try {
+        await deleteFromR2({ key: media.storageKey, url: media.url });
+      } catch (e) {
+        // best-effort
+      }
+    } else if (media.url && media.url.includes('/uploads/media/')) {
       const filename = media.url.split('/uploads/media/')[1];
       if (filename) {
         const filePath = path.join(__dirname, 'uploads', 'media', filename);
@@ -2615,6 +2773,12 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
       },
     });
 
+    const resolvePaymentStatus = (ed, eventStatus) => {
+      if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
+      if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
+      return 'UPCOMING';
+    };
+
     const bookings = eventDjs.map((ed) => ({
       id: ed.id,
       eventId: ed.event.id,
@@ -2624,6 +2788,11 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
       eventLocation: ed.event.location,
       eventStatus: ed.event.status,
       invitationStatus: ed.status, // Statut de l'invitation (PENDING, ACCEPTED, REJECTED)
+      paymentStatus: resolvePaymentStatus(ed, ed.event.status),
+      paymentAmount: ed.paymentAmount ?? null,
+      paymentCurrency: ed.paymentCurrency ?? 'eur',
+      paidAt: ed.paidAt ?? null,
+      invoiceNumber: ed.invoiceNumber ?? null,
       venue: ed.event.venue ? {
         id: ed.event.venue.id,
         name: ed.event.venue.venueName,
@@ -4051,9 +4220,26 @@ app.delete('/api/dj/media/:mediaId', authenticateToken, async (req, res) => {
       });
     }
 
-    await prisma.djMedia.delete({
-      where: { id: mediaId },
-    });
+    const toDelete = { url: media.url, storageKey: media.storageKey };
+
+    await prisma.djMedia.delete({ where: { id: mediaId } });
+
+    // Supprimer le fichier/objet
+    if (MEDIA_STORAGE === 'r2') {
+      try {
+        await deleteFromR2({ key: toDelete.storageKey, url: toDelete.url });
+      } catch (e) {
+        // best-effort
+      }
+    } else if (toDelete.url && toDelete.url.includes('/uploads/media/')) {
+      const filename = toDelete.url.split('/uploads/media/')[1];
+      if (filename) {
+        const filePath = path.join(__dirname, 'uploads', 'media', filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    }
 
     res.json({
       success: true,
@@ -4486,9 +4672,22 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
         // Créer un map des statuts d'invitation et eventDjId par userId
         const invitationStatusMap = {};
         const eventDjIdMap = {};
+        const paymentInfoMap = {};
         event.eventDjs.forEach((ed) => {
           invitationStatusMap[ed.djId] = ed.status;
           eventDjIdMap[ed.djId] = ed.id; // ID de l'EventDj pour le chat
+          const resolvePaymentStatus = () => {
+            if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
+            if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
+            return 'UPCOMING';
+          };
+          paymentInfoMap[ed.djId] = {
+            paymentStatus: resolvePaymentStatus(),
+            paymentAmount: ed.paymentAmount ?? null,
+            paymentCurrency: ed.paymentCurrency ?? 'eur',
+            paidAt: ed.paidAt ?? null,
+            invoiceNumber: ed.invoiceNumber ?? null,
+          };
         });
 
         const djUserIds = event.eventDjs.map((ed) => ed.djId);
@@ -4499,8 +4698,6 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           select: {
             userId: true,
             artistName: true,
-            hourlyRate: true,
-            performanceRate: true,
           },
         });
 
@@ -4521,10 +4718,9 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           djs: djs.map((dj) => ({
             userId: dj.userId,
             artistName: dj.artistName,
-            hourlyRate: dj.hourlyRate,
-            performanceRate: dj.performanceRate,
             invitationStatus: invitationStatusMap[dj.userId] || 'PENDING', // Statut de l'invitation
             eventDjId: eventDjIdMap[dj.userId], // ID de l'EventDj pour le chat
+            payment: paymentInfoMap[dj.userId] ?? { paymentStatus: 'UPCOMING' },
           })),
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
@@ -4538,6 +4734,365 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur récupération événements booker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ MVP: Mettre à jour le statut de paiement d'un booking (Booker -> DJ)
+ * @route PUT /api/booker/event-djs/:eventDjId/payment
+ * body: { status: 'UPCOMING'|'PENDING'|'PAID', amount?: number (cents), currency?: 'eur', invoiceNumber?: string }
+ */
+app.put('/api/booker/event-djs/:eventDjId/payment', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { status, amount, currency, invoiceNumber } = req.body ?? {};
+
+    const valid = ['UPCOMING', 'PENDING', 'PAID'];
+    if (!status || !valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'status doit être UPCOMING, PENDING ou PAID.' });
+    }
+
+    const ed = await prisma.eventDj.findUnique({
+      where: { id: eventDjId },
+      include: {
+        event: { include: { booker: true } },
+      },
+    });
+    if (!ed) return res.status(404).json({ success: false, message: 'Booking (EventDj) introuvable.' });
+
+    // Vérifier que le booker connecté possède cet event
+    const isOwner = ed.event?.booker?.userId === userId;
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const nextInvoiceNumber =
+      (typeof invoiceNumber === 'string' && invoiceNumber.trim())
+        ? invoiceNumber.trim()
+        : (status === 'PAID' && !ed.invoiceNumber)
+          ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
+          : ed.invoiceNumber;
+
+    const next = await prisma.eventDj.update({
+      where: { id: eventDjId },
+      data: {
+        paymentStatus: status,
+        paymentAmount: typeof amount === 'number' ? Math.max(0, Math.floor(amount)) : ed.paymentAmount,
+        paymentCurrency: typeof currency === 'string' && currency ? currency.toLowerCase() : ed.paymentCurrency,
+        paidAt: status === 'PAID' ? new Date() : null,
+        invoiceNumber: nextInvoiceNumber,
+      },
+    });
+
+    return res.json({
+      success: true,
+      payment: {
+        paymentStatus: next.paymentStatus,
+        paymentAmount: next.paymentAmount,
+        paymentCurrency: next.paymentCurrency,
+        paidAt: next.paidAt,
+        invoiceNumber: next.invoiceNumber,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur update payment booking:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Contrat booking (MVP) intégré au chat privé Booker <-> DJ
+ *
+ * Flow:
+ * - Booker édite un DRAFT (payload JSON)
+ * - Booker "envoie" => status SENT + bookerAcceptedAt + contractHash
+ * - DJ "accepte" => status SIGNED + djAcceptedAt (hash immuable)
+ */
+
+const stableStringify = (obj) => {
+  const seen = new WeakSet();
+  const sorter = (v) => {
+    if (v && typeof v === 'object') {
+      if (seen.has(v)) return null;
+      seen.add(v);
+      if (Array.isArray(v)) return v.map(sorter);
+      return Object.keys(v).sort().reduce((acc, k) => {
+        acc[k] = sorter(v[k]);
+        return acc;
+      }, {});
+    }
+    return v;
+  };
+  return JSON.stringify(sorter(obj));
+};
+
+const hashContract = (payload) => {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(stableStringify(payload || {})).digest('hex');
+};
+
+const loadEventDjWithAccess = async (eventDjId, userId) => {
+  const ed = await prisma.eventDj.findUnique({
+    where: { id: eventDjId },
+    include: {
+      event: { include: { booker: true, venue: true } },
+    },
+  });
+  if (!ed) return { error: { code: 404, message: 'Booking (EventDj) introuvable.' } };
+  const isDj = ed.djId === userId;
+  const isBooker = ed.event?.booker?.userId === userId;
+  if (!isDj && !isBooker) return { error: { code: 403, message: 'Accès refusé.' } };
+  return { ed, isDj, isBooker };
+};
+
+// GET contrat
+app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { ed, isDj, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    const sentBy = ed.contractSentBy ?? (ed.contractStatus === 'SENT' ? 'BOOKER' : null);
+
+    return res.json({
+      success: true,
+      contract: {
+        status: ed.contractStatus,
+        version: ed.contractVersion,
+        payload: ed.contractPayload,
+        hash: ed.contractHash,
+        sentAt: ed.contractSentAt,
+        sentBy,
+        bookerAcceptedAt: ed.bookerAcceptedAt,
+        djAcceptedAt: ed.djAcceptedAt,
+      },
+      role: isBooker ? 'BOOKER' : 'DJ',
+      booking: {
+        eventDjId: ed.id,
+        eventId: ed.eventId,
+        eventTitle: ed.event?.title,
+        eventDate: ed.event?.date,
+        eventTime: ed.event?.time,
+        venueName: ed.event?.venue?.venueName ?? null,
+        venueAddress: ed.event?.venue?.address ?? null,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur get contract:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Booker: save draft (modifiable tant que pas SENT/SIGNED)
+app.put('/api/contracts/event-djs/:eventDjId/draft', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ed, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul le booker peut modifier le contrat.' });
+
+    if (ed.contractStatus !== 'DRAFT') {
+      return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé. Crée un nouveau contrat.' });
+    }
+
+    const next = await prisma.eventDj.update({
+      where: { id: eventDjId },
+      data: {
+        contractPayload: payload ?? {},
+        contractHash: null,
+        contractSentAt: null,
+        contractSentBy: null,
+        bookerAcceptedAt: null,
+        djAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        version: next.contractVersion,
+        payload: next.contractPayload,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur save contract draft:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Booker: send contract (booker accepts)
+app.post('/api/contracts/event-djs/:eventDjId/send', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { ed, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul le booker peut envoyer le contrat.' });
+
+    if (ed.contractStatus !== 'DRAFT') {
+      return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+    }
+
+    const payload = ed.contractPayload ?? {};
+    const hash = hashContract(payload);
+
+    const next = await prisma.eventDj.update({
+      where: { id: eventDjId },
+      data: {
+        contractStatus: 'SENT',
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: 'BOOKER',
+        bookerAcceptedAt: new Date(),
+        djAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur send contract:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Booker/DJ: counter-propose (modifie le payload et renvoie à l'autre partie)
+app.post('/api/contracts/event-djs/:eventDjId/counter', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ed, isDj, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    if (ed.contractStatus !== 'SENT') {
+      return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
+    }
+
+    const sender = isBooker ? 'BOOKER' : 'DJ';
+    if (!sender) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+
+    const currentSentBy = ed.contractSentBy ?? 'BOOKER';
+    // On ne peut contre-proposer que si l'autre partie a envoyé la dernière version
+    if (currentSentBy === sender) {
+      return res.status(400).json({ success: false, message: 'Tu as déjà la main. Accepte ou attends la réponse.' });
+    }
+
+    const nextPayload = payload ?? {};
+    const hash = hashContract(nextPayload);
+
+    const next = await prisma.eventDj.update({
+      where: { id: eventDjId },
+      data: {
+        contractStatus: 'SENT',
+        contractPayload: nextPayload,
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: sender,
+        bookerAcceptedAt: sender === 'BOOKER' ? new Date() : null,
+        djAcceptedAt: sender === 'DJ' ? new Date() : null,
+        contractVersion: { increment: 1 },
+      },
+    });
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        version: next.contractVersion,
+        payload: next.contractPayload,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+        djAcceptedAt: next.djAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur counter contract:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Booker/DJ: accept contract (récepteur accepte => SIGNED si les deux ont accepté)
+app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { ed, isDj, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    if (ed.contractStatus !== 'SENT') {
+      return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
+    }
+
+    const role = isBooker ? 'BOOKER' : (isDj ? 'DJ' : null);
+    if (!role) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    const currentSentBy = ed.contractSentBy ?? 'BOOKER';
+    // On ne peut accepter que si l'autre partie a envoyé la dernière version
+    if (currentSentBy === role) {
+      return res.status(400).json({ success: false, message: 'Tu as déjà accepté cette version. Attends la réponse.' });
+    }
+
+    // Re-hash pour revalidation
+    const payload = ed.contractPayload ?? {};
+    const expectedHash = ed.contractHash ?? '';
+    const actualHash = hashContract(payload);
+    if (!expectedHash || expectedHash !== actualHash) {
+      return res.status(400).json({ success: false, message: 'Contrat invalide (hash mismatch). Renvoie le contrat.' });
+    }
+
+    const now = new Date();
+    const data = {
+      // Compat: si un ancien contrat SENT n'a pas sentBy, on le fixe à BOOKER
+      contractSentBy: ed.contractSentBy ?? 'BOOKER',
+      bookerAcceptedAt: role === 'BOOKER' ? now : ed.bookerAcceptedAt,
+      djAcceptedAt: role === 'DJ' ? now : ed.djAcceptedAt,
+    };
+
+    const updated = await prisma.eventDj.update({
+      where: { id: eventDjId },
+      data,
+    });
+
+    const shouldSign = !!updated.bookerAcceptedAt && !!updated.djAcceptedAt;
+    const next = shouldSign
+      ? await prisma.eventDj.update({
+          where: { id: eventDjId },
+          data: { contractStatus: 'SIGNED' },
+        })
+      : updated;
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        version: next.contractVersion,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+        djAcceptedAt: next.djAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur accept contract:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -4664,7 +5219,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Vérifier que les DJs existent et sont disponibles, et récupérer leurs tarifs
+    // Vérifier que les DJs existent et sont disponibles
     const djs = await prisma.userDj.findMany({
       where: {
         userId: { in: djIds },
@@ -4673,8 +5228,6 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       select: {
         userId: true,
         artistName: true,
-        hourlyRate: true,
-        performanceRate: true,
       },
     });
 
@@ -4685,27 +5238,8 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Calculer le prix total automatiquement si durationHours est fourni
-    let calculatedPrice = price ? parseFloat(price) : 0;
-    if (durationHours && parseFloat(durationHours) > 0) {
-      const duration = parseFloat(durationHours);
-      
-      // Base pour le lieu (basée sur la note moyenne si disponible)
-      const venueBase = venue.averageRatingGlobal 
-        ? 50 + (venue.averageRatingGlobal * 10)
-        : 50;
-      
-      // Somme des tarifs horaires de tous les DJs
-      const djsTotal = djs.reduce((sum, dj) => {
-        // Utiliser hourlyRate en priorité, sinon performanceRate, sinon 0
-        const rate = dj.hourlyRate ?? dj.performanceRate ?? 0;
-        return sum + rate;
-      }, 0);
-      
-      // Prix total = base lieu + (somme des tarifs horaires × durée)
-      calculatedPrice = venueBase + (djsTotal * duration);
-      calculatedPrice = Math.max(0, Math.round(calculatedPrice));
-    }
+    // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
+    const calculatedPrice = price ? parseFloat(price) : 0;
 
     // Vérifier les conflits de date/lieu
     // Convertir la date en DateTime
@@ -5084,7 +5618,12 @@ app.get('/api/djs/ranking', async (req, res) => {
  * ✅ AJOUT: Uploader une image pour un post du feed
  * @route POST /api/feed/post/upload-image
  */
-app.post('/api/feed/post/upload-image', authenticateToken, upload.single('image'), async (req, res) => {
+app.post(
+  '/api/feed/post/upload-image',
+  authenticateToken,
+  (req, res, next) =>
+    (MEDIA_STORAGE === 'r2' ? uploadMemory.single('image') : uploadLocal.single('image'))(req, res, next),
+  async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -5111,9 +5650,11 @@ app.post('/api/feed/post/upload-image', authenticateToken, upload.single('image'
     // Vérifier que c'est bien une image
     if (!req.file.mimetype.startsWith('image/')) {
       // Supprimer le fichier si ce n'est pas une image
-      const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (MEDIA_STORAGE === 'local' && req.file.filename) {
+        const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
       return res.status(400).json({
         success: false,
@@ -5121,14 +5662,21 @@ app.post('/api/feed/post/upload-image', authenticateToken, upload.single('image'
       });
     }
 
-    // Construire l'URL publique du fichier
-    // ✅ IMPORTANT: pour les quick tunnels, PUBLIC_URL peut être obsolète.
-    // On préfère donc le Host de la requête (trycloudflare) et on force https.
-    const host = req.get('host');
-    const forwardedProto = req.get('x-forwarded-proto');
-    const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
-    const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
-    const imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+    let imageUrl = null;
+    if (MEDIA_STORAGE === 'r2') {
+      const key = makeObjectKey('feed', req.file.originalname);
+      const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
+      imageUrl = uploaded.url;
+    } else {
+      // Construire l'URL publique du fichier
+      // ✅ IMPORTANT: pour les quick tunnels, PUBLIC_URL peut être obsolète.
+      // On préfère donc le Host de la requête (trycloudflare) et on force https.
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
+      imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+    }
 
     res.json({
       success: true,
@@ -5137,7 +5685,7 @@ app.post('/api/feed/post/upload-image', authenticateToken, upload.single('image'
   } catch (error) {
     console.error('Erreur upload image post:', error);
     // Supprimer le fichier en cas d'erreur
-    if (req.file) {
+    if (MEDIA_STORAGE === 'local' && req.file && req.file.filename) {
       const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
@@ -5186,6 +5734,16 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
     // Ajouter imageUrl seulement s'il est fourni
     if (imageUrl) {
       postData.imageUrl = imageUrl;
+      // ✅ Stocker la clé R2 si applicable (utile pour suppression/modération)
+      try {
+        if (MEDIA_STORAGE === 'r2') {
+          const { keyFromPublicUrl } = require('./utils/mediaStorage');
+          const k = keyFromPublicUrl(imageUrl);
+          if (k) postData.imageStorageKey = k;
+        }
+      } catch (e) {
+        // ignore
+      }
     }
 
     let includeData = {

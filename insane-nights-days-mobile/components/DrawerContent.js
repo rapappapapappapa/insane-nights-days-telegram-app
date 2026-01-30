@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
 
@@ -82,8 +84,35 @@ const menuItems = [
 
 export default function DrawerContent({ navigation }) {
   const { navigate } = useNavigation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
+  const insets = useSafeAreaInsets();
+
+  const [activeDjGenre, setActiveDjGenre] = useState(null);
+
+  const isLoggedIn = !!user?.isAuthenticated;
+  const activeProfileType = user?.activeProfileType || null;
+
+  useEffect(() => {
+    let mounted = true;
+    const loadGenre = async () => {
+      try {
+        if (!isLoggedIn || !user?.token || activeProfileType !== 'DJ') {
+          if (mounted) setActiveDjGenre(null);
+          return;
+        }
+        const res = await api.getDjProfile(user.token);
+        const genre = res?.dj?.genre || null;
+        if (mounted) setActiveDjGenre(genre);
+      } catch (e) {
+        if (mounted) setActiveDjGenre(null);
+      }
+    };
+    loadGenre();
+    return () => {
+      mounted = false;
+    };
+  }, [isLoggedIn, user?.token, activeProfileType]);
 
   const getProfileLabel = (type) => {
     switch (type) {
@@ -106,8 +135,8 @@ export default function DrawerContent({ navigation }) {
   };
 
   const dashboardItem = (() => {
-    if (!user?.isAuthenticated) return null;
-    switch (user?.activeProfileType) {
+    if (!isLoggedIn) return null;
+    switch (activeProfileType) {
       case 'DJ':
         return {
           id: 'djDashboard',
@@ -142,8 +171,10 @@ export default function DrawerContent({ navigation }) {
 
   const itemsToRender = dashboardItem ? [dashboardItem, ...menuItems] : menuItems;
 
+  const contentPaddingBottom = useMemo(() => 24 + (insets?.bottom || 0), [insets?.bottom]);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}>
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Logo size={60} />
@@ -151,15 +182,21 @@ export default function DrawerContent({ navigation }) {
         <Text style={styles.title}>Menu Principal</Text>
         <Text style={styles.subtitle}>Que voulez-vous faire ?</Text>
 
-        {user?.isAuthenticated && (
+        {isLoggedIn && (
           <View style={styles.profilePill}>
             <Text style={styles.profilePillText}>
-              Profil actif : {getProfileLabel(user?.activeProfileType)}
+              Profil actif : {getProfileLabel(activeProfileType)}
             </Text>
           </View>
         )}
 
-        {user?.isAuthenticated && ((unreadByProfileType?.DJ || 0) > 0 || (unreadByProfileType?.BOOKER || 0) > 0) ? (
+        {isLoggedIn && activeProfileType === 'DJ' && activeDjGenre ? (
+          <View style={styles.genrePill}>
+            <Text style={styles.genrePillText}>Style : {activeDjGenre}</Text>
+          </View>
+        ) : null}
+
+        {isLoggedIn && ((unreadByProfileType?.DJ || 0) > 0 || (unreadByProfileType?.BOOKER || 0) > 0) ? (
           <View style={styles.unreadBreakdownRow}>
             {(unreadByProfileType?.DJ || 0) > 0 ? (
               <View style={styles.unreadChip}>
@@ -178,10 +215,10 @@ export default function DrawerContent({ navigation }) {
       <View style={styles.menuList}>
         {itemsToRender.map(item => {
           // Filtrage simple basé sur l'état de connexion
-          if (item.onlyWhenLoggedOut && user?.isAuthenticated) return null;
-          if (item.onlyWhenLoggedIn && !user?.isAuthenticated) return null;
-          if (item.onlyForActiveProfileTypes && user?.isAuthenticated) {
-            const active = user?.activeProfileType || null;
+          if (item.onlyWhenLoggedOut && isLoggedIn) return null;
+          if (item.onlyWhenLoggedIn && !isLoggedIn) return null;
+          if (item.onlyForActiveProfileTypes && isLoggedIn) {
+            const active = activeProfileType;
             if (!active || !item.onlyForActiveProfileTypes.includes(active)) return null;
           }
           
@@ -204,6 +241,25 @@ export default function DrawerContent({ navigation }) {
           );
         })}
       </View>
+
+      {isLoggedIn ? (
+        <View style={styles.logoutSection}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.85}
+            onPress={async () => {
+              try {
+                await logout();
+              } finally {
+                navigation.closeDrawer();
+                navigate('home');
+              }
+            }}
+          >
+            <Text style={styles.logoutButtonText}>🚪 Déconnexion</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -249,6 +305,20 @@ const styles = StyleSheet.create({
   profilePillText: {
     color: '#fff',
     fontSize: 13,
+    fontWeight: '800',
+  },
+  genrePill: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  genrePillText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12,
     fontWeight: '800',
   },
   unreadBreakdownRow: {
@@ -304,5 +374,23 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     lineHeight: 18,
+  },
+  logoutSection: {
+    paddingTop: 18,
+    paddingHorizontal: 20,
+  },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(255,23,68,0.10)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    color: '#FF1744',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });

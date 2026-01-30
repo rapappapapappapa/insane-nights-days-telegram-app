@@ -34,6 +34,11 @@ import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
+function cleanText(s) {
+  if (!s) return '';
+  return String(s).replace(/\s+/g, ' ').trim();
+}
+
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 280;
 
@@ -82,11 +87,7 @@ export default function DjDashboardPage() {
   // Matériel
   const [equipment, setEquipment] = useState('');
   
-  // Tarifs
-  const [hourlyRate, setHourlyRate] = useState('300');
-  const [performanceRate, setPerformanceRate] = useState('800');
-  const [minTravelFee, setMinTravelFee] = useState('');
-  const [extraFees, setExtraFees] = useState('');
+  // Tarifs retirés: prix fixé via contrat Booker ↔ DJ
   
   // Disponibilités
   const [availableDays, setAvailableDays] = useState({
@@ -124,6 +125,19 @@ export default function DjDashboardPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [newMessageText, setNewMessageText] = useState('');
   const chatScrollViewRef = useRef(null);
+
+  // ✅ Contrat (MVP) - intégré au chat privé Booker <-> DJ
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractData, setContractData] = useState(null);
+  const [contractBooking, setContractBooking] = useState(null);
+  const [contractEditorVisible, setContractEditorVisible] = useState(false);
+  const [contractDraft, setContractDraft] = useState({
+    priceEur: '',
+    depositEur: '',
+    paymentTerms: '',
+    cancellation: '',
+    notes: '',
+  });
 
   const handleBack = async () => {
     try {
@@ -187,6 +201,8 @@ export default function DjDashboardPage() {
     await loadChatMessages(eventDjId, false);
     // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
     await markAllAsRead();
+    // ✅ Charger le contrat (chat privé)
+    await loadContract(eventDjId);
   };
 
   const openGroupChat = async (eventId) => {
@@ -198,6 +214,70 @@ export default function DjDashboardPage() {
     await loadChatMessages(eventId, true);
     // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
     await markAllAsRead();
+  };
+
+  const loadContract = async (eventDjId) => {
+    if (!user?.token || !eventDjId) return;
+    setContractLoading(true);
+    try {
+      const res = await api.getBookingContract(user.token, eventDjId);
+      if (res?.success) {
+        setContractData(res.contract || null);
+        setContractBooking(res.booking || null);
+        const p = res.contract?.payload || {};
+        setContractDraft({
+          priceEur: p?.priceEur != null ? String(p.priceEur) : '',
+          depositEur: p?.depositEur != null ? String(p.depositEur) : '',
+          paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
+          cancellation: p?.cancellation ? String(p.cancellation) : '',
+          notes: p?.notes ? String(p.notes) : '',
+        });
+      }
+    } catch (e) {
+      console.error('[DjDashboard] loadContract error:', e);
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
+  const acceptContract = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const res = await api.acceptBookingContract(user.token, selectedChatEventDjId);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d’accepter.' : 'Unable to accept.'));
+      }
+    } catch (e) {
+      console.error('[DjDashboard] acceptContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const counterContract = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const payload = {
+        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
+        depositEur: contractDraft.depositEur ? Number(String(contractDraft.depositEur).replace(',', '.')) : null,
+        paymentTerms: contractDraft.paymentTerms?.trim() || null,
+        cancellation: contractDraft.cancellation?.trim() || null,
+        notes: contractDraft.notes?.trim() || null,
+      };
+      const res = await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
+        setContractEditorVisible(false);
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[DjDashboard] counterContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
   };
 
   // ✅ Ouvrir automatiquement la conversation depuis une notification (DJ)
@@ -406,11 +486,6 @@ export default function DjDashboardPage() {
         setTiktokUrl(response.dj.tiktokUrl || '');
         // Matériel
         setEquipment(response.dj.equipment || '');
-        // Tarifs
-        setHourlyRate(response.dj.hourlyRate ? response.dj.hourlyRate.toString() : '');
-        setPerformanceRate(response.dj.performanceRate ? response.dj.performanceRate.toString() : '');
-        setMinTravelFee(response.dj.minTravelFee ? response.dj.minTravelFee.toString() : '');
-        setExtraFees(response.dj.extraFees ? response.dj.extraFees.toString() : '');
         // Disponibilités
         if (response.dj.availableDays) {
           try {
@@ -473,11 +548,6 @@ export default function DjDashboardPage() {
         tiktokUrl: tiktokUrl && tiktokUrl.trim() ? tiktokUrl.trim() : null,
         // Matériel
         equipment: equipment && equipment.trim() ? equipment.trim() : null,
-        // Tarifs
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
-        performanceRate: performanceRate ? parseFloat(performanceRate) : null,
-        minTravelFee: minTravelFee ? parseFloat(minTravelFee) : null,
-        extraFees: extraFees ? parseFloat(extraFees) : null,
         // Disponibilités
         availableDays: JSON.stringify(availableDays),
         availableStatus: availableStatus,
@@ -488,7 +558,6 @@ export default function DjDashboardPage() {
         genre: additionalData.genre,
         mainCity: additionalData.mainCity,
         languages: additionalData.languages,
-        hourlyRate: additionalData.hourlyRate,
         allKeys: Object.keys(additionalData),
       });
 
@@ -1473,56 +1542,14 @@ export default function DjDashboardPage() {
               showsVerticalScrollIndicator={true}
             >
             <Text style={styles.sectionTitle}>
-              {language === 'fr' ? 'TARIFS & DISPONIBILITÉS' : 'RATES & AVAILABILITIES'}
+              {language === 'fr' ? 'DISPONIBILITÉS' : 'AVAILABILITIES'}
           </Text>
 
-          <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Tarif horaire' : 'Hourly Rate'}</Text>
-            <TextInput
-              style={styles.input}
-                value={hourlyRate}
-                onChangeText={setHourlyRate}
-                placeholder="300"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-                keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Tarif par prestation' : 'Rate per Performance'}</Text>
-            <TextInput
-              style={styles.input}
-                value={performanceRate}
-                onChangeText={setPerformanceRate}
-                placeholder="800"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-                keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Tarif minimum déplacement' : 'Minimum Travel Fee'}</Text>
-            <TextInput
-              style={styles.input}
-                value={minTravelFee}
-                onChangeText={setMinTravelFee}
-                placeholder="0"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-                keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Frais supplémentaires' : 'Extra Fees'}</Text>
-            <TextInput
-              style={styles.input}
-                value={extraFees}
-                onChangeText={setExtraFees}
-                placeholder="0"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-                keyboardType="numeric"
-            />
-          </View>
+          <Text style={styles.comingSoon}>
+            {language === 'fr'
+              ? 'Le prix sera fixé via un contrat avec le booker (dans le chat privé).'
+              : 'Pricing will be agreed via a contract with the booker (in private chat).'}
+          </Text>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Disponibilités' : 'Availabilities'}</Text>
@@ -1804,6 +1831,25 @@ export default function DjDashboardPage() {
                             {statusLabels[booking.eventStatus]}
                           </Text>
                         </View>
+                      </View>
+
+                      {/* ✅ Paiement (Booker -> DJ) */}
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>💳 {language === 'fr' ? 'Paiement' : 'Payment'}</Text>
+                        {(() => {
+                          const ps = booking.paymentStatus || 'UPCOMING';
+                          const labels = {
+                            UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                            PENDING: language === 'fr' ? 'En attente' : 'Pending',
+                            PAID: language === 'fr' ? 'Payé' : 'Paid',
+                          };
+                          return (
+                            <Text style={styles.bookingInfoValue}>
+                              {labels[ps] || ps}
+                              {booking.invoiceNumber ? ` • ${booking.invoiceNumber}` : ''}
+                            </Text>
+                          );
+                        })()}
                       </View>
                       
                       <View style={styles.bookingInfo}>
@@ -2585,6 +2631,89 @@ export default function DjDashboardPage() {
             </View>
             </View>
 
+            {/* ✅ Contrat (uniquement chat privé) */}
+            {!isGroupChat && selectedChatEventDjId ? (
+              <View style={styles.contractCard}>
+                <View style={styles.contractTopRow}>
+                  <Text style={styles.contractTitle}>
+                    🧾 {language === 'fr' ? 'Contrat de booking' : 'Booking contract'}
+                  </Text>
+                  {contractLoading ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Text style={styles.contractStatus}>
+                      {contractData?.status === 'SIGNED'
+                        ? (language === 'fr' ? 'Signé' : 'Signed')
+                        : contractData?.status === 'SENT'
+                          ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                          : (language === 'fr' ? 'Brouillon' : 'Draft')}
+                    </Text>
+                  )}
+                </View>
+
+                {contractBooking?.eventTitle ? (
+                  <Text style={styles.contractMeta} numberOfLines={2}>
+                    🎵 {contractBooking.eventTitle}
+                  </Text>
+                ) : null}
+
+                <Text style={styles.contractLine}>
+                  💰 {language === 'fr' ? 'Prix' : 'Price'}:{' '}
+                  <Text style={styles.contractLineStrong}>
+                    {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (language === 'fr' ? 'À définir' : 'To define')}
+                  </Text>
+                  {contractData?.payload?.depositEur != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositEur} €` : ''}
+                </Text>
+
+                {contractData?.payload?.paymentTerms ? (
+                  <Text style={styles.contractSmall} numberOfLines={2}>
+                    💳 {cleanText(contractData.payload.paymentTerms)}
+                  </Text>
+                ) : null}
+
+                <View style={styles.contractActionsRow}>
+                  {contractData?.status === 'SENT' ? (
+                    contractData?.sentBy === 'BOOKER' ? (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.contractButton, styles.contractButtonSecondary]}
+                          onPress={() => setContractEditorVisible(true)}
+                        >
+                          <Text style={styles.contractButtonText}>
+                            {language === 'fr' ? 'Contre-proposer' : 'Counter'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.contractButton, styles.contractButtonPrimary]}
+                          onPress={acceptContract}
+                        >
+                          <Text style={styles.contractButtonTextDark}>
+                            {language === 'fr' ? 'Accepter' : 'Accept'}
+                          </Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text style={styles.contractHint}>
+                        {language === 'fr'
+                          ? 'En attente de la réponse du booker.'
+                          : 'Waiting for booker response.'}
+                      </Text>
+                    )
+                  ) : contractData?.status === 'SIGNED' ? (
+                    <Text style={styles.contractHint}>
+                      {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
+                    </Text>
+                  ) : (
+                    <Text style={styles.contractHint}>
+                      {language === 'fr'
+                        ? 'En attente du booker.'
+                        : 'Waiting for booker.'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ) : null}
+
             {/* Messages */}
             {loadingChatMessages ? (
               <View style={styles.chatLoadingContainer}>
@@ -2735,6 +2864,87 @@ export default function DjDashboardPage() {
                 )}
               </TouchableOpacity>
             </View>
+
+            {/* ✅ Modal édition contrat (contre-proposition DJ) */}
+            <Modal
+              visible={contractEditorVisible}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setContractEditorVisible(false)}
+            >
+              <View style={styles.contractModalOverlay}>
+                <View style={styles.contractModalCard}>
+                  <Text style={styles.contractModalTitle}>
+                    {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
+                  </Text>
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Prix (€)' : 'Price (€)'}</Text>
+                  <TextInput
+                    style={styles.contractModalInput}
+                    value={contractDraft.priceEur}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, priceEur: v }))}
+                    placeholder="500"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (€) (optionnel)' : 'Deposit (€) (optional)'}</Text>
+                  <TextInput
+                    style={styles.contractModalInput}
+                    value={contractDraft.depositEur}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, depositEur: v }))}
+                    placeholder="100"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.paymentTerms}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, paymentTerms: v }))}
+                    placeholder={language === 'fr' ? 'Ex: solde à la fin du set' : 'Ex: balance after performance'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.cancellation}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
+                    placeholder={language === 'fr' ? 'Ex: J-7: 50% dû' : 'Ex: D-7: 50% due'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes (optionnel)' : 'Notes (optional)'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.notes}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, notes: v }))}
+                    placeholder={language === 'fr' ? 'Ex: arrivée 20h, set 22h-00h' : 'Ex: arrival 8pm, set 10pm-12am'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <View style={styles.contractModalActions}>
+                    <TouchableOpacity
+                      style={[styles.contractButton, styles.contractButtonSecondary]}
+                      onPress={() => setContractEditorVisible(false)}
+                    >
+                      <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.contractButton, styles.contractButtonPrimary]}
+                      onPress={counterContract}
+                    >
+                      <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -3908,6 +4118,136 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 18,
     fontWeight: '700',
+  },
+  // ✅ Contrat (chat privé)
+  contractCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.22)',
+    backgroundColor: 'rgba(255,23,68,0.06)',
+  },
+  contractTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  contractTitle: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  contractStatus: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  contractMeta: {
+    marginTop: 6,
+    color: Colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  contractLine: {
+    marginTop: 6,
+    color: Colors.textSecondary,
+    fontSize: 12,
+  },
+  contractLineStrong: {
+    color: Colors.text,
+    fontWeight: '900',
+  },
+  contractSmall: {
+    marginTop: 4,
+    color: Colors.textSecondary,
+    fontSize: 11,
+  },
+  contractActionsRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  contractHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  contractButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contractButtonPrimary: {
+    backgroundColor: Colors.primary,
+  },
+  contractButtonSecondary: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  contractButtonText: {
+    color: Colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  contractButtonTextDark: {
+    color: '#0b0b0e',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  contractModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  contractModalCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    backgroundColor: Colors.background,
+  },
+  contractModalTitle: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  contractModalLabel: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  contractModalInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: Colors.text,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    fontSize: 13,
+  },
+  contractModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 14,
   },
   chatLoadingContainer: {
     flex: 1,

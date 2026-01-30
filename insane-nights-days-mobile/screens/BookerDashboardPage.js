@@ -26,6 +26,11 @@ import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
+function cleanText(s) {
+  if (!s) return '';
+  return String(s).replace(/\s+/g, ' ').trim();
+}
+
 export default function BookerDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
@@ -48,6 +53,7 @@ export default function BookerDashboardPage() {
     !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
   const [showMyEvents, setShowMyEvents] = useState(shouldOpenBookings || false);
   const [deletingEventId, setDeletingEventId] = useState(null);
+  const [markingPaymentEventDjId, setMarkingPaymentEventDjId] = useState(null);
   
   // Slots DJ pour la création d'événement
   const [djSlots, setDjSlots] = useState([null]); // Array de djIds ou null
@@ -62,6 +68,19 @@ export default function BookerDashboardPage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [newMessageText, setNewMessageText] = useState('');
   const chatScrollViewRef = useRef(null);
+
+  // ✅ Contrat (MVP) - intégré au chat privé Booker <-> DJ
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractData, setContractData] = useState(null);
+  const [contractBooking, setContractBooking] = useState(null);
+  const [contractEditorVisible, setContractEditorVisible] = useState(false);
+  const [contractDraft, setContractDraft] = useState({
+    priceEur: '',
+    depositEur: '',
+    paymentTerms: '',
+    cancellation: '',
+    notes: '',
+  });
 
   // Date & heure avec sélecteurs stylés
   const [tempDate, setTempDate] = useState(eventDateTime);
@@ -400,6 +419,25 @@ export default function BookerDashboardPage() {
     }
   };
 
+  const markBookingAsPaid = async (eventDjId) => {
+    if (!user?.token || !eventDjId) return;
+    setMarkingPaymentEventDjId(eventDjId);
+    try {
+      const res = await api.updateBookingPayment(user.token, eventDjId, { status: 'PAID' });
+      if (res?.success) {
+        await fetchMyEvents();
+        showSuccess(language === 'fr' ? 'Paiement marqué comme payé.' : 'Payment marked as paid.');
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible de mettre à jour le paiement.' : 'Unable to update payment.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] markBookingAsPaid error:', e);
+      showError(language === 'fr' ? 'Erreur paiement.' : 'Payment error.');
+    } finally {
+      setMarkingPaymentEventDjId(null);
+    }
+  };
+
   // Fonctions de chat
   const openChat = async (eventDjId) => {
     setSelectedChatEventDjId(eventDjId);
@@ -410,6 +448,8 @@ export default function BookerDashboardPage() {
     await loadChatMessages(eventDjId, false);
     // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
     await markAllAsRead();
+    // ✅ Charger le contrat (chat privé)
+    await loadContract(eventDjId);
   };
 
   const openGroupChat = async (eventId) => {
@@ -421,6 +461,110 @@ export default function BookerDashboardPage() {
     await loadChatMessages(eventId, true);
     // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
     await markAllAsRead();
+  };
+
+  const loadContract = async (eventDjId) => {
+    if (!user?.token || !eventDjId) return;
+    setContractLoading(true);
+    try {
+      const res = await api.getBookingContract(user.token, eventDjId);
+      if (res?.success) {
+        setContractData(res.contract || null);
+        setContractBooking(res.booking || null);
+        const p = res.contract?.payload || {};
+        setContractDraft({
+          priceEur: p?.priceEur != null ? String(p.priceEur) : '',
+          depositEur: p?.depositEur != null ? String(p.depositEur) : '',
+          paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
+          cancellation: p?.cancellation ? String(p.cancellation) : '',
+          notes: p?.notes ? String(p.notes) : '',
+        });
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] loadContract error:', e);
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
+  const saveContractDraft = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const payload = {
+        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
+        depositEur: contractDraft.depositEur ? Number(String(contractDraft.depositEur).replace(',', '.')) : null,
+        paymentTerms: contractDraft.paymentTerms?.trim() || null,
+        cancellation: contractDraft.cancellation?.trim() || null,
+        notes: contractDraft.notes?.trim() || null,
+      };
+      const res = await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
+        setContractEditorVisible(false);
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] saveContractDraft error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const sendContract = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const res = await api.sendBookingContract(user.token, selectedChatEventDjId);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat envoyé au DJ.' : 'Contract sent to DJ.');
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] sendContract error:', e);
+      showError(language === 'fr' ? 'Erreur envoi contrat.' : 'Contract send error.');
+    }
+  };
+
+  const acceptContract = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const res = await api.acceptBookingContract(user.token, selectedChatEventDjId);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d’accepter.' : 'Unable to accept.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] acceptContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const counterContract = async () => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    try {
+      const payload = {
+        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
+        depositEur: contractDraft.depositEur ? Number(String(contractDraft.depositEur).replace(',', '.')) : null,
+        paymentTerms: contractDraft.paymentTerms?.trim() || null,
+        cancellation: contractDraft.cancellation?.trim() || null,
+        notes: contractDraft.notes?.trim() || null,
+      };
+      const res = await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
+        setContractEditorVisible(false);
+        await loadContract(selectedChatEventDjId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] counterContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
   };
 
   // ✅ Ouvrir automatiquement la conversation depuis une notification (BOOKER)
@@ -728,48 +872,7 @@ export default function BookerDashboardPage() {
   const selectedVenue = venues.find((v) => v.id === formData.venueId);
   const selectedDjs = availableDjs.filter((dj) => formData.djIds.includes(dj.userId));
 
-  // Calcul automatique du prix - seulement quand nécessaire, sans useEffect
-  const calculatePrice = () => {
-    const duration = formData.durationHours
-      ? parseFloat(formData.durationHours.replace(',', '.'))
-      : 0;
-
-    if (!selectedVenue || selectedDjs.length === 0 || !duration || duration <= 0) {
-      return '';
-    }
-
-    // Base simple pour le lieu
-    const venueBase =
-      typeof selectedVenue.averageRatingGlobal === 'number'
-        ? 50 + selectedVenue.averageRatingGlobal * 10
-        : 50;
-
-    // Somme des tarifs horaires / prestation des DJs
-    const djsTotal = selectedDjs.reduce((sum, dj) => {
-      const rate = dj.hourlyRate ?? dj.performanceRate ?? 0;
-      return sum + rate;
-    }, 0);
-
-    const total = venueBase + djsTotal * duration;
-    return String(Math.max(0, Math.round(total)));
-  };
-
-  const autoPrice = calculatePrice();
-  
-  // Mettre à jour le prix seulement si calculé et différent
-  const lastAutoPrice = useRef('');
-  React.useLayoutEffect(() => {
-    if (autoPrice && autoPrice !== lastAutoPrice.current) {
-      lastAutoPrice.current = autoPrice;
-      setFormData(prev => {
-        // Ne mettre à jour que si différent pour éviter les re-renders
-        if (prev.price !== autoPrice) {
-          return { ...prev, price: autoPrice };
-        }
-        return prev;
-      });
-    }
-  }, [autoPrice]); // Seulement autoPrice
+  // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
 
   return (
       <KeyboardAvoidingView
@@ -899,6 +1002,17 @@ export default function BookerDashboardPage() {
                           REJECTED: language === 'fr' ? 'Refusé' : 'Rejected',
                         };
                         const status = dj.invitationStatus || 'PENDING';
+                        const payStatus = dj?.payment?.paymentStatus || 'UPCOMING';
+                        const payColors = {
+                          UPCOMING: 'rgba(255,255,255,0.55)',
+                          PENDING: '#FFA500',
+                          PAID: '#4CAF50',
+                        };
+                        const payLabels = {
+                          UPCOMING: language === 'fr' ? 'Paiement à venir' : 'Payment upcoming',
+                          PENDING: language === 'fr' ? 'Paiement en attente' : 'Payment pending',
+                          PAID: language === 'fr' ? 'Payé' : 'Paid',
+                        };
                         return (
                           <View key={dj.userId} style={styles.djItem}>
                             <Text style={styles.djName}>{dj.artistName}</Text>
@@ -916,6 +1030,25 @@ export default function BookerDashboardPage() {
                                   {statusLabels[status]}
                                 </Text>
                               </View>
+                              <View style={[styles.djStatusBadge, { backgroundColor: payColors[payStatus] + '20' }]}>
+                                <Text style={[styles.djStatusText, { color: payColors[payStatus] }]}>
+                                  {payLabels[payStatus] || payStatus}
+                                </Text>
+                              </View>
+
+                              {status === 'ACCEPTED' && dj.eventDjId && payStatus !== 'PAID' ? (
+                                <TouchableOpacity
+                                  style={styles.chatButtonSmall}
+                                  onPress={() => markBookingAsPaid(dj.eventDjId)}
+                                  disabled={markingPaymentEventDjId === dj.eventDjId}
+                                >
+                                  {markingPaymentEventDjId === dj.eventDjId ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                  ) : (
+                                    <Text style={styles.chatButtonSmallText}>✅</Text>
+                                  )}
+                                </TouchableOpacity>
+                              ) : null}
                             </View>
                           </View>
                         );
@@ -1208,7 +1341,7 @@ export default function BookerDashboardPage() {
                     >
                       <Text style={[styles.selectButtonText, !selectedDj && styles.placeholderText]}>
                         {selectedDj
-                          ? `${selectedDj.artistName}${selectedDj.hourlyRate ? ` - ${selectedDj.hourlyRate}€/h` : ''}`
+                          ? `${selectedDj.artistName} • ${language === 'fr' ? 'prix à convenir' : 'price to agree'}`
                           : language === 'fr' ? 'Sélectionner un DJ' : 'Select a DJ'}
                       </Text>
                       <Text style={styles.chevron}>▼</Text>
@@ -1287,7 +1420,7 @@ export default function BookerDashboardPage() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  {language === 'fr' ? 'Prix estimé' : 'Estimated price'} (€) *
+                  {language === 'fr' ? 'Budget (optionnel)' : 'Budget (optional)'} (€)
                 </Text>
                 <TextInput
                   style={styles.input}
@@ -1297,19 +1430,11 @@ export default function BookerDashboardPage() {
                   value={formData.price}
                   onChangeText={(value) => handleChange('price', value)}
                 />
-                {autoPrice ? (
-                  <Text style={styles.helperText}>
-                    {language === 'fr'
-                      ? `Calculé automatiquement : ~${autoPrice} € (modifiable)`
-                      : `Automatically computed: ~${autoPrice} € (editable)`}
-                  </Text>
-                ) : (
-                  <Text style={styles.helperText}>
-                    {language === 'fr'
-                      ? 'Le prix sera calculé automatiquement selon le lieu, les DJs et la durée.'
-                      : 'Price will be automatically computed from venue, DJs and duration.'}
-                  </Text>
-                )}
+                <Text style={styles.helperText}>
+                  {language === 'fr'
+                    ? 'Le prix DJ sera fixé via un contrat (chat privé).'
+                    : 'DJ price will be set via a contract (private chat).'}
+                </Text>
               </View>
 
               <View style={styles.inputGroup}>
@@ -1467,30 +1592,23 @@ export default function BookerDashboardPage() {
                         </View>
                       )}
 
-                      {/* Coût des DJs */}
-                      {selectedDjs.map((dj) => {
-                        const duration = formData.durationHours
-                          ? parseFloat(formData.durationHours.replace(',', '.'))
-                          : 0;
-                        const rate = dj.hourlyRate ?? dj.performanceRate ?? 0;
-                        const djCost = rate * duration;
-                        return (
-                          <View key={dj.userId} style={styles.costRow}>
-                            <Text style={styles.costLabel}>
-                              {dj.artistName} ({duration}h × {rate}€/h)
-                            </Text>
-                            <Text style={styles.costValue}>{Math.round(djCost)} €</Text>
-                          </View>
-                        );
-                      })}
+                      {/* Prix DJ */}
+                      <View style={styles.costRow}>
+                        <Text style={styles.costLabel}>
+                          {language === 'fr' ? 'DJs' : 'DJs'}
+                        </Text>
+                        <Text style={styles.costValue}>
+                          {language === 'fr' ? 'Prix à convenir (contrat)' : 'Price to agree (contract)'}
+                        </Text>
+                      </View>
 
                       {/* Total */}
                       <View style={styles.costTotal}>
                         <Text style={styles.costTotalLabel}>
-                          {language === 'fr' ? 'Total estimé' : 'Estimated Total'}
+                          {language === 'fr' ? 'Total' : 'Total'}
                         </Text>
                         <Text style={styles.costTotalValue}>
-                          {autoPrice || formData.price} €
+                          {formData.price ? `${formData.price} €` : (language === 'fr' ? 'À définir' : 'To define')}
                         </Text>
                       </View>
                     </View>
@@ -1733,6 +1851,107 @@ export default function BookerDashboardPage() {
             </View>
             </View>
 
+            {/* ✅ Contrat (uniquement chat privé) */}
+            {!isGroupChat && selectedChatEventDjId ? (
+              <View style={styles.contractCard}>
+                <View style={styles.contractTopRow}>
+                  <Text style={styles.contractTitle}>
+                    🧾 {language === 'fr' ? 'Contrat de booking' : 'Booking contract'}
+                  </Text>
+                  {contractLoading ? (
+                    <ActivityIndicator size="small" color="#FF1744" />
+                  ) : (
+                    <Text style={styles.contractStatus}>
+                      {contractData?.status === 'SIGNED'
+                        ? (language === 'fr' ? 'Signé' : 'Signed')
+                        : contractData?.status === 'SENT'
+                          ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                          : (language === 'fr' ? 'Brouillon' : 'Draft')}
+                    </Text>
+                  )}
+                </View>
+
+                {contractBooking?.eventTitle ? (
+                  <Text style={styles.contractMeta} numberOfLines={2}>
+                    🎵 {contractBooking.eventTitle}
+                  </Text>
+                ) : null}
+
+                <Text style={styles.contractLine}>
+                  💰 {language === 'fr' ? 'Prix' : 'Price'}:{' '}
+                  <Text style={styles.contractLineStrong}>
+                    {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (language === 'fr' ? 'À définir' : 'To define')}
+                  </Text>
+                  {contractData?.payload?.depositEur != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositEur} €` : ''}
+                </Text>
+
+                {contractData?.payload?.paymentTerms ? (
+                  <Text style={styles.contractSmall} numberOfLines={2}>
+                    💳 {cleanText(contractData.payload.paymentTerms)}
+                  </Text>
+                ) : null}
+                {contractData?.payload?.cancellation ? (
+                  <Text style={styles.contractSmall} numberOfLines={2}>
+                    🧯 {cleanText(contractData.payload.cancellation)}
+                  </Text>
+                ) : null}
+
+                <View style={styles.contractActionsRow}>
+                  {contractData?.status === 'DRAFT' ? (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.contractButton, styles.contractButtonSecondary]}
+                        onPress={() => setContractEditorVisible(true)}
+                      >
+                        <Text style={styles.contractButtonText}>
+                          {language === 'fr' ? 'Modifier' : 'Edit'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.contractButton, styles.contractButtonPrimary]}
+                        onPress={sendContract}
+                      >
+                        <Text style={styles.contractButtonTextDark}>
+                          {language === 'fr' ? 'Envoyer au DJ' : 'Send to DJ'}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : contractData?.status === 'SENT' ? (
+                    contractData?.sentBy === 'DJ' ? (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.contractButton, styles.contractButtonSecondary]}
+                          onPress={() => setContractEditorVisible(true)}
+                        >
+                          <Text style={styles.contractButtonText}>
+                            {language === 'fr' ? 'Contre-proposer' : 'Counter'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.contractButton, styles.contractButtonPrimary]}
+                          onPress={acceptContract}
+                        >
+                          <Text style={styles.contractButtonTextDark}>
+                            {language === 'fr' ? 'Accepter' : 'Accept'}
+                          </Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text style={styles.contractHint}>
+                        {language === 'fr'
+                          ? 'En attente de l’acceptation du DJ.'
+                          : 'Waiting for DJ acceptance.'}
+                      </Text>
+                    )
+                  ) : (
+                    <Text style={styles.contractHint}>
+                      {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ) : null}
+
             {/* Messages */}
             {loadingChatMessages ? (
               <View style={styles.chatLoadingContainer}>
@@ -1875,6 +2094,91 @@ export default function BookerDashboardPage() {
                 )}
               </TouchableOpacity>
             </View>
+
+            {/* ✅ Modal édition contrat */}
+            <Modal
+              visible={contractEditorVisible}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => setContractEditorVisible(false)}
+            >
+              <View style={styles.contractModalOverlay}>
+                <View style={styles.contractModalCard}>
+                  <Text style={styles.contractModalTitle}>
+                    {language === 'fr' ? 'Contrat (brouillon)' : 'Contract (draft)'}
+                  </Text>
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Prix (€)' : 'Price (€)'}</Text>
+                  <TextInput
+                    style={styles.contractModalInput}
+                    value={contractDraft.priceEur}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, priceEur: v }))}
+                    placeholder="500"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (€) (optionnel)' : 'Deposit (€) (optional)'}</Text>
+                  <TextInput
+                    style={styles.contractModalInput}
+                    value={contractDraft.depositEur}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, depositEur: v }))}
+                    placeholder="100"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.paymentTerms}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, paymentTerms: v }))}
+                    placeholder={language === 'fr' ? 'Ex: solde à la fin du set' : 'Ex: balance after performance'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.cancellation}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
+                    placeholder={language === 'fr' ? 'Ex: J-7: 50% dû' : 'Ex: D-7: 50% due'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes (optionnel)' : 'Notes (optional)'}</Text>
+                  <TextInput
+                    style={[styles.contractModalInput, { height: 60 }]}
+                    value={contractDraft.notes}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, notes: v }))}
+                    placeholder={language === 'fr' ? 'Ex: arrivée 20h, set 22h-00h' : 'Ex: arrival 8pm, set 10pm-12am'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                  />
+
+                  <View style={styles.contractModalActions}>
+                    <TouchableOpacity
+                      style={[styles.contractButton, styles.contractButtonSecondary]}
+                      onPress={() => setContractEditorVisible(false)}
+                    >
+                      <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.contractButton, styles.contractButtonPrimary]}
+                      onPress={contractData?.status === 'DRAFT' ? saveContractDraft : counterContract}
+                    >
+                      <Text style={styles.contractButtonTextDark}>
+                        {contractData?.status === 'DRAFT'
+                          ? (language === 'fr' ? 'Sauvegarder' : 'Save')
+                          : (language === 'fr' ? 'Envoyer' : 'Send')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -1943,6 +2247,137 @@ const styles = StyleSheet.create({
     minWidth: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // ✅ Contrat (chat privé)
+  contractCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.28)',
+    backgroundColor: 'rgba(255,23,68,0.06)',
+  },
+  contractTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  contractTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  contractStatus: {
+    color: '#FF1744',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  contractMeta: {
+    marginTop: 6,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  contractLine: {
+    marginTop: 6,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+  },
+  contractLineStrong: {
+    color: '#fff',
+    fontWeight: '900',
+  },
+  contractSmall: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 11,
+  },
+  contractActionsRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  contractHint: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  contractButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contractButtonPrimary: {
+    backgroundColor: '#FF1744',
+  },
+  contractButtonSecondary: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  contractButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  contractButtonTextDark: {
+    color: '#0b0b0e',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  contractModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  contractModalCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: '#0b0b0e',
+  },
+  contractModalTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  contractModalLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  contractModalInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    fontSize: 13,
+  },
+  contractModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 14,
   },
   scrollView: {
     flex: 1,

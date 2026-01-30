@@ -4,11 +4,42 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
 import logger from './logger';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user_data';
+
+// Web fallback: expo-secure-store isn't reliable/available on web exports.
+const webGetItem = (key) => {
+  try {
+    if (typeof globalThis === 'undefined' || !globalThis.localStorage) return null;
+    return globalThis.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+};
+
+const webSetItem = (key, value) => {
+  try {
+    if (typeof globalThis === 'undefined' || !globalThis.localStorage) return;
+    globalThis.localStorage.setItem(key, value);
+  } catch (e) {
+    // ignore
+  }
+};
+
+const webRemoveItem = (key) => {
+  try {
+    if (typeof globalThis === 'undefined' || !globalThis.localStorage) return;
+    globalThis.localStorage.removeItem(key);
+  } catch (e) {
+    // ignore
+  }
+};
+
+const isWeb = Platform.OS === 'web';
 
 /**
  * Vérifie si un token JWT est expiré
@@ -41,18 +72,30 @@ export const isTokenExpired = (token) => {
 export const saveToken = async (token) => {
   try {
     if (!token) {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      if (isWeb) {
+        webRemoveItem(TOKEN_KEY);
+      } else {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
       return;
     }
     
     // Vérifier que le token n'est pas expiré avant de le sauvegarder
     if (isTokenExpired(token)) {
       logger.warn('[TokenStorage] Tentative de sauvegarde d\'un token expiré');
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      if (isWeb) {
+        webRemoveItem(TOKEN_KEY);
+      } else {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
       return;
     }
     
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    if (isWeb) {
+      webSetItem(TOKEN_KEY, token);
+    } else {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    }
   } catch (error) {
     logger.error('[TokenStorage] Erreur sauvegarde token:', error);
     throw error;
@@ -65,7 +108,7 @@ export const saveToken = async (token) => {
  */
 export const getToken = async () => {
   try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    const token = isWeb ? webGetItem(TOKEN_KEY) : await SecureStore.getItemAsync(TOKEN_KEY);
     
     if (!token) {
       return null;
@@ -74,7 +117,11 @@ export const getToken = async () => {
     // Vérifier si le token est expiré
     if (isTokenExpired(token)) {
       logger.warn('[TokenStorage] Token expiré détecté, suppression...');
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      if (isWeb) {
+        webRemoveItem(TOKEN_KEY);
+      } else {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+      }
       return null;
     }
     
@@ -90,8 +137,13 @@ export const getToken = async () => {
  */
 export const deleteToken = async () => {
   try {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(USER_KEY);
+    if (isWeb) {
+      webRemoveItem(TOKEN_KEY);
+      webRemoveItem(USER_KEY);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
+    }
   } catch (error) {
     logger.error('[TokenStorage] Erreur suppression token:', error);
   }
@@ -104,14 +156,22 @@ export const deleteToken = async () => {
 export const saveUserData = async (userData) => {
   try {
     if (!userData) {
-      await SecureStore.deleteItemAsync(USER_KEY);
+      if (isWeb) {
+        webRemoveItem(USER_KEY);
+      } else {
+        await SecureStore.deleteItemAsync(USER_KEY);
+      }
       return;
     }
     
     // Ne pas sauvegarder le token dans les données utilisateur
     const { token, password, ...safeUserData } = userData;
     
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(safeUserData));
+    if (isWeb) {
+      webSetItem(USER_KEY, JSON.stringify(safeUserData));
+    } else {
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(safeUserData));
+    }
   } catch (error) {
     logger.error('[TokenStorage] Erreur sauvegarde données utilisateur:', error);
   }
@@ -123,7 +183,7 @@ export const saveUserData = async (userData) => {
  */
 export const getUserData = async () => {
   try {
-    const userDataString = await SecureStore.getItemAsync(USER_KEY);
+    const userDataString = isWeb ? webGetItem(USER_KEY) : await SecureStore.getItemAsync(USER_KEY);
     if (!userDataString) {
       return null;
     }

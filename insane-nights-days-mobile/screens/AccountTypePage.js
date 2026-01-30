@@ -44,15 +44,20 @@ export default function AccountTypePage() {
   const { navigate } = useNavigation();
 
   const handleAccountTypeSelect = (type) => {
-    if (type === 'community') {
-      navigate('registerCommunity');
-    } else if (type === 'dj') {
-      navigate('registerDj');
-    } else if (type === 'booker') {
-      navigate('registerBooker');
-    } else if (type === 'venue') {
-      navigate('registerVenue');
-    }
+    // ✅ IMPORTANT: créer/connexion compte d'abord, puis créer le profil.
+    const nextScreen =
+      type === 'community'
+        ? 'registerCommunity'
+        : type === 'dj'
+          ? 'registerDj'
+          : type === 'booker'
+            ? 'registerBooker'
+            : type === 'venue'
+              ? 'registerVenue'
+              : null;
+
+    if (!nextScreen) return;
+    navigate('login', { mode: 'register', nextScreen });
   };
 
   return (

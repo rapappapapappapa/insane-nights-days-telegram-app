@@ -7,7 +7,7 @@ import { retryApiCall, isRetryableError } from '../utils/retry';
 
 const API_CONFIG = {
   // URL de base du backend
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://touch-drug-contractor-buildings.trycloudflare.com',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE || 'https://trek-fort-split-warren.trycloudflare.com',
   
   // Timeout pour les requêtes
   TIMEOUT: 10000,
@@ -54,6 +54,8 @@ const API_CONFIG = {
     BOOKER_EVENTS: '/api/booker/events',
     BOOKER_CREATE_EVENT: '/api/booker/events',
     BOOKER_DELETE_EVENT: '/api/booker/events',
+    BOOKER_EVENTDJ_PAYMENT: '/api/booker/event-djs',
+    CONTRACTS_EVENTDJS: '/api/contracts/event-djs',
   },
 };
 
@@ -800,7 +802,7 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(API_CONFIG.ENDPOINTS.DJ_BOOKINGS, {}, token);
+    return apiRequest(API_CONFIG.ENDPOINTS.DJ_BOOKINGS, { noCache: true }, token);
   },
 
   // Accepter une invitation à un événement
@@ -855,7 +857,64 @@ const api = {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_EVENTS, {}, token);
+    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_EVENTS, { noCache: true }, token);
+  },
+
+  // ✅ Booking payment (Booker -> DJ): mettre à jour statut/montant/facture
+  updateBookingPayment: async (token, eventDjId, { status, amount, currency, invoiceNumber } = {}) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!eventDjId) {
+      throw new Error('eventDjId requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_EVENTDJ_PAYMENT}/${eventDjId}/payment`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ status, amount, currency, invoiceNumber }),
+      },
+      token
+    );
+  },
+
+  // ✅ Contrat booking (Booker <-> DJ) intégré au chat privé
+  getBookingContract: async (token, eventDjId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}`, { noCache: true }, token);
+  },
+
+  saveBookingContractDraft: async (token, eventDjId, payload) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}/draft`,
+      { method: 'PUT', body: JSON.stringify({ payload: payload || {} }) },
+      token
+    );
+  },
+
+  sendBookingContract: async (token, eventDjId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}/send`, { method: 'POST' }, token);
+  },
+
+  acceptBookingContract: async (token, eventDjId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}/accept`, { method: 'POST' }, token);
+  },
+
+  counterBookingContract: async (token, eventDjId, payload) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}/counter`,
+      { method: 'POST', body: JSON.stringify({ payload: payload || {} }) },
+      token
+    );
   },
 
   // Ajouter un DJ à un événement existant (Booker)

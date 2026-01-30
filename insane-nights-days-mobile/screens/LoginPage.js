@@ -21,21 +21,26 @@ import { useToast } from '../hooks/useToast';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
-  const { user, login } = useAuth();
-  const { navigate } = useNavigation();
+  const { user, login, register } = useAuth();
+  const { navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState(routeParams?.mode === 'register' ? 'register' : 'login'); // 'login'|'register'
 
-  // ✅ Si déjà connecté, rediriger vers welcome (mais PAS pendant le render)
+  const nextScreen = routeParams?.nextScreen || null;
+
+  // ✅ Si déjà connecté, rediriger (mais PAS pendant le render)
   useEffect(() => {
     if (user?.isAuthenticated) {
-      navigate('welcome');
+      navigate(nextScreen || 'welcome');
     }
-  }, [user?.isAuthenticated, navigate]);
+  }, [user?.isAuthenticated, navigate, nextScreen]);
 
   if (user?.isAuthenticated) return null;
 
@@ -54,9 +59,40 @@ export default function LoginPage() {
       setEmail('');
       setPassword('');
       showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
-      setTimeout(() => navigate('welcome'), 300);
+      setTimeout(() => navigate(nextScreen || 'welcome'), 300);
     } else {
       showError(result.error ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
+    }
+  };
+
+  const handleRegister = async () => {
+    if (loading) return;
+    if (!email || !username || !password || !confirmPassword) {
+      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showError(language === 'fr' ? 'Les mots de passe ne correspondent pas.' : 'Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      showError(language === 'fr' ? 'Mot de passe trop court (min 6).' : 'Password too short (min 6).');
+      return;
+    }
+
+    setLoading(true);
+    const result = await register({ email, username, password });
+    setLoading(false);
+
+    if (result.success) {
+      showSuccess(language === 'fr' ? 'Compte créé !' : 'Account created!');
+      setEmail('');
+      setUsername('');
+      setPassword('');
+      setConfirmPassword('');
+      setTimeout(() => navigate(nextScreen || 'welcome'), 300);
+    } else {
+      showError(result.error ?? (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
     }
   };
 
@@ -66,23 +102,65 @@ export default function LoginPage() {
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.header}>
           <Logo size={90} />
-          <Text style={styles.title}>{language === 'fr' ? 'Connexion' : 'Login'}</Text>
+          <Text style={styles.title}>
+            {mode === 'register'
+              ? (language === 'fr' ? 'Inscription' : 'Sign up')
+              : (language === 'fr' ? 'Connexion' : 'Login')}
+          </Text>
           <Text style={styles.subtitle}>
-            {language === 'fr' ? 'Accède à ton compte' : 'Access your account'}
+            {mode === 'register'
+              ? (language === 'fr' ? 'Crée ton compte' : 'Create your account')
+              : (language === 'fr' ? 'Accède à ton compte' : 'Access your account')}
           </Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>{language === 'fr' ? 'Email ou Pseudo' : 'Email or Username'}</Text>
+          <View style={styles.modeRow}>
+            <TouchableOpacity
+              style={[styles.modePill, mode === 'login' && styles.modePillActive]}
+              onPress={() => setMode('login')}
+              disabled={loading}
+            >
+              <Text style={[styles.modePillText, mode === 'login' && styles.modePillTextActive]}>
+                {language === 'fr' ? 'Connexion' : 'Login'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modePill, mode === 'register' && styles.modePillActive]}
+              onPress={() => setMode('register')}
+              disabled={loading}
+            >
+              <Text style={[styles.modePillText, mode === 'register' && styles.modePillTextActive]}>
+                {language === 'fr' ? 'Inscription' : 'Sign up'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>{language === 'fr' ? 'Email' : 'Email'}</Text>
           <TextInput
             style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com ou ton.pseudo' : 'your.email@example.com or your.username'}
+            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
             placeholderTextColor="rgba(255,255,255,0.45)"
             autoCapitalize="none"
             autoCorrect={false}
             value={email}
             onChangeText={setEmail}
           />
+
+          {mode === 'register' ? (
+            <>
+              <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Username'}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
+                placeholderTextColor="rgba(255,255,255,0.45)"
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={username}
+                onChangeText={setUsername}
+              />
+            </>
+          ) : null}
 
           <Text style={styles.label}>{t('password')}</Text>
           <View style={styles.passwordRow}>
@@ -100,15 +178,48 @@ export default function LoginPage() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={[styles.primaryButton, loading && styles.primaryButtonDisabled]} onPress={handleLogin} disabled={loading}>
-            {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('accountType')}>
-            <Text style={styles.secondaryButtonText}>
-              {language === 'fr' ? 'Créer un compte' : 'Create an account'}
-            </Text>
-          </TouchableOpacity>
+          {mode === 'register' ? (
+            <>
+              <Text style={styles.label}>{language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={language === 'fr' ? 'Confirmer' : 'Confirm'}
+                placeholderTextColor="rgba(255,255,255,0.45)"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                onPress={handleRegister}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#0b0b0e" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {language === 'fr' ? 'Créer mon compte' : 'Create account'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('accountType')}>
+                <Text style={styles.secondaryButtonText}>
+                  {language === 'fr' ? 'Créer un compte' : 'Create an account'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -154,6 +265,32 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.25)',
     borderRadius: 18,
     padding: 18,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  modePill: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 999,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  modePillActive: {
+    borderColor: 'rgba(255,23,68,0.45)',
+    backgroundColor: 'rgba(255,23,68,0.18)',
+  },
+  modePillText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  modePillTextActive: {
+    color: '#fff',
   },
   label: {
     color: 'rgba(255,255,255,0.85)',

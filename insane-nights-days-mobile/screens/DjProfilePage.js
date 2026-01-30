@@ -117,10 +117,7 @@ export default function DjProfilePage() {
             genre: ratingsResponse.dj.genre,
             mainCity: ratingsResponse.dj.mainCity,
             languages: ratingsResponse.dj.languages,
-            hourlyRate: ratingsResponse.dj.hourlyRate,
-            performanceRate: ratingsResponse.dj.performanceRate,
-            minTravelFee: ratingsResponse.dj.minTravelFee,
-            extraFees: ratingsResponse.dj.extraFees,
+            // ✅ Tarifs retirés (prix à convenir via contrat Booker ↔ DJ)
             availableStatus: ratingsResponse.dj.availableStatus,
             soundcloudUrl: ratingsResponse.dj.soundcloudUrl,
             spotifyUrl: ratingsResponse.dj.spotifyUrl,

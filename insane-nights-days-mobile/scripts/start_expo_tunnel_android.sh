@@ -25,5 +25,6 @@ safe="${safe}-$(date +%s)"
 export EXPO_TUNNEL_SUBDOMAIN="$safe"
 echo "Using EXPO_TUNNEL_SUBDOMAIN=${EXPO_TUNNEL_SUBDOMAIN}"
 
-npx expo start --tunnel --clear
+# Force Expo Go (otherwise Expo may default to dev-client QR)
+npx expo start --tunnel --clear --go
 

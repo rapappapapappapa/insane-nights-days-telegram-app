@@ -112,6 +112,215 @@ app.post('/api/admin/bootstrap', async (req, res) => {
   }
 });
 
+/**
+ * ✅ Seed demo data (events + feed) for remote testers
+ * Protected by ADMIN_BOOTSTRAP_KEY (same mechanism as bootstrap).
+ *
+ * POST /api/admin/seed-demo
+ * headers: x-admin-bootstrap-key
+ * query: reset=true (optional) to delete demo data first
+ */
+app.post('/api/admin/seed-demo', async (req, res) => {
+  try {
+    const key = req.get('x-admin-bootstrap-key') || req.body?.bootstrapKey;
+    const expected = process.env.ADMIN_BOOTSTRAP_KEY;
+    if (!expected || key !== expected) {
+      return res.status(403).json({ success: false, message: 'Clé bootstrap invalide.' });
+    }
+
+    const reset = String(req.query?.reset || '').toLowerCase() === 'true';
+
+    const demo = {
+      dj: { email: 'demo.dj@insane.test', username: 'demo_dj' },
+      booker: { email: 'demo.booker@insane.test', username: 'demo_booker' },
+      venue: { email: 'demo.venue@insane.test', username: 'demo_venue' },
+    };
+
+    if (reset) {
+      const demoUsers = await prisma.user.findMany({
+        where: { email: { in: [demo.dj.email, demo.booker.email, demo.venue.email] } },
+        select: { id: true },
+      });
+      const demoUserIds = demoUsers.map(u => u.id);
+
+      // Remove demo content first (safe even if empty)
+      await prisma.feedPost.deleteMany({ where: { authorId: { in: demoUserIds } } });
+      await prisma.event.deleteMany({ where: { title: { startsWith: 'Demo -' } } });
+      await prisma.userDj.deleteMany({ where: { userId: { in: demoUserIds } } });
+      await prisma.userBooker.deleteMany({ where: { userId: { in: demoUserIds } } });
+      await prisma.userVenue.deleteMany({ where: { userId: { in: demoUserIds } } });
+      await prisma.user.deleteMany({ where: { id: { in: demoUserIds } } });
+    } else {
+      // If we already have upcoming events, don't spam duplicates
+      const existingUpcoming = await prisma.event.count({
+        where: { status: 'UPCOMING', date: { gte: new Date() } },
+      });
+      if (existingUpcoming > 0) {
+        return res.json({
+          success: true,
+          message: 'Seed ignoré: des événements UPCOMING existent déjà. Utilise ?reset=true si tu veux régénérer.',
+          existingUpcoming,
+        });
+      }
+    }
+
+    const demoPassword = await bcrypt.hash('demo-password-change-me', 10);
+
+    const djUser = await prisma.user.upsert({
+      where: { email: demo.dj.email },
+      update: { username: demo.dj.username, activeProfileType: 'DJ', accountType: 'DJ' },
+      create: {
+        email: demo.dj.email,
+        username: demo.dj.username,
+        password: demoPassword,
+        activeProfileType: 'DJ',
+        accountType: 'DJ',
+      },
+    });
+
+    const bookerUser = await prisma.user.upsert({
+      where: { email: demo.booker.email },
+      update: { username: demo.booker.username, activeProfileType: 'BOOKER', accountType: 'BOOKER' },
+      create: {
+        email: demo.booker.email,
+        username: demo.booker.username,
+        password: demoPassword,
+        activeProfileType: 'BOOKER',
+        accountType: 'BOOKER',
+      },
+    });
+
+    const venueUser = await prisma.user.upsert({
+      where: { email: demo.venue.email },
+      update: { username: demo.venue.username, activeProfileType: 'VENUE', accountType: 'VENUE' },
+      create: {
+        email: demo.venue.email,
+        username: demo.venue.username,
+        password: demoPassword,
+        activeProfileType: 'VENUE',
+        accountType: 'VENUE',
+      },
+    });
+
+    await prisma.userDj.deleteMany({ where: { userId: djUser.id } });
+    await prisma.userBooker.deleteMany({ where: { userId: bookerUser.id } });
+    await prisma.userVenue.deleteMany({ where: { userId: venueUser.id } });
+
+    const djProfile = await prisma.userDj.create({
+      data: {
+        userId: djUser.id,
+        artistName: 'Demo DJ Neon',
+        city: 'Paris',
+        phone: '0000000000',
+        birthDate: '01/01/1999',
+        bio: 'Compte démo pour tests iOS/Android.',
+        genre: 'Techno',
+        profileImage: 'https://images.unsplash.com/photo-1520975693416-35a27293e0f3?w=400&h=400&fit=crop',
+        bannerImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&h=400&fit=crop',
+        languages: 'FR,EN',
+      },
+    });
+
+    const bookerProfile = await prisma.userBooker.create({
+      data: {
+        userId: bookerUser.id,
+        nom: 'Demo',
+        prenom: 'Booker',
+        phonePro: '0000000000',
+        bookerType: 'Club',
+      },
+    });
+
+    const venueProfile = await prisma.userVenue.create({
+      data: {
+        userId: venueUser.id,
+        venueName: 'Demo Club Insane',
+        address: '123 Rue de la Nuit, Paris',
+      },
+    });
+
+    const daysFromNow = (d) => new Date(Date.now() + d * 24 * 60 * 60 * 1000);
+
+    // Create 2 upcoming events so the feed isn't empty
+    const e1 = await prisma.event.create({
+      data: {
+        title: 'Demo - Insane Night (Techno)',
+        date: daysFromNow(7),
+        time: '22:00',
+        location: 'Demo Club Insane, Paris',
+        price: 25,
+        capacity: 200,
+        sold: 0,
+        genre: 'Techno',
+        description: 'Événement démo pour tests (Railway).',
+        image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&h=800&fit=crop',
+        status: 'UPCOMING',
+        venueId: venueProfile.id,
+        bookerId: bookerProfile.id,
+      },
+    });
+
+    const e2 = await prisma.event.create({
+      data: {
+        title: 'Demo - Bass Revolution (D&B)',
+        date: daysFromNow(14),
+        time: '21:00',
+        location: 'Demo Club Insane, Paris',
+        price: 30,
+        capacity: 150,
+        sold: 0,
+        genre: 'Drum & Bass',
+        description: 'Événement démo pour tests (Railway).',
+        image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&h=800&fit=crop',
+        status: 'UPCOMING',
+        venueId: venueProfile.id,
+        bookerId: bookerProfile.id,
+      },
+    });
+
+    // Link DJ to events
+    await prisma.eventDj.createMany({
+      data: [
+        { eventId: e1.id, djId: djUser.id, status: 'ACCEPTED' },
+        { eventId: e2.id, djId: djUser.id, status: 'ACCEPTED' },
+      ],
+      skipDuplicates: true,
+    });
+
+    // Create a couple of demo feed posts
+    await prisma.feedPost.createMany({
+      data: [
+        {
+          authorId: djUser.id,
+          djId: djProfile.id,
+          content: 'Demo: prêt pour une Insane Night sur Railway. 🔥',
+          imageUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&h=800&fit=crop',
+        },
+        {
+          authorId: bookerUser.id,
+          bookerId: bookerProfile.id,
+          content: 'Demo: nouveaux événements à venir, pensez à réserver vos places.',
+          imageUrl: 'https://images.unsplash.com/photo-1464375117522-1311dd7a0b66?w=1200&h=800&fit=crop',
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Seed démo OK.',
+      created: {
+        users: { dj: djUser.id, booker: bookerUser.id, venue: venueUser.id },
+        profiles: { dj: djProfile.id, booker: bookerProfile.id, venue: venueProfile.id },
+        events: [e1.id, e2.id],
+      },
+    });
+  } catch (e) {
+    console.error('Erreur seed demo:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur', error: String(e?.message || e) });
+  }
+});
+
 // Exemple endpoints admin
 app.get('/api/admin/me', authenticateToken, requireAdmin, async (req, res) => {
   res.json({ success: true, admin: { id: req.user.id, email: req.user.email, username: req.user.username } });

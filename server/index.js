@@ -6538,17 +6538,27 @@ app.get('/api/test', async (req, res) => {
   }
 });
 
-// Mettre à jour les statuts au démarrage
-updateEventStatuses();
-
-// Mettre à jour les statuts toutes les 5 minutes
-setInterval(updateEventStatuses, 5 * 60 * 1000);
+// Mettre à jour les statuts au démarrage (désactivable en prod)
+const ENABLE_EVENT_STATUS_CRON = (process.env.ENABLE_EVENT_STATUS_CRON ?? 'true').toLowerCase() === 'true';
+if (ENABLE_EVENT_STATUS_CRON) {
+  updateEventStatuses();
+  // Mettre à jour les statuts toutes les 5 minutes
+  setInterval(updateEventStatuses, 5 * 60 * 1000);
+} else {
+  console.log('⏸️  Cron status événements désactivé (ENABLE_EVENT_STATUS_CRON=false)');
+}
 
 // IMPORTANT (Railway): don't force IPv4-only bind; let Node bind all interfaces.
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
-  console.log(`⏰ Mise à jour automatique des statuts d'événements activée (toutes les 5 minutes)`);
+  if (ENABLE_EVENT_STATUS_CRON) {
+    console.log(`⏰ Mise à jour automatique des statuts d'événements activée (toutes les 5 minutes)`);
+  }
+});
+
+server.on('error', (err) => {
+  console.error('❌ Erreur serveur HTTP:', err);
 });
 
 const shutdown = async () => {
@@ -6561,5 +6571,13 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// Log but try not to hard-crash in production.
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+});
 
 

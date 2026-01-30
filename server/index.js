@@ -6548,8 +6548,8 @@ if (ENABLE_EVENT_STATUS_CRON) {
   console.log('⏸️  Cron status événements désactivé (ENABLE_EVENT_STATUS_CRON=false)');
 }
 
-// IMPORTANT (Railway): don't force IPv4-only bind; let Node bind all interfaces.
-const server = app.listen(PORT, () => {
+// Railway expects the app to listen on all interfaces.
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   if (ENABLE_EVENT_STATUS_CRON) {

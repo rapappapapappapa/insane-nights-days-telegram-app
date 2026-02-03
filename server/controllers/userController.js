@@ -378,6 +378,7 @@ const getCurrentUser = async (req, res) => {
         id: user.id,
         email: user.email,
         username: user.username,
+        role: user.role || 'USER',
         score: user.score ?? 0,
         level: user.level ?? 1,
         sbtActive: user.sbtActive ?? false,

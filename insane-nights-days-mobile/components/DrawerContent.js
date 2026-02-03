@@ -80,6 +80,14 @@ const menuItems = [
     description: 'Basculer entre tes profils',
     onlyWhenLoggedIn: true,
   },
+  {
+    id: 'admin',
+    emoji: '🛡️',
+    title: 'Admin',
+    description: 'Modération & utilisateurs',
+    onlyWhenLoggedIn: true,
+    onlyWhenAdmin: true,
+  },
 ];
 
 export default function DrawerContent({ navigation }) {
@@ -92,6 +100,7 @@ export default function DrawerContent({ navigation }) {
 
   const isLoggedIn = !!user?.isAuthenticated;
   const activeProfileType = user?.activeProfileType || null;
+  const isAdmin = (user?.role || 'USER') === 'ADMIN';
 
   useEffect(() => {
     let mounted = true;
@@ -217,6 +226,7 @@ export default function DrawerContent({ navigation }) {
           // Filtrage simple basé sur l'état de connexion
           if (item.onlyWhenLoggedOut && isLoggedIn) return null;
           if (item.onlyWhenLoggedIn && !isLoggedIn) return null;
+          if (item.onlyWhenAdmin && !isAdmin) return null;
           if (item.onlyForActiveProfileTypes && isLoggedIn) {
             const active = activeProfileType;
             if (!active || !item.onlyForActiveProfileTypes.includes(active)) return null;

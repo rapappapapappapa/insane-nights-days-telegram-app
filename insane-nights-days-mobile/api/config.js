@@ -1302,6 +1302,35 @@ const api = {
       method: 'PUT',
     }, token);
   },
+
+  // =========================================================================
+  // ADMIN (nécessite user.role === 'ADMIN')
+  // =========================================================================
+  adminMe: async (token) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest('/api/admin/me', { noCache: true }, token);
+  },
+  adminListUsers: async (token) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest('/api/admin/users', { noCache: true }, token);
+  },
+  adminSetUserRole: async (token, userId, role) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!userId) throw new Error('userId requis.');
+    return apiRequest(`/api/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }, token);
+  },
+  adminListFeedPosts: async (token, limit = 50, offset = 0) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(`/api/admin/feed/posts?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`, { noCache: true }, token);
+  },
+  adminDeleteFeedPost: async (token, postId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!postId) throw new Error('postId requis.');
+    return apiRequest(`/api/admin/feed/posts/${postId}`, { method: 'DELETE' }, token);
+  },
 };
 
 // Fonction helper pour normaliser les URLs des médias

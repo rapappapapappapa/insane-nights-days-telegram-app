@@ -340,6 +340,120 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+/**
+ * ✅ Admin: modifier le rôle d'un utilisateur
+ * @route PUT /api/admin/users/:userId/role
+ * body: { role: 'USER' | 'ADMIN' }
+ */
+app.put('/api/admin/users/:userId/role', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const nextRoleRaw = req.body?.role;
+    const nextRole = typeof nextRoleRaw === 'string' ? nextRoleRaw.trim().toUpperCase() : null;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId requis.' });
+    }
+    if (nextRole !== 'USER' && nextRole !== 'ADMIN') {
+      return res.status(400).json({ success: false, message: 'Rôle invalide. Utilise USER ou ADMIN.' });
+    }
+
+    // Empêcher un admin de se retirer ses propres droits (évite lock-out)
+    if (req.user.id === userId && nextRole !== 'ADMIN') {
+      return res.status(400).json({ success: false, message: 'Impossible de retirer ton propre accès admin.' });
+    }
+
+    // Empêcher de supprimer le dernier admin
+    if (nextRole !== 'ADMIN') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+      const target = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (target?.role === 'ADMIN' && adminCount <= 1) {
+        return res.status(400).json({ success: false, message: 'Impossible: il doit rester au moins un admin.' });
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { role: nextRole },
+      select: { id: true, email: true, username: true, role: true, activeProfileType: true, createdAt: true },
+    });
+
+    return res.json({ success: true, user: updated });
+  } catch (e) {
+    console.error('Erreur admin set role:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: lister les posts du feed (modération)
+ * @route GET /api/admin/feed/posts?limit=&offset=
+ */
+app.get('/api/admin/feed/posts', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
+
+    const posts = await prisma.feedPost.findMany({
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        content: true,
+        imageUrl: true,
+        imageStorageKey: true,
+        createdAt: true,
+        author: { select: { id: true, username: true, email: true } },
+        dj: { select: { artistName: true } },
+        booker: { select: { nom: true, prenom: true } },
+      },
+    });
+
+    return res.json({ success: true, posts });
+  } catch (e) {
+    console.error('Erreur admin list feed posts:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: supprimer un post du feed (modération)
+ * @route DELETE /api/admin/feed/posts/:postId
+ */
+app.delete('/api/admin/feed/posts/:postId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { postId } = req.params;
+    if (!postId) {
+      return res.status(400).json({ success: false, message: 'postId requis.' });
+    }
+
+    const post = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { id: true, imageUrl: true, imageStorageKey: true },
+    });
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post introuvable.' });
+    }
+
+    // Best-effort: supprimer l'objet R2 si on a une clé
+    if (MEDIA_STORAGE === 'r2') {
+      try {
+        await deleteFromR2({ key: post.imageStorageKey, url: post.imageUrl });
+      } catch (e) {
+        // Ne pas bloquer la suppression DB sur un échec R2 (réseau/droits)
+        console.warn('[admin delete feed post] deleteFromR2 failed:', e?.message ?? e);
+      }
+    }
+
+    await prisma.feedPost.delete({ where: { id: postId } });
+    return res.json({ success: true, message: 'Post supprimé.' });
+  } catch (e) {
+    console.error('Erreur admin delete feed post:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Configuration Multer pour l'upload de fichiers
 const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {

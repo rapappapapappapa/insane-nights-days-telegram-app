@@ -43,6 +43,7 @@ import FeedPage from './screens/FeedPage'; // ✅ AJOUT: Page Feed d'actualité
 import CreateFeedPostPage from './screens/CreateFeedPostPage'; // ✅ AJOUT: Page création de post
 import TutorialPage from './screens/TutorialPage'; // ✅ AJOUT: Page de tutoriel
 import NotificationsPage from './screens/NotificationsPage'; // ✅ AJOUT: Page notifications (feed)
+import AdminPage from './screens/AdminPage'; // ✅ AJOUT: Page admin
 
 const SCREENS = {
   home: HomePage,
@@ -76,6 +77,7 @@ const SCREENS = {
   createFeedPost: CreateFeedPostPage, // ✅ AJOUT: Route pour créer un post
   tutorial: TutorialPage, // ✅ AJOUT: Route pour le tutoriel
   notifications: NotificationsPage, // ✅ AJOUT: Route notifications (feed)
+  admin: AdminPage, // ✅ AJOUT: Route admin (visible uniquement pour admins)
 };
 
 function AppContent() {

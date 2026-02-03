@@ -965,6 +965,52 @@ const api = {
     );
   },
 
+  // ✅ Modifier un événement (booker) - champs limités
+  updateEvent: async (token, eventId, updates = {}) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventId) throw new Error('eventId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_CREATE_EVENT}/${eventId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(updates || {}),
+      },
+      token
+    );
+  },
+
+  // ✅ Uploader une image d'événement (booker)
+  uploadEventImage: async (token, eventId, imageUri) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventId) throw new Error('eventId requis.');
+    if (!imageUri) throw new Error('L\'URI de l\'image est requise.');
+
+    const formData = new FormData();
+    const fileData = {
+      uri: imageUri,
+      type: getMimeType(imageUri, 'photo'),
+      name: getFileName(imageUri),
+    };
+    formData.append('image', fileData);
+
+    const uploadUrl = `${API_CONFIG.BASE_URL}/api/booker/events/${eventId}/upload-image`;
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || 'Échec de l\'upload de l\'image.');
+    }
+    return result;
+  },
+
   // ============================================
   // CHAT - Communication DJ/Booker
   // ============================================

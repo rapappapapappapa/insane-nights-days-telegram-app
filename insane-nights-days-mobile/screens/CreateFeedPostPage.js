@@ -220,7 +220,13 @@ export default function CreateFeedPostPage() {
       </View>
 
       {/* ✅ FORMULAIRE: Zone de saisie pour le contenu et l'image */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.contentInput}

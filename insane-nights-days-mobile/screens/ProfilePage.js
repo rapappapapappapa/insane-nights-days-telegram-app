@@ -210,7 +210,13 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         )}
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>I</Text>

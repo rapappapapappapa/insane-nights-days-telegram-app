@@ -193,6 +193,9 @@ export default function VenueListPage() {
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing} // État de rafraîchissement

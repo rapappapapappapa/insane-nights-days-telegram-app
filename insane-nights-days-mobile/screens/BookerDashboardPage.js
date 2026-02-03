@@ -25,6 +25,7 @@ import { useToast } from '../hooks/useToast';
 import NotificationBadge from '../components/NotificationBadge';
 import { useNotifications } from '../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 function cleanText(s) {
   if (!s) return '';
@@ -54,6 +55,20 @@ export default function BookerDashboardPage() {
   const [showMyEvents, setShowMyEvents] = useState(shouldOpenBookings || false);
   const [deletingEventId, setDeletingEventId] = useState(null);
   const [markingPaymentEventDjId, setMarkingPaymentEventDjId] = useState(null);
+
+  // ✅ Édition événement (champs limités)
+  const [editEventVisible, setEditEventVisible] = useState(false);
+  const [editEventSaving, setEditEventSaving] = useState(false);
+  const [editEventUploading, setEditEventUploading] = useState(false);
+  const [editEventId, setEditEventId] = useState(null);
+  const [editEventDraft, setEditEventDraft] = useState({
+    title: '',
+    description: '',
+    genre: '',
+    location: '',
+    time: '',
+    image: null,
+  });
   
   // Slots DJ pour la création d'événement
   const [djSlots, setDjSlots] = useState([null]); // Array de djIds ou null
@@ -740,6 +755,87 @@ export default function BookerDashboardPage() {
     );
   };
 
+  const openEditEvent = (event) => {
+    setEditEventId(event?.id || null);
+    setEditEventDraft({
+      title: event?.title || '',
+      description: event?.description || '',
+      genre: event?.genre || '',
+      location: event?.location || '',
+      time: event?.time || '',
+      image: event?.image || null,
+    });
+    setEditEventVisible(true);
+  };
+
+  const pickEditEventImage = async () => {
+    if (!user?.token || !editEventId) return;
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          language === 'fr' ? 'Permission requise' : 'Permission required',
+          language === 'fr'
+            ? 'Autorise l’accès aux photos pour choisir une image.'
+            : 'Please allow photo access to pick an image.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.9,
+      });
+
+      if (result.canceled) return;
+      const uri = result.assets?.[0]?.uri;
+      if (!uri) return;
+
+      setEditEventUploading(true);
+      const uploaded = await api.uploadEventImage(user.token, editEventId, uri);
+      setEditEventDraft((prev) => ({ ...prev, image: uploaded?.imageUrl || prev.image }));
+      showSuccess(language === 'fr' ? 'Photo ajoutée.' : 'Photo added.');
+    } catch (e) {
+      console.error('Erreur upload image event:', e);
+      showError(language === 'fr' ? 'Impossible d’uploader la photo.' : 'Unable to upload image.');
+    } finally {
+      setEditEventUploading(false);
+    }
+  };
+
+  const saveEditEvent = async () => {
+    if (!user?.token || !editEventId || editEventSaving) return;
+    if (!editEventDraft.title?.trim()) {
+      showError(language === 'fr' ? 'Titre requis.' : 'Title is required.');
+      return;
+    }
+    setEditEventSaving(true);
+    try {
+      const updates = {
+        title: editEventDraft.title,
+        description: editEventDraft.description,
+        genre: editEventDraft.genre,
+        location: editEventDraft.location,
+        time: editEventDraft.time,
+        image: editEventDraft.image,
+      };
+      const res = await api.updateEvent(user.token, editEventId, updates);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Événement modifié.' : 'Event updated.');
+        setEditEventVisible(false);
+        await fetchMyEvents();
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible de modifier.' : 'Unable to update.'));
+      }
+    } catch (e) {
+      console.error('Erreur update event:', e);
+      showError(language === 'fr' ? 'Erreur modification événement.' : 'Event update error.');
+    } finally {
+      setEditEventSaving(false);
+    }
+  };
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -933,6 +1029,7 @@ export default function BookerDashboardPage() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {showMyEvents ? (
           // Section "Mes événements"
@@ -1062,6 +1159,14 @@ export default function BookerDashboardPage() {
                   <Text style={styles.eventInfo}>
                     {event.sold} / {event.capacity} {language === 'fr' ? 'places vendues' : 'tickets sold'}
                   </Text>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => openEditEvent(event)}
+                  >
+                    <Text style={styles.editButtonText}>
+                      {language === 'fr' ? '✏️ Modifier' : '✏️ Edit'}
+                    </Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.deleteButton, deletingEventId === event.id && styles.deleteButtonDisabled]}
                     onPress={() => handleDeleteEvent(event.id)}
@@ -2183,6 +2288,130 @@ export default function BookerDashboardPage() {
         </View>
       </Modal>
       
+      {/* ✅ Modal édition événement */}
+      <Modal
+        visible={editEventVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEditEventVisible(false)}
+      >
+        <View style={styles.editEventOverlay}>
+          <KeyboardAvoidingView
+            style={styles.editEventCard}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView
+              contentContainerStyle={styles.editEventContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              <Text style={styles.editEventTitle}>
+                {language === 'fr' ? 'Modifier l’événement' : 'Edit event'}
+              </Text>
+
+              <Text style={styles.editEventLabel}>{language === 'fr' ? 'Titre' : 'Title'}</Text>
+              <TextInput
+                style={styles.editEventInput}
+                value={editEventDraft.title}
+                onChangeText={(v) => setEditEventDraft((p) => ({ ...p, title: v }))}
+                placeholder={language === 'fr' ? 'Nom de l’événement' : 'Event name'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+
+              <Text style={styles.editEventLabel}>{language === 'fr' ? 'Description' : 'Description'}</Text>
+              <TextInput
+                style={[styles.editEventInput, { height: 90 }]}
+                value={editEventDraft.description}
+                onChangeText={(v) => setEditEventDraft((p) => ({ ...p, description: v }))}
+                placeholder={language === 'fr' ? 'Description (optionnel)' : 'Description (optional)'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                multiline
+              />
+
+              <View style={styles.editEventRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.editEventLabel}>{language === 'fr' ? 'Genre' : 'Genre'}</Text>
+                  <TextInput
+                    style={styles.editEventInput}
+                    value={editEventDraft.genre}
+                    onChangeText={(v) => setEditEventDraft((p) => ({ ...p, genre: v }))}
+                    placeholder="Techno"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+                </View>
+                <View style={{ width: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.editEventLabel}>{language === 'fr' ? 'Heure' : 'Time'}</Text>
+                  <TextInput
+                    style={styles.editEventInput}
+                    value={editEventDraft.time}
+                    onChangeText={(v) => setEditEventDraft((p) => ({ ...p, time: v }))}
+                    placeholder="21:00"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.editEventLabel}>{language === 'fr' ? 'Adresse (affichage)' : 'Display address'}</Text>
+              <TextInput
+                style={styles.editEventInput}
+                value={editEventDraft.location}
+                onChangeText={(v) => setEditEventDraft((p) => ({ ...p, location: v }))}
+                placeholder={language === 'fr' ? 'Adresse affichée' : 'Displayed address'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+
+              <Text style={styles.editEventLabel}>{language === 'fr' ? 'Photo' : 'Photo'}</Text>
+              {editEventDraft.image ? (
+                <Image
+                  source={{ uri: normalizeMediaUrl(editEventDraft.image) }}
+                  style={styles.editEventImage}
+                />
+              ) : (
+                <Text style={styles.editEventHint}>
+                  {language === 'fr' ? 'Aucune photo' : 'No photo'}
+                </Text>
+              )}
+              <TouchableOpacity
+                style={[styles.editEventImageButton, editEventUploading && styles.editEventImageButtonDisabled]}
+                onPress={pickEditEventImage}
+                disabled={editEventUploading}
+              >
+                {editEventUploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.editEventImageButtonText}>
+                    {language === 'fr' ? '🖼️ Choisir une photo' : '🖼️ Pick a photo'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.editEventActions}>
+                <TouchableOpacity
+                  style={[styles.editEventAction, styles.editEventCancel]}
+                  onPress={() => setEditEventVisible(false)}
+                  disabled={editEventSaving || editEventUploading}
+                >
+                  <Text style={styles.editEventCancelText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editEventAction, styles.editEventSave, (editEventSaving || editEventUploading) && styles.editEventSaveDisabled]}
+                  onPress={saveEditEvent}
+                  disabled={editEventSaving || editEventUploading}
+                >
+                  {editEventSaving ? (
+                    <ActivityIndicator size="small" color="#0b0b0e" />
+                  ) : (
+                    <Text style={styles.editEventSaveText}>{language === 'fr' ? 'Enregistrer' : 'Save'}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
       {/* Toast pour les notifications */}
       <Toast
         message={toast.message}
@@ -2937,6 +3166,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  editButton: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.30)',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   deleteButtonDisabled: {
     opacity: 0.6,
   },
@@ -3181,6 +3426,107 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+
+  // ✅ Edit event modal
+  editEventOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  editEventCard: {
+    backgroundColor: '#12121a',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    overflow: 'hidden',
+    maxHeight: '85%',
+  },
+  editEventContent: {
+    padding: 16,
+  },
+  editEventTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  editEventLabel: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  editEventInput: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 14,
+  },
+  editEventRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  editEventHint: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  editEventImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  editEventImageButton: {
+    backgroundColor: 'rgba(255,23,68,0.20)',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+  },
+  editEventImageButtonDisabled: {
+    opacity: 0.6,
+  },
+  editEventImageButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  editEventActions: {
+    flexDirection: 'row',
+    marginTop: 14,
+    gap: 10,
+  },
+  editEventAction: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editEventCancel: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  editEventCancelText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  editEventSave: {
+    backgroundColor: '#FF1744',
+  },
+  editEventSaveDisabled: {
+    opacity: 0.7,
+  },
+  editEventSaveText: {
+    color: '#0b0b0e',
+    fontWeight: '900',
   },
   // Styles pour les slots DJ
   djSlotContainer: {

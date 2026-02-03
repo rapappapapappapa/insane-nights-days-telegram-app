@@ -5,7 +5,7 @@ set -euo pipefail
 # invalid hostname characters (like underscores). We force a safe subdomain.
 #
 # Usage:
-#   bash scripts/start_expo_tunnel_android.sh
+#   bash scripts/start_expo_tunnel_android.sh [port]
 #
 # Notes:
 # - This is for Expo Go + tunnel.
@@ -25,6 +25,9 @@ safe="${safe}-$(date +%s)"
 export EXPO_TUNNEL_SUBDOMAIN="$safe"
 echo "Using EXPO_TUNNEL_SUBDOMAIN=${EXPO_TUNNEL_SUBDOMAIN}"
 
+# Allow overriding Metro port (useful when running 2 servers at once)
+PORT="${1:-8081}"
+
 # Force Expo Go (otherwise Expo may default to dev-client QR)
-npx expo start --tunnel --clear --go
+npx expo start --tunnel --clear --go --port "$PORT"
 

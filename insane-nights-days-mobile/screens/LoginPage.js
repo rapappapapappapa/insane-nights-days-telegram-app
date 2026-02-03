@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -100,127 +101,135 @@ export default function LoginPage() {
     <SafeAreaView style={styles.container}>
       <BackgroundVideo />
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.header}>
-          <Logo size={90} />
-          <Text style={styles.title}>
-            {mode === 'register'
-              ? (language === 'fr' ? 'Inscription' : 'Sign up')
-              : (language === 'fr' ? 'Connexion' : 'Login')}
-          </Text>
-          <Text style={styles.subtitle}>
-            {mode === 'register'
-              ? (language === 'fr' ? 'Crée ton compte' : 'Create your account')
-              : (language === 'fr' ? 'Accède à ton compte' : 'Access your account')}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.modeRow}>
-            <TouchableOpacity
-              style={[styles.modePill, mode === 'login' && styles.modePillActive]}
-              onPress={() => setMode('login')}
-              disabled={loading}
-            >
-              <Text style={[styles.modePillText, mode === 'login' && styles.modePillTextActive]}>
-                {language === 'fr' ? 'Connexion' : 'Login'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modePill, mode === 'register' && styles.modePillActive]}
-              onPress={() => setMode('register')}
-              disabled={loading}
-            >
-              <Text style={[styles.modePillText, mode === 'register' && styles.modePillTextActive]}>
-                {language === 'fr' ? 'Inscription' : 'Sign up'}
-              </Text>
-            </TouchableOpacity>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <View style={styles.header}>
+            <Logo size={90} />
+            <Text style={styles.title}>
+              {mode === 'register'
+                ? (language === 'fr' ? 'Inscription' : 'Sign up')
+                : (language === 'fr' ? 'Connexion' : 'Login')}
+            </Text>
+            <Text style={styles.subtitle}>
+              {mode === 'register'
+                ? (language === 'fr' ? 'Crée ton compte' : 'Create your account')
+                : (language === 'fr' ? 'Accède à ton compte' : 'Access your account')}
+            </Text>
           </View>
 
-          <Text style={styles.label}>{language === 'fr' ? 'Email' : 'Email'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-            placeholderTextColor="rgba(255,255,255,0.45)"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={email}
-            onChangeText={setEmail}
-          />
+          <View style={styles.form}>
+            <View style={styles.modeRow}>
+              <TouchableOpacity
+                style={[styles.modePill, mode === 'login' && styles.modePillActive]}
+                onPress={() => setMode('login')}
+                disabled={loading}
+              >
+                <Text style={[styles.modePillText, mode === 'login' && styles.modePillTextActive]}>
+                  {language === 'fr' ? 'Connexion' : 'Login'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modePill, mode === 'register' && styles.modePillActive]}
+                onPress={() => setMode('register')}
+                disabled={loading}
+              >
+                <Text style={[styles.modePillText, mode === 'register' && styles.modePillTextActive]}>
+                  {language === 'fr' ? 'Inscription' : 'Sign up'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          {mode === 'register' ? (
-            <>
-              <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Username'}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={username}
-                onChangeText={setUsername}
-              />
-            </>
-          ) : null}
-
-          <Text style={styles.label}>{t('password')}</Text>
-          <View style={styles.passwordRow}>
+            <Text style={styles.label}>{language === 'fr' ? 'Email' : 'Email'}</Text>
             <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder={language === 'fr' ? 'Mot de passe' : 'Password'}
+              style={styles.input}
+              placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
               placeholderTextColor="rgba(255,255,255,0.45)"
-              secureTextEntry={!showPassword}
               autoCapitalize="none"
-              value={password}
-              onChangeText={setPassword}
+              autoCorrect={false}
+              value={email}
+              onChangeText={setEmail}
             />
-            <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="rgba(255,255,255,0.7)" />
-            </TouchableOpacity>
-          </View>
 
-          {mode === 'register' ? (
-            <>
-              <Text style={styles.label}>{language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}</Text>
+            {mode === 'register' ? (
+              <>
+                <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Username'}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={username}
+                  onChangeText={setUsername}
+                />
+              </>
+            ) : null}
+
+            <Text style={styles.label}>{t('password')}</Text>
+            <View style={styles.passwordRow}>
               <TextInput
-                style={styles.input}
-                placeholder={language === 'fr' ? 'Confirmer' : 'Confirm'}
+                style={[styles.input, styles.passwordInput]}
+                placeholder={language === 'fr' ? 'Mot de passe' : 'Password'}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={password}
+                onChangeText={setPassword}
               />
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#0b0b0e" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>
-                    {language === 'fr' ? 'Créer mon compte' : 'Create account'}
+              <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+            </View>
+
+            {mode === 'register' ? (
+              <>
+                <Text style={styles.label}>{language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={language === 'fr' ? 'Confirmer' : 'Confirm'}
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+                <TouchableOpacity
+                  style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                  onPress={handleRegister}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#0b0b0e" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>
+                      {language === 'fr' ? 'Créer mon compte' : 'Create account'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                  onPress={handleLogin}
+                  disabled={loading}
+                >
+                  {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('accountType')}>
+                  <Text style={styles.secondaryButtonText}>
+                    {language === 'fr' ? 'Créer un compte' : 'Create an account'}
                   </Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-              >
-                {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('accountType')}>
-                <Text style={styles.secondaryButtonText}>
-                  {language === 'fr' ? 'Créer un compte' : 'Create an account'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {toast.visible && (
@@ -241,7 +250,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 28,
+    flexGrow: 1,
     justifyContent: 'center',
   },
   header: {

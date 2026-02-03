@@ -5382,6 +5382,135 @@ app.delete('/api/booker/events/:eventId', authenticateToken, async (req, res) =>
 });
 
 /**
+ * Modifier un événement (Booker) - champs limités
+ * @route PUT /api/booker/events/:eventId
+ * body (tous optionnels): { title?, description?, image?, genre?, location?, time? }
+ */
+app.put('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+    const { title, description, image, genre, location, time } = req.body ?? {};
+
+    // Vérifier que le booker existe
+    const booker = await prisma.userBooker.findFirst({ where: { userId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+
+    // Vérifier que l'événement existe et appartient au booker
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+    if (event.bookerId !== booker.id) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres événements.' });
+    }
+
+    const data = {};
+    if (typeof title === 'string') data.title = title.trim();
+    if (typeof description === 'string') data.description = description.trim() || null;
+    if (typeof image === 'string') data.image = image.trim() || null;
+    if (typeof genre === 'string') data.genre = genre.trim() || event.genre;
+    if (typeof location === 'string') data.location = location.trim() || event.location;
+    if (typeof time === 'string') data.time = time.trim() || event.time;
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ success: false, message: 'Aucun champ à modifier.' });
+    }
+
+    // Empêcher les changements "critiques" via cet endpoint
+    delete data.price;
+    delete data.capacity;
+    delete data.sold;
+    delete data.status;
+    delete data.date;
+    delete data.venueId;
+    delete data.bookerId;
+
+    const updated = await prisma.event.update({
+      where: { id: eventId },
+      data,
+    });
+
+    return res.json({ success: true, message: 'Événement modifié.', event: updated });
+  } catch (error) {
+    console.error('Erreur modification événement:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Uploader une image pour un événement (Booker)
+ * @route POST /api/booker/events/:eventId/upload-image
+ * form-data: image=<file>
+ */
+app.post(
+  '/api/booker/events/:eventId/upload-image',
+  authenticateToken,
+  (req, res, next) =>
+    (MEDIA_STORAGE === 'r2' ? uploadMemory.single('image') : uploadLocal.single('image'))(req, res, next),
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { eventId } = req.params;
+
+      const booker = await prisma.userBooker.findFirst({ where: { userId } });
+      if (!booker) {
+        return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+      }
+
+      const event = await prisma.event.findUnique({ where: { id: eventId } });
+      if (!event) {
+        return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+      }
+      if (event.bookerId !== booker.id) {
+        return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres événements.' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Aucune image fournie.' });
+      }
+
+      if (!req.file.mimetype.startsWith('image/')) {
+        if (MEDIA_STORAGE === 'local' && req.file.filename) {
+          const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({ success: false, message: 'Le fichier doit être une image.' });
+      }
+
+      let imageUrl = null;
+      if (MEDIA_STORAGE === 'r2') {
+        const key = makeObjectKey('events', req.file.originalname);
+        const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
+        imageUrl = uploaded.url;
+      } else {
+        const host = req.get('host');
+        const forwardedProto = req.get('x-forwarded-proto');
+        const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+        const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
+        imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+      }
+
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { image: imageUrl },
+      });
+
+      return res.json({ success: true, imageUrl });
+    } catch (error) {
+      console.error('Erreur upload image event:', error);
+      if (MEDIA_STORAGE === 'local' && req.file && req.file.filename) {
+        const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+      return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+  }
+);
+
+/**
  * Crée un nouvel événement pour un booker
  * @route POST /api/booker/events
  */

@@ -374,7 +374,11 @@ export default function FeedPage() {
           feed.map((item) => {
             if (item.type === 'post') {
               const isDj = item.profileType === 'DJ';
-              const profileName = isDj ? item.dj?.artistName : item.booker?.name;
+              // Booker posts can sometimes miss the embedded booker object (old data / partial responses),
+              // so fallback to author username instead of showing "Utilisateur".
+              const profileName = isDj
+                ? item.dj?.artistName
+                : (item.booker?.name || item.author?.username);
               const profileImage = isDj ? item.dj?.profileImage : null;
               const profileLocation = isDj ? item.dj?.city : null;
               

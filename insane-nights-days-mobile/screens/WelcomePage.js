@@ -647,6 +647,9 @@ export default function WelcomePage() {
             <ScrollView
               style={styles.feedScroll}
               contentContainerStyle={styles.feedContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}

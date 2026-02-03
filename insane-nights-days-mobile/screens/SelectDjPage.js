@@ -166,7 +166,13 @@ export default function SelectDjPage() {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
         {filteredDjs.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>

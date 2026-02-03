@@ -177,6 +177,9 @@ export default function EventsPage() {
       <ScrollView
         style={styles.eventsScroll}
         contentContainerStyle={styles.eventsContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

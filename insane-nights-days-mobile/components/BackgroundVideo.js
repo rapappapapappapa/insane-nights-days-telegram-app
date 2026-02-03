@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
@@ -8,34 +8,31 @@ import { VideoView, useVideoPlayer } from 'expo-video';
  */
 export default function BackgroundVideo({ opacity = 0.6 }) {
   const videoSource = useMemo(() => require('../assets/Background_D_.mp4'), []);
-  const backgroundVideo = useVideoPlayer(videoSource);
-  
-  useEffect(() => {
-    if (backgroundVideo) {
-      try {
-        backgroundVideo.play();
-        backgroundVideo.loop = true;
-        backgroundVideo.muted = true;
-      } catch (error) {
-        console.warn('Erreur lors de la lecture de la vidéo:', error);
-      }
+  // Important: configurer le player dans le callback du hook pour éviter
+  // des effets "après release" (Android: shared object already released).
+  const backgroundVideo = useVideoPlayer(videoSource, (player) => {
+    try {
+      player.loop = true;
+      player.muted = true;
+      player.play();
+    } catch (e) {
+      // best-effort (ne pas crasher l'app)
     }
-    
-    return () => {
-      // Ne pas essayer de pause() dans le cleanup car le player peut être détruit
-      // Le cleanup se fera automatiquement quand le composant est démonté
-    };
-  }, [backgroundVideo]);
+  });
   
   return (
     <>
-      <VideoView
-        player={backgroundVideo}
-        style={styles.backgroundVideo}
-        contentFit="cover"
-        nativeControls={false}
-        allowsPictureInPicture={false}
-      />
+      {backgroundVideo ? (
+        <VideoView
+          // key pour forcer un remount propre si le player change
+          key={`bg-${String(videoSource)}`}
+          player={backgroundVideo}
+          style={styles.backgroundVideo}
+          contentFit="cover"
+          nativeControls={false}
+          allowsPictureInPicture={false}
+        />
+      ) : null}
       <View style={[styles.videoOverlay, { backgroundColor: `rgba(11, 11, 14, ${opacity})` }]} />
     </>
   );

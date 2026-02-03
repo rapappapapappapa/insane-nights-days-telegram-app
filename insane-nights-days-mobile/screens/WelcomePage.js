@@ -803,10 +803,6 @@ export default function WelcomePage() {
                               style={styles.postImage}
                               resizeMode="cover"
                               onError={(error) => {
-                                if (__DEV__) {
-                                  console.warn('Erreur chargement image post:', error?.nativeEvent?.error);
-                                  console.warn('URL de l\'image:', imageUri);
-                                }
                                 setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }));
                               }}
                             />

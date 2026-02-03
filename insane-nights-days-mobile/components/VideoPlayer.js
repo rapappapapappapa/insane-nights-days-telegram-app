@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -49,22 +49,33 @@ export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, on
 
   const youtubeEmbedUrl = isYouTube ? getYouTubeEmbedUrl(videoSource) : null;
   
-  // Créer le player seulement si on a une source valide et que le modal est visible (pas pour YouTube)
-  const player = useVideoPlayer(
-    !isYouTube && videoSource && visible ? videoSource : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    (player) => {
-      if (!isYouTube && videoSource && visible) {
-        player.play();
-      }
+  // Créer le player seulement si on a une source valide et que le modal est visible (pas pour YouTube).
+  // Évite les erreurs Android "shared object already released" quand visible toggle vite.
+  const playerSource = useMemo(() => {
+    if (isYouTube) return null;
+    if (!visible) return null;
+    if (!videoSource) return null;
+    return videoSource;
+  }, [isYouTube, visible, videoSource]);
+
+  const player = useVideoPlayer(playerSource, (player) => {
+    try {
+      player.play();
+    } catch (e) {
+      // best-effort
     }
-  );
+  });
 
   useEffect(() => {
+    let t = null;
     if (visible) {
       setLoading(true);
-      // Le player se charge automatiquement
-      setTimeout(() => setLoading(false), 1000);
+      // Le player se charge automatiquement (fallback UX)
+      t = setTimeout(() => setLoading(false), 800);
     }
+    return () => {
+      if (t) clearTimeout(t);
+    };
   }, [visible, videoSource, isYouTube]);
 
   // Ne pas afficher si pas de source
@@ -105,7 +116,7 @@ export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, on
               javaScriptEnabled={true}
               domStorageEnabled={true}
             />
-          ) : videoSource && !isYouTube ? (
+          ) : videoSource && !isYouTube && player ? (
             <VideoView
               style={styles.video}
               player={player}

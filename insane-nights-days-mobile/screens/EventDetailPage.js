@@ -88,6 +88,7 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [buyingTicket, setBuyingTicket] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
   useEffect(() => {
@@ -244,6 +245,45 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleReportEvent = async () => {
+    if (!user?.token || reporting) return;
+
+    const reasons = [
+      { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
+      { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
+      { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
+      { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
+      { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
+    ];
+
+    Alert.alert(
+      language === 'fr' ? 'Signaler cet événement' : 'Report this event',
+      language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
+      [
+        ...reasons.map((r) => ({
+          text: r.label,
+          onPress: async () => {
+            try {
+              setReporting(true);
+              const res = await api.createReport(user.token, {
+                targetType: 'EVENT',
+                targetId: eventId,
+                reason: r.id,
+              });
+              if (res?.success) showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
+              else showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer le signalement.' : 'Unable to send report.'));
+            } catch (e) {
+              showError(language === 'fr' ? 'Erreur lors du signalement.' : 'Reporting failed.');
+            } finally {
+              setReporting(false);
+            }
+          },
+        })),
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
 
   const fetchEvent = async () => {
     setLoading(true);
@@ -318,6 +358,17 @@ export default function EventDetailPage() {
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('events')}>
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.reportChip, reporting && styles.reportChipDisabled]}
+          onPress={handleReportEvent}
+          activeOpacity={0.85}
+          disabled={reporting}
+        >
+          <Text style={styles.reportChipText}>
+            {reporting ? '...' : (language === 'fr' ? '🚩 Signaler' : '🚩 Report')}
+          </Text>
         </TouchableOpacity>
       </View>
       <ScrollView
@@ -464,6 +515,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
     backgroundColor: '#0b0b0e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reportChip: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  reportChipDisabled: {
+    opacity: 0.6,
+  },
+  reportChipText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '900',
+    fontSize: 12,
   },
   backButtonTop: {
     alignSelf: 'flex-start',

@@ -16,12 +16,47 @@ enum UserRole {
   ADMIN
 }
 
+// ✅ Modération comptes
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+// ✅ Signalements / modération
+enum ReportTargetType {
+  FEED_POST
+  EVENT
+  USER
+  DJ_PROFILE
+  BOOKER_PROFILE
+  VENUE_PROFILE
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  SCAM
+  ILLEGAL
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
 model User {
   id                String   @id @default(uuid())
   email             String   @unique
   username          String
   password          String
   role              UserRole @default(USER)
+  status            UserStatus @default(ACTIVE)
+  suspendedUntil    DateTime?
+  bannedAt          DateTime?
   score             Int      @default(0)
   level             Int      @default(1)
   accountType       String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)
@@ -47,6 +82,55 @@ model User {
   // ✅ AJOUT: Relations vers les notifications
   feedNotifications FeedNotification[] // Notifications reçues
   feedNotificationsAsActor FeedNotification[] @relation("NotificationActor") // Notifications créées (en tant qu'acteur)
+
+  // ✅ Signalements + logs admin
+  reportsMade Report[] @relation("ReportsMade")
+  reportsAssigned Report[] @relation("ReportsAssigned")
+  adminActions AdminActionLog[]
+}
+
+// ✅ Signalement utilisateur -> admin
+model Report {
+  id         String          @id @default(uuid())
+  reporterId String
+  reporter   User            @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  targetType ReportTargetType
+  targetId   String
+
+  reason     ReportReason
+  details    String?
+
+  status     ReportStatus @default(OPEN)
+  adminId    String?
+  admin      User?        @relation("ReportsAssigned", fields: [adminId], references: [id], onDelete: SetNull)
+  adminNote  String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([reporterId])
+  @@index([targetType, targetId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ✅ Audit log des actions admin (traçabilité)
+model AdminActionLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  action    String
+  targetType String
+  targetId  String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 model UserCommunity {

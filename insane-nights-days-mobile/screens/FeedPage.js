@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
-import { api } from '../api/config';
+import { api, normalizeMediaUrl } from '../api/config';
 import EmptyState from '../components/EmptyState';
 import { useFeedNotifications } from '../hooks/useFeedNotifications'; // ✅ AJOUT: Hook pour les notifications du feed
 import NotificationBadge from '../components/NotificationBadge'; // ✅ AJOUT: Badge de notification
@@ -55,6 +55,52 @@ export default function FeedPage() {
   const [postComments, setPostComments] = useState({}); // { postId: [comments] }
   const [expandedComments, setExpandedComments] = useState({}); // { postId: true/false }
   const [commentInputs, setCommentInputs] = useState({}); // { postId: text }
+  const [brokenPostImages, setBrokenPostImages] = useState({}); // { postId: true }
+
+  const reportPost = (postId) => {
+    if (!user?.token) {
+      Alert.alert(
+        language === 'fr' ? 'Connexion requise' : 'Login required',
+        language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.'
+      );
+      return;
+    }
+
+    const reasons = [
+      { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
+      { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
+      { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
+      { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
+      { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
+    ];
+
+    Alert.alert(
+      language === 'fr' ? 'Signaler ce post' : 'Report this post',
+      language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
+      [
+        ...reasons.map((r) => ({
+          text: r.label,
+          onPress: async () => {
+            try {
+              const res = await api.createReport(user.token, {
+                targetType: 'FEED_POST',
+                targetId: postId,
+                reason: r.id,
+              });
+              if (res?.success) {
+                Alert.alert(language === 'fr' ? 'Merci' : 'Thanks', language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
+              } else {
+                Alert.alert(language === 'fr' ? 'Erreur' : 'Error', res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
+              }
+            } catch (e) {
+              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
+            }
+          },
+        })),
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   useEffect(() => {
     fetchFeed();
@@ -381,6 +427,9 @@ export default function FeedPage() {
                 : (item.booker?.name || item.author?.username);
               const profileImage = isDj ? item.dj?.profileImage : null;
               const profileLocation = isDj ? item.dj?.city : null;
+              const imageUri = normalizeMediaUrl(item.imageUrl);
+              const avatarUri = isDj ? normalizeMediaUrl(profileImage) : null;
+              const isBrokenImage = !!brokenPostImages[item.id];
               
               return (
                 <View key={`post-${item.id}`} style={styles.postCard}>
@@ -396,9 +445,9 @@ export default function FeedPage() {
                       }}
                     >
                       <View style={styles.postAvatar}>
-                        {profileImage ? (
+                        {avatarUri ? (
                           <Image
-                            source={{ uri: profileImage }}
+                            source={{ uri: avatarUri }}
                             style={styles.avatarImage}
                           />
                         ) : (
@@ -439,19 +488,37 @@ export default function FeedPage() {
                         </View>
                       </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.reportIconBtn}
+                      onPress={() => reportPost(item.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="flag-outline" size={18} color="rgba(255,255,255,0.65)" />
+                    </TouchableOpacity>
                   </View>
 
                   {/* ✅ MODIFICATION: Contenu du post avec meilleure typographie */}
                   <Text style={styles.postContent}>{item.content}</Text>
 
                   {/* ✅ MODIFICATION: Image avec bordures arrondies */}
-                  {item.imageUrl && (
+                  {!!imageUri && !isBrokenImage && (
                     <View style={styles.postImageContainer}>
                       <Image
-                        source={{ uri: item.imageUrl }}
+                        source={{ uri: imageUri }}
                         style={styles.postImage}
                         resizeMode="cover"
+                        onError={() => setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }))}
                       />
+                    </View>
+                  )}
+
+                  {!!imageUri && isBrokenImage && (
+                    <View style={[styles.postImageContainer, styles.postImageFallback]}>
+                      <Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.6)" />
+                      <Text style={styles.postImageFallbackText}>
+                        {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
+                      </Text>
                     </View>
                   )}
 
@@ -702,10 +769,23 @@ const styles = StyleSheet.create({
   },
   postHeader: {
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   postHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  reportIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   // ✅ MODIFICATION: Avatar plus petit style Twitter/X
   postAvatar: {
@@ -808,11 +888,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   postImage: {
     width: '100%',
     height: 250,
     borderRadius: 16,
+  },
+  postImageFallback: {
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  postImageFallbackText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '700',
   },
   // ✅ MODIFICATION: Actions plus visibles et espacées
   postActions: {

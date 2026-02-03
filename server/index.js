@@ -326,6 +326,26 @@ app.get('/api/admin/me', authenticateToken, requireAdmin, async (req, res) => {
   res.json({ success: true, admin: { id: req.user.id, email: req.user.email, username: req.user.username } });
 });
 
+// Helper: audit log admin actions (best-effort)
+async function logAdminAction({ adminId, action, targetType, targetId, metadata }) {
+  try {
+    await prisma.adminActionLog.create({
+      data: {
+        adminId,
+        action,
+        targetType,
+        targetId: targetId || null,
+        metadata: metadata || undefined,
+      },
+    });
+  } catch (e) {
+    // best-effort: never block the main action
+    if (process.env.DEBUG_LOGS === 'true') {
+      console.warn('[admin log] failed:', e?.message ?? e);
+    }
+  }
+}
+
 app.get('/api/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -376,6 +396,14 @@ app.put('/api/admin/users/:userId/role', authenticateToken, requireAdmin, async 
       where: { id: userId },
       data: { role: nextRole },
       select: { id: true, email: true, username: true, role: true, activeProfileType: true, createdAt: true },
+    });
+
+    await logAdminAction({
+      adminId: req.user.id,
+      action: 'SET_USER_ROLE',
+      targetType: 'USER',
+      targetId: updated.id,
+      metadata: { role: updated.role },
     });
 
     return res.json({ success: true, user: updated });
@@ -447,9 +475,228 @@ app.delete('/api/admin/feed/posts/:postId', authenticateToken, requireAdmin, asy
     }
 
     await prisma.feedPost.delete({ where: { id: postId } });
+
+    await logAdminAction({
+      adminId: req.user.id,
+      action: 'DELETE_FEED_POST',
+      targetType: 'FEED_POST',
+      targetId: postId,
+      metadata: { hadImage: !!post.imageUrl },
+    });
     return res.json({ success: true, message: 'Post supprimé.' });
   } catch (e) {
     console.error('Erreur admin delete feed post:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Créer un signalement (report)
+ * @route POST /api/reports
+ * body: { targetType, targetId, reason, details? }
+ */
+app.post('/api/reports', authenticateToken, async (req, res) => {
+  try {
+    const reporterId = req.user.id;
+    const { targetType, targetId, reason, details } = req.body ?? {};
+
+    const t = typeof targetType === 'string' ? targetType.trim().toUpperCase() : null;
+    const r = typeof reason === 'string' ? reason.trim().toUpperCase() : null;
+    const id = typeof targetId === 'string' ? targetId.trim() : null;
+
+    const allowedTypes = ['FEED_POST', 'EVENT', 'USER', 'DJ_PROFILE', 'BOOKER_PROFILE', 'VENUE_PROFILE'];
+    const allowedReasons = ['SPAM', 'HARASSMENT', 'SCAM', 'ILLEGAL', 'OTHER'];
+
+    if (!t || !allowedTypes.includes(t)) {
+      return res.status(400).json({ success: false, message: 'targetType invalide.' });
+    }
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'targetId requis.' });
+    }
+    if (!r || !allowedReasons.includes(r)) {
+      return res.status(400).json({ success: false, message: 'reason invalide.' });
+    }
+
+    // Validation best-effort selon le type
+    if (t === 'FEED_POST') {
+      const exists = await prisma.feedPost.findUnique({ where: { id }, select: { id: true } });
+      if (!exists) return res.status(404).json({ success: false, message: 'Post introuvable.' });
+    }
+    if (t === 'EVENT') {
+      const exists = await prisma.event.findUnique({ where: { id }, select: { id: true } });
+      if (!exists) return res.status(404).json({ success: false, message: 'Événement introuvable.' });
+    }
+
+    const report = await prisma.report.create({
+      data: {
+        reporterId,
+        targetType: t,
+        targetId: id,
+        reason: r,
+        details: typeof details === 'string' ? details.trim().slice(0, 2000) : null,
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(201).json({ success: true, report });
+  } catch (e) {
+    console.error('Erreur création report:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: lister les signalements
+ * @route GET /api/admin/reports?status=
+ */
+app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : null;
+    const where = {};
+    if (status && ['OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED'].includes(status)) {
+      where.status = status;
+    }
+
+    const reports = await prisma.report.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        targetType: true,
+        targetId: true,
+        reason: true,
+        details: true,
+        status: true,
+        adminNote: true,
+        createdAt: true,
+        updatedAt: true,
+        reporter: { select: { id: true, username: true, email: true } },
+      },
+    });
+
+    return res.json({ success: true, reports });
+  } catch (e) {
+    console.error('Erreur admin list reports:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: mettre à jour un report
+ * @route PUT /api/admin/reports/:reportId
+ * body: { status?, adminNote? }
+ */
+app.put('/api/admin/reports/:reportId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const nextStatusRaw = req.body?.status;
+    const nextStatus = typeof nextStatusRaw === 'string' ? nextStatusRaw.trim().toUpperCase() : null;
+    const adminNote = typeof req.body?.adminNote === 'string' ? req.body.adminNote.trim().slice(0, 2000) : null;
+
+    const data = { adminId: req.user.id };
+    if (nextStatus && ['OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED'].includes(nextStatus)) {
+      data.status = nextStatus;
+    }
+    if (adminNote !== null) data.adminNote = adminNote;
+
+    const updated = await prisma.report.update({
+      where: { id: reportId },
+      data,
+      select: {
+        id: true,
+        status: true,
+        adminNote: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAdminAction({
+      adminId: req.user.id,
+      action: 'UPDATE_REPORT',
+      targetType: 'REPORT',
+      targetId: reportId,
+      metadata: { status: updated.status },
+    });
+
+    return res.json({ success: true, report: updated });
+  } catch (e) {
+    console.error('Erreur admin update report:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: lister les événements (modération)
+ * @route GET /api/admin/events?limit=&offset=
+ */
+app.get('/api/admin/events', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
+
+    const events = await prisma.event.findMany({
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        time: true,
+        location: true,
+        status: true,
+        genre: true,
+        image: true,
+        createdAt: true,
+        booker: { select: { id: true, nom: true, prenom: true, user: { select: { id: true, username: true, email: true } } } },
+        venue: { select: { id: true, venueName: true } },
+      },
+    });
+
+    return res.json({ success: true, events });
+  } catch (e) {
+    console.error('Erreur admin list events:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * ✅ Admin: supprimer un événement
+ * @route DELETE /api/admin/events/:eventId
+ */
+app.delete('/api/admin/events/:eventId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    if (!eventId) return res.status(400).json({ success: false, message: 'eventId requis.' });
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, title: true, image: true },
+    });
+    if (!event) return res.status(404).json({ success: false, message: 'Événement introuvable.' });
+
+    // Les ratings ne sont pas en cascade -> clean avant suppression
+    await prisma.djRating.deleteMany({ where: { eventId } });
+    await prisma.venueRating.deleteMany({ where: { eventId } });
+
+    await prisma.event.delete({ where: { id: eventId } });
+
+    await logAdminAction({
+      adminId: req.user.id,
+      action: 'DELETE_EVENT',
+      targetType: 'EVENT',
+      targetId: eventId,
+      metadata: { title: event.title },
+    });
+
+    return res.json({ success: true, message: 'Événement supprimé.' });
+  } catch (e) {
+    console.error('Erreur admin delete event:', e);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

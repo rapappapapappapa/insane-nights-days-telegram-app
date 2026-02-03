@@ -36,6 +36,31 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
+    // ✅ Modération: bloquer les comptes suspendus / bannis
+    const status = user.status || 'ACTIVE';
+    if (status === 'BANNED') {
+      return res.status(403).json({ success: false, message: 'Compte banni.' });
+    }
+    if (status === 'SUSPENDED') {
+      const until = user.suspendedUntil ? new Date(user.suspendedUntil) : null;
+      if (until && until.getTime() > Date.now()) {
+        return res.status(403).json({
+          success: false,
+          message: `Compte suspendu jusqu'au ${until.toISOString()}`,
+          suspendedUntil: until.toISOString(),
+        });
+      }
+      // Suspension expirée -> repasser actif (best-effort)
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { status: 'ACTIVE', suspendedUntil: null },
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+
     // Ajouter les infos utilisateur à la requête pour utilisation dans les routes
     req.user = {
       id: user.id,

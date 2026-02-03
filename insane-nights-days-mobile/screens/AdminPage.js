@@ -21,6 +21,13 @@ export default function AdminPage() {
   const [postsLoading, setPostsLoading] = useState(false);
   const [posts, setPosts] = useState([]);
 
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [reportsFilter, setReportsFilter] = useState('OPEN');
+
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [events, setEvents] = useState([]);
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -106,6 +113,72 @@ export default function AdminPage() {
             try {
               const res = await api.adminDeleteFeedPost(token, postId);
               if (res?.success) setPosts((prev) => prev.filter((p) => p.id !== postId));
+              else throw new Error(res?.message || 'Delete failed');
+            } catch (e) {
+              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const loadReports = async () => {
+    if (!token || reportsLoading) return;
+    setReportsLoading(true);
+    try {
+      const res = await api.adminListReports(token, reportsFilter);
+      if (res?.success && Array.isArray(res.reports)) setReports(res.reports);
+      else setReports([]);
+    } catch (e) {
+      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les signalements.' : 'Unable to load reports.');
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const updateReport = async (reportId, updates) => {
+    if (!token) return;
+    try {
+      const res = await api.adminUpdateReport(token, reportId, updates);
+      if (res?.success && res.report) {
+        setReports((prev) => prev.map((r) => (r.id === res.report.id ? { ...r, ...res.report } : r)));
+      } else {
+        throw new Error(res?.message || 'Update failed');
+      }
+    } catch (e) {
+      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Action impossible.' : 'Action failed.'));
+    }
+  };
+
+  const loadEvents = async () => {
+    if (!token || eventsLoading) return;
+    setEventsLoading(true);
+    try {
+      const res = await api.adminListEvents(token, 50, 0);
+      if (res?.success && Array.isArray(res.events)) setEvents(res.events);
+      else setEvents([]);
+    } catch (e) {
+      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les événements.' : 'Unable to load events.');
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  const deleteEvent = async (eventId) => {
+    if (!token) return;
+    Alert.alert(
+      language === 'fr' ? 'Supprimer' : 'Delete',
+      language === 'fr' ? 'Supprimer cet événement ?' : 'Delete this event?',
+      [
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+        {
+          text: language === 'fr' ? 'Supprimer' : 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await api.adminDeleteEvent(token, eventId);
+              if (res?.success) setEvents((prev) => prev.filter((e) => e.id !== eventId));
               else throw new Error(res?.message || 'Delete failed');
             } catch (e) {
               Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
@@ -225,6 +298,79 @@ export default function AdminPage() {
           </View>
         ))}
       </View>
+
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>{language === 'fr' ? 'Signalements' : 'Reports'}</Text>
+          <TouchableOpacity style={styles.btn} onPress={loadReports} activeOpacity={0.85}>
+            <Text style={styles.btnText}>{reportsLoading ? (language === 'fr' ? '...' : '...') : (language === 'fr' ? 'Charger' : 'Load')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.filterRow}>
+          {['OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED'].map((s) => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.filterChip, reportsFilter === s && styles.filterChipActive]}
+              onPress={() => setReportsFilter(s)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.filterChipText}>{s}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {reports.map((r) => (
+          <View key={r.id} style={styles.postRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle} numberOfLines={2}>
+                {r.targetType} • {r.reason} • {r.status}
+              </Text>
+              <Text style={styles.itemSub} numberOfLines={2}>
+                {r.reporter?.username ? `${r.reporter.username}: ` : ''}
+                {r.details || (language === 'fr' ? '—' : '—')}
+              </Text>
+              <Text style={styles.itemSub} numberOfLines={1}>{new Date(r.createdAt).toLocaleString()}</Text>
+            </View>
+            <View style={styles.itemActions}>
+              <TouchableOpacity style={styles.smallBtn} onPress={() => updateReport(r.id, { status: 'IN_REVIEW' })} activeOpacity={0.85}>
+                <Text style={styles.smallBtnText}>REVIEW</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.smallBtn} onPress={() => updateReport(r.id, { status: 'RESOLVED' })} activeOpacity={0.85}>
+                <Text style={styles.smallBtnText}>OK</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnDanger]} onPress={() => updateReport(r.id, { status: 'REJECTED' })} activeOpacity={0.85}>
+                <Text style={styles.smallBtnText}>NO</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>{language === 'fr' ? 'Événements (modération)' : 'Events (moderation)'}</Text>
+          <TouchableOpacity style={styles.btn} onPress={loadEvents} activeOpacity={0.85}>
+            <Text style={styles.btnText}>{eventsLoading ? (language === 'fr' ? '...' : '...') : (language === 'fr' ? 'Charger' : 'Load')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {events.map((ev) => (
+          <View key={ev.id} style={styles.postRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle} numberOfLines={2}>{ev.title} <Text style={styles.badge}>{ev.status}</Text></Text>
+              <Text style={styles.itemSub} numberOfLines={1}>{new Date(ev.date).toLocaleDateString()} • {ev.location}</Text>
+              <Text style={styles.itemSub} numberOfLines={1}>
+                {ev.booker?.user?.username ? `@${ev.booker.user.username}` : ''}
+                {ev.venue?.venueName ? ` • ${ev.venue.venueName}` : ''}
+              </Text>
+            </View>
+            <TouchableOpacity style={[styles.smallBtn, styles.smallBtnDanger]} onPress={() => deleteEvent(ev.id)} activeOpacity={0.85}>
+              <Text style={styles.smallBtnText}>{language === 'fr' ? 'Suppr.' : 'Del'}</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -273,6 +419,20 @@ const styles = StyleSheet.create({
   itemSub: { color: 'rgba(255,255,255,0.6)', marginTop: 2 },
   badge: { color: '#FF1744', fontWeight: '900' },
   itemActions: { flexDirection: 'row', gap: 8 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  filterChipActive: {
+    borderColor: 'rgba(255, 23, 68, 0.35)',
+    backgroundColor: 'rgba(255, 23, 68, 0.18)',
+  },
+  filterChipText: { color: 'rgba(255,255,255,0.85)', fontWeight: '900', fontSize: 12 },
   smallBtn: {
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 10,

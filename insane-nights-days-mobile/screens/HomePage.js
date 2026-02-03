@@ -53,6 +53,48 @@ export default function HomePage() {
   const [expandedComments, setExpandedComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [brokenPostImages, setBrokenPostImages] = useState({});
+
+  const reportPost = (postId) => {
+    if (!user?.token) {
+      Alert.alert(
+        language === 'fr' ? 'Connexion requise' : 'Login required',
+        language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.'
+      );
+      return;
+    }
+
+    const reasons = [
+      { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
+      { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
+      { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
+      { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
+      { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
+    ];
+
+    Alert.alert(
+      language === 'fr' ? 'Signaler ce post' : 'Report this post',
+      language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
+      [
+        ...reasons.map((r) => ({
+          text: r.label,
+          onPress: async () => {
+            try {
+              const res = await api.createReport(user.token, {
+                targetType: 'FEED_POST',
+                targetId: postId,
+                reason: r.id,
+              });
+              if (res?.success) showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
+              else showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
+            } catch (e) {
+              showError(language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
+            }
+          },
+        })),
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
   
   // Animation pour le feed
   const feedTranslateY = useRef(new Animated.Value(0)).current;
@@ -540,6 +582,16 @@ export default function HomePage() {
                               <Ionicons name="trash-outline" size={18} color="rgba(255,255,255,0.6)" />
                             </TouchableOpacity>
                           )}
+
+                          {!isAuthor && (
+                            <TouchableOpacity
+                              style={styles.reportPostButton}
+                              onPress={() => reportPost(item.id)}
+                              activeOpacity={0.75}
+                            >
+                              <Ionicons name="flag-outline" size={18} color="rgba(255,255,255,0.6)" />
+                            </TouchableOpacity>
+                          )}
                         </View>
 
                         <Text style={styles.postContent}>{item.content}</Text>
@@ -967,6 +1019,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deletePostButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  reportPostButton: {
     padding: 8,
     marginLeft: 8,
   },

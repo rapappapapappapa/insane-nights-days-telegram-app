@@ -437,22 +437,6 @@ const uploadMemory = multer({
 // Servir les fichiers statiques uniquement en mode local
 if (MEDIA_STORAGE === 'local') {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-} else {
-  // En prod (Railway), le disque n'est pas persistant. Les anciennes URLs
-  // du type /uploads/media/*.jpg peuvent donc 404 après un redeploy.
-  //
-  // Pour éviter les erreurs côté app (Image "Failed to load"), on renvoie
-  // un placeholder léger pour les images.
-  const TRANSPARENT_1X1_PNG_BASE64 =
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+Xc1cAAAAASUVORK5CYII=';
-  const TRANSPARENT_1X1_PNG = Buffer.from(TRANSPARENT_1X1_PNG_BASE64, 'base64');
-
-  app.get(/^\/uploads\/media\/.+\.(png|jpe?g|webp|gif|heic|heif)$/i, (req, res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    return res.status(200).send(TRANSPARENT_1X1_PNG);
-  });
 }
 // Servir les fichiers uploadés de manière statique
 // (déplacé plus haut: conditionnel selon MEDIA_STORAGE)

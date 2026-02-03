@@ -24,7 +24,7 @@ import BackgroundVideo from '../components/BackgroundVideo';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import Logo from '../components/Logo';
-import { api } from '../api/config';
+import { api, normalizeMediaUrl } from '../api/config';
 import { useFeedNotifications } from '../hooks/useFeedNotifications';
 import NotificationBadge from '../components/NotificationBadge';
 import EmptyState from '../components/EmptyState';
@@ -52,6 +52,7 @@ export default function HomePage() {
   const [postComments, setPostComments] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
+  const [brokenPostImages, setBrokenPostImages] = useState({});
   
   // Animation pour le feed
   const feedTranslateY = useRef(new Animated.Value(0)).current;
@@ -461,11 +462,17 @@ export default function HomePage() {
                   if (item.type === 'post') {
                     const isDj = item.profileType === 'DJ';
                     const profileData = isDj ? item.dj : item.booker;
-                    const profileName = isDj ? item.dj?.artistName : item.booker?.name;
-                    const profileImage = isDj ? item.dj?.profileImage : null;
+                    // Booker posts can miss embedded `booker` object (old data/partial responses),
+                    // so fallback to author username instead of "Utilisateur".
+                    const profileName = isDj
+                      ? item.dj?.artistName
+                      : (item.booker?.name || item.author?.username);
+                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : null;
                     const profileLocation = isDj ? item.dj?.city : null;
                     
                     const isAuthor = user?.id && item.author?.id === user.id;
+                    const imageUri = normalizeMediaUrl(item.imageUrl);
+                    const isBrokenImage = !!brokenPostImages[item.id];
                     
                     return (
                       <View key={`post-${item.id}`} style={styles.postCard}>
@@ -537,19 +544,29 @@ export default function HomePage() {
 
                         <Text style={styles.postContent}>{item.content}</Text>
 
-                        {item.imageUrl && (
+                        {!!imageUri && !isBrokenImage && (
                           <View style={styles.postImageContainer}>
                             <Image
-                              source={{ uri: item.imageUrl }}
+                              source={{ uri: imageUri }}
                               style={styles.postImage}
                               resizeMode="cover"
                               onError={(error) => {
                                 if (__DEV__) {
                                   console.warn('Erreur chargement image post:', error?.nativeEvent?.error);
-                                  console.warn('URL de l\'image:', item.imageUrl);
+                                  console.warn('URL de l\'image:', imageUri);
                                 }
+                                setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }));
                               }}
                             />
+                          </View>
+                        )}
+
+                        {!!imageUri && isBrokenImage && (
+                          <View style={[styles.postImageContainer, styles.postImageFallback]}>
+                            <Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.6)" />
+                            <Text style={styles.postImageFallbackText}>
+                              {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
+                            </Text>
                           </View>
                         )}
 
@@ -1048,11 +1065,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   postImage: {
     width: '100%',
     height: 250,
     borderRadius: 16,
+  },
+  postImageFallback: {
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  postImageFallbackText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    textAlign: 'center',
   },
   postActions: {
     flexDirection: 'row',

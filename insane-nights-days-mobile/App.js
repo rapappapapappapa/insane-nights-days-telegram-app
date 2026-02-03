@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useLanguage } from './contexts/LanguageContext';
@@ -85,6 +85,14 @@ function AppContent() {
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
+
+  // expo-av Video is deprecated in favor of expo-video, but we use it as a
+  // temporary workaround for Android crashes with expo-video.
+  useEffect(() => {
+    LogBox.ignoreLogs([
+      '[expo-av]: Video component from `expo-av` is deprecated in favor of `expo-video`.',
+    ]);
+  }, []);
   
   // ✅ AJOUT: Log pour debug - vérifier que hasNewMessage change bien
   useEffect(() => {

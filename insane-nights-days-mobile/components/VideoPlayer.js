@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,7 @@ import {
   Text,
   Dimensions,
 } from 'react-native';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -17,6 +17,7 @@ const { width, height } = Dimensions.get('window');
 export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, onClose, isYouTube = false }) {
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const videoRef = useRef(null);
 
   // Convertir videoUrl en source valide
   const getVideoSource = () => {
@@ -49,22 +50,12 @@ export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, on
 
   const youtubeEmbedUrl = isYouTube ? getYouTubeEmbedUrl(videoSource) : null;
   
-  // Créer le player seulement si on a une source valide et que le modal est visible (pas pour YouTube).
-  // Évite les erreurs Android "shared object already released" quand visible toggle vite.
-  const playerSource = useMemo(() => {
+  const avSource = useMemo(() => {
     if (isYouTube) return null;
     if (!visible) return null;
     if (!videoSource) return null;
-    return videoSource;
+    return typeof videoSource === 'string' ? { uri: videoSource } : videoSource;
   }, [isYouTube, visible, videoSource]);
-
-  const player = useVideoPlayer(playerSource, (player) => {
-    try {
-      player.play();
-    } catch (e) {
-      // best-effort
-    }
-  });
 
   useEffect(() => {
     let t = null;
@@ -116,14 +107,18 @@ export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, on
               javaScriptEnabled={true}
               domStorageEnabled={true}
             />
-          ) : videoSource && !isYouTube && player ? (
-            <VideoView
+          ) : avSource && !isYouTube ? (
+            <Video
+              ref={videoRef}
               style={styles.video}
-              player={player}
-              allowsFullscreen
-              allowsPictureInPicture
-              contentFit="contain"
-              nativeControls
+              source={avSource}
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={visible}
+              isLooping={false}
+              useNativeControls
+              onLoadStart={() => setLoading(true)}
+              onReadyForDisplay={() => setLoading(false)}
+              onError={() => setLoading(false)}
             />
           ) : null}
 

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { Video, ResizeMode } from 'expo-av';
 
 /**
  * Composant réutilisable pour la vidéo d'arrière-plan
@@ -8,31 +8,17 @@ import { VideoView, useVideoPlayer } from 'expo-video';
  */
 export default function BackgroundVideo({ opacity = 0.6 }) {
   const videoSource = useMemo(() => require('../assets/Background_D_.mp4'), []);
-  // Important: configurer le player dans le callback du hook pour éviter
-  // des effets "après release" (Android: shared object already released).
-  const backgroundVideo = useVideoPlayer(videoSource, (player) => {
-    try {
-      player.loop = true;
-      player.muted = true;
-      player.play();
-    } catch (e) {
-      // best-effort (ne pas crasher l'app)
-    }
-  });
   
   return (
     <>
-      {backgroundVideo ? (
-        <VideoView
-          // key pour forcer un remount propre si le player change
-          key={`bg-${String(videoSource)}`}
-          player={backgroundVideo}
-          style={styles.backgroundVideo}
-          contentFit="cover"
-          nativeControls={false}
-          allowsPictureInPicture={false}
-        />
-      ) : null}
+      <Video
+        source={videoSource}
+        style={styles.backgroundVideo}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
       <View style={[styles.videoOverlay, { backgroundColor: `rgba(11, 11, 14, ${opacity})` }]} />
     </>
   );

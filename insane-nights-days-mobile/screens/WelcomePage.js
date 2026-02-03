@@ -756,14 +756,10 @@ export default function WelcomePage() {
                               style={styles.postImage}
                               resizeMode="cover"
                               onError={(error) => {
-                                console.error('Erreur chargement image post:', error.nativeEvent.error);
-                                console.log('URL de l\'image:', item.imageUrl);
-                              }}
-                              onLoadStart={() => {
-                                console.log('Début chargement image:', item.imageUrl);
-                              }}
-                              onLoadEnd={() => {
-                                console.log('Image chargée avec succès:', item.imageUrl);
+                                if (__DEV__) {
+                                  console.warn('Erreur chargement image post:', error?.nativeEvent?.error);
+                                  console.warn('URL de l\'image:', item.imageUrl);
+                                }
                               }}
                             />
                           </View>

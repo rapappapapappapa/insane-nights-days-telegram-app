@@ -437,7 +437,7 @@ export default function HomePage() {
             
             {/* Titre au centre */}
             <Text style={styles.feedHeaderTitle}>
-              {language === 'fr' ? 'poisson' : 'poisson'}
+              {language === 'fr' ? 'Feed' : 'Feed'}
             </Text>
             
             {/* Boutons à droite */}

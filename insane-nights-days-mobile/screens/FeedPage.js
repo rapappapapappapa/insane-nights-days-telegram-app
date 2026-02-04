@@ -12,7 +12,6 @@ import {
   TextInput, // ✅ AJOUT: Pour les commentaires
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import * as Updates from 'expo-updates';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -367,14 +366,9 @@ export default function FeedPage() {
       
       <View style={styles.header}>
         <View style={styles.headerLeftSpacer} />
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            {language === 'fr' ? 'poisson' : 'poisson'}
-          </Text>
-          <Text style={styles.headerSubtle} numberOfLines={1}>
-            {String(Updates?.channel || 'no-channel')} • {Updates?.isEmbeddedLaunch ? 'embedded' : 'update'}
-          </Text>
-        </View>
+        <Text style={styles.headerTitle}>
+          {language === 'fr' ? 'Feed' : 'Feed'}
+        </Text>
         <View style={styles.headerRight}>
           {user?.token && feedNotificationsCount > 0 && (
             <TouchableOpacity
@@ -708,12 +702,6 @@ const styles = StyleSheet.create({
   headerLeftSpacer: {
     width: 44, // équilibre visuel (même largeur que l'espace du hamburger)
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
   floatingMenuButton: {
     position: 'absolute',
     left: 20,
@@ -732,17 +720,11 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   headerTitle: {
+    flex: 1,
     color: '#fff',
     fontSize: 28,
     fontWeight: '700',
     textAlign: 'center',
-  },
-  headerSubtle: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    marginTop: -2,
   },
   // ✅ AJOUT: Container pour les boutons à droite du header
   headerRight: {

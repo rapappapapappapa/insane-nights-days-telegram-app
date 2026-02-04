@@ -367,7 +367,7 @@ export default function FeedPage() {
       <View style={styles.header}>
         <View style={styles.headerLeftSpacer} />
         <Text style={styles.headerTitle}>
-          {language === 'fr' ? 'Feed ✅ UPDATE OK' : 'Feed ✅ UPDATE OK'}
+          {language === 'fr' ? 'poisson' : 'poisson'}
         </Text>
         <View style={styles.headerRight}>
           {user?.token && feedNotificationsCount > 0 && (

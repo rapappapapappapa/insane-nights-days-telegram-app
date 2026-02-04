@@ -639,7 +639,7 @@ export default function WelcomePage() {
             
             {/* Titre au centre */}
             <Text style={styles.feedHeaderTitle}>
-              {language === 'fr' ? 'Feed' : 'Feed'}
+              {language === 'fr' ? 'poisson' : 'poisson'}
             </Text>
             
             {/* Boutons à droite */}

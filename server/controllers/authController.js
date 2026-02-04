@@ -5,7 +5,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
-const { validateRegistration, validateLogin, normalizeEmail } = require('../utils/validation');
+const { validateRegistration, validateLogin, normalizeEmail, validatePassword, isValidEmail } = require('../utils/validation');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
@@ -151,6 +151,133 @@ const login = async (req, res) => {
 };
 
 /**
+ * Mot de passe oublié: envoie un code par email
+ * @route POST /api/auth/forgot-password
+ * body: { email }
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const emailRaw = req.body?.email;
+    const email = typeof emailRaw === 'string' ? normalizeEmail(emailRaw) : '';
+    // Ne jamais révéler si l'email existe ou non
+    const genericOk = () =>
+      sendSuccess(res, { message: 'Si un compte existe, un code de réinitialisation a été envoyé.' });
+
+    if (!email || !isValidEmail(email)) {
+      return genericOk();
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true },
+    });
+
+    if (!user) return genericOk();
+
+    const crypto = require('crypto');
+    const { sendMail } = require('../utils/mailer');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetCodeHash: codeHash,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+
+    const subject = 'Insane Nights & Days — Réinitialisation du mot de passe';
+    const text = `Ton code de réinitialisation est: ${code}\n\nIl expire dans 15 minutes.`;
+    const html = `<p>Ton code de réinitialisation est:</p><h2>${code}</h2><p>Il expire dans 15 minutes.</p>`;
+
+    try {
+      await sendMail({ to: user.email, subject, text, html });
+    } catch (e) {
+      if (e?.code === 'SMTP_NOT_CONFIGURED' && process.env.NODE_ENV === 'production') {
+        return sendError(res, 'Service email non configuré.', 500);
+      }
+      // dev-only
+      const debugCode = process.env.DEBUG_LOGS === 'true' || process.env.NODE_ENV !== 'production' ? code : undefined;
+      return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
+    }
+
+    return genericOk();
+  } catch (e) {
+    handleError(e, res, 'Erreur lors du mot de passe oublié.');
+  }
+};
+
+/**
+ * Réinitialiser le mot de passe avec code
+ * @route POST /api/auth/reset-password
+ * body: { email, code, newPassword, confirmPassword? }
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const emailRaw = req.body?.email;
+    const codeRaw = req.body?.code;
+    const newPassword = req.body?.newPassword;
+    const confirmPassword = req.body?.confirmPassword ?? newPassword;
+
+    const email = typeof emailRaw === 'string' ? normalizeEmail(emailRaw) : '';
+    const code = typeof codeRaw === 'string' ? codeRaw.trim() : '';
+
+    if (!email || !isValidEmail(email)) {
+      return sendError(res, 'Email invalide.', 400);
+    }
+    if (!/^\d{6}$/.test(code)) {
+      return sendError(res, 'Code invalide (6 chiffres).', 400);
+    }
+    if (newPassword !== confirmPassword) {
+      return sendError(res, 'La confirmation ne correspond pas.', 400);
+    }
+    const pwd = validatePassword(newPassword);
+    if (!pwd.valid) return sendError(res, pwd.message, 400);
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        passwordResetCodeHash: true,
+        passwordResetExpiresAt: true,
+      },
+    });
+    if (!user || !user.passwordResetCodeHash || !user.passwordResetExpiresAt) {
+      return sendError(res, 'Code invalide ou expiré.', 400);
+    }
+    const expiresAt = new Date(user.passwordResetExpiresAt);
+    if (expiresAt.getTime() < Date.now()) {
+      return sendError(res, 'Code expiré.', 400);
+    }
+
+    const crypto = require('crypto');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+    if (codeHash !== user.passwordResetCodeHash) {
+      return sendError(res, 'Code invalide.', 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(String(newPassword), 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetCodeHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    return sendSuccess(res, { message: 'Mot de passe réinitialisé.' });
+  } catch (e) {
+    handleError(e, res, 'Erreur reset password.');
+  }
+};
+
+/**
  * Connexion via wallet TON (mock pour l'instant)
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
@@ -202,5 +329,7 @@ module.exports = {
   register,
   login,
   connectWallet,
+  forgotPassword,
+  resetPassword,
 };
 

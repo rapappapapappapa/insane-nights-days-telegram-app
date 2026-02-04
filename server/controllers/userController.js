@@ -379,6 +379,7 @@ const getCurrentUser = async (req, res) => {
         email: user.email,
         username: user.username,
         role: user.role || 'USER',
+        emailVerified: !!user.emailVerified,
         score: user.score ?? 0,
         level: user.level ?? 1,
         sbtActive: user.sbtActive ?? false,
@@ -391,6 +392,134 @@ const getCurrentUser = async (req, res) => {
     });
   } catch (error) {
     handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Envoie un code de vérification email à l'utilisateur connecté
+ * @route POST /api/user/me/email/verification/send
+ */
+const sendEmailVerification = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        emailVerified: true,
+        emailVerificationSentAt: true,
+      },
+    });
+
+    if (!user) return sendError(res, 'Utilisateur non trouvé', 404);
+    if (user.emailVerified) {
+      return sendSuccess(res, { message: 'Email déjà vérifié.' });
+    }
+
+    // Anti-spam: 1 envoi / 60s
+    if (user.emailVerificationSentAt) {
+      const last = new Date(user.emailVerificationSentAt);
+      if (now.getTime() - last.getTime() < 60 * 1000) {
+        return sendError(res, 'Veuillez patienter avant de renvoyer un code.', 429);
+      }
+    }
+
+    const crypto = require('crypto');
+    const { sendMail, isConfigured } = require('../utils/mailer');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationCodeHash: codeHash,
+        emailVerificationSentAt: now,
+      },
+    });
+
+    const subject = 'Insane Nights & Days — Vérification email';
+    const text = `Ton code de vérification est: ${code}\n\nIl expire dans 30 minutes.`;
+    const html = `<p>Ton code de vérification est:</p><h2>${code}</h2><p>Il expire dans 30 minutes.</p>`;
+
+    try {
+      await sendMail({ to: user.email, subject, text, html });
+    } catch (e) {
+      // En prod, on échoue si pas de SMTP configuré
+      if (e?.code === 'SMTP_NOT_CONFIGURED' && process.env.NODE_ENV === 'production') {
+        return sendError(res, 'Service email non configuré.', 500);
+      }
+      // En dev, on peut renvoyer le code pour debug
+      const debugCode = process.env.DEBUG_LOGS === 'true' || process.env.NODE_ENV !== 'production' ? code : undefined;
+      return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
+    }
+
+    return sendSuccess(res, { message: 'Code envoyé.' });
+  } catch (e) {
+    console.error('Erreur sendEmailVerification:', e);
+    return sendError(res, 'Erreur serveur', 500);
+  }
+};
+
+/**
+ * Confirme la vérification email (code)
+ * @route POST /api/user/me/email/verification/confirm
+ * body: { code }
+ */
+const confirmEmailVerification = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const codeRaw = req.body?.code;
+    const code = typeof codeRaw === 'string' ? codeRaw.trim() : '';
+    if (!/^\d{6}$/.test(code)) {
+      return sendError(res, 'Code invalide (6 chiffres).', 400);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        emailVerified: true,
+        emailVerificationCodeHash: true,
+        emailVerificationSentAt: true,
+      },
+    });
+    if (!user) return sendError(res, 'Utilisateur non trouvé', 404);
+    if (user.emailVerified) return sendSuccess(res, { message: 'Email déjà vérifié.' });
+    if (!user.emailVerificationCodeHash || !user.emailVerificationSentAt) {
+      return sendError(res, 'Aucun code en cours. Demande un nouveau code.', 400);
+    }
+
+    const sentAt = new Date(user.emailVerificationSentAt);
+    const now = new Date();
+    if (now.getTime() - sentAt.getTime() > 30 * 60 * 1000) {
+      return sendError(res, 'Code expiré. Demande un nouveau code.', 400);
+    }
+
+    const crypto = require('crypto');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+    if (codeHash !== user.emailVerificationCodeHash) {
+      return sendError(res, 'Code incorrect.', 400);
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerified: true,
+        emailVerifiedAt: now,
+        emailVerificationCodeHash: null,
+        emailVerificationSentAt: null,
+      },
+    });
+
+    return sendSuccess(res, { message: 'Email vérifié.' });
+  } catch (e) {
+    console.error('Erreur confirmEmailVerification:', e);
+    return sendError(res, 'Erreur serveur', 500);
   }
 };
 
@@ -634,6 +763,8 @@ module.exports = {
   changePassword,
   getUserById,
   getCurrentUser,
+  sendEmailVerification,
+  confirmEmailVerification,
   getCurrentDjProfile,
   updateDjProfile,
 };

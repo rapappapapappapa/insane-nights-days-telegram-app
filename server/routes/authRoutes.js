@@ -20,5 +20,19 @@ router.post('/register', authController.register);
  */
 router.post('/login', authController.login);
 
+/**
+ * @route POST /api/auth/forgot-password
+ * @desc Envoie un code de réinitialisation par email
+ * @access Public
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route POST /api/auth/reset-password
+ * @desc Réinitialise le mot de passe avec code
+ * @access Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router;
 

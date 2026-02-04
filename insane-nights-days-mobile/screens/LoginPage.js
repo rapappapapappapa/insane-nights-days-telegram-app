@@ -9,12 +9,14 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import { api } from '../api/config';
 import BackgroundVideo from '../components/BackgroundVideo';
 import Logo from '../components/Logo';
 import Toast from '../components/Toast';
@@ -33,6 +35,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState(routeParams?.mode === 'register' ? 'register' : 'login'); // 'login'|'register'
+  const [resetVisible, setResetVisible] = useState(false);
+  const [resetStep, setResetStep] = useState('email'); // 'email' | 'code'
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
 
@@ -215,6 +224,22 @@ export default function LoginPage() {
             ) : (
               <>
                 <TouchableOpacity
+                  style={styles.forgotLink}
+                  onPress={() => {
+                    setResetEmail(email || '');
+                    setResetCode('');
+                    setResetPassword('');
+                    setResetConfirm('');
+                    setResetStep('email');
+                    setResetVisible(true);
+                  }}
+                  disabled={loading}
+                >
+                  <Text style={styles.forgotLinkText}>
+                    {language === 'fr' ? 'Mot de passe oublié ?' : 'Forgot password?'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                   onPress={handleLogin}
                   disabled={loading}
@@ -239,6 +264,152 @@ export default function LoginPage() {
           onHide={hideToast}
         />
       )}
+
+      <Modal visible={resetVisible} transparent animationType="fade" onRequestClose={() => setResetVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {language === 'fr' ? 'Réinitialiser le mot de passe' : 'Reset password'}
+              </Text>
+              <TouchableOpacity onPress={() => setResetVisible(false)}>
+                <Ionicons name="close" size={22} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            </View>
+
+            {resetStep === 'email' ? (
+              <>
+                <Text style={styles.modalLabel}>{language === 'fr' ? 'Email' : 'Email'}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="ton.email@example.com"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                />
+
+                <TouchableOpacity
+                  style={[styles.modalPrimaryButton, resetLoading && styles.primaryButtonDisabled]}
+                  onPress={async () => {
+                    if (resetLoading) return;
+                    if (!resetEmail || !resetEmail.includes('@')) {
+                      showError(language === 'fr' ? 'Email invalide.' : 'Invalid email.');
+                      return;
+                    }
+                    setResetLoading(true);
+                    try {
+                      const res = await api.forgotPassword(resetEmail);
+                      if (res?.success) {
+                        showSuccess(language === 'fr' ? 'Si un compte existe, le code a été envoyé.' : 'If an account exists, the code was sent.');
+                        setResetStep('code');
+                      } else {
+                        showError(res?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                      }
+                    } catch (e) {
+                      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}
+                  disabled={resetLoading}
+                >
+                  <Text style={styles.modalPrimaryButtonText}>
+                    {resetLoading ? '...' : (language === 'fr' ? 'Envoyer le code' : 'Send code')}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalLabel}>{language === 'fr' ? 'Code (6 chiffres)' : 'Code (6 digits)'}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="123456"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  value={resetCode}
+                  onChangeText={setResetCode}
+                  maxLength={6}
+                />
+
+                <Text style={styles.modalLabel}>{language === 'fr' ? 'Nouveau mot de passe' : 'New password'}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={language === 'fr' ? 'Nouveau mot de passe' : 'New password'}
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  secureTextEntry
+                  value={resetPassword}
+                  onChangeText={setResetPassword}
+                />
+
+                <Text style={styles.modalLabel}>{language === 'fr' ? 'Confirmer' : 'Confirm'}</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={language === 'fr' ? 'Confirmer' : 'Confirm'}
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  secureTextEntry
+                  value={resetConfirm}
+                  onChangeText={setResetConfirm}
+                />
+
+                <TouchableOpacity
+                  style={[styles.modalPrimaryButton, resetLoading && styles.primaryButtonDisabled]}
+                  onPress={async () => {
+                    if (resetLoading) return;
+                    if (!resetCode || resetCode.trim().length !== 6) {
+                      showError(language === 'fr' ? 'Code invalide.' : 'Invalid code.');
+                      return;
+                    }
+                    if (!resetPassword || resetPassword.length < 6) {
+                      showError(language === 'fr' ? 'Mot de passe trop court (min 6).' : 'Password too short (min 6).');
+                      return;
+                    }
+                    if (resetPassword !== resetConfirm) {
+                      showError(language === 'fr' ? 'La confirmation ne correspond pas.' : 'Confirmation does not match.');
+                      return;
+                    }
+                    setResetLoading(true);
+                    try {
+                      const res = await api.resetPassword({
+                        email: resetEmail,
+                        code: resetCode,
+                        newPassword: resetPassword,
+                        confirmPassword: resetConfirm,
+                      });
+                      if (res?.success) {
+                        showSuccess(language === 'fr' ? 'Mot de passe réinitialisé.' : 'Password reset.');
+                        setResetVisible(false);
+                      } else {
+                        showError(res?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                      }
+                    } catch (e) {
+                      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                    } finally {
+                      setResetLoading(false);
+                    }
+                  }}
+                  disabled={resetLoading}
+                >
+                  <Text style={styles.modalPrimaryButtonText}>
+                    {resetLoading ? '...' : (language === 'fr' ? 'Valider' : 'Confirm')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalBackLink}
+                  onPress={() => setResetStep('email')}
+                  disabled={resetLoading}
+                >
+                  <Text style={styles.modalBackLinkText}>
+                    {language === 'fr' ? 'Renvoyer un code' : 'Send again'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -364,6 +535,85 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
+  },
+  forgotLink: {
+    alignSelf: 'flex-end',
+    marginBottom: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
+  forgotLinkText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: 'rgba(11,11,14,0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    borderRadius: 18,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  modalLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    marginTop: 10,
+    marginBottom: 6,
+    fontWeight: '700',
+  },
+  modalInput: {
+    backgroundColor: '#0b0b0e',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    borderRadius: 12,
+    color: '#ffffff',
+    fontSize: 16,
+    padding: 12,
+  },
+  modalPrimaryButton: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  modalPrimaryButtonText: {
+    color: '#0b0b0e',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+  modalBackLink: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  modalBackLinkText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
     fontWeight: '800',
     textDecorationLine: 'underline',
   },

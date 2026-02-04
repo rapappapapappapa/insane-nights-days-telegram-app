@@ -562,6 +562,40 @@ const api = {
     );
   },
 
+  // =========================================================================
+  // EMAIL VERIFICATION / PASSWORD RESET
+  // =========================================================================
+  sendEmailVerificationCode: async (token) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest('/api/user/me/email/verification/send', { method: 'POST', noCache: true }, token);
+  },
+  confirmEmailVerificationCode: async (token, code) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!code) throw new Error('Code requis.');
+    return apiRequest(
+      '/api/user/me/email/verification/confirm',
+      { method: 'POST', body: JSON.stringify({ code: String(code).trim() }) },
+      token
+    );
+  },
+  forgotPassword: async (email) => {
+    return apiRequest('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: (email || '').toString().trim() }),
+    });
+  },
+  resetPassword: async ({ email, code, newPassword, confirmPassword }) => {
+    return apiRequest('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: (email || '').toString().trim(),
+        code: (code || '').toString().trim(),
+        newPassword: (newPassword || '').toString(),
+        confirmPassword: (confirmPassword || '').toString(),
+      }),
+    });
+  },
+
   // Récupérer le profil DJ actif
   getDjProfile: async (token) => {
     if (!token) {

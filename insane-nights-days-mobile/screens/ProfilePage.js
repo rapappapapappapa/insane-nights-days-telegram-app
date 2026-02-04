@@ -45,6 +45,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const ticketsCount = user?.tickets ?? tickets.length ?? 0;
   const eventsParticipated = user?.eventsParticipated ?? 0;
   const email = authUser?.email || user?.email || '';
+  const emailVerified = authUser?.emailVerified ?? user?.emailVerified ?? false;
   const isAuthenticated = authUser?.isAuthenticated ?? false;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -59,6 +60,9 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     confirmPassword: '',
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  const [emailCode, setEmailCode] = useState('');
+  const [sendingEmailCode, setSendingEmailCode] = useState(false);
+  const [verifyingEmailCode, setVerifyingEmailCode] = useState(false);
 
   useEffect(() => {
     setForm({ username });
@@ -260,10 +264,86 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                 <Text style={styles.infoValue}>{username}</Text>
               </View>
               {isAuthenticated ? (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Email</Text>
-                  <Text style={styles.infoValue}>{email}</Text>
-                </View>
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Email</Text>
+                    <Text style={styles.infoValue}>{email}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Statut</Text>
+                    <Text style={[styles.infoValue, emailVerified ? styles.success : styles.warning]}>
+                      {emailVerified ? 'Vérifié' : 'Non vérifié'}
+                    </Text>
+                  </View>
+
+                  {!emailVerified ? (
+                    <View style={styles.emailVerifyBox}>
+                      <TouchableOpacity
+                        style={[styles.smallButton, sendingEmailCode && styles.smallButtonDisabled]}
+                        onPress={async () => {
+                          if (!authUser?.token || sendingEmailCode) return;
+                          setSendingEmailCode(true);
+                          try {
+                            const res = await api.sendEmailVerificationCode(authUser.token);
+                            if (res?.success) showSuccess('Code envoyé.');
+                            else showError(res?.message || 'Impossible d’envoyer le code.');
+                          } catch (e) {
+                            showError(e?.message || 'Impossible d’envoyer le code.');
+                          } finally {
+                            setSendingEmailCode(false);
+                          }
+                        }}
+                        disabled={sendingEmailCode}
+                      >
+                        <Text style={styles.smallButtonText}>
+                          {sendingEmailCode ? '...' : 'Envoyer un code'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TextInput
+                        value={emailCode}
+                        onChangeText={setEmailCode}
+                        placeholder="Code (6 chiffres)"
+                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        style={[styles.input, styles.codeInput]}
+                      />
+
+                      <TouchableOpacity
+                        style={[styles.smallPrimaryButton, verifyingEmailCode && styles.smallButtonDisabled]}
+                        onPress={async () => {
+                          if (!authUser?.token || verifyingEmailCode) return;
+                          if (!emailCode || emailCode.trim().length !== 6) {
+                            showError('Code invalide.');
+                            return;
+                          }
+                          setVerifyingEmailCode(true);
+                          try {
+                            const res = await api.confirmEmailVerificationCode(authUser.token, emailCode);
+                            if (res?.success) {
+                              showSuccess('Email vérifié.');
+                              setEmailCode('');
+                              await refreshCurrentUser();
+                            } else {
+                              showError(res?.message || 'Code incorrect.');
+                            }
+                          } catch (e) {
+                            showError(e?.message || 'Code incorrect.');
+                          } finally {
+                            setVerifyingEmailCode(false);
+                          }
+                        }}
+                        disabled={verifyingEmailCode}
+                      >
+                        <Text style={styles.smallPrimaryButtonText}>
+                          {verifyingEmailCode ? '...' : 'Vérifier'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </>
               ) : null}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Niveau</Text>
@@ -701,6 +781,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 12,
     marginBottom: 16,
+  },
+  emailVerifyBox: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    gap: 10,
+  },
+  codeInput: {
+    marginBottom: 0,
+  },
+  smallButton: {
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    alignItems: 'center',
+  },
+  smallPrimaryButton: {
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  smallButtonDisabled: {
+    opacity: 0.6,
+  },
+  smallButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  smallPrimaryButtonText: {
+    color: '#0b0b0e',
+    fontWeight: '800',
   },
   editActions: {
     flexDirection: 'row',

@@ -44,6 +44,20 @@ router.post('/change-password', authenticateToken, userController.changePassword
 router.get('/me', authenticateToken, userController.getCurrentUser);
 
 /**
+ * @route POST /api/user/me/email/verification/send
+ * @desc Envoie un code de vérification email
+ * @access Private
+ */
+router.post('/me/email/verification/send', authenticateToken, userController.sendEmailVerification);
+
+/**
+ * @route POST /api/user/me/email/verification/confirm
+ * @desc Confirme la vérification email (code)
+ * @access Private
+ */
+router.post('/me/email/verification/confirm', authenticateToken, userController.confirmEmailVerification);
+
+/**
  * @route GET /api/user/dj/profile
  * @desc Récupère le profil DJ actif de l'utilisateur connecté
  * @access Private (nécessite authentification)

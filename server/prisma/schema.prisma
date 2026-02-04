@@ -57,6 +57,12 @@ model User {
   status            UserStatus @default(ACTIVE)
   suspendedUntil    DateTime?
   bannedAt          DateTime?
+  emailVerified     Boolean  @default(false)
+  emailVerifiedAt   DateTime?
+  emailVerificationCodeHash String?
+  emailVerificationSentAt   DateTime?
+  passwordResetCodeHash     String?
+  passwordResetExpiresAt    DateTime?
   score             Int      @default(0)
   level             Int      @default(1)
   accountType       String? // 'COMMUNITY', 'DJ', 'BOOKER', 'VENUE' (déprécié, utiliser activeProfileType)

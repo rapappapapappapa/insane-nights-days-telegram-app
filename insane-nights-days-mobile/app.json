@@ -39,6 +39,7 @@
     "plugins": [
       "expo-audio",
       "expo-video",
+      "expo-updates",
       "expo-asset",
       [
         "@stripe/stripe-react-native",

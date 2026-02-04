@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
+import * as Updates from 'expo-updates';
 
 const menuItems = [
   {
@@ -101,6 +102,43 @@ export default function DrawerContent({ navigation }) {
   const isLoggedIn = !!user?.isAuthenticated;
   const activeProfileType = user?.activeProfileType || null;
   const isAdmin = (user?.role || 'USER') === 'ADMIN';
+
+  const showUpdateInfo = async () => {
+    try {
+      const info = [
+        `channel: ${String(Updates?.channel || 'no-channel')}`,
+        `runtimeVersion: ${String(Updates?.runtimeVersion || 'n/a')}`,
+        `updateId: ${String(Updates?.updateId || 'n/a')}`,
+        `embedded: ${Updates?.isEmbeddedLaunch ? 'yes' : 'no'}`,
+      ].join('\n');
+
+      Alert.alert(
+        'Updates',
+        info,
+        [
+          { text: 'OK', style: 'cancel' },
+          {
+            text: 'Check & Reload',
+            onPress: async () => {
+              try {
+                const res = await Updates.checkForUpdateAsync();
+                if (!res?.isAvailable) {
+                  Alert.alert('Updates', 'No update available.');
+                  return;
+                }
+                await Updates.fetchUpdateAsync();
+                await Updates.reloadAsync();
+              } catch (e) {
+                Alert.alert('Updates', String(e?.message || e));
+              }
+            },
+          },
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Updates', String(e?.message || e));
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -255,6 +293,13 @@ export default function DrawerContent({ navigation }) {
       {isLoggedIn ? (
         <View style={styles.logoutSection}>
           <TouchableOpacity
+            style={styles.updateButton}
+            activeOpacity={0.85}
+            onPress={showUpdateInfo}
+          >
+            <Text style={styles.updateButtonText}>⬇️ Updates</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.logoutButton}
             activeOpacity={0.85}
             onPress={async () => {
@@ -388,6 +433,21 @@ const styles = StyleSheet.create({
   logoutSection: {
     paddingTop: 18,
     paddingHorizontal: 20,
+    gap: 10,
+  },
+  updateButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  updateButtonText: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 13,
+    fontWeight: '900',
   },
   logoutButton: {
     borderWidth: 1,

@@ -20,6 +20,7 @@ import { api, normalizeMediaUrl } from '../api/config';
 import EmptyState from '../components/EmptyState';
 import { useFeedNotifications } from '../hooks/useFeedNotifications'; // ✅ AJOUT: Hook pour les notifications du feed
 import NotificationBadge from '../components/NotificationBadge'; // ✅ AJOUT: Badge de notification
+import Logo from '../components/Logo'; // ✅ AJOUT: Logo NOX
 
 /**
  * ✅ AJOUT: Page Feed d'actualité
@@ -365,10 +366,23 @@ export default function FeedPage() {
       <StatusBar style="light" />
       
       <View style={styles.header}>
-        <View style={styles.headerLeftSpacer} />
+        {/* ✅ AJOUT: Logo NOX à gauche */}
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.feedLogoButton}
+            onPress={() => fetchFeed(true)}
+            activeOpacity={0.7}
+          >
+            <Logo size={48} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Titre au centre */}
         <Text style={styles.headerTitle}>
           {language === 'fr' ? 'Feed' : 'Feed'}
         </Text>
+        
+        {/* Boutons à droite */}
         <View style={styles.headerRight}>
           {user?.token && feedNotificationsCount > 0 && (
             <TouchableOpacity
@@ -701,6 +715,14 @@ const styles = StyleSheet.create({
   },
   headerLeftSpacer: {
     width: 44, // équilibre visuel (même largeur que l'espace du hamburger)
+  },
+  // ✅ AJOUT: Container pour le logo à gauche
+  headerLeft: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedLogoButton: {
+    padding: 4,
   },
   floatingMenuButton: {
     position: 'absolute',

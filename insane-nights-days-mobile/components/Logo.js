@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { Image, StyleSheet, View, Text } from 'react-native';
 
 /**
- * ✅ AJOUT: Composant Logo INSANE réutilisable
- * Utilise le logo INSANE CORPORATION (vrailogo.png)
+ * ✅ Composant Logo NOX réutilisable
+ * Utilise le logo NOX (vrailogo.png)
  * 
  * Le logo est placé dans: insane-nights-days-mobile/assets/vrailogo.png
  * Format: PNG avec fond transparent ou fond noir
  * 
- * ✅ CORRECTION: Fallback si le logo ne charge pas (affiche le carré rouge avec "I")
+ * ✅ Fallback si le logo ne charge pas (affiche le carré rouge avec "N")
  */
 export default function Logo({ size = 100, style }) {
   const [imageError, setImageError] = useState(false);
@@ -25,7 +25,7 @@ export default function Logo({ size = 100, style }) {
       ) : (
         // Fallback si l'image ne charge pas
         <View style={[styles.fallback, { width: size, height: size, borderRadius: size * 0.25 }]}>
-          <Text style={[styles.fallbackText, { fontSize: size * 0.5 }]}>I</Text>
+          <Text style={[styles.fallbackText, { fontSize: size * 0.5 }]}>N</Text>
         </View>
       )}
     </View>

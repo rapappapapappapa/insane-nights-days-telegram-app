@@ -6610,14 +6610,17 @@ app.delete('/api/feed/post/:postId', authenticateToken, async (req, res) => {
  */
 app.get('/api/feed', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 50; // ✅ AUGMENTÉ: De 20 à 50 par défaut pour voir plus de posts
     const offset = parseInt(req.query.offset) || 0;
 
     // Récupérer les posts récents (triés par date décroissante)
+    // ✅ CORRECTION: Pas de filtre par date - tous les posts sont visibles pour tous les utilisateurs
+    // Tous les posts sont récupérés indépendamment de la date de création du compte utilisateur
     const posts = await prisma.feedPost.findMany({
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },
+      // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte
       include: {
         dj: {
           select: {

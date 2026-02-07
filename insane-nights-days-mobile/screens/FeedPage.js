@@ -129,7 +129,7 @@ export default function FeedPage() {
     }
 
     try {
-      const response = await api.getFeed(30, 0); // Récupérer 30 éléments
+      const response = await api.getFeed(50, 0); // ✅ AUGMENTÉ: Récupérer 50 éléments pour voir plus de posts historiques
       if (response && response.success && Array.isArray(response.feed)) {
         setFeed(response.feed);
         // ✅ AJOUT: Initialiser les compteurs de likes avec les valeurs du feed

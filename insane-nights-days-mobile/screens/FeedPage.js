@@ -131,6 +131,14 @@ export default function FeedPage() {
     try {
       const response = await api.getFeed(50, 0); // ✅ AUGMENTÉ: Récupérer 50 éléments pour voir plus de posts historiques
       if (response && response.success && Array.isArray(response.feed)) {
+        // ✅ DEBUG: Logger les informations du feed pour diagnostiquer
+        console.log('[FeedPage] Feed récupéré:', {
+          total: response.feed.length,
+          posts: response.feed.filter(item => item.type === 'post').length,
+          events: response.feed.filter(item => item.type === 'event').length,
+          oldestPost: response.feed.length > 0 ? response.feed[response.feed.length - 1]?.createdAt : null,
+          newestPost: response.feed.length > 0 ? response.feed[0]?.createdAt : null,
+        });
         setFeed(response.feed);
         // ✅ AJOUT: Initialiser les compteurs de likes avec les valeurs du feed
         const likesCountState = {};
@@ -141,6 +149,7 @@ export default function FeedPage() {
         });
         setPostLikesCount(likesCountState);
       } else {
+        console.warn('[FeedPage] Réponse invalide du serveur:', response);
         setFeed([]);
       }
     } catch (error) {

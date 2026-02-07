@@ -6615,12 +6615,13 @@ app.get('/api/feed', async (req, res) => {
 
     // Récupérer les posts récents (triés par date décroissante)
     // ✅ CORRECTION: Pas de filtre par date - tous les posts sont visibles pour tous les utilisateurs
-    // Tous les posts sont récupérés indépendamment de la date de création du compte utilisateur
+    // Tous les posts sont récupérés indépendamment de la date de création du compte utilisateur ou d'installation de l'app
+    // ✅ IMPORTANT: Pas de filtre par date d'installation de l'app - tous les posts historiques doivent être visibles
     const posts = await prisma.feedPost.findMany({
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },
-      // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte
+      // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte ou d'installation
       include: {
         dj: {
           select: {
@@ -6796,6 +6797,18 @@ app.get('/api/feed', async (req, res) => {
     const feedItems = [...formattedPosts, ...formattedEvents].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
+
+    // ✅ DEBUG: Logger les informations du feed pour diagnostiquer
+    console.log('[API /feed] Feed généré:', {
+      totalPosts: formattedPosts.length,
+      totalEvents: formattedEvents.length,
+      totalItems: feedItems.length,
+      limit: limit,
+      offset: offset,
+      returnedItems: feedItems.slice(0, limit).length,
+      oldestItem: feedItems.length > 0 ? feedItems[feedItems.length - 1]?.createdAt : null,
+      newestItem: feedItems.length > 0 ? feedItems[0]?.createdAt : null,
+    });
 
     res.json({
       success: true,

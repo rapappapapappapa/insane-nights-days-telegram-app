@@ -1,16 +1,4 @@
 import React, { useState } from 'react';
-import { Image, StyleSheet, View, Text } from 'react-native';
-
-/**
- * ✅ Composant Logo NOX réutilisable
- * Utilise le logo NOX (vrailogo.png)
- * 
- * Le logo est placé dans: insane-nights-days-mobile/assets/vrailogo.png
- * Format: PNG avec fond transparent ou fond noir
- * 
- * ✅ Fallback si le logo ne charge pas (affiche le carré rouge avec "N")
- */
-import React, { useState } from 'react';
 import { Image, StyleSheet, View, Text, Platform } from 'react-native';
 
 /**
@@ -60,7 +48,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  // ✅ AJOUT: Style pour le fallback (carré rouge avec "I")
+  // ✅ AJOUT: Style pour le fallback (carré rouge avec "N")
   fallback: {
     backgroundColor: '#FF1744',
     alignItems: 'center',

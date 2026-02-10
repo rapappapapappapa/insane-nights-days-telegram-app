@@ -80,7 +80,7 @@ export default function HomePage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
       } else {
-        showError(res?.message || (language === 'fr' ? 'Impossible d'envoyer.' : 'Unable to send.'));
+        showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
       }
     } catch (e) {
       console.error('Erreur signalement:', e);

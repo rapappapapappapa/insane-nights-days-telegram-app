@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SkeletonLoader from './SkeletonLoader';
 
@@ -80,6 +80,9 @@ export default function ImageWithRetry({
     return (
       <View style={[style, styles.errorContainer, fallbackStyle]}>
         <Ionicons name="image-outline" size={24} color="rgba(255,255,255,0.4)" />
+        <Text style={styles.errorText}>
+          {showRetryButton ? 'Appuyez pour réessayer' : 'Image indisponible'}
+        </Text>
         {showRetryButton && (
           <TouchableOpacity
             style={styles.retryButton}
@@ -142,5 +145,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 23, 68, 0.4)',
+  },
+  errorText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

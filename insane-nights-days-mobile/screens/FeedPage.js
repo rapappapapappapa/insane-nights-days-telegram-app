@@ -504,7 +504,7 @@ export default function FeedPage() {
               const profileLocation = isDj ? item.dj?.city : null;
               const imageUri = normalizeMediaUrl(item.imageUrl);
               const avatarUri = isDj ? normalizeMediaUrl(profileImage) : null;
-              const isBrokenImage = !!brokenPostImages[item.id];
+              // ✅ SUPPRIMÉ: isBrokenImage n'est plus nécessaire car ImageWithRetry gère les erreurs
               
               return (
                 <View key={`post-${item.id}`} style={styles.postCard}>

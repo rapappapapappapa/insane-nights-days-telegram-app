@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Modal,
   TextInput, // ✅ AJOUT: Pour les commentaires
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +21,73 @@ import EmptyState from '../components/EmptyState';
 import { useFeedNotifications } from '../hooks/useFeedNotifications'; // ✅ AJOUT: Hook pour les notifications du feed
 import NotificationBadge from '../components/NotificationBadge'; // ✅ AJOUT: Badge de notification
 import Logo from '../components/Logo'; // ✅ AJOUT: Logo NOX
+import { useToast } from '../hooks/useToast'; // ✅ AJOUT: Hook Toast pour remplacer Alert.alert
+import Toast from '../components/Toast'; // ✅ AJOUT: Composant Toast
+import ImageWithRetry from '../components/ImageWithRetry'; // ✅ AJOUT: Image avec retry automatique
+import FeedPostSkeleton from '../components/FeedPostSkeleton'; // ✅ AJOUT: Skeleton pour les posts
+
+/**
+ * ✅ AJOUT: Reducer pour gérer les états des posts (optimisation performance)
+ */
+const postStateReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_LIKED_POST':
+      return {
+        ...state,
+        likedPosts: { ...state.likedPosts, [action.postId]: action.liked },
+      };
+    case 'SET_LIKES_COUNT':
+      return {
+        ...state,
+        postLikesCount: { ...state.postLikesCount, [action.postId]: action.count },
+      };
+    case 'SET_LIKES_STATE':
+      return {
+        ...state,
+        likedPosts: action.likedPosts,
+        postLikesCount: action.likesCount,
+      };
+    case 'SET_COMMENTS':
+      return {
+        ...state,
+        postComments: { ...state.postComments, [action.postId]: action.comments },
+      };
+    case 'TOGGLE_COMMENTS':
+      return {
+        ...state,
+        expandedComments: {
+          ...state.expandedComments,
+          [action.postId]: !state.expandedComments[action.postId],
+        },
+      };
+    case 'SET_COMMENT_INPUT':
+      return {
+        ...state,
+        commentInputs: { ...state.commentInputs, [action.postId]: action.text },
+      };
+    case 'CLEAR_COMMENT_INPUT':
+      return {
+        ...state,
+        commentInputs: { ...state.commentInputs, [action.postId]: '' },
+      };
+    case 'SET_BROKEN_IMAGE':
+      return {
+        ...state,
+        brokenPostImages: { ...state.brokenPostImages, [action.postId]: true },
+      };
+    default:
+      return state;
+  }
+};
+
+const initialPostState = {
+  likedPosts: {},
+  postLikesCount: {},
+  postComments: {},
+  expandedComments: {},
+  commentInputs: {},
+  brokenPostImages: {},
+};
 
 /**
  * ✅ AJOUT: Page Feed d'actualité
@@ -30,7 +97,9 @@ export default function FeedPage() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { navigate } = useNavigation();
+  const { toast, showError, showSuccess, hideToast } = useToast(); // ✅ AJOUT: Toast pour remplacer Alert.alert
   const { unreadCount: feedNotificationsCount, refreshUnreadCount: refreshFeedNotifications } = useFeedNotifications(); // ✅ AJOUT: Notifications du feed
+  
   const openFeedNotifications = async () => {
     if (!user?.isAuthenticated || !user?.token) return;
     try {
@@ -40,68 +109,61 @@ export default function FeedPage() {
     } catch (e) {
       console.error('[FeedPage] openFeedNotifications error:', e);
       refreshFeedNotifications();
-      Alert.alert(
-        language === 'fr' ? 'Notifications' : 'Notifications',
-        language === 'fr' ? 'Impossible de charger les notifications.' : 'Unable to load notifications.'
-      );
+      showError(language === 'fr' ? 'Impossible de charger les notifications.' : 'Unable to load notifications.');
     }
   };
 
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  // ✅ AJOUT: États pour gérer les likes et commentaires
-  const [likedPosts, setLikedPosts] = useState({}); // { postId: true/false }
-  const [postLikesCount, setPostLikesCount] = useState({}); // { postId: count }
-  const [postComments, setPostComments] = useState({}); // { postId: [comments] }
-  const [expandedComments, setExpandedComments] = useState({}); // { postId: true/false }
-  const [commentInputs, setCommentInputs] = useState({}); // { postId: text }
-  const [brokenPostImages, setBrokenPostImages] = useState({}); // { postId: true }
+  // ✅ OPTIMISATION: Utiliser useReducer pour grouper les états liés aux posts
+  const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
+  
+  // Destructuration pour faciliter l'utilisation
+  const { likedPosts, postLikesCount, postComments, expandedComments, commentInputs, brokenPostImages } = postState;
+
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [postToReport, setPostToReport] = useState(null);
 
   const reportPost = (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.'
-      );
+      showError(language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.');
       return;
     }
-
-    const reasons = [
-      { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
-      { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
-      { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
-      { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
-      { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
-    ];
-
-    Alert.alert(
-      language === 'fr' ? 'Signaler ce post' : 'Report this post',
-      language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
-      [
-        ...reasons.map((r) => ({
-          text: r.label,
-          onPress: async () => {
-            try {
-              const res = await api.createReport(user.token, {
-                targetType: 'FEED_POST',
-                targetId: postId,
-                reason: r.id,
-              });
-              if (res?.success) {
-                Alert.alert(language === 'fr' ? 'Merci' : 'Thanks', language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
-              } else {
-                Alert.alert(language === 'fr' ? 'Erreur' : 'Error', res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
-              }
-            } catch (e) {
-              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
-            }
-          },
-        })),
-        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-      ]
-    );
+    setPostToReport(postId);
+    setReportModalVisible(true);
   };
+
+  const handleReportReason = async (reason) => {
+    if (!user?.token || !postToReport) return;
+    setReportModalVisible(false);
+    
+    try {
+      const res = await api.createReport(user.token, {
+        targetType: 'FEED_POST',
+        targetId: postToReport,
+        reason: reason.id,
+      });
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('Erreur signalement:', e);
+      showError(language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
+    } finally {
+      setPostToReport(null);
+    }
+  };
+
+  const reportReasons = [
+    { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
+    { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
+    { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
+    { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
+    { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
+  ];
 
   useEffect(() => {
     // ✅ FORCER le rechargement au montage du composant (première installation)
@@ -162,7 +224,7 @@ export default function FeedPage() {
             likesCountState[item.id] = item.likes || 0;
           }
         });
-        setPostLikesCount(likesCountState);
+        dispatchPostState({ type: 'SET_LIKES_STATE', likedPosts: {}, likesCount: likesCountState });
       } else {
         console.warn('[FeedPage] Réponse invalide du serveur:', response);
         setFeed([]);
@@ -252,8 +314,7 @@ export default function FeedPage() {
       }
     }
 
-    setLikedPosts(likesState);
-    setPostLikesCount(likesCountState);
+    dispatchPostState({ type: 'SET_LIKES_STATE', likedPosts: likesState, likesCount: likesCountState });
   };
 
   /**
@@ -261,11 +322,9 @@ export default function FeedPage() {
    */
   const handleToggleLike = async (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' 
-          ? 'Vous devez être connecté pour liker un post'
-          : 'You must be logged in to like a post'
+      showError(language === 'fr' 
+        ? 'Vous devez être connecté pour liker un post'
+        : 'You must be logged in to like a post'
       );
       return;
     }
@@ -273,24 +332,15 @@ export default function FeedPage() {
     try {
       const response = await api.toggleLikePost(user.token, postId);
       if (response && response.success) {
-        // Mettre à jour l'état local
-        setLikedPosts(prev => ({
-          ...prev,
-          [postId]: response.liked,
-        }));
-        setPostLikesCount(prev => ({
-          ...prev,
-          [postId]: response.likesCount,
-        }));
+        // Mettre à jour l'état local avec dispatch
+        dispatchPostState({ type: 'SET_LIKED_POST', postId, liked: response.liked });
+        dispatchPostState({ type: 'SET_LIKES_COUNT', postId, count: response.likesCount });
         // ✅ AJOUT: Rafraîchir les notifications après un like
         refreshFeedNotifications();
       }
     } catch (error) {
       console.error('Erreur like/unlike:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred')
-      );
+      showError(error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
     }
   };
 
@@ -301,10 +351,7 @@ export default function FeedPage() {
     try {
       const response = await api.getPostComments(postId, 50, 0);
       if (response && response.success) {
-        setPostComments(prev => ({
-          ...prev,
-          [postId]: response.comments || [],
-        }));
+        dispatchPostState({ type: 'SET_COMMENTS', postId, comments: response.comments || [] });
       }
     } catch (error) {
       console.error('Erreur chargement commentaires:', error);
@@ -316,10 +363,7 @@ export default function FeedPage() {
    */
   const toggleComments = (postId) => {
     const isExpanded = expandedComments[postId];
-    setExpandedComments(prev => ({
-      ...prev,
-      [postId]: !isExpanded,
-    }));
+    dispatchPostState({ type: 'TOGGLE_COMMENTS', postId });
 
     // Charger les commentaires si on les ouvre pour la première fois
     if (!isExpanded && !postComments[postId]) {
@@ -332,11 +376,9 @@ export default function FeedPage() {
    */
   const handleCreateComment = async (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' 
-          ? 'Vous devez être connecté pour commenter'
-          : 'You must be logged in to comment'
+      showError(language === 'fr' 
+        ? 'Vous devez être connecté pour commenter'
+        : 'You must be logged in to comment'
       );
       return;
     }
@@ -350,24 +392,19 @@ export default function FeedPage() {
       const response = await api.createComment(user.token, postId, content);
       if (response && response.success) {
         // Ajouter le commentaire à la liste
-        setPostComments(prev => ({
-          ...prev,
-          [postId]: [...(prev[postId] || []), response.comment],
-        }));
+        dispatchPostState({ 
+          type: 'SET_COMMENTS', 
+          postId, 
+          comments: [...(postComments[postId] || []), response.comment] 
+        });
         // Vider l'input
-        setCommentInputs(prev => ({
-          ...prev,
-          [postId]: '',
-        }));
+        dispatchPostState({ type: 'CLEAR_COMMENT_INPUT', postId });
         // ✅ AJOUT: Rafraîchir les notifications après un commentaire
         refreshFeedNotifications();
       }
     } catch (error) {
       console.error('Erreur création commentaire:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred')
-      );
+      showError(error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
     }
   };
 
@@ -484,12 +521,21 @@ export default function FeedPage() {
                     >
                       <View style={styles.postAvatar}>
                         {avatarUri ? (
-                          <Image
-                            source={{ uri: avatarUri }}
+                          <ImageWithRetry
+                            uri={avatarUri}
                             style={styles.avatarImage}
+                            resizeMode="cover"
+                            maxRetries={2}
+                            showRetryButton={false}
+                            onError={() => {
+                              // Marquer l'avatar comme broken pour afficher le placeholder
+                              dispatchPostState({ type: 'SET_BROKEN_IMAGE', postId: `avatar-${item.id}` });
+                            }}
                           />
-                        ) : (
-                          <View style={[styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
+                        ) : null}
+                        {/* Afficher le placeholder si pas d'URI ou si l'image a échoué */}
+                        {(!avatarUri || brokenPostImages[`avatar-${item.id}`]) && (
+                          <View style={[StyleSheet.absoluteFill, styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
                             <Text style={styles.avatarText}>
                               {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'B')}
                             </Text>
@@ -539,24 +585,21 @@ export default function FeedPage() {
                   {/* ✅ MODIFICATION: Contenu du post avec meilleure typographie */}
                   <Text style={styles.postContent}>{item.content}</Text>
 
-                  {/* ✅ MODIFICATION: Image avec bordures arrondies */}
-                  {!!imageUri && !isBrokenImage && (
+                  {/* ✅ AMÉLIORATION: Image avec retry automatique et skeleton loader */}
+                  {!!imageUri && (
                     <View style={styles.postImageContainer}>
-                      <Image
-                        source={{ uri: imageUri }}
+                      <ImageWithRetry
+                        uri={imageUri}
                         style={styles.postImage}
                         resizeMode="cover"
-                        onError={() => setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }))}
+                        maxRetries={3}
+                        retryDelay={1000}
+                        onError={() => {
+                          // Marquer comme broken seulement après tous les retries
+                          dispatchPostState({ type: 'SET_BROKEN_IMAGE', postId: item.id });
+                        }}
+                        fallbackStyle={styles.postImageFallback}
                       />
-                    </View>
-                  )}
-
-                  {!!imageUri && isBrokenImage && (
-                    <View style={[styles.postImageContainer, styles.postImageFallback]}>
-                      <Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.6)" />
-                      <Text style={styles.postImageFallbackText}>
-                        {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
-                      </Text>
                     </View>
                   )}
 
@@ -630,10 +673,7 @@ export default function FeedPage() {
                             placeholder={language === 'fr' ? 'Ajouter un commentaire...' : 'Add a comment...'}
                             placeholderTextColor="rgba(255,255,255,0.5)"
                             value={commentInputs[item.id] || ''}
-                            onChangeText={(text) => setCommentInputs(prev => ({
-                              ...prev,
-                              [item.id]: text,
-                            }))}
+                            onChangeText={(text) => dispatchPostState({ type: 'SET_COMMENT_INPUT', postId: item.id, text })}
                             multiline
                           />
                           <TouchableOpacity
@@ -708,6 +748,55 @@ export default function FeedPage() {
           })
         )}
       </ScrollView>
+
+      {/* ✅ AJOUT: Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
+
+      {/* ✅ AJOUT: Modal pour signaler un post */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {language === 'fr' ? 'Signaler ce post' : 'Report this post'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.'}
+            </Text>
+            
+            {reportReasons.map((reason) => (
+              <TouchableOpacity
+                key={reason.id}
+                style={styles.modalButton}
+                onPress={() => handleReportReason(reason)}
+              >
+                <Text style={styles.modalButtonText}>{reason.label}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalCancelButton]}
+              onPress={() => {
+                setReportModalVisible(false);
+                setPostToReport(null);
+              }}
+            >
+              <Text style={styles.modalCancelButtonText}>
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1089,5 +1178,60 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     flex: 1,
+  },
+  // ✅ AJOUT: Styles pour le modal de signalement
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#2a2a2f',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.2)',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.2)',
+    marginTop: 8,
+  },
+  modalCancelButtonText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

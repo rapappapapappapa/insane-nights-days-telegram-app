@@ -11,7 +11,6 @@ import {
   Animated,
   Dimensions,
   Image,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,48 +52,51 @@ export default function HomePage() {
   const [expandedComments, setExpandedComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [brokenPostImages, setBrokenPostImages] = useState({});
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [postToReport, setPostToReport] = useState(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
 
   const reportPost = (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.'
-      );
+      showError(language === 'fr' ? 'Connecte-toi pour signaler.' : 'Log in to report.');
       return;
     }
 
-    const reasons = [
-      { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
-      { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
-      { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
-      { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
-      { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
-    ];
-
-    Alert.alert(
-      language === 'fr' ? 'Signaler ce post' : 'Report this post',
-      language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
-      [
-        ...reasons.map((r) => ({
-          text: r.label,
-          onPress: async () => {
-            try {
-              const res = await api.createReport(user.token, {
-                targetType: 'FEED_POST',
-                targetId: postId,
-                reason: r.id,
-              });
-              if (res?.success) showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
-              else showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
-            } catch (e) {
-              showError(language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
-            }
-          },
-        })),
-        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-      ]
-    );
+    setPostToReport(postId);
+    setReportModalVisible(true);
   };
+
+  const handleReportReason = async (reason) => {
+    if (!user?.token || !postToReport) return;
+    setReportModalVisible(false);
+    
+    try {
+      const res = await api.createReport(user.token, {
+        targetType: 'FEED_POST',
+        targetId: postToReport,
+        reason: reason.id,
+      });
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Signalement envoyé.' : 'Report sent.');
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d'envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('Erreur signalement:', e);
+      showError(language === 'fr' ? 'Signalement impossible.' : 'Reporting failed.');
+    } finally {
+      setPostToReport(null);
+    }
+  };
+
+  const reportReasons = [
+    { id: 'SPAM', label: language === 'fr' ? 'Spam / pub' : 'Spam / ads' },
+    { id: 'SCAM', label: language === 'fr' ? 'Arnaque' : 'Scam' },
+    { id: 'HARASSMENT', label: language === 'fr' ? 'Harcèlement' : 'Harassment' },
+    { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
+    { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
+  ];
   
   // Animation pour le feed
   const feedTranslateY = useRef(new Animated.Value(0)).current;
@@ -190,11 +192,9 @@ export default function HomePage() {
    */
   const handleToggleLike = async (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' 
-          ? 'Vous devez être connecté pour liker un post'
-          : 'You must be logged in to like a post'
+      showError(language === 'fr' 
+        ? 'Vous devez être connecté pour liker un post'
+        : 'You must be logged in to like a post'
       );
       return;
     }
@@ -255,11 +255,9 @@ export default function HomePage() {
    */
   const handleCreateComment = async (postId) => {
     if (!user?.token) {
-      Alert.alert(
-        language === 'fr' ? 'Connexion requise' : 'Login required',
-        language === 'fr' 
-          ? 'Vous devez être connecté pour commenter'
-          : 'You must be logged in to comment'
+      showError(language === 'fr' 
+        ? 'Vous devez être connecté pour commenter'
+        : 'You must be logged in to comment'
       );
       return;
     }
@@ -298,39 +296,31 @@ export default function HomePage() {
       return;
     }
 
-    Alert.alert(
-      language === 'fr' ? 'Supprimer le post' : 'Delete post',
-      language === 'fr' 
-        ? 'Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.'
-        : 'Are you sure you want to delete this post? This action cannot be undone.',
-      [
-        {
-          text: language === 'fr' ? 'Annuler' : 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: language === 'fr' ? 'Supprimer' : 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await api.deleteFeedPost(user.token, postId);
-              if (response && response.success) {
-                setFeed(prev => prev.filter(item => item.id !== postId));
-                showSuccess(language === 'fr' ? 'Post supprimé avec succès' : 'Post deleted successfully');
-              }
-            } catch (error) {
-              console.error('Erreur suppression post:', error);
-              // ✅ CORRECTION: Gérer les erreurs de token expiré
-              if (error?.isTokenExpired || error?.status === 401 || error?.status === 403) {
-                handleTokenExpired();
-              } else {
-                showError(language === 'fr' ? 'Erreur lors de la suppression du post' : 'Error deleting post');
-              }
-            }
-          },
-        },
-      ]
-    );
+    setPostToDelete(postId);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeletePost = async () => {
+    if (!user?.token || !postToDelete) return;
+    setDeleteModalVisible(false);
+    
+    try {
+      const response = await api.deleteFeedPost(user.token, postToDelete);
+      if (response && response.success) {
+        setFeed(prev => prev.filter(item => item.id !== postToDelete));
+        showSuccess(language === 'fr' ? 'Post supprimé avec succès' : 'Post deleted successfully');
+      }
+    } catch (error) {
+      console.error('Erreur suppression post:', error);
+      // ✅ CORRECTION: Gérer les erreurs de token expiré
+      if (error?.isTokenExpired || error?.status === 401 || error?.status === 403) {
+        handleTokenExpired();
+      } else {
+        showError(language === 'fr' ? 'Erreur lors de la suppression du post' : 'Error deleting post');
+      }
+    } finally {
+      setPostToDelete(null);
+    }
   };
 
   /**
@@ -369,10 +359,7 @@ export default function HomePage() {
     } catch (e) {
       console.error('[HomePage] openFeedNotifications error:', e);
       refreshFeedNotifications();
-      Alert.alert(
-        language === 'fr' ? 'Notifications' : 'Notifications',
-        language === 'fr' ? 'Impossible de charger les notifications.' : 'Unable to load notifications.'
-      );
+      showError(language === 'fr' ? 'Impossible de charger les notifications.' : 'Unable to load notifications.');
     }
   };
 
@@ -815,13 +802,98 @@ export default function HomePage() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Toast pour les notifications */}
+      {/* ✅ AJOUT: Toast pour les notifications */}
       <Toast
         message={toast.message}
         type={toast.type}
         visible={toast.visible}
         onHide={hideToast}
       />
+
+      {/* ✅ AJOUT: Modal pour signaler un post */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {language === 'fr' ? 'Signaler ce post' : 'Report this post'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.'}
+            </Text>
+            
+            {reportReasons.map((reason) => (
+              <TouchableOpacity
+                key={reason.id}
+                style={styles.modalButton}
+                onPress={() => handleReportReason(reason)}
+              >
+                <Text style={styles.modalButtonText}>{reason.label}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalCancelButton]}
+              onPress={() => {
+                setReportModalVisible(false);
+                setPostToReport(null);
+              }}
+            >
+              <Text style={styles.modalCancelButtonText}>
+                {language === 'fr' ? 'Annuler' : 'Cancel'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ AJOUT: Modal de confirmation pour supprimer un post */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {language === 'fr' ? 'Supprimer le post' : 'Delete post'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {language === 'fr' 
+                ? 'Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.'
+                : 'Are you sure you want to delete this post? This action cannot be undone.'}
+            </Text>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setPostToDelete(null);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>
+                  {language === 'fr' ? 'Annuler' : 'Cancel'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDeleteButton]}
+                onPress={confirmDeletePost}
+              >
+                <Text style={styles.modalDeleteButtonText}>
+                  {language === 'fr' ? 'Supprimer' : 'Delete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       </View>
   );
 }
@@ -1311,5 +1383,76 @@ const styles = StyleSheet.create({
   modalOptionTextSelected: {
     color: '#0b0b0e',
     fontWeight: '700',
+  },
+  // ✅ AJOUT: Styles pour les modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#2a2a2f',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.2)',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.2)',
+    marginTop: 8,
+  },
+  modalCancelButtonText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalDeleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    flex: 1,
+  },
+  modalDeleteButtonText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

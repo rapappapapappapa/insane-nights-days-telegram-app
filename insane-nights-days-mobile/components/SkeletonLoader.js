@@ -3,6 +3,7 @@ import { View, StyleSheet, Animated } from 'react-native';
 
 /**
  * Composant Skeleton pour afficher un placeholder animé pendant le chargement
+ * Amélioré avec effet shimmer moderne
  * @param {number|string} width - Largeur du skeleton
  * @param {number|string} height - Hauteur du skeleton
  * @param {object} style - Styles additionnels
@@ -14,49 +15,62 @@ export default function SkeletonLoader({
   style,
   circular = false 
 }) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      })
     ).start();
   }, []);
   
-  const opacity = animatedValue.interpolate({
+  const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
+    outputRange: [-200, 200],
   });
   
   return (
-    <Animated.View
+    <View
       style={[
         styles.skeleton,
         {
           width,
           height,
-          opacity,
           borderRadius: circular ? height / 2 : 12,
+          overflow: 'hidden',
         },
         style,
       ]}
-    />
+    >
+      <Animated.View
+        style={[
+          styles.shimmer,
+          {
+            transform: [{ translateX }],
+          },
+        ]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: '#1a1a1f',
+    position: 'relative',
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    opacity: 0.5,
   },
 });
 

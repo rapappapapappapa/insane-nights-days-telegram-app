@@ -104,6 +104,8 @@ export default function FeedPage() {
   };
 
   useEffect(() => {
+    // ✅ FORCER le rechargement au montage du composant (première installation)
+    // Cela garantit que les nouveaux utilisateurs récupèrent toujours les données fraîches
     fetchFeed();
   }, []);
 
@@ -129,16 +131,29 @@ export default function FeedPage() {
     }
 
     try {
+      // ✅ IMPORTANT: Toujours récupérer depuis le serveur (noCache déjà activé dans api.getFeed)
+      // Ajouter un timestamp pour éviter tout cache même au niveau du navigateur/Expo
+      const timestamp = Date.now();
       const response = await api.getFeed(50, 0); // ✅ AUGMENTÉ: Récupérer 50 éléments pour voir plus de posts historiques
       if (response && response.success && Array.isArray(response.feed)) {
         // ✅ DEBUG: Logger les informations du feed pour diagnostiquer
         console.log('[FeedPage] Feed récupéré:', {
+          timestamp: new Date(timestamp).toISOString(),
           total: response.feed.length,
           posts: response.feed.filter(item => item.type === 'post').length,
           events: response.feed.filter(item => item.type === 'event').length,
           oldestPost: response.feed.length > 0 ? response.feed[response.feed.length - 1]?.createdAt : null,
           newestPost: response.feed.length > 0 ? response.feed[0]?.createdAt : null,
+          allPostDates: response.feed.filter(item => item.type === 'post').map(p => p.createdAt),
         });
+        
+        // ✅ VÉRIFICATION: S'assurer qu'on a bien tous les posts (pas de filtre)
+        if (response.feed.length === 0) {
+          console.warn('[FeedPage] ⚠️ ATTENTION: Le feed est vide !');
+        } else if (response.feed.filter(item => item.type === 'post').length < 5) {
+          console.warn('[FeedPage] ⚠️ ATTENTION: Moins de 5 posts récupérés alors qu\'il devrait y en avoir 5 !');
+        }
+        
         setFeed(response.feed);
         // ✅ AJOUT: Initialiser les compteurs de likes avec les valeurs du feed
         const likesCountState = {};

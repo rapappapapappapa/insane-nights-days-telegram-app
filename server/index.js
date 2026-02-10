@@ -6799,16 +6799,29 @@ app.get('/api/feed', async (req, res) => {
     );
 
     // ✅ DEBUG: Logger les informations du feed pour diagnostiquer
+    const returnedFeed = feedItems.slice(0, limit);
+    const returnedPosts = returnedFeed.filter(item => item.type === 'post');
     console.log('[API /feed] Feed généré:', {
       totalPosts: formattedPosts.length,
       totalEvents: formattedEvents.length,
       totalItems: feedItems.length,
       limit: limit,
       offset: offset,
-      returnedItems: feedItems.slice(0, limit).length,
+      returnedItems: returnedFeed.length,
+      returnedPosts: returnedPosts.length,
       oldestItem: feedItems.length > 0 ? feedItems[feedItems.length - 1]?.createdAt : null,
       newestItem: feedItems.length > 0 ? feedItems[0]?.createdAt : null,
+      allPostDates: formattedPosts.map(p => p.createdAt),
     });
+    
+    // ✅ VÉRIFICATION: S'assurer qu'on retourne bien tous les posts disponibles
+    if (formattedPosts.length > 0 && returnedPosts.length < formattedPosts.length) {
+      console.warn('[API /feed] ⚠️ ATTENTION: Tous les posts ne sont pas retournés !', {
+        totalPosts: formattedPosts.length,
+        returnedPosts: returnedPosts.length,
+        missingPosts: formattedPosts.length - returnedPosts.length,
+      });
+    }
 
     res.json({
       success: true,

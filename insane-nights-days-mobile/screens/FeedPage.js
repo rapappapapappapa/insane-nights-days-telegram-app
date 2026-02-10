@@ -594,11 +594,8 @@ export default function FeedPage() {
                         resizeMode="cover"
                         maxRetries={3}
                         retryDelay={1000}
-                        onError={() => {
-                          // Marquer comme broken seulement après tous les retries
-                          dispatchPostState({ type: 'SET_BROKEN_IMAGE', postId: item.id });
-                        }}
-                        fallbackStyle={styles.postImageFallback}
+                        showRetryButton={true}
+                        // ✅ ImageWithRetry gère maintenant complètement l'affichage des erreurs avec bouton retry
                       />
                     </View>
                   )}

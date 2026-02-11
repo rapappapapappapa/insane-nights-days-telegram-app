@@ -6362,19 +6362,30 @@ app.post(
     }
 
     let imageUrl = null;
+    let imageUrl;
     if (MEDIA_STORAGE === 'r2') {
       const key = makeObjectKey('feed', req.file.originalname);
       const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
       imageUrl = uploaded.url;
     } else {
-      // Construire l'URL publique du fichier
-      // ✅ IMPORTANT: pour les quick tunnels, PUBLIC_URL peut être obsolète.
-      // On préfère donc le Host de la requête (trycloudflare) et on force https.
-      const host = req.get('host');
-      const forwardedProto = req.get('x-forwarded-proto');
-      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
-      const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
+      // ✅ CORRECTION: Utiliser PUBLIC_URL en priorité pour éviter les URLs temporaires
+      // Priorité : PUBLIC_URL (variable d'environnement) > Origin/Referer > Host de la requête
+      // Cela garantit que les médias sont toujours accessibles via l'URL permanente (Railway)
+      const publicUrl = process.env.PUBLIC_URL;
+      const origin = req.get('origin') || req.get('referer');
+      const baseUrl = publicUrl
+        ? publicUrl.replace(/\/$/, '')
+        : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
       imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+      
+      // ✅ LOG: Logger pour debug
+      console.log('[uploadFeedPostImage] URL générée:', {
+        hasPublicUrl: !!publicUrl,
+        publicUrl: publicUrl,
+        origin: origin,
+        host: req.get('host'),
+        finalUrl: imageUrl,
+      });
     }
 
     res.json({

@@ -12,38 +12,50 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
-import HomePage from './screens/HomePage';
-import LoginPage from './screens/LoginPage';
-import AccountTypePage from './screens/AccountTypePage';
-import RegisterCommunityPage from './screens/RegisterCommunityPage';
-import RegisterDjPage from './screens/RegisterDjPage';
-import RegisterBookerPage from './screens/RegisterBookerPage';
-import RegisterVenuePage from './screens/RegisterVenuePage';
-import WelcomePage from './screens/WelcomePage';
-import EventsPage from './screens/EventsPage';
-import EventDetailPage from './screens/EventDetailPage';
-import PurchaseSuccessPage from './screens/PurchaseSuccessPage';
-import DjRatingsPage from './screens/DjRatingsPage';
-import VenueRatingsPage from './screens/VenueRatingsPage';
-import RateEventPage from './screens/RateEventPage';
-import TicketsPage from './screens/TicketsPage';
-import PurchasesPage from './screens/PurchasesPage';
-import DjListPage from './screens/DjListPage';
-import VenueListPage from './screens/VenueListPage';
-import DjProfilePage from './screens/DjProfilePage';
-import DjDashboardPage from './screens/DjDashboardPage';
-import BookerDashboardPage from './screens/BookerDashboardPage';
-import VenueDashboardPage from './screens/VenueDashboardPage';
-import SelectDjPage from './screens/SelectDjPage';
-import SelectVenuePage from './screens/SelectVenuePage';
-import VenueProfilePage from './screens/VenueProfilePage';
-import SwitchProfilePage from './screens/SwitchProfilePage';
-import ProfilePage from './screens/ProfilePage';
-import FeedPage from './screens/FeedPage'; // ✅ AJOUT: Page Feed d'actualité
-import CreateFeedPostPage from './screens/CreateFeedPostPage'; // ✅ AJOUT: Page création de post
-import TutorialPage from './screens/TutorialPage'; // ✅ AJOUT: Page de tutoriel
-import NotificationsPage from './screens/NotificationsPage'; // ✅ AJOUT: Page notifications (feed)
-import AdminPage from './screens/AdminPage'; // ✅ AJOUT: Page admin
+// ✅ RÉORGANISATION: Imports organisés par fonctionnalité
+import HomePage from './screens/feed/HomePage';
+import WelcomePage from './screens/feed/WelcomePage';
+import FeedPage from './screens/feed/FeedPage';
+import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
+
+import LoginPage from './screens/auth/LoginPage';
+import AccountTypePage from './screens/auth/AccountTypePage';
+import RegisterCommunityPage from './screens/auth/RegisterCommunityPage';
+import RegisterDjPage from './screens/auth/RegisterDjPage';
+import RegisterBookerPage from './screens/auth/RegisterBookerPage';
+import RegisterVenuePage from './screens/auth/RegisterVenuePage';
+
+import DjDashboardPage from './screens/dashboard/DjDashboardPage';
+import BookerDashboardPage from './screens/dashboard/BookerDashboardPage';
+import VenueDashboardPage from './screens/dashboard/VenueDashboardPage';
+import AdminPage from './screens/dashboard/AdminPage';
+
+import EventsPage from './screens/events/EventsPage';
+import EventDetailPage from './screens/events/EventDetailPage';
+import RateEventPage from './screens/events/RateEventPage';
+import TicketsPage from './screens/events/TicketsPage';
+
+import ProfilePage from './screens/profiles/ProfilePage';
+import DjProfilePage from './screens/profiles/DjProfilePage';
+import VenueProfilePage from './screens/profiles/VenueProfilePage';
+import DjListPage from './screens/profiles/DjListPage';
+import VenueListPage from './screens/profiles/VenueListPage';
+import DjRatingsPage from './screens/profiles/DjRatingsPage';
+import VenueRatingsPage from './screens/profiles/VenueRatingsPage';
+
+import SelectDjPage from './screens/selection/SelectDjPage';
+import SelectVenuePage from './screens/selection/SelectVenuePage';
+
+import SwitchProfilePage from './screens/profile-management/SwitchProfilePage';
+
+import PurchasesPage from './screens/purchases/PurchasesPage';
+import PurchaseSuccessPage from './screens/purchases/PurchaseSuccessPage';
+
+import NotificationsPage from './screens/notifications/NotificationsPage';
+
+import RankingPage from './screens/ranking/RankingPage';
+
+import TutorialPage from './screens/tutorial/TutorialPage';
 
 const SCREENS = {
   home: HomePage,

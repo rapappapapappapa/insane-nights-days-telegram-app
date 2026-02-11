@@ -77,20 +77,26 @@ async function updateFeedPostImageUrls() {
     }
 
     // Demander confirmation
+    if (updates.length === 0) {
+      console.log('\n✅ Aucune mise à jour nécessaire - toutes les URLs sont déjà correctes !');
+      return;
+    }
+
     console.log(`\n⚠️  ${updates.length} post(s) seront mis à jour.`);
-    console.log('Pour exécuter les mises à jour, décommentez les lignes ci-dessous dans le script.');
+    console.log('Exécution des mises à jour...\n');
 
     // Mettre à jour les URLs
-    // for (const update of updates) {
-    //   await prisma.feedPost.update({
-    //     where: { id: update.id },
-    //     data: { imageUrl: update.newUrl },
-    //   });
-    //   updatedCount++;
-    //   console.log(`✅ Mis à jour: ${update.id}`);
-    // }
+    for (const update of updates) {
+      await prisma.feedPost.update({
+        where: { id: update.id },
+        data: { imageUrl: update.newUrl },
+      });
+      updatedCount++;
+      console.log(`✅ Mis à jour: ${update.id}`);
+      console.log(`   ${update.oldUrl} → ${update.newUrl}`);
+    }
 
-    // console.log(`\n✨ Mise à jour terminée: ${updatedCount} post(s) mis à jour sur ${allPosts.length}`);
+    console.log(`\n✨ Mise à jour terminée: ${updatedCount} post(s) mis à jour sur ${allPosts.length}`);
 
   } catch (error) {
     console.error('❌ Erreur lors de la mise à jour:', error);

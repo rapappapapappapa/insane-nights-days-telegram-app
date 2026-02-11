@@ -5847,10 +5847,12 @@ app.post(
         const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
         imageUrl = uploaded.url;
       } else {
-        const host = req.get('host');
-        const forwardedProto = req.get('x-forwarded-proto');
-        const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
-        const baseUrl = `${proto}://${host}`.replace(/\/$/, '');
+        // ✅ CORRECTION: Utiliser PUBLIC_URL en priorité pour éviter les URLs temporaires
+        const publicUrl = process.env.PUBLIC_URL;
+        const origin = req.get('origin') || req.get('referer');
+        const baseUrl = publicUrl
+          ? publicUrl.replace(/\/$/, '')
+          : (origin ? origin.replace(/\/$/, '') : `${req.protocol}://${req.get('host')}`);
         imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
       }
 
@@ -6361,7 +6363,6 @@ app.post(
       });
     }
 
-    let imageUrl = null;
     let imageUrl;
     if (MEDIA_STORAGE === 'r2') {
       const key = makeObjectKey('feed', req.file.originalname);
@@ -6689,7 +6690,12 @@ app.get('/api/feed', async (req, res) => {
     });
 
     // ✅ AJOUT: Helpers pour normaliser les URLs d'images
+    // ✅ CORRECTION: Utiliser PUBLIC_URL en priorité pour éviter les URLs temporaires
     const getRequestBaseUrl = () => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) {
+        return publicUrl.replace(/\/$/, '');
+      }
       const host = req.get('host');
       const forwardedProto = req.get('x-forwarded-proto');
       const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);

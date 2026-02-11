@@ -9,12 +9,24 @@ const path = require('path');
 const prisma = new PrismaClient();
 
 // URL permanente du backend (Railway)
-const PUBLIC_URL = process.env.PUBLIC_URL || 'https://insane-nights-days-telegram-app-production.up.railway.app';
+// ✅ IMPORTANT: Utiliser l'URL Railway permanente, pas les tunnels temporaires
+const RAILWAY_URL = 'https://insane-nights-days-telegram-app-production.up.railway.app';
+const PUBLIC_URL_ENV = process.env.PUBLIC_URL || RAILWAY_URL;
+
+// ✅ VÉRIFICATION: S'assurer qu'on n'utilise pas un tunnel temporaire
+let finalPublicUrl;
+if (PUBLIC_URL_ENV.includes('trycloudflare.com')) {
+  console.warn('⚠️  ATTENTION: PUBLIC_URL pointe vers un tunnel temporaire !');
+  console.warn('   Utilisation de l\'URL Railway permanente par défaut.');
+  finalPublicUrl = RAILWAY_URL;
+} else {
+  finalPublicUrl = PUBLIC_URL_ENV;
+}
 
 async function updateFeedPostImageUrls() {
   try {
     console.log('🔄 Début de la mise à jour des URLs d\'images des posts du feed...');
-    console.log(`📡 URL publique: ${PUBLIC_URL}`);
+    console.log(`📡 URL publique utilisée: ${finalPublicUrl}`);
 
     // Récupérer tous les posts avec des images
     const allPosts = await prisma.feedPost.findMany({
@@ -45,14 +57,14 @@ async function updateFeedPostImageUrls() {
         post.imageUrl.includes('trycloudflare.com') ||
         post.imageUrl.includes('localhost') ||
         post.imageUrl.includes('127.0.0.1') ||
-        (!post.imageUrl.startsWith(PUBLIC_URL) && post.imageUrl.includes('/uploads/media/'));
+        (!post.imageUrl.startsWith(finalPublicUrl) && post.imageUrl.includes('/uploads/media/'));
 
       if (isTemporaryUrl) {
         // Extraire le nom du fichier de l'URL
         const fileName = post.imageUrl.split('/').pop();
         
-        // Construire la nouvelle URL avec PUBLIC_URL
-        newUrl = `${PUBLIC_URL}/uploads/media/${fileName}`;
+        // Construire la nouvelle URL avec l'URL Railway permanente
+        newUrl = `${finalPublicUrl}/uploads/media/${fileName}`;
         
         updates.push({
           id: post.id,
@@ -71,12 +83,6 @@ async function updateFeedPostImageUrls() {
       console.log(`   Nouvelle URL: ${update.newUrl}`);
     });
 
-    if (updates.length === 0) {
-      console.log('\n✅ Aucune mise à jour nécessaire.');
-      return;
-    }
-
-    // Demander confirmation
     if (updates.length === 0) {
       console.log('\n✅ Aucune mise à jour nécessaire - toutes les URLs sont déjà correctes !');
       return;

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+// Import dynamique pour éviter crash au chargement (expo-image-picker peut poser problème sur certains devices)
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -39,6 +39,7 @@ export default function CreateFeedPostPage() {
    */
   const handlePickImage = async () => {
     try {
+      const ImagePicker = await import('expo-image-picker');
       // Demander les permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -212,12 +213,14 @@ export default function CreateFeedPostPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Toast
-        message={toast?.message}
-        type={toast?.type || 'info'}
-        visible={!!toast?.visible}
-        onHide={hideToast}
-      />
+      {toast?.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type || 'info'}
+          visible={true}
+          onHide={hideToast}
+        />
+      )}
       
       {/* ✅ HEADER: En-tête avec boutons annuler et publier */}
       <View style={styles.header}>

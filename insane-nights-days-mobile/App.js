@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useLanguage } from './contexts/LanguageContext';
@@ -95,7 +95,7 @@ const SCREENS = {
 };
 
 function AppContent() {
-  const { currentPage, navigate } = useNavigation();
+  const { currentPage, navigate, goBack } = useNavigation();
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
@@ -188,11 +188,33 @@ function AppContent() {
   }
   
   const ScreenComponent = SCREENS[currentPage] || HomePage;
-  
+  const isCreateFeedPost = currentPage === 'createFeedPost';
+
   return (
     <>
       <Drawer>
-        <ScreenComponent />
+        {isCreateFeedPost ? (
+          <ErrorBoundary
+            title="Erreur création de post"
+            fallback={(err, reset) => (
+              <View style={[styles.loadingContainer, { padding: 20 }]}>
+                <Text style={{ color: '#FF1744', fontSize: 14, marginBottom: 12, textAlign: 'center' }}>
+                  {err?.message || 'Erreur inconnue'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => { reset(); goBack(); }}
+                  style={{ backgroundColor: '#FF1744', padding: 12, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#fff' }}>Retour</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          >
+            <ScreenComponent />
+          </ErrorBoundary>
+        ) : (
+          <ScreenComponent />
+        )}
       </Drawer>
       {/* Notification push globale */}
       {user?.isAuthenticated && (

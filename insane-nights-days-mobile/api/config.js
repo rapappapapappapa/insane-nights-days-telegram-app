@@ -311,7 +311,7 @@ const api = {
       API_CONFIG.ENDPOINTS.PROFILE_BOOKER,
       {
         method: 'POST',
-        body: JSON.stringify({ nom, prenom, phonePro, bookerType }),
+        body: JSON.stringify({ nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null }),
       },
       token
     );
@@ -666,7 +666,7 @@ const api = {
   },
 
   // ✅ AJOUT: Mettre à jour le profil Booker
-  updateBookerProfile: async (token, nom, prenom, phonePro, bookerType) => {
+  updateBookerProfile: async (token, nom, prenom, phonePro, bookerType, pseudo = null) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
@@ -674,7 +674,7 @@ const api = {
       API_CONFIG.ENDPOINTS.BOOKER_PROFILE,
       {
         method: 'PUT',
-        body: JSON.stringify({ nom, prenom, phonePro, bookerType }),
+        body: JSON.stringify({ nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null }),
       },
       token
     );

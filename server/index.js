@@ -1143,7 +1143,7 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
 // Endpoint pour créer un profil Booker
 app.post('/api/profile/booker', authenticateToken, async (req, res) => {
   try {
-    const { nom, prenom, phonePro, bookerType } = req.body ?? {};
+    const { nom, prenom, phonePro, bookerType, pseudo } = req.body ?? {};
     const userId = req.user.id;
 
     if (!nom || !prenom || !phonePro || !bookerType) {
@@ -1169,6 +1169,7 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
         prenom: prenom.trim(),
         phonePro: phonePro.trim(),
         bookerType: bookerType.trim(),
+        pseudo: pseudo && String(pseudo).trim() ? String(pseudo).trim() : null,
       },
     });
 
@@ -1191,6 +1192,7 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
         prenom: bookerProfile.prenom,
         phonePro: bookerProfile.phonePro,
         bookerType: bookerProfile.bookerType,
+        pseudo: bookerProfile.pseudo,
       },
     });
   } catch (error) {
@@ -1209,7 +1211,7 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
 app.put('/api/booker/profile', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nom, prenom, phonePro, bookerType } = req.body;
+    const { nom, prenom, phonePro, bookerType, pseudo } = req.body;
 
     // Validation
     if (!nom || !prenom || !phonePro || !bookerType) {
@@ -1231,15 +1233,20 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    // Mettre à jour le profil
+    // Mettre à jour le profil (pseudo optionnel, affiché sur le feed)
+    const updateData = {
+      nom: nom.trim(),
+      prenom: prenom.trim(),
+      phonePro: phonePro.trim(),
+      bookerType: bookerType.trim(),
+    };
+    if (pseudo !== undefined) {
+      updateData.pseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+    }
+
     const updatedBooker = await prisma.userBooker.update({
       where: { id: bookerProfile.id },
-      data: {
-        nom: nom.trim(),
-        prenom: prenom.trim(),
-        phonePro: phonePro.trim(),
-        bookerType: bookerType.trim(),
-      },
+      data: updateData,
     });
 
     res.json({
@@ -1251,6 +1258,7 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
         prenom: updatedBooker.prenom,
         phonePro: updatedBooker.phonePro,
         bookerType: updatedBooker.bookerType,
+        pseudo: updatedBooker.pseudo,
         profileImage: updatedBooker.profileImage,
       },
     });
@@ -1527,7 +1535,7 @@ app.get('/api/events', async (req, res) => {
         return djName;
       }),
       djIds: event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
-      venueId: event.venueId,
+      venueId: event.venueId, 
       venueName: event.venue?.venueName,
     }));
 
@@ -6686,6 +6694,7 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
       postData.bookerId = bookerProfile.id;
       includeData.booker = {
         select: {
+          pseudo: true,
           nom: true,
           prenom: true,
           bookerType: true,
@@ -6730,9 +6739,9 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
     if (post.booker) {
       responsePost.booker = {
         id: post.bookerId,
-        name: `${post.booker.nom} ${post.booker.prenom}`,
+        name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
         bookerType: post.booker.bookerType,
-        profileImage: post.booker.profileImage, // ✅ AJOUT: Photo de profil du booker
+        profileImage: post.booker.profileImage,
       };
     }
 
@@ -6824,10 +6833,11 @@ app.get('/api/feed', async (req, res) => {
         },
         booker: {
           select: {
+            pseudo: true,
             nom: true,
             prenom: true,
             bookerType: true,
-            profileImage: true, // ✅ AJOUT: Photo de profil du booker
+            profileImage: true,
           },
         },
         author: {
@@ -6858,6 +6868,7 @@ app.get('/api/feed', async (req, res) => {
         },
         booker: {
           select: {
+            pseudo: true,
             nom: true,
             prenom: true,
           },
@@ -6960,9 +6971,9 @@ app.get('/api/feed', async (req, res) => {
         formattedPost.booker = {
           id: post.bookerId,
           userId: post.authorId,
-          name: `${post.booker.nom} ${post.booker.prenom}`,
+          name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
           bookerType: post.booker.bookerType,
-          profileImage: normalizeImageUrl(post.booker.profileImage), // ✅ AJOUT: Photo de profil du booker
+          profileImage: normalizeImageUrl(post.booker.profileImage),
         };
       }
 
@@ -6989,7 +7000,7 @@ app.get('/api/feed', async (req, res) => {
         : null,
       booker: event.booker
         ? {
-            name: `${event.booker.nom} ${event.booker.prenom}`,
+            name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}`,
           }
         : null,
       createdAt: event.createdAt,

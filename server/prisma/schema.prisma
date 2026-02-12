@@ -205,6 +205,7 @@ model UserBooker {
   id         String   @id @default(uuid())
   userId     String // Plusieurs profils Booker possibles par User
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pseudo     String?  // ✅ Pseudo affiché sur le feed (à la place du nom complet)
   nom        String
   prenom     String
   phonePro   String

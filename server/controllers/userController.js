@@ -54,9 +54,11 @@ const getUserProfiles = async (req, res) => {
       booker: user.bookers.map((b) => ({
         id: b.id,
         type: 'BOOKER',
+        pseudo: b.pseudo,
         nom: b.nom,
         prenom: b.prenom,
         bookerType: b.bookerType,
+        profileImage: b.profileImage,
       })),
       venue: user.venues.map((v) => ({
         id: v.id,

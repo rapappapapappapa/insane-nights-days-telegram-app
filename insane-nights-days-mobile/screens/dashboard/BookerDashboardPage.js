@@ -61,6 +61,7 @@ export default function BookerDashboardPage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
+    pseudo: '',
     nom: '',
     prenom: '',
     phonePro: '',
@@ -401,6 +402,7 @@ export default function BookerDashboardPage() {
       if (response?.success && response?.profile) {
         setBookerProfile(response.profile);
         setProfileForm({
+          pseudo: response.profile.pseudo || '',
           nom: response.profile.nom || '',
           prenom: response.profile.prenom || '',
           phonePro: response.profile.phonePro || '',
@@ -430,7 +432,8 @@ export default function BookerDashboardPage() {
         profileForm.nom,
         profileForm.prenom,
         profileForm.phonePro,
-        profileForm.bookerType
+        profileForm.bookerType,
+        profileForm.pseudo || null
       );
       if (response?.success) {
         showSuccess(language === 'fr' ? 'Profil mis à jour avec succès.' : 'Profile updated successfully.');
@@ -1130,6 +1133,17 @@ export default function BookerDashboardPage() {
 
                 {/* Formulaire */}
                 <View style={styles.profileForm}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'fr' ? 'Pseudo (affiché sur le feed)' : 'Nickname (displayed on feed)'}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.pseudo}
+                    onChangeText={(v) => setProfileForm((p) => ({ ...p, pseudo: v }))}
+                    placeholder={language === 'fr' ? 'Ex: parano69100' : 'e.g. parano69100'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+
                   <Text style={styles.inputLabel}>{language === 'fr' ? 'Nom' : 'Last Name'}</Text>
                   <TextInput
                     style={styles.input}

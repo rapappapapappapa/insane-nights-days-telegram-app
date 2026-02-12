@@ -46,6 +46,7 @@ const API_CONFIG = {
     USER_SWITCH_PROFILE: '/api/user/switch-profile',
     USER_CHANGE_PASSWORD: '/api/user/change-password',
     USER_DJ_PROFILE: '/api/user/dj/profile',
+    BOOKER_PROFILE: '/api/booker/profile',
     DJ_BOOKINGS: '/api/dj/bookings',
     DJ_ACCEPT_INVITATION: '/api/dj/invitations',
     DJ_REJECT_INVITATION: '/api/dj/invitations',
@@ -650,6 +651,61 @@ const api = {
       token,
       timeout
     );
+  },
+
+  // ✅ AJOUT: Récupérer le profil Booker
+  getBookerProfile: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    const profiles = await api.getUserProfiles(token);
+    if (profiles?.success && profiles?.profiles?.booker?.[0]) {
+      return { success: true, profile: profiles.profiles.booker[0] };
+    }
+    return { success: false, message: 'Profil Booker non trouvé.' };
+  },
+
+  // ✅ AJOUT: Mettre à jour le profil Booker
+  updateBookerProfile: async (token, nom, prenom, phonePro, bookerType) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.BOOKER_PROFILE,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ nom, prenom, phonePro, bookerType }),
+      },
+      token
+    );
+  },
+
+  // ✅ AJOUT: Uploader la photo de profil d'un Booker
+  uploadBookerProfileImage: async (token, imageUri) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    const formData = new FormData();
+    formData.append('image', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'profile.jpg',
+    });
+
+    const uploadUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKER_PROFILE}/upload-image`;
+    return fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData,
+    })
+      .then((res) => res.json())
+      .catch((error) => {
+        console.error('Erreur upload photo de profil Booker:', error);
+        throw error;
+      });
   },
 
   // Uploader un fichier média pour un DJ

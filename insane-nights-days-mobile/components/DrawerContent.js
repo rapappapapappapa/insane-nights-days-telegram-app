@@ -105,31 +105,50 @@ export default function DrawerContent({ navigation }) {
 
   const showUpdateInfo = async () => {
     try {
-      const info = [
-        `channel: ${String(Updates?.channel || 'no-channel')}`,
-        `runtimeVersion: ${String(Updates?.runtimeVersion || 'n/a')}`,
-        `updateId: ${String(Updates?.updateId || 'n/a')}`,
-        `embedded: ${Updates?.isEmbeddedLaunch ? 'yes' : 'no'}`,
+      // Vérifier si expo-updates est disponible
+      const isEnabled = Updates.isEnabled;
+      const channel = Updates?.channel || 'no-channel';
+      const runtimeVersion = Updates?.runtimeVersion || 'n/a';
+      const updateId = Updates?.updateId || 'n/a';
+      const isEmbedded = Updates?.isEmbeddedLaunch || false;
+      
+      const updateInfo = [
+        `Updates activés: ${isEnabled ? '✅ Oui' : '❌ Non'}`,
+        `Canal: ${channel}`,
+        `Version runtime: ${runtimeVersion}`,
+        `Update ID: ${updateId}`,
+        `Embedded: ${isEmbedded ? 'oui' : 'non'}`,
+        '',
+        isEnabled 
+          ? 'Les OTA updates sont activés. Cliquez sur "Vérifier" pour chercher des mises à jour.'
+          : '⚠️ Les OTA updates ne sont PAS activés.\n\nL\'app doit être rebuildée avec EAS Build pour que les updates fonctionnent.',
       ].join('\n');
 
       Alert.alert(
-        'Updates',
-        info,
+        'Informations Updates',
+        updateInfo,
         [
           { text: 'OK', style: 'cancel' },
           {
-            text: 'Check & Reload',
+            text: 'Vérifier',
             onPress: async () => {
               try {
+                if (!isEnabled) {
+                  Alert.alert(
+                    'Updates désactivés',
+                    'Les OTA updates ne sont pas activés dans cette version de l\'app.\n\nPour activer les updates, vous devez rebuild l\'app avec EAS Build:\n\neas build --platform android'
+                  );
+                  return;
+                }
                 const res = await Updates.checkForUpdateAsync();
                 if (!res?.isAvailable) {
-                  Alert.alert('Updates', 'No update available.');
+                  Alert.alert('Updates', 'Aucune mise à jour disponible.');
                   return;
                 }
                 await Updates.fetchUpdateAsync();
                 await Updates.reloadAsync();
               } catch (e) {
-                Alert.alert('Updates', String(e?.message || e));
+                Alert.alert('Erreur Updates', String(e?.message || e));
               }
             },
           },

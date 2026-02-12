@@ -27,6 +27,7 @@ import RegisterVenuePage from './screens/auth/RegisterVenuePage';
 
 import DjDashboardPage from './screens/dashboard/DjDashboardPage';
 import BookerDashboardPage from './screens/dashboard/BookerDashboardPage';
+import BookerEventDashboardPage from './screens/dashboard/BookerEventDashboardPage';
 import VenueDashboardPage from './screens/dashboard/VenueDashboardPage';
 import AdminPage from './screens/dashboard/AdminPage';
 
@@ -80,6 +81,7 @@ const SCREENS = {
   djDashboard: DjDashboardPage,
   venueDashboard: VenueDashboardPage,
   bookerDashboard: BookerDashboardPage,
+  bookerEventDashboard: BookerEventDashboardPage,
   selectDj: SelectDjPage,
   selectVenue: SelectVenuePage,
   venueProfile: VenueProfilePage,

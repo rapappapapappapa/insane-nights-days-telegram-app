@@ -79,7 +79,7 @@ export default function VenueDashboardPage() {
       }
     } catch (error) {
       console.error('Erreur chargement venue dashboard:', error);
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger le lieu.' : 'Unable to load venue.');
+      showError(language === 'fr' ? 'Impossible de charger le lieu.' : 'Unable to load venue.');
     } finally {
       setLoading(false);
     }
@@ -158,17 +158,11 @@ export default function VenueDashboardPage() {
                       setSavingMedia(true);
                       await api.uploadVenueMediaFile(user.token, venue.id, videoUri, mediaType);
                       await loadVenueMedia(venue.id);
-                      Alert.alert(
-                        language === 'fr' ? 'Succès' : 'Success',
-                        language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.'
-                      );
+                      showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                     }
                   } catch (docError) {
                     console.error('[pickMedia] Erreur DocumentPicker:', docError);
-                    Alert.alert(
-                      language === 'fr' ? 'Erreur' : 'Error',
-                      language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
-                    );
+                    showError(language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video');
                   } finally {
                     setSavingMedia(false);
                   }
@@ -201,10 +195,7 @@ export default function VenueDashboardPage() {
         // Sur Android, demander directement
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert(
-            language === 'fr' ? 'Permission requise' : 'Permission required',
-            language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required'
-          );
+          showError(language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required');
           return;
         }
       }
@@ -261,17 +252,11 @@ export default function VenueDashboardPage() {
                       setSavingMedia(true);
                       await api.uploadVenueMediaFile(user.token, venue.id, fileUri, mediaType);
                       await loadVenueMedia(venue.id);
-                      Alert.alert(
-                        language === 'fr' ? 'Succès' : 'Success',
-                        language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.'
-                      );
+                      showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                     }
                   } catch (docError) {
                     console.error('[pickMedia] Erreur DocumentPicker:', docError);
-                    Alert.alert(
-                      language === 'fr' ? 'Erreur' : 'Error',
-                      language === 'fr' ? 'Impossible de sélectionner le média' : 'Unable to select media'
-                    );
+                    showError(language === 'fr' ? 'Impossible de sélectionner le média' : 'Unable to select media');
                   } finally {
                     setSavingMedia(false);
                   }
@@ -297,10 +282,7 @@ export default function VenueDashboardPage() {
       setSavingMedia(true);
       await api.uploadVenueMediaFile(user.token, venue.id, asset.uri, mediaType);
       await loadVenueMedia(venue.id);
-      Alert.alert(
-        language === 'fr' ? 'Succès' : 'Success',
-        language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.'
-      );
+      showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
     } catch (error) {
       console.error('Erreur upload média lieu:', error);
       
@@ -336,17 +318,11 @@ export default function VenueDashboardPage() {
                     setSavingMedia(true);
                     await api.uploadVenueMediaFile(user.token, venue.id, videoUri, mediaType);
                     await loadVenueMedia(venue.id);
-                    Alert.alert(
-                      language === 'fr' ? 'Succès' : 'Success',
-                      language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.'
-                    );
+                    showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                   }
                 } catch (docError) {
                   console.error('[pickMedia] Erreur DocumentPicker:', docError);
-                  Alert.alert(
-                    language === 'fr' ? 'Erreur' : 'Error',
-                    language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
-                  );
+                  showError(language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video');
                 } finally {
                   setSavingMedia(false);
                 }
@@ -355,10 +331,7 @@ export default function VenueDashboardPage() {
           ]
         );
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' ? 'Impossible d\'ajouter le média.' : 'Unable to add media.'
-        );
+        showError(language === 'fr' ? 'Impossible d\'ajouter le média.' : 'Unable to add media.');
       }
     } finally {
       setSavingMedia(false);
@@ -384,12 +357,13 @@ export default function VenueDashboardPage() {
               if (resp?.success) {
                 setPhotos((p) => p.filter((m) => m.id !== media.id));
                 setVideos((v) => v.filter((m) => m.id !== media.id));
+                showSuccess(language === 'fr' ? 'Média supprimé.' : 'Media deleted.');
               } else {
-                Alert.alert(language === 'fr' ? 'Erreur' : 'Error', resp?.message || 'Suppression impossible');
+                showError(resp?.message || (language === 'fr' ? 'Suppression impossible' : 'Delete failed'));
               }
             } catch (err) {
               console.error('Erreur suppression média:', err);
-              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Suppression impossible.' : 'Delete failed.');
+              showError(language === 'fr' ? 'Suppression impossible.' : 'Delete failed.');
             } finally {
               setDeletingMediaId(null);
             }

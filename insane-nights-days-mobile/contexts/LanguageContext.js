@@ -6,7 +6,7 @@ const LanguageContext = createContext();
 const translations = {
   fr: {
     // Page d'accueil
-    createAccount: 'Créez votre compte Insane Nights Days',
+    createAccount: 'Créez votre compte Nox',
     login: 'Connexion',
     register: 'Inscription',
     email: 'Email',
@@ -25,7 +25,7 @@ const translations = {
   },
   en: {
     // Home page
-    createAccount: 'Create your Insane Nights Days account',
+    createAccount: 'Create your Nox account',
     login: 'Login',
     register: 'Sign up',
     email: 'Email',

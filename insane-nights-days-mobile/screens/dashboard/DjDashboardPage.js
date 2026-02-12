@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
   Image,
   Animated,
   Dimensions,
@@ -314,8 +313,7 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('Erreur chargement messages:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
+      showError(
         language === 'fr' ? 'Impossible de charger les messages.' : 'Unable to load messages.'
       );
     } finally {
@@ -642,12 +640,10 @@ export default function DjDashboardPage() {
           console.error('[saveMedia] Erreur upload fichier:', uploadError);
           // Si l'upload échoue, afficher un message d'erreur détaillé
           const errorMessage = uploadError.message || 'Erreur inconnue lors de l\'upload';
-          Alert.alert(
-            language === 'fr' ? 'Erreur upload' : 'Upload error',
+          showError(
             language === 'fr' 
               ? `Impossible d'uploader le fichier: ${errorMessage}\n\nVérifiez:\n- Votre connexion internet\n- La taille du fichier (max 100MB)\n- Réessayez dans quelques instants` 
-              : `Unable to upload file: ${errorMessage}\n\nCheck:\n- Your internet connection\n- File size (max 100MB)\n- Try again in a few moments`,
-            [{ text: language === 'fr' ? 'OK' : 'OK' }]
+              : `Unable to upload file: ${errorMessage}\n\nCheck:\n- Your internet connection\n- File size (max 100MB)\n- Try again in a few moments`
           );
           throw uploadError;
         }
@@ -745,8 +741,7 @@ export default function DjDashboardPage() {
         } else if (type === 'audio') {
           setAudioFiles(audioFiles.filter(a => a.id !== mediaId));
         }
-        Alert.alert(
-          language === 'fr' ? 'Succès' : 'Success',
+        showSuccess(
           language === 'fr' ? 'Média supprimé avec succès' : 'Media deleted successfully'
         );
       } else {
@@ -754,9 +749,8 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('[deleteMedia] Erreur suppression média:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-          language === 'fr' 
+      showError(
+        language === 'fr' 
           ? `Erreur lors de la suppression: ${error.message || 'Erreur inconnue'}` 
           : `Error deleting: ${error.message || 'Unknown error'}`
       );
@@ -768,8 +762,7 @@ export default function DjDashboardPage() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          language === 'fr' ? 'Permission requise' : 'Permission required',
+        showError(
           language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required'
         );
         return;
@@ -801,8 +794,7 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('[pickImage] Erreur lors de la sélection de photos:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
+      showError(
         language === 'fr' 
           ? `Erreur lors de la sélection des photos: ${error.message || 'Erreur inconnue'}` 
           : `Error selecting photos: ${error.message || 'Unknown error'}`
@@ -880,10 +872,7 @@ export default function DjDashboardPage() {
         // Sur Android, demander directement
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert(
-            language === 'fr' ? 'Permission requise' : 'Permission required',
-            language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required'
-          );
+          showError(language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required');
           return;
         }
       }
@@ -939,8 +928,7 @@ export default function DjDashboardPage() {
                         if (response && response.success && response.media) {
                           // Utiliser l'URL retournée par le serveur (URL publique)
                           setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-                          Alert.alert(
-                            language === 'fr' ? 'Succès' : 'Success',
+                          showSuccess(
                             language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
                           );
                         } else {
@@ -952,10 +940,9 @@ export default function DjDashboardPage() {
                     }
                   } catch (docError) {
                     console.error('[pickVideo] Erreur DocumentPicker:', docError);
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
-                      language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
-                    );
+        showError(
+          language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
+        );
                   }
                 }
               }
@@ -983,10 +970,7 @@ export default function DjDashboardPage() {
                 if (response && response.success && response.media) {
                   // Utiliser l'URL retournée par le serveur (URL publique)
                   setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-                  Alert.alert(
-                    language === 'fr' ? 'Succès' : 'Success',
-                    language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
-                  );
+                  showSuccess(language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully');
                 } else {
                   setVideos([...videos, { id: null, url: videoUri }]);
       }
@@ -1034,8 +1018,7 @@ export default function DjDashboardPage() {
         }
         
         if (result.assets.length > 0) {
-          Alert.alert(
-            language === 'fr' ? 'Succès' : 'Success',
+          showSuccess(
             language === 'fr' 
               ? `${result.assets.length} vidéo(s) ajoutée(s)` 
               : `${result.assets.length} video(s) added`
@@ -1079,25 +1062,20 @@ export default function DjDashboardPage() {
                       const response = await saveMedia('video', videoUri);
                       if (response && response.success && response.media) {
                         setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-                        Alert.alert(
-                          language === 'fr' ? 'Succès' : 'Success',
-                          language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
-                        );
+                        showSuccess(language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully');
                       } else {
                         setVideos([...videos, { id: null, url: videoUri }]);
                       }
                     } catch (saveError) {
                       console.error('[pickVideo] Erreur sauvegarde vidéo:', saveError);
-                      Alert.alert(
-                        language === 'fr' ? 'Erreur' : 'Error',
+                      showError(
                         language === 'fr' ? 'Impossible d\'ajouter la vidéo' : 'Unable to add video'
                       );
                     }
                   }
                 } catch (docError) {
                   console.error('[pickVideo] Erreur DocumentPicker:', docError);
-                  Alert.alert(
-                    language === 'fr' ? 'Erreur' : 'Error',
+                  showError(
                     language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
                   );
                 }
@@ -1106,8 +1084,7 @@ export default function DjDashboardPage() {
           ]
         );
       } else {
-        Alert.alert(
-          language === 'fr' ? 'Erreur' : 'Error',
+        showError(
           language === 'fr' 
             ? `Erreur lors de la sélection de la vidéo: ${error.message || 'Erreur inconnue'}` 
             : `Error selecting video: ${error.message || 'Unknown error'}`
@@ -1146,8 +1123,7 @@ export default function DjDashboardPage() {
         }
         
         if (audioAssets.length > 0) {
-          Alert.alert(
-            language === 'fr' ? 'Succès' : 'Success',
+          showSuccess(
             language === 'fr' 
               ? `${audioAssets.length} fichier(s) audio ajouté(s)` 
               : `${audioAssets.length} audio file(s) added`
@@ -1156,8 +1132,7 @@ export default function DjDashboardPage() {
       }
     } catch (error) {
       console.error('Erreur sélection audio:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
+      showError(
         language === 'fr' ? 'Erreur lors de la sélection du fichier audio' : 'Error selecting audio file'
       );
     }
@@ -1190,10 +1165,9 @@ export default function DjDashboardPage() {
         if (response && response.success && response.media) {
           // Utiliser l'URL retournée par le serveur (URL publique)
           setProfileImage(normalizeMediaUrl(response.media.url));
-          Alert.alert(
-            language === 'fr' ? 'Succès' : 'Success',
+          showSuccess(
             language === 'fr' ? 'Photo de profil mise à jour' : 'Profile picture updated'
-      );
+          );
         }
       } catch (error) {
         console.error('Erreur sauvegarde photo de profil:', error);
@@ -1230,8 +1204,7 @@ export default function DjDashboardPage() {
           // Utiliser l'URL retournée par le serveur (URL publique)
           setBannerImage(normalizeMediaUrl(response.media.url));
           
-          Alert.alert(
-            language === 'fr' ? 'Succès' : 'Success',
+          showSuccess(
             language === 'fr' ? 'Bannière mise à jour' : 'Banner updated'
           );
         }
@@ -2136,7 +2109,7 @@ export default function DjDashboardPage() {
                   try {
                     if (videoUrl.includes('gogg') || videoUrl.includes('tracer') || 
                         (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
-                      finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
+                      finalVideoUrl = require('../../assets/videos/gogg-tracer.mp4');
                     }
                   } catch (e) {
                     console.error('Erreur chargement vidéo locale:', e);
@@ -2987,12 +2960,9 @@ export default function DjDashboardPage() {
                           } else {
                             setBannerImage(normalizeMediaUrl(photo.url));
                           }
-                          Alert.alert(
-                            language === 'fr' ? 'Succès' : 'Success',
-                            language === 'fr' 
-                              ? (selectingPhotoFor === 'profile' ? 'Photo de profil mise à jour' : 'Bannière mise à jour')
-                              : (selectingPhotoFor === 'profile' ? 'Profile picture updated' : 'Banner updated')
-                          );
+                          showSuccess(language === 'fr' 
+                            ? (selectingPhotoFor === 'profile' ? 'Photo de profil mise à jour' : 'Bannière mise à jour')
+                            : (selectingPhotoFor === 'profile' ? 'Profile picture updated' : 'Banner updated'));
                           setSelectingPhotoFor(null);
                         } catch (error) {
                           console.error('Erreur sélection photo:', error);

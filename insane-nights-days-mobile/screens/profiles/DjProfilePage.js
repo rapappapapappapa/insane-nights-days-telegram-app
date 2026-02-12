@@ -436,7 +436,7 @@ export default function DjProfilePage() {
                         try {
                           if (videoUrl.includes('gogg') || videoUrl.includes('tracer') ||
                               (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
-                            finalVideoUrl = require('../assets/videos/gogg-tracer.mp4');
+                            finalVideoUrl = require('../../assets/videos/gogg-tracer.mp4');
                           }
                         } catch {
                           finalVideoUrl = videoUrl;

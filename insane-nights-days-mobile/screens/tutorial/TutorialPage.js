@@ -27,10 +27,10 @@ export default function TutorialPage() {
   const tutorialSteps = [
     {
       icon: 'musical-notes',
-      title: language === 'fr' ? 'Bienvenue sur INSANE' : 'Welcome to INSANE',
+      title: language === 'fr' ? 'Bienvenue sur NOX' : 'Welcome to NOX',
       description: language === 'fr' 
-        ? 'INSANE est la plateforme qui connecte les DJs, les bookers et les lieux pour créer des événements inoubliables.'
-        : 'INSANE is the platform that connects DJs, bookers and venues to create unforgettable events.',
+        ? 'NOX est la plateforme qui connecte les DJs, les bookers et les lieux pour créer des événements inoubliables.'
+        : 'NOX is the platform that connects DJs, bookers and venues to create unforgettable events.',
     },
     {
       icon: 'person',

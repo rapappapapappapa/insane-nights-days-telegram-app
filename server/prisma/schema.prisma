@@ -209,6 +209,7 @@ model UserBooker {
   prenom     String
   phonePro   String
   bookerType String
+  profileImage String? // ✅ AJOUT: URL de la photo de profil
   createdAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -500,10 +500,10 @@ export default function FeedPage() {
               const profileName = isDj
                 ? item.dj?.artistName
                 : (item.booker?.name || item.author?.username);
-              const profileImage = isDj ? item.dj?.profileImage : null;
+              const profileImage = isDj ? item.dj?.profileImage : item.booker?.profileImage;
               const profileLocation = isDj ? item.dj?.city : null;
               const imageUri = normalizeMediaUrl(item.imageUrl);
-              const avatarUri = isDj ? normalizeMediaUrl(profileImage) : null;
+              const avatarUri = normalizeMediaUrl(profileImage); // ✅ CORRECTION: Afficher la photo de profil pour DJs et Bookers
               // ✅ SUPPRIMÉ: isBrokenImage n'est plus nécessaire car ImageWithRetry gère les erreurs
               
               return (

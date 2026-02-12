@@ -1202,6 +1202,174 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * ✅ AJOUT: Mettre à jour le profil Booker
+ * @route PUT /api/booker/profile
+ */
+app.put('/api/booker/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { nom, prenom, phonePro, bookerType } = req.body;
+
+    // Validation
+    if (!nom || !prenom || !phonePro || !bookerType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tous les champs sont requis (nom, prenom, phonePro, bookerType).',
+      });
+    }
+
+    // Récupérer le profil booker de l'utilisateur
+    const bookerProfile = await prisma.userBooker.findFirst({
+      where: { userId },
+    });
+
+    if (!bookerProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil Booker non trouvé.',
+      });
+    }
+
+    // Mettre à jour le profil
+    const updatedBooker = await prisma.userBooker.update({
+      where: { id: bookerProfile.id },
+      data: {
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        phonePro: phonePro.trim(),
+        bookerType: bookerType.trim(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Profil Booker mis à jour avec succès.',
+      profile: {
+        id: updatedBooker.id,
+        nom: updatedBooker.nom,
+        prenom: updatedBooker.prenom,
+        phonePro: updatedBooker.phonePro,
+        bookerType: updatedBooker.bookerType,
+        profileImage: updatedBooker.profileImage,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur mise à jour profil Booker:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du profil Booker.',
+    });
+  }
+});
+
+/**
+ * ✅ AJOUT: Uploader la photo de profil d'un Booker
+ * @route POST /api/booker/profile/upload-image
+ */
+app.post(
+  '/api/booker/profile/upload-image',
+  authenticateToken,
+  (req, res, next) =>
+    (MEDIA_STORAGE === 'r2' ? uploadMemory.single('image') : uploadLocal.single('image'))(req, res, next),
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Aucune image fournie.',
+        });
+      }
+
+      if (!req.file.mimetype.startsWith('image/')) {
+        if (MEDIA_STORAGE === 'local' && req.file.filename) {
+          const filePath = path.join(__dirname, 'uploads', 'media', req.file.filename);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'Le fichier doit être une image.',
+        });
+      }
+
+      // Récupérer le profil booker
+      const bookerProfile = await prisma.userBooker.findFirst({
+        where: { userId },
+      });
+
+      if (!bookerProfile) {
+        return res.status(404).json({
+          success: false,
+          message: 'Profil Booker non trouvé.',
+        });
+      }
+
+      let imageUrl = null;
+      if (MEDIA_STORAGE === 'r2') {
+        try {
+          const key = makeObjectKey('booker-profile', req.file.originalname);
+          const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
+          imageUrl = uploaded.url;
+        } catch (r2Error) {
+          console.error('[uploadBookerProfileImage] Erreur R2, fallback vers local:', r2Error.message);
+          const publicUrl = process.env.PUBLIC_URL;
+          const origin = req.get('origin') || req.get('referer');
+          const baseUrl = publicUrl
+            ? publicUrl.replace(/\/?$/, '')
+            : (origin ? origin.replace(/\/?$/, '') : `${req.protocol}://${req.get('host')}`);
+          imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+        }
+      } else {
+        const publicUrl = process.env.PUBLIC_URL;
+        const origin = req.get('origin') || req.get('referer');
+        const baseUrl = publicUrl
+          ? publicUrl.replace(/\/?$/, '')
+          : (origin ? origin.replace(/\/?$/, '') : `${req.protocol}://${req.get('host')}`);
+        imageUrl = `${baseUrl}/uploads/media/${req.file.filename}`;
+      }
+
+      // Supprimer l'ancienne photo de profil si elle existe (R2)
+      if (bookerProfile.profileImage && MEDIA_STORAGE === 'r2') {
+        try {
+          const { keyFromPublicUrl } = require('./utils/mediaStorage');
+          const oldKey = keyFromPublicUrl(bookerProfile.profileImage);
+          if (oldKey) {
+            await deleteFromR2({ key: oldKey, url: bookerProfile.profileImage });
+          }
+        } catch (e) {
+          // best-effort
+        }
+      } else if (bookerProfile.profileImage && bookerProfile.profileImage.includes('/uploads/media/')) {
+        // Supprimer l'ancienne photo (local)
+        const oldFilePath = path.join(__dirname, 'uploads', 'media', path.basename(bookerProfile.profileImage));
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+        }
+      }
+
+      // Mettre à jour le profil avec la nouvelle photo
+      const updatedBooker = await prisma.userBooker.update({
+        where: { id: bookerProfile.id },
+        data: { profileImage: imageUrl },
+      });
+
+      res.json({
+        success: true,
+        message: 'Photo de profil mise à jour avec succès.',
+        profileImage: imageUrl,
+      });
+    } catch (error) {
+      console.error('Erreur upload photo de profil Booker:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'upload de la photo de profil.',
+      });
+    }
+  }
+);
+
 // Endpoint pour créer un profil Venue (Lieu)
 app.post('/api/profile/venue', authenticateToken, async (req, res) => {
   try {
@@ -6564,6 +6732,7 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
         id: post.bookerId,
         name: `${post.booker.nom} ${post.booker.prenom}`,
         bookerType: post.booker.bookerType,
+        profileImage: post.booker.profileImage, // ✅ AJOUT: Photo de profil du booker
       };
     }
 
@@ -6658,6 +6827,7 @@ app.get('/api/feed', async (req, res) => {
             nom: true,
             prenom: true,
             bookerType: true,
+            profileImage: true, // ✅ AJOUT: Photo de profil du booker
           },
         },
         author: {
@@ -6757,6 +6927,9 @@ app.get('/api/feed', async (req, res) => {
 
     // Formater les posts
     const formattedPosts = posts.map((post) => {
+      // ✅ CORRECTION: Déterminer le profileType selon djId/bookerId au moment de la création, pas activeProfileType actuel
+      const profileType = post.djId ? 'DJ' : (post.bookerId ? 'BOOKER' : null);
+      
       const formattedPost = {
         type: 'post',
         id: post.id,
@@ -6764,7 +6937,7 @@ app.get('/api/feed', async (req, res) => {
         imageUrl: normalizeImageUrl(post.imageUrl), // ✅ CORRECTION: Normaliser l'URL de l'image
         likes: post.likes,
         createdAt: post.createdAt,
-        profileType: post.author.activeProfileType, // ✅ AJOUT: Type de profil (DJ ou BOOKER)
+        profileType: profileType, // ✅ CORRECTION: Utiliser djId/bookerId pour déterminer le type, pas activeProfileType
         author: {
           id: post.authorId,
           username: post.author.username,
@@ -6789,6 +6962,7 @@ app.get('/api/feed', async (req, res) => {
           userId: post.authorId,
           name: `${post.booker.nom} ${post.booker.prenom}`,
           bookerType: post.booker.bookerType,
+          profileImage: normalizeImageUrl(post.booker.profileImage), // ✅ AJOUT: Photo de profil du booker
         };
       }
 

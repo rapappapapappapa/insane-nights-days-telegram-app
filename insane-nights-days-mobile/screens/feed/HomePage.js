@@ -411,7 +411,7 @@ export default function HomePage() {
           <SafeAreaView style={styles.feedSafeArea} edges={['top']}>
             {/* Header du feed */}
             <View style={[styles.feedHeader, { paddingTop: Math.max(insets.top + 10, Platform.OS === 'ios' ? 50 : 30) }]}>
-            {/* ✅ AJOUT: Logo INSANE à gauche */}
+            {/* ✅ AJOUT: Logo NOX à gauche */}
             <View style={styles.feedHeaderLeft}>
               <TouchableOpacity
                 style={styles.feedLogoButton}
@@ -496,7 +496,7 @@ export default function HomePage() {
                     const profileName = isDj
                       ? item.dj?.artistName
                       : (item.booker?.name || item.author?.username);
-                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : null;
+                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : normalizeMediaUrl(item.booker?.profileImage); // ✅ CORRECTION: Afficher la photo de profil pour DJs et Bookers
                     const profileLocation = isDj ? item.dj?.city : null;
                     
                     const isAuthor = user?.id && item.author?.id === user.id;

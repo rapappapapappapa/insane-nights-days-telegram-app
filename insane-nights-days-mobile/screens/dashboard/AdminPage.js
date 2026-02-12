@@ -3,10 +3,13 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/config';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 
 export default function AdminPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const { toast, showError, showSuccess, hideToast } = useToast();
 
   const isAdmin = (user?.role || 'USER') === 'ADMIN';
   const token = user?.token;
@@ -65,7 +68,7 @@ export default function AdminPage() {
       if (res?.success && Array.isArray(res.users)) setUsers(res.users);
       else setUsers([]);
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les utilisateurs.' : 'Unable to load users.');
+      showError(language === 'fr' ? 'Impossible de charger les utilisateurs.' : 'Unable to load users.');
     } finally {
       setUsersLoading(false);
     }
@@ -81,7 +84,7 @@ export default function AdminPage() {
         throw new Error(res?.message || 'Role update failed');
       }
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Action impossible.' : 'Action failed.'));
+      showError(e?.message || (language === 'fr' ? 'Action impossible.' : 'Action failed.'));
     }
   };
 
@@ -93,7 +96,7 @@ export default function AdminPage() {
       if (res?.success && Array.isArray(res.posts)) setPosts(res.posts);
       else setPosts([]);
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les posts.' : 'Unable to load posts.');
+      showError(language === 'fr' ? 'Impossible de charger les posts.' : 'Unable to load posts.');
     } finally {
       setPostsLoading(false);
     }
@@ -112,10 +115,12 @@ export default function AdminPage() {
           onPress: async () => {
             try {
               const res = await api.adminDeleteFeedPost(token, postId);
-              if (res?.success) setPosts((prev) => prev.filter((p) => p.id !== postId));
-              else throw new Error(res?.message || 'Delete failed');
+              if (res?.success) {
+                setPosts((prev) => prev.filter((p) => p.id !== postId));
+                showSuccess(language === 'fr' ? 'Post supprimé.' : 'Post deleted.');
+              } else throw new Error(res?.message || 'Delete failed');
             } catch (e) {
-              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
+              showError(e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
             }
           },
         },
@@ -131,7 +136,7 @@ export default function AdminPage() {
       if (res?.success && Array.isArray(res.reports)) setReports(res.reports);
       else setReports([]);
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les signalements.' : 'Unable to load reports.');
+      showError(language === 'fr' ? 'Impossible de charger les signalements.' : 'Unable to load reports.');
     } finally {
       setReportsLoading(false);
     }
@@ -147,7 +152,7 @@ export default function AdminPage() {
         throw new Error(res?.message || 'Update failed');
       }
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Action impossible.' : 'Action failed.'));
+      showError(e?.message || (language === 'fr' ? 'Action impossible.' : 'Action failed.'));
     }
   };
 
@@ -159,7 +164,7 @@ export default function AdminPage() {
       if (res?.success && Array.isArray(res.events)) setEvents(res.events);
       else setEvents([]);
     } catch (e) {
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', language === 'fr' ? 'Impossible de charger les événements.' : 'Unable to load events.');
+      showError(language === 'fr' ? 'Impossible de charger les événements.' : 'Unable to load events.');
     } finally {
       setEventsLoading(false);
     }
@@ -178,10 +183,12 @@ export default function AdminPage() {
           onPress: async () => {
             try {
               const res = await api.adminDeleteEvent(token, eventId);
-              if (res?.success) setEvents((prev) => prev.filter((e) => e.id !== eventId));
-              else throw new Error(res?.message || 'Delete failed');
+              if (res?.success) {
+                setEvents((prev) => prev.filter((e) => e.id !== eventId));
+                showSuccess(language === 'fr' ? 'Événement supprimé.' : 'Event deleted.');
+              } else throw new Error(res?.message || 'Delete failed');
             } catch (e) {
-              Alert.alert(language === 'fr' ? 'Erreur' : 'Error', e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
+              showError(e?.message || (language === 'fr' ? 'Suppression impossible.' : 'Delete failed.'));
             }
           },
         },
@@ -371,6 +378,14 @@ export default function AdminPage() {
           </View>
         ))}
       </View>
+      
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </ScrollView>
   );
 }

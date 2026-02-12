@@ -615,7 +615,7 @@ export default function WelcomePage() {
         >
           {/* Header du feed */}
           <View style={styles.feedHeader}>
-            {/* ✅ AJOUT: Logo INSANE à gauche */}
+            {/* ✅ AJOUT: Logo NOX à gauche */}
             <View style={styles.feedHeaderLeft}>
               <Logo size={40} />
             </View>

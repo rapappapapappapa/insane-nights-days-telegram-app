@@ -52,7 +52,22 @@ export default function BookerDashboardPage() {
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
   const shouldOpenBookings =
     !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
-  const [showMyEvents, setShowMyEvents] = useState(shouldOpenBookings || false);
+  
+  // ✅ MODIFICATION: Ajouter une section "Profil" avec activeSection (profil, events)
+  const [activeSection, setActiveSection] = useState(shouldOpenBookings ? 'events' : 'profil');
+  
+  // ✅ AJOUT: États pour la gestion du profil booker
+  const [bookerProfile, setBookerProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    nom: '',
+    prenom: '',
+    phonePro: '',
+    bookerType: 'INDEPENDENT',
+  });
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState(null);
   const [markingPaymentEventDjId, setMarkingPaymentEventDjId] = useState(null);
 
@@ -153,24 +168,9 @@ export default function BookerDashboardPage() {
     setShowTimePicker(true);
   };
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  // ✅ SUPPRIMÉ: Variables liées au formulaire de création d'événement (déplacées vers BookerEventDashboardPage)
   
-  // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif/Paiement)
-  const [currentStep, setCurrentStep] = useState(1);
-  
-  // Gérer les sélections depuis routeParams - avec comparaison pour éviter les doublons
-  const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, eventId: null, slotIndex: null });
-  const hasInitializedSlots = useRef(false);
-  
-  // Extraire les valeurs primitives pour éviter les re-renders
-  const currentDjId = routeParams?.selectedDjId;
-  const currentVenueId = routeParams?.selectedVenueId;
-  const currentAction = routeParams?.action;
-  const currentEventId = routeParams?.eventId || null;
-  const currentSlotIndex = routeParams?.slotIndex;
-  
-  React.useLayoutEffect(() => {
+  React.useEffect(() => {
     // Pour les mises à jour de slots (création d'événement), toujours permettre la mise à jour
     const isSlotUpdate = currentSlotIndex !== undefined && currentSlotIndex !== null && !currentEventId;
     
@@ -381,10 +381,101 @@ export default function BookerDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDjId, currentVenueId, currentAction, currentSlotIndex, currentEventId]); // Inclure currentEventId dans les dépendances
 
+  // ✅ AJOUT: Charger le profil booker
+  const loadBookerProfile = async () => {
+    if (!user?.token) return;
+    setLoadingProfile(true);
+    try {
+      const response = await api.getBookerProfile(user.token);
+      if (response?.success && response?.profile) {
+        setBookerProfile(response.profile);
+        setProfileForm({
+          nom: response.profile.nom || '',
+          prenom: response.profile.prenom || '',
+          phonePro: response.profile.phonePro || '',
+          bookerType: response.profile.bookerType || 'INDEPENDENT',
+        });
+        setProfileImage(response.profile.profileImage || null);
+      }
+    } catch (error) {
+      console.error('Erreur chargement profil booker:', error);
+      showError(language === 'fr' ? 'Impossible de charger le profil.' : 'Unable to load profile.');
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // ✅ AJOUT: Sauvegarder le profil booker
+  const saveBookerProfile = async () => {
+    if (!user?.token || savingProfile) return;
+    if (!profileForm.nom || !profileForm.prenom || !profileForm.phonePro || !profileForm.bookerType) {
+      showError(language === 'fr' ? 'Tous les champs sont requis.' : 'All fields are required.');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const response = await api.updateBookerProfile(
+        user.token,
+        profileForm.nom,
+        profileForm.prenom,
+        profileForm.phonePro,
+        profileForm.bookerType
+      );
+      if (response?.success) {
+        showSuccess(language === 'fr' ? 'Profil mis à jour avec succès.' : 'Profile updated successfully.');
+        await loadBookerProfile();
+      } else {
+        showError(response?.message || (language === 'fr' ? 'Erreur lors de la mise à jour.' : 'Update failed.'));
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde profil booker:', error);
+      showError(language === 'fr' ? 'Erreur lors de la sauvegarde.' : 'Save failed.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // ✅ AJOUT: Uploader la photo de profil
+  const pickProfileImage = async () => {
+    if (!user?.token) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showError(language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const uri = result.assets[0].uri;
+      setUploadingProfileImage(true);
+      try {
+        const response = await api.uploadBookerProfileImage(user.token, uri);
+        if (response?.success) {
+          setProfileImage(response.profileImage);
+          showSuccess(language === 'fr' ? 'Photo de profil mise à jour' : 'Profile picture updated');
+        } else {
+          showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'upload.' : 'Upload failed.'));
+        }
+      } catch (error) {
+        console.error('Erreur upload photo de profil:', error);
+        showError(language === 'fr' ? 'Erreur lors de l\'upload.' : 'Upload failed.');
+      } finally {
+        setUploadingProfileImage(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (user?.token) {
       fetchVenues();
       fetchMyEvents();
+      loadBookerProfile(); // ✅ AJOUT: Charger le profil booker
       // Ne pas charger les DJs ici, on les chargera quand la date sera sélectionnée
     }
   }, [user?.token]);
@@ -664,12 +755,7 @@ export default function BookerDashboardPage() {
       );
     } catch (error) {
       console.error('Erreur suppression message:', error);
-      Alert.alert(
-        language === 'fr' ? 'Erreur' : 'Error',
-        language === 'fr'
-          ? 'Impossible de supprimer le message.'
-          : 'Unable to delete message.'
-      );
+      showError(language === 'fr' ? 'Impossible de supprimer le message.' : 'Unable to delete message.');
     }
   };
 
@@ -727,25 +813,14 @@ export default function BookerDashboardPage() {
             try {
               const response = await api.deleteEvent(user.token, eventId);
               if (response && response.success) {
-                Alert.alert(
-                  language === 'fr' ? 'Événement supprimé' : 'Event deleted',
-                  language === 'fr'
-                    ? 'L\'événement a été supprimé avec succès.'
-                    : 'The event has been deleted successfully.'
-                );
+                showSuccess(language === 'fr' ? 'L\'événement a été supprimé avec succès.' : 'The event has been deleted successfully.');
                 fetchMyEvents(); // Rafraîchir la liste
               } else {
-                Alert.alert(
-                  language === 'fr' ? 'Erreur' : 'Error',
-                  response?.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting event.')
-                );
+                showError(response?.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting event.'));
               }
             } catch (error) {
               console.error('Erreur suppression événement:', error);
-              Alert.alert(
-                language === 'fr' ? 'Erreur' : 'Error',
-                error.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting event.')
-              );
+              showError(error.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting event.'));
             } finally {
               setDeletingEventId(null);
             }
@@ -846,12 +921,7 @@ export default function BookerDashboardPage() {
 
     // Validation
     if (!formData.title || !formData.date || !formData.time || !formData.venueId || formData.djIds.length === 0) {
-      Alert.alert(
-        language === 'fr' ? 'Champs manquants' : 'Missing fields',
-        language === 'fr' 
-          ? 'Veuillez remplir tous les champs requis (titre, date, heure, lieu, DJ).'
-          : 'Please fill in all required fields (title, date, time, venue, DJ).'
-      );
+      showError(language === 'fr' ? 'Veuillez remplir tous les champs requis (titre, date, heure, lieu, DJ).' : 'Please fill in all required fields (title, date, time, venue, DJ).');
       return;
     }
 
@@ -917,12 +987,7 @@ export default function BookerDashboardPage() {
       const response = await api.createEvent(user.token, eventData);
 
       if (!response) {
-        Alert.alert(
-          language === 'fr' ? 'Erreur de connexion' : 'Connection error',
-          language === 'fr'
-            ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
-            : 'Unable to reach server. Check your connection.'
-        );
+        showError(language === 'fr' ? 'Impossible de joindre le serveur. Vérifie ta connexion.' : 'Unable to reach server. Check your connection.');
         return;
       }
 
@@ -1000,24 +1065,24 @@ export default function BookerDashboardPage() {
       {/* Boutons de navigation */}
       <View style={styles.tabButtons}>
         <TouchableOpacity
-          style={[styles.tabButton, !showMyEvents && styles.tabButtonActive]}
-          onPress={() => setShowMyEvents(false)}
+          style={[styles.tabButton, activeSection === 'profil' && styles.tabButtonActive]}
+          onPress={() => setActiveSection('profil')}
         >
-          <Text style={[styles.tabButtonText, !showMyEvents && styles.tabButtonTextActive]}>
-            {language === 'fr' ? 'Créer un événement' : 'Create Event'}
+          <Text style={[styles.tabButtonText, activeSection === 'profil' && styles.tabButtonTextActive]}>
+            {language === 'fr' ? 'Profil' : 'Profile'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tabButton, showMyEvents && styles.tabButtonActive]}
+          style={[styles.tabButton, activeSection === 'events' && styles.tabButtonActive]}
           onPress={() => {
-            setShowMyEvents(true);
+            setActiveSection('events');
             fetchMyEvents();
             // Marquer les messages comme lus quand on ouvre la section événements
             markAllAsRead();
           }}
         >
           <View style={styles.tabButtonContent}>
-            <Text style={[styles.tabButtonText, showMyEvents && styles.tabButtonTextActive]}>
+            <Text style={[styles.tabButtonText, activeSection === 'events' && styles.tabButtonTextActive]}>
               {language === 'fr' ? 'Mes événements' : 'My Events'}
             </Text>
             <NotificationBadge count={unreadCount} />
@@ -1025,13 +1090,142 @@ export default function BookerDashboardPage() {
         </TouchableOpacity>
       </View>
 
+      {/* ✅ AJOUT: Bouton Dashboard Événement */}
+      {activeSection === 'profil' && (
+        <TouchableOpacity
+          style={styles.eventDashboardButton}
+          onPress={() => navigate('bookerEventDashboard', {})}
+        >
+          <Ionicons name="calendar" size={24} color="#0b0b0e" />
+          <Text style={styles.eventDashboardButtonText}>
+            {language === 'fr' ? 'Dashboard Événement' : 'Event Dashboard'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        {showMyEvents ? (
+        {activeSection === 'profil' ? (
+          // ✅ AJOUT: Section "Profil"
+          <View style={styles.profileSection}>
+            {loadingProfile ? (
+              <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>
+                  {language === 'fr' ? 'Mon Profil' : 'My Profile'}
+                </Text>
+                
+                {/* Photo de profil */}
+                <View style={styles.profileImageContainer}>
+                  {profileImage ? (
+                    <Image
+                      source={{ uri: normalizeMediaUrl(profileImage) }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <Ionicons name="person" size={60} color="rgba(255,255,255,0.5)" />
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.changePhotoButton}
+                    onPress={pickProfileImage}
+                    disabled={uploadingProfileImage}
+                  >
+                    {uploadingProfileImage ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="camera" size={20} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Formulaire */}
+                <View style={styles.profileForm}>
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Nom' : 'Last Name'}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.nom}
+                    onChangeText={(v) => setProfileForm((p) => ({ ...p, nom: v }))}
+                    placeholder={language === 'fr' ? 'Nom' : 'Last Name'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Prénom' : 'First Name'}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.prenom}
+                    onChangeText={(v) => setProfileForm((p) => ({ ...p, prenom: v }))}
+                    placeholder={language === 'fr' ? 'Prénom' : 'First Name'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Téléphone professionnel' : 'Professional Phone'}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileForm.phonePro}
+                    onChangeText={(v) => setProfileForm((p) => ({ ...p, phonePro: v }))}
+                    placeholder={language === 'fr' ? 'Téléphone professionnel' : 'Professional Phone'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    keyboardType="phone-pad"
+                  />
+
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Type de booker' : 'Booker Type'}</Text>
+                  <View style={styles.bookerTypeContainer}>
+                    {['INDEPENDENT', 'AGENCY', 'VENUE'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.bookerTypeButton,
+                          profileForm.bookerType === type && styles.bookerTypeButtonActive,
+                        ]}
+                        onPress={() => setProfileForm((p) => ({ ...p, bookerType: type }))}
+                      >
+                        <Text
+                          style={[
+                            styles.bookerTypeButtonText,
+                            profileForm.bookerType === type && styles.bookerTypeButtonTextActive,
+                          ]}
+                        >
+                          {type === 'INDEPENDENT'
+                            ? language === 'fr'
+                              ? 'Indépendant'
+                              : 'Independent'
+                            : type === 'AGENCY'
+                            ? language === 'fr'
+                              ? 'Agence'
+                              : 'Agency'
+                            : language === 'fr'
+                            ? 'Lieu'
+                            : 'Venue'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
+                    onPress={saveBookerProfile}
+                    disabled={savingProfile}
+                  >
+                    {savingProfile ? (
+                      <ActivityIndicator size="small" color="#0b0b0e" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>
+                        {language === 'fr' ? 'Enregistrer' : 'Save'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        ) : activeSection === 'events' ? (
           // Section "Mes événements"
           <View style={styles.eventsSection}>
             <Text style={styles.sectionTitle}>
@@ -1184,569 +1378,7 @@ export default function BookerDashboardPage() {
               ))
             )}
           </View>
-        ) : (
-          <>
-            {/* Indicateur d'étapes */}
-            <View style={styles.stepsIndicator}>
-              <View style={[styles.step, currentStep >= 1 && styles.stepActive]}>
-                <Text style={[styles.stepNumber, currentStep >= 1 && styles.stepNumberActive]}>1</Text>
-                <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>
-                  {language === 'fr' ? 'Date' : 'Date'}
-                </Text>
-              </View>
-              <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
-              <View style={[styles.step, currentStep >= 2 && styles.stepActive]}>
-                <Text style={[styles.stepNumber, currentStep >= 2 && styles.stepNumberActive]}>2</Text>
-                <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>
-                  {language === 'fr' ? 'Lieu' : 'Venue'}
-                </Text>
-              </View>
-              <View style={[styles.stepLine, currentStep >= 3 && styles.stepLineActive]} />
-              <View style={[styles.step, currentStep >= 3 && styles.stepActive]}>
-                <Text style={[styles.stepNumber, currentStep >= 3 && styles.stepNumberActive]}>3</Text>
-                <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>
-                  {language === 'fr' ? 'DJs' : 'DJs'}
-                </Text>
-              </View>
-              <View style={[styles.stepLine, currentStep >= 4 && styles.stepLineActive]} />
-              <View style={[styles.step, currentStep >= 4 && styles.stepActive]}>
-                <Text style={[styles.stepNumber, currentStep >= 4 && styles.stepNumberActive]}>4</Text>
-                <Text style={[styles.stepLabel, currentStep >= 4 && styles.stepLabelActive]}>
-                  {language === 'fr' ? 'Détails' : 'Details'}
-                </Text>
-              </View>
-              <View style={[styles.stepLine, currentStep >= 5 && styles.stepLineActive]} />
-              <View style={[styles.step, currentStep >= 5 && styles.stepActive]}>
-                <Text style={[styles.stepNumber, currentStep >= 5 && styles.stepNumberActive]}>5</Text>
-                <Text style={[styles.stepLabel, currentStep >= 5 && styles.stepLabelActive]}>
-                  {language === 'fr' ? 'Paiement' : 'Payment'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.form}>
-              {/* ÉTAPE 1: Date et Durée */}
-              {currentStep === 1 && (
-            <>
-              <Text style={styles.sectionTitle}>
-                {language === 'fr' ? 'Étape 1 : Date et durée' : 'Step 1: Date and duration'}
-              </Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Date' : 'Date'} *
-                </Text>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={openDatePicker}
-                >
-                  <Text style={[styles.selectButtonText, !formData.date && styles.placeholderText]}>
-                    {formData.date
-                      ? new Date(eventDateTime).toLocaleDateString(
-                          language === 'fr' ? 'fr-FR' : 'en-US',
-                          { day: '2-digit', month: '2-digit', year: 'numeric' }
-                        )
-                      : language === 'fr'
-                      ? 'Choisir une date'
-                      : 'Choose a date'}
-                  </Text>
-                  <Text style={styles.chevron}>📅</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Heure de début' : 'Start time'} *
-                </Text>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={openTimePicker}
-                >
-                  <Text style={[styles.selectButtonText, !formData.time && styles.placeholderText]}>
-                    {formData.time
-                      ? formData.time
-                      : language === 'fr'
-                      ? 'Choisir une heure'
-                      : 'Choose a time'}
-                  </Text>
-                  <Text style={styles.chevron}>⏰</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Durée de la soirée (heures)' : 'Event duration (hours)'} *
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={language === 'fr' ? 'Ex: 4' : 'Ex: 4'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="numeric"
-                  value={formData.durationHours}
-                  onChangeText={(value) => handleChange('durationHours', value)}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.nextButton, (!formData.date || !formData.time || !formData.durationHours) && styles.nextButtonDisabled]}
-                onPress={() => {
-                  if (formData.date && formData.time && formData.durationHours) {
-                    setCurrentStep(2);
-                  }
-                }}
-                disabled={!formData.date || !formData.time || !formData.durationHours}
-              >
-                <Text style={styles.nextButtonText}>
-                  {language === 'fr' ? 'Suivant →' : 'Next →'}
-                </Text>
-              </TouchableOpacity>
-            </>
-              )}
-
-              {/* ÉTAPE 2: Sélection du lieu */}
-              {currentStep === 2 && (
-            <>
-              <Text style={styles.sectionTitle}>
-                {language === 'fr' ? 'Étape 2 : Choisir un lieu' : 'Step 2: Choose a venue'}
-              </Text>
-
-              <Text style={styles.stepDescription}>
-                {language === 'fr' 
-                  ? 'Sélectionne un lieu disponible pour cette date et cette durée.'
-                  : 'Select a venue available for this date and duration.'}
-              </Text>
-
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => {
-                  navigate('selectVenue', {
-                    selectedVenueId: formData.venueId,
-                  });
-                }}
-              >
-                <Text style={[styles.selectButtonText, !selectedVenue && styles.placeholderText]}>
-                  {selectedVenue
-                    ? `${selectedVenue.venueName} - ${selectedVenue.address}`
-                    : language === 'fr' ? 'Sélectionner un lieu' : 'Select a venue'}
-                </Text>
-                <Text style={styles.chevron}>▼</Text>
-              </TouchableOpacity>
-
-              {selectedVenue && (
-                <View style={styles.selectedInfo}>
-                  <Text style={styles.selectedInfoText}>
-                    ✓ {language === 'fr' ? 'Lieu sélectionné' : 'Venue selected'}: {selectedVenue.venueName}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.stepButtons}>
-                <TouchableOpacity
-                  style={styles.backButtonStep}
-                  onPress={() => setCurrentStep(1)}
-                >
-                  <Text style={styles.backButtonStepText}>
-                    ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.nextButton, !selectedVenue && styles.nextButtonDisabled]}
-                  onPress={() => {
-                    if (selectedVenue) {
-                      setCurrentStep(3);
-                    }
-                  }}
-                  disabled={!selectedVenue}
-                >
-                  <Text style={styles.nextButtonText}>
-                    {language === 'fr' ? 'Suivant →' : 'Next →'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-              )}
-
-              {/* ÉTAPE 3: Sélection des DJs */}
-              {currentStep === 3 && (
-            <>
-              <Text style={styles.sectionTitle}>
-                {language === 'fr' ? 'Étape 3 : Choisir des DJs' : 'Step 3: Choose DJs'}
-              </Text>
-
-              {!formData.date && (
-                <View style={styles.warningBox}>
-                  <Text style={styles.warningText}>
-                    {language === 'fr' 
-                      ? '⚠️ Veuillez d\'abord sélectionner une date à l\'étape 1 pour voir les DJs disponibles.'
-                      : '⚠️ Please select a date in step 1 first to see available DJs.'}
-                  </Text>
-                </View>
-              )}
-
-              {formData.date && (
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoText}>
-                    {language === 'fr' 
-                      ? `📅 DJs disponibles le ${new Date(eventDateTime).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
-                      : `📅 DJs available on ${new Date(eventDateTime).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}`}
-                  </Text>
-                </View>
-              )}
-
-              <Text style={styles.stepDescription}>
-                {language === 'fr' 
-                  ? 'Ajoutez des slots et sélectionnez un DJ pour chaque slot.'
-                  : 'Add slots and select a DJ for each slot.'}
-              </Text>
-
-              {/* Liste des slots DJ */}
-              {djSlots.map((djId, index) => {
-                const selectedDj = djId ? availableDjs.find(dj => dj.userId === djId) : null;
-                return (
-                  <View key={index} style={styles.djSlotContainer}>
-                    <View style={styles.djSlotHeader}>
-                      <Text style={styles.djSlotLabel}>
-                        {language === 'fr' ? `Slot ${index + 1}` : `Slot ${index + 1}`}
-                      </Text>
-                      {djSlots.length > 1 && (
-                        <TouchableOpacity
-                          style={styles.removeSlotButton}
-                          onPress={() => {
-                            const newSlots = djSlots.filter((_, i) => i !== index);
-                            setDjSlots(newSlots);
-                            // Mettre à jour formData.djIds
-                            const newDjIds = newSlots.filter(id => id !== null);
-                            setFormData(prev => ({ ...prev, djIds: newDjIds }));
-                          }}
-                        >
-                          <Text style={styles.removeSlotButtonText}>✕</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={styles.selectButton}
-                      onPress={() => {
-                        // Passer tous les DJs déjà sélectionnés dans tous les slots (sauf celui du slot actuel)
-                        // Utiliser formData.djIds comme source de vérité pour inclure tous les DJs sélectionnés
-                        const currentSlotDjId = djSlots[index];
-                        const otherSelectedDjIds = formData.djIds.filter(id => id !== currentSlotDjId);
-                        console.log('[BookerDashboard] Navigation vers selectDj:', {
-                          slotIndex: index,
-                          currentSlotDjId,
-                          otherSelectedDjIds,
-                          allDjIds: formData.djIds,
-                          djSlots
-                        });
-                        navigate('selectDj', {
-                          selectedDjIds: otherSelectedDjIds,
-                          slotIndex: index,
-                          isSlotMode: true,
-                        });
-                      }}
-                    >
-                      <Text style={[styles.selectButtonText, !selectedDj && styles.placeholderText]}>
-                        {selectedDj
-                          ? `${selectedDj.artistName} • ${language === 'fr' ? 'prix à convenir' : 'price to agree'}`
-                          : language === 'fr' ? 'Sélectionner un DJ' : 'Select a DJ'}
-                      </Text>
-                      <Text style={styles.chevron}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-
-              {/* Bouton pour ajouter un slot */}
-              <TouchableOpacity
-                style={styles.addSlotButton}
-                onPress={() => {
-                  setDjSlots([...djSlots, null]);
-                }}
-              >
-                <Text style={styles.addSlotButtonText}>
-                  + {language === 'fr' ? 'Ajouter un slot DJ' : 'Add DJ slot'}
-                </Text>
-              </TouchableOpacity>
-
-              {djSlots.filter(id => id !== null).length > 0 && (
-                <View style={styles.selectedInfo}>
-                  <Text style={styles.selectedInfoText}>
-                    ✓ {language === 'fr' ? 'DJ(s) sélectionné(s)' : 'DJ(s) selected'}: {djSlots.filter(id => id !== null).length}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.stepButtons}>
-                <TouchableOpacity
-                  style={styles.backButtonStep}
-                  onPress={() => setCurrentStep(2)}
-                >
-                  <Text style={styles.backButtonStepText}>
-                    ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.nextButton, djSlots.filter(id => id !== null).length === 0 && styles.nextButtonDisabled]}
-                  onPress={() => {
-                    const selectedDjIds = djSlots.filter(id => id !== null);
-                    if (selectedDjIds.length > 0) {
-                      setFormData(prev => ({ ...prev, djIds: selectedDjIds }));
-                      setCurrentStep(4);
-                    }
-                  }}
-                  disabled={djSlots.filter(id => id !== null).length === 0}
-                >
-                  <Text style={styles.nextButtonText}>
-                    {language === 'fr' ? 'Suivant →' : 'Next →'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-              )}
-
-              {/* ÉTAPE 4: Détails et paiement */}
-              {currentStep === 4 && (
-            <>
-              <Text style={styles.sectionTitle}>
-                {language === 'fr' ? 'Étape 4 : Détails' : 'Step 4: Details'}
-              </Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Titre de l\'événement' : 'Event title'} *
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={language === 'fr' ? 'Ex: Soirée Techno Underground' : 'Ex: Underground Techno Night'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={formData.title}
-                  onChangeText={(value) => handleChange('title', value)}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Budget (optionnel)' : 'Budget (optional)'} (€)
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="numeric"
-                  value={formData.price}
-                  onChangeText={(value) => handleChange('price', value)}
-                />
-                <Text style={styles.helperText}>
-                  {language === 'fr'
-                    ? 'Le prix DJ sera fixé via un contrat (chat privé).'
-                    : 'DJ price will be set via a contract (private chat).'}
-                </Text>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Capacité' : 'Capacity'}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="200"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="numeric"
-                  value={formData.capacity}
-                  onChangeText={(value) => handleChange('capacity', value)}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Genre musical' : 'Music genre'}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={language === 'fr' ? 'Ex: Techno, House, Electro' : 'Ex: Techno, House, Electro'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={formData.genre}
-                  onChangeText={(value) => handleChange('genre', value)}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Description' : 'Description'}
-                </Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder={language === 'fr' ? 'Description de l\'événement...' : 'Event description...'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  multiline
-                  numberOfLines={4}
-                  value={formData.description}
-                  onChangeText={(value) => handleChange('description', value)}
-                />
-              </View>
-
-              <View style={styles.stepButtons}>
-                <TouchableOpacity
-                  style={styles.backButtonStep}
-                  onPress={() => setCurrentStep(3)}
-                >
-                  <Text style={styles.backButtonStepText}>
-                    ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.nextButton, (!formData.title || !formData.price) && styles.nextButtonDisabled]}
-                  onPress={() => {
-                    if (formData.title && formData.price) {
-                      setCurrentStep(5);
-                    }
-                  }}
-                  disabled={!formData.title || !formData.price}
-                >
-                  <Text style={styles.nextButtonText}>
-                    {language === 'fr' ? 'Suivant →' : 'Next →'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </>
-              )}
-
-              {/* ÉTAPE 5: Récapitulatif et Paiement */}
-              {currentStep === 5 && (
-                <>
-                  <Text style={styles.sectionTitle}>
-                    {language === 'fr' ? 'Étape 5 : Récapitulatif et Paiement' : 'Step 5: Summary and Payment'}
-                  </Text>
-
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>
-                      {language === 'fr' ? 'Récapitulatif de l\'événement' : 'Event Summary'}
-                    </Text>
-
-                    {/* Informations de base */}
-                    <View style={styles.summarySection}>
-                      <Text style={styles.summaryLabel}>
-                        {language === 'fr' ? 'Titre' : 'Title'}
-                      </Text>
-                      <Text style={styles.summaryValue}>{formData.title}</Text>
-                    </View>
-
-                    <View style={styles.summarySection}>
-                      <Text style={styles.summaryLabel}>
-                        {language === 'fr' ? 'Date et heure' : 'Date and time'}
-                      </Text>
-                      <Text style={styles.summaryValue}>
-                        {formData.date && new Date(eventDateTime).toLocaleDateString(
-                          language === 'fr' ? 'fr-FR' : 'en-US',
-                          { day: '2-digit', month: '2-digit', year: 'numeric' }
-                        )} {formData.time}
-                      </Text>
-                    </View>
-
-                    <View style={styles.summarySection}>
-                      <Text style={styles.summaryLabel}>
-                        {language === 'fr' ? 'Durée' : 'Duration'}
-                      </Text>
-                      <Text style={styles.summaryValue}>
-                        {formData.durationHours} {language === 'fr' ? 'heures' : 'hours'}
-                      </Text>
-                    </View>
-
-                    {selectedVenue && (
-                      <View style={styles.summarySection}>
-                        <Text style={styles.summaryLabel}>
-                          {language === 'fr' ? 'Lieu' : 'Venue'}
-                        </Text>
-                        <Text style={styles.summaryValue}>{selectedVenue.venueName}</Text>
-                        <Text style={styles.summarySubValue}>{selectedVenue.address}</Text>
-                      </View>
-                    )}
-
-                    {selectedDjs.length > 0 && (
-                      <View style={styles.summarySection}>
-                        <Text style={styles.summaryLabel}>
-                          {language === 'fr' ? 'DJs sélectionnés' : 'Selected DJs'}
-                        </Text>
-                        {selectedDjs.map((dj) => (
-                          <Text key={dj.userId} style={styles.summaryValue}>
-                            • {dj.artistName}
-                          </Text>
-                        ))}
-                      </View>
-                    )}
-
-                    {/* Détail des coûts */}
-                    <View style={styles.costBreakdown}>
-                      <Text style={styles.costTitle}>
-                        {language === 'fr' ? 'Détail des coûts' : 'Cost Breakdown'}
-                      </Text>
-
-                      {/* Coût du lieu */}
-                      {selectedVenue && (
-                        <View style={styles.costRow}>
-                          <Text style={styles.costLabel}>
-                            {language === 'fr' ? 'Lieu' : 'Venue'} ({selectedVenue.venueName})
-                          </Text>
-                          <Text style={styles.costValue}>
-                            {(() => {
-                              const venueBase = typeof selectedVenue.averageRatingGlobal === 'number'
-                                ? 50 + selectedVenue.averageRatingGlobal * 10
-                                : 50;
-                              return `${Math.round(venueBase)} €`;
-                            })()}
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* Prix DJ */}
-                      <View style={styles.costRow}>
-                        <Text style={styles.costLabel}>
-                          {language === 'fr' ? 'DJs' : 'DJs'}
-                        </Text>
-                        <Text style={styles.costValue}>
-                          {language === 'fr' ? 'Prix à convenir (contrat)' : 'Price to agree (contract)'}
-                        </Text>
-                      </View>
-
-                      {/* Total */}
-                      <View style={styles.costTotal}>
-                        <Text style={styles.costTotalLabel}>
-                          {language === 'fr' ? 'Total' : 'Total'}
-                        </Text>
-                        <Text style={styles.costTotalValue}>
-                          {formData.price ? `${formData.price} €` : (language === 'fr' ? 'À définir' : 'To define')}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.stepButtons}>
-                    <TouchableOpacity
-                      style={styles.backButtonStep}
-                      onPress={() => setCurrentStep(4)}
-                    >
-                      <Text style={styles.backButtonStepText}>
-                        ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.createButton, creating && styles.createButtonDisabled]}
-                      onPress={handleCreateEvent}
-                      disabled={creating || !formData.title || !formData.price}
-                    >
-                      {creating ? (
-                        <ActivityIndicator color="#0b0b0e" />
-                      ) : (
-                        <Text style={styles.createButtonText}>
-                          {language === 'fr' ? 'Confirmer et créer l\'événement' : 'Confirm and create event'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-            </View>
-          </>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Modal pour le sélecteur de date */}
@@ -3010,6 +2642,121 @@ const styles = StyleSheet.create({
   },
   tabButtonTextActive: {
     color: '#fff',
+  },
+  // ✅ AJOUT: Styles pour la section profil
+  profileSection: {
+    padding: 20,
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    position: 'relative',
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#111',
+  },
+  profileImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changePhotoButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: '35%',
+    backgroundColor: '#FF1744',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#0b0b0e',
+  },
+  profileForm: {
+    gap: 16,
+  },
+  inputLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 16,
+  },
+  bookerTypeContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  bookerTypeButton: {
+    flex: 1,
+    minWidth: 100,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+  },
+  bookerTypeButtonActive: {
+    borderColor: '#FF1744',
+    backgroundColor: 'rgba(255,23,68,0.2)',
+  },
+  bookerTypeButtonText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bookerTypeButtonTextActive: {
+    color: '#FF1744',
+    fontWeight: '800',
+  },
+  saveButton: {
+    backgroundColor: '#FF1744',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#0b0b0e',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  eventDashboardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF1744',
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 10,
+  },
+  eventDashboardButtonText: {
+    color: '#0b0b0e',
+    fontSize: 18,
+    fontWeight: '800',
   },
   eventsSection: {
     padding: 20,

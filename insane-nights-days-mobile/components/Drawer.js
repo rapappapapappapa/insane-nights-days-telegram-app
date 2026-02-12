@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    left: 16,
+    right: 16,
     bottom: 22,
     width: FLOATING_BTN_SIZE,
     height: FLOATING_BTN_SIZE,

@@ -3,9 +3,9 @@ import { Image, StyleSheet, View, Text, Platform } from 'react-native';
 
 /**
  * ✅ Composant Logo NOX réutilisable
- * Utilise le logo NOX (vrailogo.png)
+ * Utilise le logo NOX (noxlogo.png)
  * 
- * Le logo est placé dans: insane-nights-days-mobile/assets/vrailogo.png
+ * Le logo est placé dans: insane-nights-days-mobile/assets/noxlogo.png
  * Format: PNG avec fond transparent ou fond noir
  * 
  * ✅ Fallback si le logo ne charge pas (affiche le carré rouge avec "N")
@@ -15,7 +15,7 @@ export default function Logo({ size = 100, style }) {
   
   // ✅ DEBUG: Logger pour diagnostiquer les problèmes de chargement sur Android
   const handleImageError = (error) => {
-    console.error('[Logo] Erreur de chargement de vrailogo.png:', error);
+    console.error('[Logo] Erreur de chargement de noxlogo.png:', error);
     console.error('[Logo] Platform:', Platform.OS);
     setImageError(true);
   };
@@ -24,7 +24,7 @@ export default function Logo({ size = 100, style }) {
     <View style={[styles.container, { width: size, height: size }, style]}>
       {!imageError ? (
         <Image
-          source={require('../assets/vrailogo.png')}
+          source={require('../assets/noxlogo.png')}
           style={[styles.logo, { width: size, height: size }]}
           resizeMode="contain"
           onError={handleImageError}

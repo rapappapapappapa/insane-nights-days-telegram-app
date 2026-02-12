@@ -204,7 +204,7 @@ export default function EventDetailPage() {
       }
 
       const init = await Stripe.initPaymentSheet({
-        merchantDisplayName: 'Insane Nights & Days',
+        merchantDisplayName: 'Nox',
         paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
         allowsDelayedPaymentMethods: true,
         returnURL: 'insane-nights-days-mobile://stripe-redirect',

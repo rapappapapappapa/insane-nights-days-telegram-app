@@ -85,8 +85,10 @@ export default function BookerDashboardPage() {
     image: null,
   });
   
-  // Slots DJ pour la création d'événement
+  // Slots DJ pour la création d'événement (utilisés quand retour depuis SelectDj)
   const [djSlots, setDjSlots] = useState([null]); // Array de djIds ou null
+  const [currentStep, setCurrentStep] = useState(1);
+  const hasInitializedSlots = useRef(false);
 
   // Chat
   const [chatModalVisible, setChatModalVisible] = useState(false);
@@ -489,35 +491,7 @@ export default function BookerDashboardPage() {
     }
   }, [user?.token]);
 
-  // Rafraîchir la liste des DJs quand la date change
-  useEffect(() => {
-    if (user?.token && formData.date && currentStep >= 3) {
-      // Charger les DJs disponibles seulement si on a une date et qu'on est à l'étape 3 ou plus
-      fetchAvailableDjs();
-    }
-  }, [formData.date, currentStep, user?.token]);
-
-  // Initialiser les slots seulement la première fois qu'on arrive à l'étape 3
-  useEffect(() => {
-    if (currentStep === 3 && !hasInitializedSlots.current) {
-      // Si on a déjà des DJs sélectionnés, créer des slots pour eux + un slot vide
-      if (formData.djIds.length > 0) {
-        setDjSlots([...formData.djIds, null]);
-      } else if (djSlots.length === 0) {
-        // Si on n'a pas de slots du tout, créer un slot vide
-        setDjSlots([null]);
-      }
-      hasInitializedSlots.current = true;
-      console.log('[BookerDashboard] Initialisation slots étape 3:', { 
-        formDataDjIds: formData.djIds, 
-        djSlots: djSlots.length > 0 ? djSlots : (formData.djIds.length > 0 ? [...formData.djIds, null] : [null])
-      });
-    } else if (currentStep !== 3) {
-      // Réinitialiser le flag quand on quitte l'étape 3
-      hasInitializedSlots.current = false;
-    }
-    // Ne pas se déclencher si les slots sont déjà initialisés et qu'on est toujours à l'étape 3
-  }, [currentStep]); // Seulement dépendre de currentStep pour éviter les conflits
+  // Note: fetchAvailableDjs et initialisation des slots sont dans BookerEventDashboardPage
 
   const fetchMyEvents = async () => {
     if (!user?.token || loadingEvents) return;

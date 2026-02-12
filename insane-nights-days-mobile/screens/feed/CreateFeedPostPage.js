@@ -124,6 +124,17 @@ export default function CreateFeedPostPage() {
       return;
     }
 
+    // Vérifier que le profil actif est DJ ou Booker (backend refuse sinon)
+    const activeType = user?.activeProfileType;
+    if (activeType !== 'DJ' && activeType !== 'BOOKER') {
+      showError(
+        language === 'fr'
+          ? 'Seuls les profils DJ et Booker peuvent poster. Passe sur ton profil Booker ou DJ via le menu.'
+          : 'Only DJ and Booker profiles can post. Switch to your Booker or DJ profile via the menu.'
+      );
+      return;
+    }
+
     // Si une image locale est sélectionnée mais pas encore uploadée, l'uploader d'abord
     let finalImageUrl = imageUrl; // Utiliser l'URL existante si elle existe
     if (selectedImageUri && !imageUrl) {
@@ -169,8 +180,9 @@ export default function CreateFeedPostPage() {
       }
     } catch (error) {
       console.error('Erreur création post:', error);
+      const msg = error?.message || error?.payload?.message;
       showError(
-        error.message ||
+        msg ||
           (language === 'fr'
             ? 'Une erreur est survenue lors de la création du post'
             : 'An error occurred while creating the post')
@@ -180,10 +192,32 @@ export default function CreateFeedPostPage() {
     }
   };
 
+  // Garde : si connecté mais sans token, afficher un message
+  if (user && !user.token) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.errorGuard}>
+          <Text style={styles.errorGuardText}>
+            {language === 'fr' ? 'Vous devez être connecté pour poster.' : 'You must be logged in to post.'}
+          </Text>
+          <TouchableOpacity style={styles.errorGuardButton} onPress={goBack}>
+            <Text style={styles.errorGuardButtonText}>{language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Toast toast={toast} hideToast={hideToast} />
+      <Toast
+        message={toast?.message}
+        type={toast?.type || 'info'}
+        visible={!!toast?.visible}
+        onHide={hideToast}
+      />
       
       {/* ✅ HEADER: En-tête avec boutons annuler et publier */}
       <View style={styles.header}>
@@ -458,5 +492,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 12,
     fontSize: 14,
+  },
+  errorGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorGuardText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorGuardButton: {
+    backgroundColor: '#FF1744',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  errorGuardButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

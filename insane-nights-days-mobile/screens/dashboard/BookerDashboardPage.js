@@ -168,7 +168,16 @@ export default function BookerDashboardPage() {
     setShowTimePicker(true);
   };
 
-  // ✅ SUPPRIMÉ: Variables liées au formulaire de création d'événement (déplacées vers BookerEventDashboardPage)
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Gérer les sélections depuis routeParams (ex: ajout DJ à un événement existant)
+  const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, eventId: null, slotIndex: null });
+  const currentDjId = routeParams?.selectedDjId;
+  const currentVenueId = routeParams?.selectedVenueId;
+  const currentAction = routeParams?.action;
+  const currentEventId = routeParams?.eventId || null;
+  const currentSlotIndex = routeParams?.slotIndex;
   
   React.useEffect(() => {
     // Pour les mises à jour de slots (création d'événement), toujours permettre la mise à jour

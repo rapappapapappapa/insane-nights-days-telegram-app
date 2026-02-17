@@ -7,23 +7,21 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useToast } from '../hooks/useToast';
 import StarRating from './StarRating';
 
 export default function RatingModal({ visible, onClose, onSubmit, title, loading = false }) {
   const { language } = useLanguage();
+  const { showError } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
   const handleSubmit = () => {
     if (rating === 0) {
-      Alert.alert(
-        language === 'fr' ? 'Note requise' : 'Rating required',
-        language === 'fr' ? 'Veuillez sélectionner une note.' : 'Please select a rating.',
-      );
+      showError(language === 'fr' ? 'Veuillez sélectionner une note.' : 'Please select a rating.');
       return;
     }
 

@@ -834,12 +834,7 @@ export default function BookerDashboardPage() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          language === 'fr' ? 'Permission requise' : 'Permission required',
-          language === 'fr'
-            ? 'Autorise l’accès aux photos pour choisir une image.'
-            : 'Please allow photo access to pick an image.'
-        );
+        showError(language === 'fr' ? "Autorise l’accès aux photos pour choisir une image." : 'Please allow photo access to pick an image.');
         return;
       }
 

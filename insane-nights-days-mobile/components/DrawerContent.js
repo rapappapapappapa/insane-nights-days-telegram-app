@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { useToast } from '../hooks/useToast';
 import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
@@ -95,6 +96,7 @@ export default function DrawerContent({ navigation }) {
   const { navigate } = useNavigation();
   const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
+  const { showError, showSuccess } = useToast();
   const insets = useSafeAreaInsets();
 
   const [activeDjGenre, setActiveDjGenre] = useState(null);
@@ -134,28 +136,25 @@ export default function DrawerContent({ navigation }) {
             onPress: async () => {
               try {
                 if (!isEnabled) {
-                  Alert.alert(
-                    'Updates désactivés',
-                    'Les OTA updates ne sont pas activés dans cette version de l\'app.\n\nPour activer les updates, vous devez rebuild l\'app avec EAS Build:\n\neas build --platform android'
-                  );
+                  showError('Les OTA updates ne sont pas activés. Rebuild l\'app avec EAS Build pour les activer.');
                   return;
                 }
                 const res = await Updates.checkForUpdateAsync();
                 if (!res?.isAvailable) {
-                  Alert.alert('Updates', 'Aucune mise à jour disponible.');
+                  showSuccess('Aucune mise à jour disponible.');
                   return;
                 }
                 await Updates.fetchUpdateAsync();
                 await Updates.reloadAsync();
               } catch (e) {
-                Alert.alert('Erreur Updates', String(e?.message || e));
+                showError(String(e?.message || e));
               }
             },
           },
         ]
       );
     } catch (e) {
-      Alert.alert('Updates', String(e?.message || e));
+      showError(String(e?.message || e));
     }
   };
 

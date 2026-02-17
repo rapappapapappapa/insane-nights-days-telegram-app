@@ -14,6 +14,7 @@ import {
   Linking,
   KeyboardAvoidingView,
   Modal,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
@@ -1142,10 +1143,7 @@ export default function DjDashboardPage() {
   const pickProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        language === 'fr' ? 'Permission requise' : 'Permission required',
-        language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required'
-      );
+      showError(language === 'fr' ? "Permission d'accès à la galerie requise" : 'Gallery access permission required');
       return;
     }
 
@@ -1180,10 +1178,7 @@ export default function DjDashboardPage() {
   const pickBannerImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        language === 'fr' ? 'Permission requise' : 'Permission required',
-        language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required'
-      );
+      showError(language === 'fr' ? "Permission d'accès à la galerie requise" : 'Gallery access permission required');
       return;
     }
 

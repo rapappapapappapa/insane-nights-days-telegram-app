@@ -704,7 +704,7 @@ export default function BookerEventDashboardPage() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>
-                  {language === 'fr' ? 'Budget (optionnel)' : 'Budget (optional)'} (€)
+                  {language === 'fr' ? 'prix de la place' : 'price of the place'} (€)
                 </Text>
                 <TextInput
                   style={styles.input}

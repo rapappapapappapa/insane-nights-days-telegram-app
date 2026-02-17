@@ -77,6 +77,8 @@ export default function DjProfilePage() {
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [events, setEvents] = useState({ upcomingEvents: [], pastEvents: [] });
   const previousTabRef = useRef(activeTab);
+  const [following, setFollowing] = useState(false);
+  const [loadingFollow, setLoadingFollow] = useState(false);
   // Drawer global géré dans App.js
 
   useEffect(() => {
@@ -85,6 +87,21 @@ export default function DjProfilePage() {
     }
   }, [djId, djUserId]);
 
+  // Charger le statut d'abonnement (suivre ce profil DJ)
+  useEffect(() => {
+    if (!user?.token || !dj?.id || dj.userId === user?.id) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await api.getFollowStatus(user.token, { djId: dj.id });
+        if (mounted && res?.success) setFollowing(!!res.following);
+      } catch {
+        if (mounted) setFollowing(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [user?.token, user?.id, dj?.id, dj?.userId]);
+
   // Note: plus d'onglet audio, rien à stopper au changement d'onglet
 
   // Fonction pour arrêter l'audio et revenir en arrière
@@ -92,6 +109,27 @@ export default function DjProfilePage() {
     // Note: expo-audio gère automatiquement le nettoyage des players
     // quand les composants sont démontés, pas besoin d'arrêter manuellement
     goBack();
+  };
+
+  const handleFollowToggle = async () => {
+    if (!user?.token || !dj?.id || loadingFollow) return;
+    if (dj.userId === user?.id) return;
+    setLoadingFollow(true);
+    try {
+      if (following) {
+        await api.unfollowDj(user.token, dj.id);
+        setFollowing(false);
+        showSuccess(language === 'fr' ? 'Abonnement retiré.' : 'Unfollowed.');
+      } else {
+        await api.followDj(user.token, dj.id);
+        setFollowing(true);
+        showSuccess(language === 'fr' ? 'Vous suivez ce DJ.' : 'You now follow this DJ.');
+      }
+    } catch (e) {
+      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+    } finally {
+      setLoadingFollow(false);
+    }
   };
 
   const fetchDjProfile = async () => {
@@ -289,6 +327,22 @@ export default function DjProfilePage() {
               </View>
             ) : null}
           </View>
+          {/* Bouton Suivre (profil DJ) - visible si connecté, pas son propre profil, pas en mode sélection */}
+          {!selectionMode && user?.token && dj.userId !== user?.id && (
+            <TouchableOpacity
+              style={[styles.followButton, following && styles.followButtonActive]}
+              onPress={handleFollowToggle}
+              disabled={loadingFollow}
+            >
+              {loadingFollow ? (
+                <Text style={styles.followButtonText}>...</Text>
+              ) : (
+                <Text style={[styles.followButtonText, following && styles.followButtonTextActive]}>
+                  {following ? (language === 'fr' ? 'Abonné ✓' : 'Following ✓') : (language === 'fr' ? 'Suivre' : 'Follow')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
           {selectionMode ? (
             <TouchableOpacity 
               style={[styles.bookButton, selectedDjIds.includes(dj.userId) && styles.bookButtonSelected]}
@@ -862,6 +916,28 @@ const styles = StyleSheet.create({
   },
   bookButtonTextDisabled: {
     color: 'rgba(255,255,255,0.6)',
+  },
+  followButton: {
+    marginTop: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FF1744',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  followButtonActive: {
+    backgroundColor: 'rgba(255,23,68,0.2)',
+    borderColor: '#FF1744',
+  },
+  followButtonText: {
+    color: '#FF1744',
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  followButtonTextActive: {
+    color: '#FF1744',
   },
   card: {
     marginHorizontal: 20,

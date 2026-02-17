@@ -76,6 +76,10 @@ model User {
   bookers     UserBooker[]
   venues      UserVenue[]
 
+  // ✅ Abonnements (follow) - par profil (DJ ou Booker)
+  followingDjs     FollowDj[]
+  followingBookers FollowBooker[]
+
   // Relations vers les tickets
   tickets Ticket[]
   // ✅ Paiements
@@ -197,6 +201,8 @@ model UserDj {
   media   DjMedia[]
   // Relations vers les posts du feed
   feedPosts FeedPost[]
+  // ✅ Abonnés (qui suivent ce profil DJ)
+  followers FollowDj[]
 
   @@index([userId])
 }
@@ -218,6 +224,8 @@ model UserBooker {
   events Event[]
   // Relations vers les posts du feed
   feedPosts FeedPost[]
+  // ✅ Abonnés (qui suivent ce profil Booker)
+  followers FollowBooker[]
 
   @@index([userId])
 }
@@ -584,4 +592,32 @@ model FeedNotification {
   @@index([postId])
   @@index([read])
   @@index([createdAt]) // Pour trier par date décroissante
+}
+
+// ✅ Abonnements : suivre un profil DJ (UserDj.id)
+model FollowDj {
+  id         String   @id @default(uuid())
+  followerId String   // User.id qui suit
+  follower   User     @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  djId       String   // UserDj.id du profil suivi
+  dj         UserDj   @relation(fields: [djId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, djId])
+  @@index([followerId])
+  @@index([djId])
+}
+
+// ✅ Abonnements : suivre un profil Booker (UserBooker.id)
+model FollowBooker {
+  id         String      @id @default(uuid())
+  followerId String      // User.id qui suit
+  follower   User        @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  bookerId   String      // UserBooker.id du profil suivi
+  booker     UserBooker  @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+
+  @@unique([followerId, bookerId])
+  @@index([followerId])
+  @@index([bookerId])
 }

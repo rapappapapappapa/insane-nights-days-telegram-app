@@ -1246,6 +1246,31 @@ const api = {
     return apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, { noCache: true });
   },
 
+  // ✅ Abonnements : suivre / ne plus suivre un profil (DJ ou Booker)
+  followDj: async (token, djId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/dj/${djId}`, { method: 'POST' }, token);
+  },
+  unfollowDj: async (token, djId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/dj/${djId}`, { method: 'DELETE' }, token);
+  },
+  followBooker: async (token, bookerId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/booker/${bookerId}`, { method: 'POST' }, token);
+  },
+  unfollowBooker: async (token, bookerId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/booker/${bookerId}`, { method: 'DELETE' }, token);
+  },
+  getFollowStatus: async (token, { djId, bookerId }) => {
+    if (!token) throw new Error('Token requis.');
+    const params = new URLSearchParams();
+    if (djId) params.set('djId', djId);
+    if (bookerId) params.set('bookerId', bookerId);
+    return apiRequest(`/api/follow/status?${params}`, {}, token);
+  },
+
   // ✅ AJOUT: Uploader une image pour un post du feed
   uploadFeedPostImage: async (token, imageUri) => {
     if (!token) {

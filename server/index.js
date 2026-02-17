@@ -6804,6 +6804,129 @@ app.delete('/api/feed/post/:postId', authenticateToken, async (req, res) => {
 });
 
 /**
+ * ✅ Abonnements : suivre / ne plus suivre un profil DJ ou Booker
+ * On suit le profil (UserDj.id ou UserBooker.id), pas l'utilisateur.
+ */
+
+// Suivre un profil DJ (UserDj.id)
+app.post('/api/follow/dj/:djId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { djId } = req.params;
+
+    const dj = await prisma.userDj.findUnique({ where: { id: djId } });
+    if (!dj) {
+      return res.status(404).json({ success: false, message: 'Profil DJ non trouvé.' });
+    }
+
+    const existing = await prisma.followDj.findUnique({
+      where: { followerId_djId: { followerId, djId } },
+    });
+    if (existing) {
+      return res.json({ success: true, following: true, message: 'Déjà abonné.' });
+    }
+
+    await prisma.followDj.create({
+      data: { followerId, djId },
+    });
+
+    res.status(201).json({ success: true, following: true, message: 'Abonnement ajouté.' });
+  } catch (error) {
+    console.error('Erreur follow DJ:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Ne plus suivre un profil DJ
+app.delete('/api/follow/dj/:djId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { djId } = req.params;
+
+    await prisma.followDj.deleteMany({
+      where: { followerId, djId },
+    });
+
+    res.json({ success: true, following: false, message: 'Abonnement retiré.' });
+  } catch (error) {
+    console.error('Erreur unfollow DJ:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Suivre un profil Booker (UserBooker.id)
+app.post('/api/follow/booker/:bookerId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { bookerId } = req.params;
+
+    const booker = await prisma.userBooker.findUnique({ where: { id: bookerId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+
+    const existing = await prisma.followBooker.findUnique({
+      where: { followerId_bookerId: { followerId, bookerId } },
+    });
+    if (existing) {
+      return res.json({ success: true, following: true, message: 'Déjà abonné.' });
+    }
+
+    await prisma.followBooker.create({
+      data: { followerId, bookerId },
+    });
+
+    res.status(201).json({ success: true, following: true, message: 'Abonnement ajouté.' });
+  } catch (error) {
+    console.error('Erreur follow Booker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Ne plus suivre un profil Booker
+app.delete('/api/follow/booker/:bookerId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { bookerId } = req.params;
+
+    await prisma.followBooker.deleteMany({
+      where: { followerId, bookerId },
+    });
+
+    res.json({ success: true, following: false, message: 'Abonnement retiré.' });
+  } catch (error) {
+    console.error('Erreur unfollow Booker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Vérifier si l'utilisateur suit un profil (djId ou bookerId en query)
+app.get('/api/follow/status', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { djId, bookerId } = req.query;
+
+    if (djId) {
+      const follow = await prisma.followDj.findUnique({
+        where: { followerId_djId: { followerId, djId } },
+      });
+      return res.json({ success: true, following: !!follow });
+    }
+    if (bookerId) {
+      const follow = await prisma.followBooker.findUnique({
+        where: { followerId_bookerId: { followerId, bookerId } },
+      });
+      return res.json({ success: true, following: !!follow });
+    }
+
+    return res.status(400).json({ success: false, message: 'djId ou bookerId requis.' });
+  } catch (error) {
+    console.error('Erreur follow status:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * ✅ AJOUT: Récupérer le feed d'actualité (posts + événements)
  * @route GET /api/feed
  * @query limit - Nombre d'éléments à récupérer (défaut: 20)

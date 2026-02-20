@@ -754,7 +754,7 @@ export default function WelcomePage() {
                     const profileName = isDj
                       ? item.dj?.artistName
                       : (item.booker?.name || item.author?.username);
-                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : null;
+                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : normalizeMediaUrl(item.booker?.profileImage);
                     const profileLocation = isDj ? item.dj?.city : null;
                     const isAuthor = user?.id && item.author?.id === user.id;
                     const imageUri = normalizeMediaUrl(item.imageUrl);
@@ -771,6 +771,8 @@ export default function WelcomePage() {
                                   djId: item.dj.id,
                                   djUserId: item.dj.userId,
                                 });
+                              } else if (!isDj && item.booker) {
+                                navigate('bookerProfile', { bookerId: item.booker.id });
                               }
                             }}
                           >

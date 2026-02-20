@@ -1275,6 +1275,9 @@ const api = {
     if (bookerId) params.set('bookerId', bookerId);
     return apiRequest(`/api/follow/status?${params}`, {}, token);
   },
+  getBookerProfileById: async (bookerId) => {
+    return apiRequest(`/api/booker/${bookerId}/public`);
+  },
 
   // ✅ AJOUT: Uploader une image pour un post du feed
   uploadFeedPostImage: async (token, imageUri) => {

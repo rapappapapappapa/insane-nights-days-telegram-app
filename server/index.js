@@ -6854,6 +6854,60 @@ app.delete('/api/follow/dj/:djId', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * Récupérer le profil public d'un Booker (sans authentification)
+ * @route GET /api/booker/:bookerId/public
+ */
+app.get('/api/booker/:bookerId/public', async (req, res) => {
+  try {
+    const { bookerId } = req.params;
+    const booker = await prisma.userBooker.findUnique({
+      where: { id: bookerId },
+      include: {
+        _count: {
+          select: { events: true, feedPosts: true },
+        },
+      },
+    });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+    const getRequestBaseUrl = () => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) return publicUrl.replace(/\/$/, '');
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return host ? `${proto}://${host}` : '';
+    };
+    const baseUrl = getRequestBaseUrl();
+    const normalizeImageUrl = (url) => {
+      if (!url) return null;
+      if (url.startsWith('/uploads/')) return `${baseUrl}${url}`;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return url;
+    };
+    res.json({
+      success: true,
+      booker: {
+        id: booker.id,
+        userId: booker.userId,
+        pseudo: booker.pseudo,
+        nom: booker.nom,
+        prenom: booker.prenom,
+        name: booker.pseudo?.trim() || `${booker.nom} ${booker.prenom}`,
+        bookerType: booker.bookerType,
+        profileImage: normalizeImageUrl(booker.profileImage),
+        eventsCount: booker._count.events,
+        postsCount: booker._count.feedPosts,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur profil Booker public:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Suivre un profil Booker (UserBooker.id)
 app.post('/api/follow/booker/:bookerId', authenticateToken, async (req, res) => {
   try {

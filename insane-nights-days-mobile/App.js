@@ -38,6 +38,7 @@ import TicketsPage from './screens/events/TicketsPage';
 
 import ProfilePage from './screens/profiles/ProfilePage';
 import DjProfilePage from './screens/profiles/DjProfilePage';
+import BookerProfilePage from './screens/profiles/BookerProfilePage';
 import VenueProfilePage from './screens/profiles/VenueProfilePage';
 import DjListPage from './screens/profiles/DjListPage';
 import VenueListPage from './screens/profiles/VenueListPage';
@@ -78,6 +79,7 @@ const SCREENS = {
   djList: DjListPage,
   venueList: VenueListPage,
   djProfile: DjProfilePage,
+  bookerProfile: BookerProfilePage,
   djDashboard: DjDashboardPage,
   venueDashboard: VenueDashboardPage,
   bookerDashboard: BookerDashboardPage,

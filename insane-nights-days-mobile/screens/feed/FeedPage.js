@@ -294,6 +294,15 @@ export default function FeedPage() {
   };
 
   /**
+   * ✅ FONCTION: Naviguer vers le profil d'un Booker
+   */
+  const handleBookerPress = (bookerId) => {
+    if (bookerId) {
+      navigate('bookerProfile', { bookerId });
+    }
+  };
+
+  /**
    * ✅ AJOUT: Vérifier quels posts sont likés par l'utilisateur
    */
   const checkLikes = async () => {
@@ -559,8 +568,9 @@ export default function FeedPage() {
                       onPress={() => {
                         if (isDj && item.dj) {
                           handleDjPress(item.dj.id, item.dj.userId);
+                        } else if (!isDj && item.booker) {
+                          handleBookerPress(item.booker.id);
                         }
-                        // TODO: Ajouter navigation vers profil booker si nécessaire
                       }}
                     >
                       <View style={styles.postAvatar}>

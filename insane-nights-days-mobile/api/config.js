@@ -1246,6 +1246,11 @@ const api = {
     return apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, { noCache: true });
   },
 
+  getFeedFollowing: async (token, limit = 50, offset = 0) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/feed/following?limit=${limit}&offset=${offset}`, { noCache: true }, token);
+  },
+
   // ✅ Abonnements : suivre / ne plus suivre un profil (DJ ou Booker)
   followDj: async (token, djId) => {
     if (!token) throw new Error('Token requis.');

@@ -6927,6 +6927,144 @@ app.get('/api/follow/status', authenticateToken, async (req, res) => {
 });
 
 /**
+ * ✅ Feed Abonnements : posts + événements des profils suivis (DJ ou Booker)
+ * @route GET /api/feed/following
+ * @query limit, offset
+ * @auth requis
+ */
+app.get('/api/feed/following', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const followedDjs = await prisma.followDj.findMany({
+      where: { followerId: userId },
+      select: { djId: true },
+    });
+    const followedBookers = await prisma.followBooker.findMany({
+      where: { followerId: userId },
+      select: { bookerId: true },
+    });
+    const djIds = followedDjs.map((f) => f.djId));
+    const bookerIds = followedBookers.map((f) => f.bookerId);
+
+    if (djIds.length === 0 && bookerIds.length === 0) {
+      return res.json({ success: true, feed: [], total: 0 });
+    }
+
+    const postsWhere = {
+      OR: [
+        ...(djIds.length > 0 ? [{ djId: { in: djIds } }] : []),
+        ...(bookerIds.length > 0 ? [{ bookerId: { in: bookerIds } }] : []),
+      ],
+    };
+
+    const posts = await prisma.feedPost.findMany({
+      where: postsWhere,
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        dj: { select: { artistName: true, profileImage: true, city: true } },
+        booker: { select: { pseudo: true, nom: true, prenom: true, bookerType: true, profileImage: true } },
+        author: { select: { username: true, activeProfileType: true } },
+      },
+    });
+
+    const upcomingEvents = bookerIds.length > 0
+      ? await prisma.event.findMany({
+          where: { bookerId: { in: bookerIds }, status: 'UPCOMING', date: { gte: new Date() } },
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            venue: { select: { venueName: true, address: true } },
+            booker: { select: { pseudo: true, nom: true, prenom: true } },
+          },
+        })
+      : [];
+
+    const getRequestBaseUrl = () => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) return publicUrl.replace(/\/$/, '');
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return `${proto}://${host}`.replace(/\/$/, '');
+    };
+    const baseUrl = getRequestBaseUrl();
+    const normalizeImageUrl = (imageUrl) => {
+      if (!imageUrl) return null;
+      if (imageUrl.startsWith('/uploads/')) return `${baseUrl}${imageUrl}`;
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+      return imageUrl;
+    };
+
+    const formattedPosts = posts.map((post) => {
+      const profileType = post.djId ? 'DJ' : (post.bookerId ? 'BOOKER' : null);
+      const formattedPost = {
+        type: 'post',
+        id: post.id,
+        content: post.content,
+        imageUrl: normalizeImageUrl(post.imageUrl),
+        likes: post.likes,
+        createdAt: post.createdAt,
+        profileType,
+        author: { id: post.authorId, username: post.author.username },
+      };
+      if (post.dj) {
+        formattedPost.dj = {
+          id: post.djId,
+          userId: post.authorId,
+          artistName: post.dj.artistName,
+          profileImage: normalizeImageUrl(post.dj.profileImage),
+          city: post.dj.city,
+        };
+      }
+      if (post.booker) {
+        formattedPost.booker = {
+          id: post.bookerId,
+          userId: post.authorId,
+          name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
+          bookerType: post.booker.bookerType,
+          profileImage: normalizeImageUrl(post.booker.profileImage),
+        };
+      }
+      return formattedPost;
+    });
+
+    const formattedEvents = upcomingEvents.map((event) => ({
+      type: 'event',
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      price: event.price,
+      genre: event.genre,
+      image: normalizeImageUrl(event.image),
+      venue: event.venue ? { name: event.venue.venueName, address: event.venue.address } : null,
+      booker: event.booker ? { name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}` } : null,
+      createdAt: event.createdAt,
+    }));
+
+    const feedItems = [...formattedPosts, ...formattedEvents].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json({
+      success: true,
+      feed: feedItems.slice(0, limit),
+      total: feedItems.length,
+    });
+  } catch (error) {
+    console.error('Erreur feed following:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * ✅ AJOUT: Récupérer le feed d'actualité (posts + événements)
  * @route GET /api/feed
  * @query limit - Nombre d'éléments à récupérer (défaut: 20)

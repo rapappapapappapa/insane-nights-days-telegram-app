@@ -116,6 +116,7 @@ export default function FeedPage() {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedTab, setFeedTab] = useState('all'); // 'all' | 'following' - style X
   // ✅ OPTIMISATION: Utiliser useReducer pour grouper les états liés aux posts
   const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
   
@@ -166,10 +167,8 @@ export default function FeedPage() {
   ];
 
   useEffect(() => {
-    // ✅ FORCER le rechargement au montage du composant (première installation)
-    // Cela garantit que les nouveaux utilisateurs récupèrent toujours les données fraîches
     fetchFeed();
-  }, []);
+  }, [feedTab]);
 
   // ✅ AJOUT: Vérifier les likes au chargement du feed
   useEffect(() => {
@@ -184,19 +183,28 @@ export default function FeedPage() {
    *                              Cela permet d'afficher un indicateur différent lors du pull-to-refresh
    */
   const fetchFeed = async (isRefresh = false) => {
-    // ✅ MODIFICATION: Utiliser 'refreshing' si c'est un rafraîchissement, sinon 'loading'
-    // Cela permet d'avoir deux indicateurs différents : un pour le chargement initial, un pour le refresh
     if (isRefresh) {
-      setRefreshing(true); // Indicateur de pull-to-refresh (en haut de la liste)
+      setRefreshing(true);
     } else {
-      setLoading(true); // Indicateur de chargement initial (centré)
+      setLoading(true);
     }
 
+    const isFollowing = feedTab === 'following';
+
     try {
-      // ✅ IMPORTANT: Toujours récupérer depuis le serveur (noCache déjà activé dans api.getFeed)
-      // Ajouter un timestamp pour éviter tout cache même au niveau du navigateur/Expo
+      let response;
+      if (isFollowing && user?.token) {
+        response = await api.getFeedFollowing(user.token, 50, 0);
+      } else if (isFollowing && !user?.token) {
+        setFeed([]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      } else {
+        response = await api.getFeed(50, 0);
+      }
+
       const timestamp = Date.now();
-      const response = await api.getFeed(50, 0); // ✅ AUGMENTÉ: Récupérer 50 éléments pour voir plus de posts historiques
       if (response && response.success && Array.isArray(response.feed)) {
         // ✅ DEBUG: Logger les informations du feed pour diagnostiquer
         console.log('[FeedPage] Feed récupéré:', {
@@ -469,6 +477,30 @@ export default function FeedPage() {
         </View>
       </View>
 
+      {/* Onglets style X : Pour tous | Abonnements */}
+      <View style={styles.feedTabs}>
+        <TouchableOpacity
+          style={[styles.feedTab, feedTab === 'all' && styles.feedTabActive]}
+          onPress={() => setFeedTab('all')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.feedTabText, feedTab === 'all' && styles.feedTabTextActive]}>
+            {language === 'fr' ? 'Pour tous' : 'For you'}
+          </Text>
+          {feedTab === 'all' && <View style={styles.feedTabIndicator} />}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
+          onPress={() => setFeedTab('following')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
+            {language === 'fr' ? 'Abonnements' : 'Following'}
+          </Text>
+          {feedTab === 'following' && <View style={styles.feedTabIndicator} />}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.feed}
         contentContainerStyle={styles.feedContent}
@@ -484,11 +516,23 @@ export default function FeedPage() {
         {feed.length === 0 ? (
           <EmptyState
             icon="newspaper-outline"
-            title={language === 'fr' ? 'Aucun contenu' : 'No content'}
+            title={
+              feedTab === 'following' && !user?.token
+                ? (language === 'fr' ? 'Connecte-toi' : 'Log in')
+                : (language === 'fr' ? 'Aucun contenu' : 'No content')
+            }
             message={
-              language === 'fr'
-                ? 'Le feed est vide pour le moment'
-                : 'The feed is empty for now'
+              feedTab === 'following' && !user?.token
+                ? (language === 'fr'
+                    ? 'Connecte-toi pour voir les posts des profils que tu suis'
+                    : 'Log in to see posts from profiles you follow')
+                : feedTab === 'following'
+                ? (language === 'fr'
+                    ? 'Suis des DJs ou des bookers pour voir leurs posts ici'
+                    : 'Follow DJs or bookers to see their posts here')
+                : (language === 'fr'
+                    ? 'Le feed est vide pour le moment'
+                    : 'The feed is empty for now')
             }
           />
         ) : (
@@ -884,6 +928,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  feedTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#0b0b0e',
+  },
+  feedTab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedTabActive: {},
+  feedTabText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  feedTabTextActive: {
+    color: '#fff',
+  },
+  feedTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: '25%',
+    right: '25%',
+    height: 3,
+    backgroundColor: '#FF1744',
+    borderRadius: 2,
   },
   feed: {
     flex: 1,

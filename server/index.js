@@ -6946,7 +6946,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       where: { followerId: userId },
       select: { bookerId: true },
     });
-    const djIds = followedDjs.map((f) => f.djId));
+    const djIds = followedDjs.map((f) => f.djId);
     const bookerIds = followedBookers.map((f) => f.bookerId);
 
     if (djIds.length === 0 && bookerIds.length === 0) {

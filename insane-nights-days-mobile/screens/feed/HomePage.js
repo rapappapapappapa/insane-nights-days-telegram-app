@@ -508,12 +508,16 @@ export default function HomePage() {
                         <View style={styles.postHeader}>
                           <TouchableOpacity
                             style={styles.postHeaderLeft}
+                            activeOpacity={0.7}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             onPress={() => {
                               if (isDj && item.dj) {
                                 navigate('djProfile', {
                                   djId: item.dj.id,
                                   djUserId: item.dj.userId,
                                 });
+                              } else if (!isDj && (item.booker?.id || item.bookerId)) {
+                                navigate('bookerProfile', { bookerId: item.booker?.id || item.bookerId });
                               }
                             }}
                           >

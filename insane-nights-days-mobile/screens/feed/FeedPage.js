@@ -565,11 +565,13 @@ export default function FeedPage() {
                   <View style={styles.postHeader}>
                     <TouchableOpacity
                       style={styles.postHeaderLeft}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       onPress={() => {
                         if (isDj && item.dj) {
                           handleDjPress(item.dj.id, item.dj.userId);
-                        } else if (!isDj && item.booker) {
-                          handleBookerPress(item.booker.id);
+                        } else if (!isDj && (item.booker?.id || item.bookerId)) {
+                          handleBookerPress(item.booker?.id || item.bookerId);
                         }
                       }}
                     >
@@ -992,6 +994,7 @@ const styles = StyleSheet.create({
   postHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    flex: 1,
   },
   reportIconBtn: {
     width: 36,

@@ -7083,6 +7083,8 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
           bookerType: post.booker.bookerType,
           profileImage: normalizeImageUrl(post.booker.profileImage),
         };
+      } else if (post.bookerId) {
+        formattedPost.bookerId = post.bookerId;
       }
       return formattedPost;
     });
@@ -7290,6 +7292,8 @@ app.get('/api/feed', async (req, res) => {
           bookerType: post.booker.bookerType,
           profileImage: normalizeImageUrl(post.booker.profileImage),
         };
+      } else if (post.bookerId) {
+        formattedPost.bookerId = post.bookerId;
       }
 
       return formattedPost;

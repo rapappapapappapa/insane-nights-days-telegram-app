@@ -163,15 +163,21 @@ export default function CommunityProfileEditPage() {
             style={styles.bannerWrap}
             onPress={() => pickImage('banner')}
             disabled={uploadingBanner}
+            activeOpacity={0.9}
           >
             <Image source={{ uri: normalizeMediaUrl(bannerImage) }} style={styles.banner} />
-            {uploadingBanner && <ActivityIndicator style={styles.overlayLoader} size="small" color="#fff" />}
+            {uploadingBanner && (
+              <View style={styles.overlayLoaderWrap}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.bannerPlaceholder}
             onPress={() => pickImage('banner')}
             disabled={uploadingBanner}
+            activeOpacity={0.9}
           >
             <Ionicons name="image-outline" size={40} color="rgba(255,255,255,0.5)" />
             <Text style={styles.placeholderText}>{language === 'fr' ? 'Ajouter une bannière' : 'Add banner'}</Text>
@@ -180,12 +186,26 @@ export default function CommunityProfileEditPage() {
 
         <View style={styles.avatarWrap}>
           {profileImage ? (
-            <TouchableOpacity onPress={() => pickImage('profile')} disabled={uploadingProfile}>
+            <TouchableOpacity
+              onPress={() => pickImage('profile')}
+              disabled={uploadingProfile}
+              activeOpacity={0.9}
+              style={styles.avatarTouchWrap}
+            >
               <Image source={{ uri: normalizeMediaUrl(profileImage) }} style={styles.avatar} />
-              {uploadingProfile && <ActivityIndicator style={styles.avatarLoader} size="small" color="#fff" />}
+              {uploadingProfile && (
+                <View style={styles.avatarLoaderWrap}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.avatarPlaceholder} onPress={() => pickImage('profile')} disabled={uploadingProfile}>
+            <TouchableOpacity
+              style={styles.avatarPlaceholder}
+              onPress={() => pickImage('profile')}
+              disabled={uploadingProfile}
+              activeOpacity={0.9}
+            >
               <Ionicons name="person" size={50} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
           )}
@@ -242,15 +262,25 @@ const styles = StyleSheet.create({
   backBtnText: { color: '#fff', fontSize: 16 },
   header: { alignItems: 'center', paddingBottom: 20 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 16 },
-  bannerWrap: { width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: -40 },
+  bannerWrap: { width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: 8 },
   banner: { width: '100%', height: '100%' },
-  bannerPlaceholder: { width: '100%', height: 120, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', marginBottom: -40 },
+  bannerPlaceholder: { width: '100%', height: 120, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   placeholderText: { color: 'rgba(255,255,255,0.5)', marginTop: 8 },
-  overlayLoader: { position: 'absolute', alignSelf: 'center', top: '50%' },
-  avatarWrap: { marginBottom: 16 },
+  overlayLoaderWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  avatarWrap: { marginBottom: 24, alignItems: 'center' },
+  avatarTouchWrap: { position: 'relative' },
   avatar: { width: 100, height: 100, borderRadius: 50 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,23,68,0.3)', justifyContent: 'center', alignItems: 'center' },
-  avatarLoader: { position: 'absolute', alignSelf: 'center', top: '50%' },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,23,68,0.4)',
+  },
+  avatarLoaderWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 50 },
   form: { paddingHorizontal: 20 },
   label: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },

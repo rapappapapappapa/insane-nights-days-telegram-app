@@ -76,6 +76,14 @@ const menuItems = [
     onlyWhenLoggedIn: true,
   },
   {
+    id: 'bookerProfileEdit',
+    emoji: '📅',
+    title: 'Mon profil Booker',
+    description: 'Modifier pseudo, photo, infos',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['BOOKER'],
+  },
+  {
     id: 'switchProfile',
     emoji: '🔄',
     title: 'Changer de profil',
@@ -196,7 +204,11 @@ export default function DrawerContent({ navigation }) {
 
   const handleMenuItemPress = (itemId, params) => {
     navigation.closeDrawer(); // Fermer le drawer avant de naviguer
-    navigate(itemId, params);
+    if (itemId === 'bookerProfileEdit') {
+      navigate('bookerDashboard', { openSection: 'profil' });
+    } else {
+      navigate(itemId, params);
+    }
   };
 
   const dashboardItem = (() => {

@@ -33,7 +33,7 @@ const getBookerPlaceholderImage = (name) => {
 export default function BookerProfilePage() {
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();
-  const { routeParams, goBack } = useNavigation();
+  const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { bookerId } = routeParams || {};
@@ -182,7 +182,16 @@ export default function BookerProfilePage() {
             </View>
           </View>
 
-          {user?.token && booker.userId !== user?.id && (
+          {user?.token && booker.userId === user?.id ? (
+            <TouchableOpacity
+              style={styles.followButton}
+              onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
+            >
+              <Text style={styles.followButtonText}>
+                {language === 'fr' ? 'Modifier mon profil' : 'Edit my profile'}
+              </Text>
+            </TouchableOpacity>
+          ) : user?.token && booker.userId !== user?.id ? (
             <TouchableOpacity
               style={[styles.followButton, following && styles.followButtonActive]}
               onPress={handleFollowToggle}
@@ -196,7 +205,7 @@ export default function BookerProfilePage() {
                 </Text>
               )}
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       </View>
 

@@ -517,25 +517,33 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   <View style={styles.profileSection}>
                     <Text style={styles.profileSectionTitle}>📅 Booker</Text>
                     {profiles.profiles.booker.map((profile) => (
-                      <TouchableOpacity
-                        key={profile.id}
-                        style={[
-                          styles.profileItem,
-                          profiles.activeProfileType === 'BOOKER' && styles.profileItemActive,
-                        ]}
-                        onPress={() => handleSwitchProfile('BOOKER')}
-                        disabled={switchingProfile || profiles.activeProfileType === 'BOOKER'}
-                      >
-                        <Text style={styles.profileItemText}>
-                          {profile.prenom} {profile.nom}
-                        </Text>
-                        {profiles.activeProfileType === 'BOOKER' && (
-                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                        )}
-                        {switchingProfile && profiles.activeProfileType !== 'BOOKER' && (
-                          <ActivityIndicator size="small" color="#FF1744" />
-                        )}
-                      </TouchableOpacity>
+                      <View key={profile.id} style={styles.profileItemRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.profileItem,
+                            styles.profileItemFlex,
+                            profiles.activeProfileType === 'BOOKER' && styles.profileItemActive,
+                          ]}
+                          onPress={() => handleSwitchProfile('BOOKER')}
+                          disabled={switchingProfile || profiles.activeProfileType === 'BOOKER'}
+                        >
+                          <Text style={styles.profileItemText}>
+                            {profile.pseudo || `${profile.prenom} ${profile.nom}`}
+                          </Text>
+                          {profiles.activeProfileType === 'BOOKER' && (
+                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                          )}
+                          {switchingProfile && profiles.activeProfileType !== 'BOOKER' && (
+                            <ActivityIndicator size="small" color="#FF1744" />
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.profileEditButton}
+                          onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
+                        >
+                          <Text style={styles.profileEditButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 )}
@@ -942,6 +950,26 @@ const styles = StyleSheet.create({
   profileItemActiveBadge: {
     color: '#FF1744',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  profileItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  profileItemFlex: {
+    flex: 1,
+  },
+  profileEditButton: {
+    backgroundColor: 'rgba(255,23,68,0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  profileEditButtonText: {
+    color: '#FF1744',
+    fontSize: 13,
     fontWeight: '600',
   },
   noProfilesText: {

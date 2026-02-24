@@ -52,9 +52,12 @@ export default function BookerDashboardPage() {
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
   const shouldOpenBookings =
     !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
+  const shouldOpenProfil = routeParams?.openSection === 'profil';
   
   // ✅ MODIFICATION: Ajouter une section "Profil" avec activeSection (profil, events)
-  const [activeSection, setActiveSection] = useState(shouldOpenBookings ? 'events' : 'profil');
+  const [activeSection, setActiveSection] = useState(
+    shouldOpenProfil ? 'profil' : (shouldOpenBookings ? 'events' : 'profil')
+  );
   
   // ✅ AJOUT: États pour la gestion du profil booker
   const [bookerProfile, setBookerProfile] = useState(null);
@@ -1071,17 +1074,30 @@ export default function BookerDashboardPage() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ AJOUT: Bouton Dashboard Événement */}
+      {/* ✅ AJOUT: Boutons Profil (voir public + dashboard événement) */}
       {activeSection === 'profil' && (
-        <TouchableOpacity
-          style={styles.eventDashboardButton}
-          onPress={() => navigate('bookerEventDashboard', {})}
-        >
-          <Ionicons name="calendar" size={24} color="#0b0b0e" />
-          <Text style={styles.eventDashboardButtonText}>
-            {language === 'fr' ? 'Dashboard Événement' : 'Event Dashboard'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.profilActionsRow}>
+          {bookerProfile?.id && (
+            <TouchableOpacity
+              style={styles.viewPublicProfileButton}
+              onPress={() => navigate('bookerProfile', { bookerId: bookerProfile.id })}
+            >
+              <Ionicons name="eye-outline" size={20} color="#FF1744" />
+              <Text style={styles.viewPublicProfileButtonText}>
+                {language === 'fr' ? 'Voir mon profil public' : 'View my public profile'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.eventDashboardButton}
+            onPress={() => navigate('bookerEventDashboard', {})}
+          >
+            <Ionicons name="calendar" size={24} color="#0b0b0e" />
+            <Text style={styles.eventDashboardButtonText}>
+              {language === 'fr' ? 'Dashboard Événement' : 'Event Dashboard'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <ScrollView
@@ -2733,17 +2749,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  profilActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  viewPublicProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FF1744',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    flex: 1,
+    minWidth: 140,
+  },
+  viewPublicProfileButtonText: {
+    color: '#FF1744',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   eventDashboardButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF1744',
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
     paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
     gap: 10,
+    flex: 1,
+    minWidth: 140,
   },
   eventDashboardButtonText: {
     color: '#0b0b0e',

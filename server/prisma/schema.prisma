@@ -149,13 +149,44 @@ model UserCommunity {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nom           String
   prenom        String
+  pseudo        String?  // Pseudo affiché (à la place du nom complet)
   pays          String
   dateNaissance String // Format: jj/mm/aaaa
   isnNumber     String   @unique
+  profileImage  String?  // URL de la photo de profil
+  bannerImage   String?  // URL de la bannière
+  genres        String?  // Styles écoutés (séparés par virgules: "Techno,House,Deep House")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Relations vers les amis (profils communauté)
+  friendshipsRequested CommunityFriend[] @relation("FriendRequester")
+  friendshipsReceived  CommunityFriend[] @relation("FriendRequested")
+
   @@index([userId])
+}
+
+// ✅ Amis entre profils Communauté (pour participer aux events ensemble, etc.)
+model CommunityFriend {
+  id                   String   @id @default(uuid())
+  requesterCommunityId String   // UserCommunity.id qui envoie la demande
+  requester            UserCommunity @relation("FriendRequester", fields: [requesterCommunityId], references: [id], onDelete: Cascade)
+  requestedCommunityId String   // UserCommunity.id qui reçoit la demande
+  requested            UserCommunity @relation("FriendRequested", fields: [requestedCommunityId], references: [id], onDelete: Cascade)
+  status               CommunityFriendStatus @default(PENDING) // PENDING | ACCEPTED | BLOCKED
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([requesterCommunityId, requestedCommunityId])
+  @@index([requesterCommunityId])
+  @@index([requestedCommunityId])
+  @@index([status])
+}
+
+enum CommunityFriendStatus {
+  PENDING  // Demande en attente
+  ACCEPTED  // Amis
+  BLOCKED   // Bloqué
 }
 
 model UserDj {

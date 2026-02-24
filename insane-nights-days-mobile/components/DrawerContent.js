@@ -12,6 +12,12 @@ import * as Updates from 'expo-updates';
 
 const menuItems = [
   {
+    id: 'home',
+    emoji: '📰',
+    title: 'Feed',
+    description: 'Retour au fil d\'actualité',
+  },
+  {
     id: 'login',
     emoji: '🔐',
     title: 'Connexion',

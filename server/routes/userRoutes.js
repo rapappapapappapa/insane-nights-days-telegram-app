@@ -74,6 +74,20 @@ router.get('/dj/profile', authenticateToken, userController.getCurrentDjProfile)
 router.put('/dj/profile', authenticateToken, userController.updateDjProfile);
 
 /**
+ * @route GET /api/user/community/profile
+ * @desc Récupère le profil Communauté de l'utilisateur connecté
+ * @access Private
+ */
+router.get('/community/profile', authenticateToken, userController.getCommunityProfile);
+
+/**
+ * @route PUT /api/user/community/profile
+ * @desc Met à jour le profil Communauté (pseudo, genres)
+ * @access Private
+ */
+router.put('/community/profile', authenticateToken, userController.updateCommunityProfile);
+
+/**
  * @route GET /api/user/:userId
  * @desc Récupère les informations d'un utilisateur par son ID
  * @access Public
@@ -82,7 +96,7 @@ router.put('/dj/profile', authenticateToken, userController.updateDjProfile);
  */
 router.get('/:userId', (req, res, next) => {
   // Éviter de matcher /dj comme userId (pour laisser passer /dj/profile)
-  if (req.params.userId === 'dj' || req.params.userId === 'profiles' || req.params.userId === 'me') {
+  if (req.params.userId === 'dj' || req.params.userId === 'profiles' || req.params.userId === 'me' || req.params.userId === 'community') {
     return res.status(404).json({ success: false, message: 'Route non trouvée' });
   }
   userController.getUserById(req, res, next);

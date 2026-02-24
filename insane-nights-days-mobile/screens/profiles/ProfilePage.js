@@ -204,14 +204,6 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
-        {isAuthenticated && (
-          <TouchableOpacity
-            style={styles.switchProfileButton}
-            onPress={() => navigate('switchProfile')}
-          >
-            <Text style={styles.switchProfileButtonText}>🔄 Changer de profil</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       <ScrollView
@@ -225,7 +217,8 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>I</Text>
           </View>
-          <Text style={styles.title}>🏆 Mon Profil</Text>
+          <Text style={styles.title}>👤 Mes Profils</Text>
+          <Text style={styles.subtitle}>Gère tes profils et bascule entre eux</Text>
         </View>
 
         <View style={styles.card}>
@@ -463,25 +456,33 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   <View style={styles.profileSection}>
                     <Text style={styles.profileSectionTitle}>👥 Communauté</Text>
                     {profiles.profiles.community.map((profile) => (
-                      <TouchableOpacity
-                        key={profile.id}
-                        style={[
-                          styles.profileItem,
-                          profiles.activeProfileType === 'COMMUNITY' && styles.profileItemActive,
-                        ]}
-                        onPress={() => handleSwitchProfile('COMMUNITY')}
-                        disabled={switchingProfile || profiles.activeProfileType === 'COMMUNITY'}
-                      >
-                        <Text style={styles.profileItemText}>
-                          {profile.prenom} {profile.nom}
-                        </Text>
-                        {profiles.activeProfileType === 'COMMUNITY' && (
-                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                        )}
-                        {switchingProfile && profiles.activeProfileType !== 'COMMUNITY' && (
-                          <ActivityIndicator size="small" color="#FF1744" />
-                        )}
-                      </TouchableOpacity>
+                      <View key={profile.id} style={styles.profileItemRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.profileItem,
+                            styles.profileItemFlex,
+                            profiles.activeProfileType === 'COMMUNITY' && styles.profileItemActive,
+                          ]}
+                          onPress={() => handleSwitchProfile('COMMUNITY')}
+                          disabled={switchingProfile || profiles.activeProfileType === 'COMMUNITY'}
+                        >
+                          <Text style={styles.profileItemText}>
+                            {profile.pseudo || `${profile.prenom} ${profile.nom}`}
+                          </Text>
+                          {profiles.activeProfileType === 'COMMUNITY' && (
+                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                          )}
+                          {switchingProfile && profiles.activeProfileType !== 'COMMUNITY' && (
+                            <ActivityIndicator size="small" color="#FF1744" />
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.profileEditButton}
+                          onPress={() => navigate('communityProfileEdit')}
+                        >
+                          <Text style={styles.profileEditButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 )}
@@ -491,23 +492,31 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   <View style={styles.profileSection}>
                     <Text style={styles.profileSectionTitle}>🎧 DJ</Text>
                     {profiles.profiles.dj.map((profile) => (
-                      <TouchableOpacity
-                        key={profile.id}
-                        style={[
-                          styles.profileItem,
-                          profiles.activeProfileType === 'DJ' && styles.profileItemActive,
-                        ]}
-                        onPress={() => handleSwitchProfile('DJ')}
-                        disabled={switchingProfile || profiles.activeProfileType === 'DJ'}
-                      >
-                        <Text style={styles.profileItemText}>{profile.artistName}</Text>
-                        {profiles.activeProfileType === 'DJ' && (
-                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                        )}
-                        {switchingProfile && profiles.activeProfileType !== 'DJ' && (
-                          <ActivityIndicator size="small" color="#FF1744" />
-                        )}
-                      </TouchableOpacity>
+                      <View key={profile.id} style={styles.profileItemRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.profileItem,
+                            styles.profileItemFlex,
+                            profiles.activeProfileType === 'DJ' && styles.profileItemActive,
+                          ]}
+                          onPress={() => handleSwitchProfile('DJ')}
+                          disabled={switchingProfile || profiles.activeProfileType === 'DJ'}
+                        >
+                          <Text style={styles.profileItemText}>{profile.artistName}</Text>
+                          {profiles.activeProfileType === 'DJ' && (
+                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                          )}
+                          {switchingProfile && profiles.activeProfileType !== 'DJ' && (
+                            <ActivityIndicator size="small" color="#FF1744" />
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.profileEditButton}
+                          onPress={() => navigate('djDashboard')}
+                        >
+                          <Text style={styles.profileEditButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 )}
@@ -553,23 +562,31 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   <View style={styles.profileSection}>
                     <Text style={styles.profileSectionTitle}>🏢 Lieu</Text>
                     {profiles.profiles.venue.map((profile) => (
-                      <TouchableOpacity
-                        key={profile.id}
-                        style={[
-                          styles.profileItem,
-                          profiles.activeProfileType === 'VENUE' && styles.profileItemActive,
-                        ]}
-                        onPress={() => handleSwitchProfile('VENUE')}
-                        disabled={switchingProfile || profiles.activeProfileType === 'VENUE'}
-                      >
-                        <Text style={styles.profileItemText}>{profile.venueName}</Text>
-                        {profiles.activeProfileType === 'VENUE' && (
-                          <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                        )}
-                        {switchingProfile && profiles.activeProfileType !== 'VENUE' && (
-                          <ActivityIndicator size="small" color="#FF1744" />
-                        )}
-                      </TouchableOpacity>
+                      <View key={profile.id} style={styles.profileItemRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.profileItem,
+                            styles.profileItemFlex,
+                            profiles.activeProfileType === 'VENUE' && styles.profileItemActive,
+                          ]}
+                          onPress={() => handleSwitchProfile('VENUE')}
+                          disabled={switchingProfile || profiles.activeProfileType === 'VENUE'}
+                        >
+                          <Text style={styles.profileItemText}>{profile.venueName}</Text>
+                          {profiles.activeProfileType === 'VENUE' && (
+                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                          )}
+                          {switchingProfile && profiles.activeProfileType !== 'VENUE' && (
+                            <ActivityIndicator size="small" color="#FF1744" />
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.profileEditButton}
+                          onPress={() => navigate('venueDashboard')}
+                        >
+                          <Text style={styles.profileEditButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
                   </View>
                 )}
@@ -578,9 +595,14 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                  (!profiles.profiles?.dj || profiles.profiles.dj.length === 0) &&
                  (!profiles.profiles?.booker || profiles.profiles.booker.length === 0) &&
                  (!profiles.profiles?.venue || profiles.profiles.venue.length === 0) && (
-                  <Text style={styles.noProfilesText}>
-                    Aucun profil créé. Créez-en un depuis le menu !
-                  </Text>
+                  <View style={styles.noProfilesBox}>
+                    <Text style={styles.noProfilesText}>
+                      Aucun profil créé. Créez-en un !
+                    </Text>
+                    <TouchableOpacity style={styles.createProfileBtn} onPress={() => navigate('switchProfile')}>
+                      <Text style={styles.createProfileBtnText}>Créer un profil</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             ) : (
@@ -977,5 +999,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginVertical: 20,
+  },
+  noProfilesBox: {
+    backgroundColor: '#141419',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.2)',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  createProfileBtn: {
+    backgroundColor: '#FF1744',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  createProfileBtnText: {
+    color: '#0b0b0e',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

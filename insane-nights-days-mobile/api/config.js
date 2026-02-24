@@ -1279,6 +1279,36 @@ const api = {
     return apiRequest(`/api/booker/${bookerId}/public`);
   },
 
+  getCommunityProfile: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/profile', {}, token);
+  },
+  updateCommunityProfile: async (token, { pseudo, genres }) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ pseudo: pseudo?.trim() || null, genres: genres?.trim() || null }),
+    }, token);
+  },
+  uploadCommunityProfileImage: async (token, imageUri, type = 'profile') => {
+    if (!token) throw new Error('Token requis.');
+    const formData = new FormData();
+    formData.append('image', {
+      uri: imageUri,
+      type: getMimeType(imageUri, 'photo'),
+      name: getFileName(imageUri),
+    });
+    const url = `${API_CONFIG.BASE_URL}/api/user/community/profile/upload-image?type=${type}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Erreur upload');
+    return data;
+  },
+
   // ✅ AJOUT: Uploader une image pour un post du feed
   uploadFeedPostImage: async (token, imageUri) => {
     if (!token) {

@@ -40,10 +40,14 @@ const getUserProfiles = async (req, res) => {
       community: user.communities.map((c) => ({
         id: c.id,
         type: 'COMMUNITY',
+        pseudo: c.pseudo,
         nom: c.nom,
         prenom: c.prenom,
         pays: c.pays,
         isnNumber: c.isnNumber,
+        profileImage: c.profileImage,
+        bannerImage: c.bannerImage,
+        genres: c.genres,
       })),
       dj: user.djs.map((d) => ({
         id: d.id,
@@ -759,6 +763,73 @@ const updateDjProfile = async (req, res) => {
   }
 };
 
+/**
+ * Récupère le profil Communauté de l'utilisateur connecté (premier profil)
+ */
+const getCommunityProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const community = await prisma.userCommunity.findFirst({
+      where: { userId },
+    });
+    if (!community) {
+      return sendError(res, 'Profil Communauté non trouvé.', 404);
+    }
+    return sendSuccess(res, {
+      profile: {
+        id: community.id,
+        pseudo: community.pseudo,
+        nom: community.nom,
+        prenom: community.prenom,
+        pays: community.pays,
+        dateNaissance: community.dateNaissance,
+        isnNumber: community.isnNumber,
+        profileImage: community.profileImage,
+        bannerImage: community.bannerImage,
+        genres: community.genres,
+      },
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Met à jour le profil Communauté (pseudo, genres)
+ */
+const updateCommunityProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { pseudo, genres } = req.body ?? {};
+    const community = await prisma.userCommunity.findFirst({
+      where: { userId },
+    });
+    if (!community) {
+      return sendError(res, 'Profil Communauté non trouvé.', 404);
+    }
+    const updateData = {};
+    if (pseudo !== undefined) updateData.pseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+    if (genres !== undefined) updateData.genres = genres && String(genres).trim() ? String(genres).trim() : null;
+    const updated = await prisma.userCommunity.update({
+      where: { id: community.id },
+      data: updateData,
+    });
+    return sendSuccess(res, {
+      profile: {
+        id: updated.id,
+        pseudo: updated.pseudo,
+        nom: updated.nom,
+        prenom: updated.prenom,
+        profileImage: updated.profileImage,
+        bannerImage: updated.bannerImage,
+        genres: updated.genres,
+      },
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
 module.exports = {
   getUserProfiles,
   switchProfile,
@@ -769,5 +840,7 @@ module.exports = {
   confirmEmailVerification,
   getCurrentDjProfile,
   updateDjProfile,
+  getCommunityProfile,
+  updateCommunityProfile,
 };
 

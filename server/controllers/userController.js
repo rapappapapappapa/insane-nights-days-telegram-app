@@ -437,7 +437,7 @@ const sendEmailVerification = async (req, res) => {
     }
 
     const crypto = require('crypto');
-    const { sendMail, isConfigured } = require('../utils/mailer');
+    const { sendMail } = require('../utils/mailer');
     const salt = (process.env.AUTH_CODE_SALT || '').trim();
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
@@ -457,12 +457,10 @@ const sendEmailVerification = async (req, res) => {
     try {
       await sendMail({ to: user.email, subject, text, html });
     } catch (e) {
-      // En prod, on échoue si pas de SMTP configuré
-      if (e?.code === 'SMTP_NOT_CONFIGURED' && process.env.NODE_ENV === 'production') {
-        return sendError(res, 'Service email non configuré.', 500);
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, 'Impossible d\'envoyer l\'email. Vérifie la config serveur.', 500);
       }
-      // En dev, on peut renvoyer le code pour debug
-      const debugCode = process.env.DEBUG_LOGS === 'true' || process.env.NODE_ENV !== 'production' ? code : undefined;
+      const debugCode = process.env.DEBUG_LOGS === 'true' ? code : undefined;
       return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
     }
 

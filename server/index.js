@@ -59,7 +59,16 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ✅ Healthcheck Railway
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'ok' });
+  let emailConfigured = false;
+  try {
+    const { isConfigured, getProvider } = require('./utils/mailer');
+    emailConfigured = isConfigured();
+    const payload = { success: true, status: 'ok', emailConfigured };
+    if (emailConfigured) payload.emailProvider = getProvider();
+    res.json(payload);
+  } catch {
+    res.json({ success: true, status: 'ok', emailConfigured: false });
+  }
 });
 
 /**

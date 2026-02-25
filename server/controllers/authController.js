@@ -197,11 +197,10 @@ const forgotPassword = async (req, res) => {
     try {
       await sendMail({ to: user.email, subject, text, html });
     } catch (e) {
-      if (e?.code === 'SMTP_NOT_CONFIGURED' && process.env.NODE_ENV === 'production') {
-        return sendError(res, 'Service email non configuré.', 500);
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, 'Impossible d\'envoyer l\'email. Vérifie la config serveur.', 500);
       }
-      // dev-only
-      const debugCode = process.env.DEBUG_LOGS === 'true' || process.env.NODE_ENV !== 'production' ? code : undefined;
+      const debugCode = process.env.DEBUG_LOGS === 'true' ? code : undefined;
       return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
     }
 

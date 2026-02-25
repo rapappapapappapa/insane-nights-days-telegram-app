@@ -25,7 +25,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - **ProfilePage** : Bouton "Modifier" DJ → djDashboard avec `openSection: 'profil'` ; Lieu → venueProfileEdit
 - **CommunityProfileEditPage** : Bouton "Mes amis" vers CommunityFriendsPage
 
+### Corrigé
+- **Mailer** : Support Resend (gratuit 3000/mois) en plus de SMTP ; vérification email et mot de passe oublié fonctionnent ; `/api/health` indique si l'email est configuré
+
 ### Technique
+- **Mailer** : `RESEND_API_KEY` + `RESEND_FROM` (prioritaire) ou SMTP_* ; logging des erreurs ; `emailConfigured` et `emailProvider` dans `/api/health`
 - **API amis** : `GET/POST/PUT/DELETE /api/user/community/friends*`, `GET /api/user/community/search?q=`
 - **Pseudo Communauté unique** : Contrainte unique sur `UserCommunity.pseudo` (recherche d'amis) ; distinct du `artistName` DJ
 - **Schema Prisma** : Modèle `UserCommunity` avec `pseudo`, `profileImage`, `bannerImage`, `genres` ; modèle `CommunityFriend` (PENDING, ACCEPTED, BLOCKED) ; `UserVenue` avec `profileImage`, `bannerImage`

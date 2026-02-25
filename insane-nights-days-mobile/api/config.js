@@ -1343,6 +1343,11 @@ const api = {
     const q = encodeURIComponent((query || '').trim());
     return apiRequest(`/api/user/community/search?q=${q}`, {}, token);
   },
+  checkCommunityPseudoAvailable: async (token, pseudo) => {
+    if (!token) throw new Error('Token requis.');
+    const p = encodeURIComponent((pseudo || '').trim());
+    return apiRequest(`/api/user/community/pseudo/check?pseudo=${p}`, {}, token);
+  },
 
   getVenueProfile: async (token) => {
     if (!token) throw new Error('Token requis.');

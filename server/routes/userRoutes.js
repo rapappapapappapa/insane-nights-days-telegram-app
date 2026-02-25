@@ -137,6 +137,13 @@ router.get('/venue/profile', authenticateToken, userController.getVenueProfile);
 router.put('/venue/profile', authenticateToken, userController.updateVenueProfile);
 
 /**
+ * @route GET /api/user/community/pseudo/check
+ * @desc Vérifier si un pseudo est disponible (?pseudo=...)
+ * @access Private
+ */
+router.get('/community/pseudo/check', authenticateToken, userController.checkCommunityPseudoAvailable);
+
+/**
  * @route GET /api/user/community/search
  * @desc Rechercher des profils Communauté par pseudo (?q=...)
  * @access Private

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -38,10 +38,33 @@ export default function CommunityProfileEditPage() {
   const [genres, setGenres] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
+  const [pseudoAvailable, setPseudoAvailable] = useState(null); // null | true | false
+  const pseudoCheckRef = useRef(null);
 
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const p = pseudo.trim();
+    if (p.length < 2) {
+      setPseudoAvailable(null);
+      return;
+    }
+    if (pseudoCheckRef.current) clearTimeout(pseudoCheckRef.current);
+    pseudoCheckRef.current = setTimeout(async () => {
+      try {
+        const res = await api.checkCommunityPseudoAvailable(user?.token, p);
+        setPseudoAvailable(res?.available ?? false);
+      } catch {
+        setPseudoAvailable(null);
+      }
+      pseudoCheckRef.current = null;
+    }, 400);
+    return () => {
+      if (pseudoCheckRef.current) clearTimeout(pseudoCheckRef.current);
+    };
+  }, [pseudo, user?.token]);
 
   const fetchProfile = async () => {
     if (!user?.token) return;
@@ -213,7 +236,11 @@ export default function CommunityProfileEditPage() {
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.label}>{language === 'fr' ? 'Pseudo (affiché)' : 'Display name'}</Text>
+        <View style={styles.pseudoRow}>
+          <Text style={styles.label}>{language === 'fr' ? 'Pseudo (unique, pour les amis)' : 'Pseudo (unique, for friends)'}</Text>
+          {pseudoAvailable === true && <Text style={styles.pseudoOk}>✓ {language === 'fr' ? 'Disponible' : 'Available'}</Text>}
+          {pseudoAvailable === false && <Text style={styles.pseudoTaken}>✗ {language === 'fr' ? 'Déjà pris' : 'Taken'}</Text>}
+        </View>
         <TextInput
           style={styles.input}
           value={pseudo}
@@ -282,7 +309,10 @@ const styles = StyleSheet.create({
   },
   avatarLoaderWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 50 },
   form: { paddingHorizontal: 20 },
+  pseudoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   label: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  pseudoOk: { color: '#10b981', fontSize: 13, fontWeight: '600' },
+  pseudoTaken: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },
   genreChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,23,68,0.3)' },

@@ -11,8 +11,8 @@ CREATE TABLE "UserCommunity" (
     "pays" TEXT NOT NULL,
     "dateNaissance" TEXT NOT NULL,
     "isnNumber" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "UserCommunity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -31,8 +31,8 @@ CREATE TABLE "UserDj" (
     "totalRatingsCommunity" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsBooker" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsVenue" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "UserDj_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -44,8 +44,8 @@ CREATE TABLE "UserBooker" (
     "prenom" TEXT NOT NULL,
     "phonePro" TEXT NOT NULL,
     "bookerType" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "UserBooker_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -62,8 +62,8 @@ CREATE TABLE "UserVenue" (
     "totalRatingsCommunity" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsBooker" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsDj" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "UserVenue_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -77,8 +77,8 @@ CREATE TABLE "DjRating" (
     "comment" TEXT,
     "eventId" TEXT NOT NULL,
     "ticketId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "DjRating_djId_fkey" FOREIGN KEY ("djId") REFERENCES "UserDj" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "DjRating_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "DjRating_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket" ("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -94,8 +94,8 @@ CREATE TABLE "VenueRating" (
     "comment" TEXT,
     "eventId" TEXT NOT NULL,
     "ticketId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "VenueRating_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "UserVenue" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "VenueRating_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "VenueRating_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket" ("id") ON DELETE SET NULL ON UPDATE CASCADE
@@ -105,7 +105,7 @@ CREATE TABLE "VenueRating" (
 CREATE TABLE "Event" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "title" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
     "time" TEXT NOT NULL,
     "location" TEXT NOT NULL,
     "price" REAL NOT NULL,
@@ -117,8 +117,8 @@ CREATE TABLE "Event" (
     "status" TEXT NOT NULL DEFAULT 'UPCOMING',
     "venueId" TEXT,
     "bookerId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Event_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "UserVenue" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Event_bookerId_fkey" FOREIGN KEY ("bookerId") REFERENCES "UserBooker" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -128,7 +128,7 @@ CREATE TABLE "EventDj" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "eventId" TEXT NOT NULL,
     "djId" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "EventDj_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -140,7 +140,7 @@ CREATE TABLE "Ticket" (
     "price" REAL NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'valid',
     "qrCode" TEXT NOT NULL,
-    "purchaseDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "purchaseDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Ticket_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Ticket_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );

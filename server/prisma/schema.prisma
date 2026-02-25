@@ -95,7 +95,7 @@ model UserCommunity {
   bannerImage          String?
   genres               String?
   profileImage         String?
-  pseudo               String?
+  pseudo               String?   @unique
   friendshipsReceived  CommunityFriend[] @relation("FriendRequested")
   friendshipsRequested CommunityFriend[] @relation("FriendRequester")
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)

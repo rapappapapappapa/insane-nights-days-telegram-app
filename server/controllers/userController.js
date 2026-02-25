@@ -799,6 +799,7 @@ const getCommunityProfile = async (req, res) => {
 
 /**
  * Met à jour le profil Communauté (pseudo, genres)
+ * Pseudo Communauté : unique pour la recherche d'amis (différent du artistName DJ)
  */
 const updateCommunityProfile = async (req, res) => {
   try {
@@ -811,7 +812,21 @@ const updateCommunityProfile = async (req, res) => {
       return sendError(res, 'Profil Communauté non trouvé.', 404);
     }
     const updateData = {};
-    if (pseudo !== undefined) updateData.pseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+    if (pseudo !== undefined) {
+      const newPseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+      if (newPseudo) {
+        const existing = await prisma.userCommunity.findFirst({
+          where: {
+            pseudo: newPseudo,
+            id: { not: community.id },
+          },
+        });
+        if (existing) {
+          return sendError(res, 'Ce pseudo Communauté est déjà pris. Choisis-en un autre.', 409);
+        }
+      }
+      updateData.pseudo = newPseudo;
+    }
     if (genres !== undefined) updateData.genres = genres && String(genres).trim() ? String(genres).trim() : null;
     const updated = await prisma.userCommunity.update({
       where: { id: community.id },
@@ -1113,6 +1128,32 @@ const updateVenueProfile = async (req, res) => {
 };
 
 /**
+ * Vérifier si un pseudo Communauté est disponible
+ * GET /api/user/community/pseudo/check?pseudo=xyz
+ */
+const checkCommunityPseudoAvailable = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const pseudo = (req.query.pseudo || '').trim();
+    if (!pseudo || pseudo.length < 2) {
+      return sendSuccess(res, { available: false, message: 'Pseudo trop court (min. 2 caractères).' });
+    }
+    const myCommunity = await prisma.userCommunity.findFirst({
+      where: { userId },
+    });
+    const existing = await prisma.userCommunity.findFirst({
+      where: {
+        pseudo,
+        ...(myCommunity ? { id: { not: myCommunity.id } } : {}),
+      },
+    });
+    return sendSuccess(res, { available: !existing });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
  * Rechercher des profils Communauté par pseudo
  * GET ?q=pseudo
  */
@@ -1161,6 +1202,7 @@ module.exports = {
   respondToCommunityFriendRequest,
   removeCommunityFriend,
   searchCommunities,
+  checkCommunityPseudoAvailable,
   getVenueProfile,
   updateVenueProfile,
 };

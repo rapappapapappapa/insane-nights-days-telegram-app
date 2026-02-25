@@ -6,8 +6,8 @@ CREATE TABLE "DjMedia" (
     "url" TEXT NOT NULL,
     "title" TEXT,
     "thumbnail" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "DjMedia_djId_fkey" FOREIGN KEY ("djId") REFERENCES "UserDj" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -40,8 +40,8 @@ CREATE TABLE "new_UserDj" (
     "totalRatingsCommunity" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsBooker" INTEGER NOT NULL DEFAULT 0,
     "totalRatingsVenue" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "UserDj_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 INSERT INTO "new_UserDj" ("artistName", "averageRatingBooker", "averageRatingCommunity", "averageRatingGlobal", "averageRatingVenue", "birthDate", "city", "createdAt", "id", "phone", "totalRatingsBooker", "totalRatingsCommunity", "totalRatingsVenue", "updatedAt", "userId") SELECT "artistName", "averageRatingBooker", "averageRatingCommunity", "averageRatingGlobal", "averageRatingVenue", "birthDate", "city", "createdAt", "id", "phone", "totalRatingsBooker", "totalRatingsCommunity", "totalRatingsVenue", "updatedAt", "userId" FROM "UserDj";

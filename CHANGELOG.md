@@ -27,6 +27,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ### Technique
 - **API amis** : `GET/POST/PUT/DELETE /api/user/community/friends*`, `GET /api/user/community/search?q=`
+- **Pseudo Communauté unique** : Contrainte unique sur `UserCommunity.pseudo` (recherche d'amis) ; distinct du `artistName` DJ
 - **Schema Prisma** : Modèle `UserCommunity` avec `pseudo`, `profileImage`, `bannerImage`, `genres` ; modèle `CommunityFriend` (PENDING, ACCEPTED, BLOCKED) ; `UserVenue` avec `profileImage`, `bannerImage`
 - **Styles ProfilePage** : `noProfilesBox`, `createProfileBtn`, `createProfileBtnText`
 

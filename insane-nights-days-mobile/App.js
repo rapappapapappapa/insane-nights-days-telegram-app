@@ -38,6 +38,8 @@ import TicketsPage from './screens/events/TicketsPage';
 
 import ProfilePage from './screens/profiles/ProfilePage';
 import CommunityProfileEditPage from './screens/profiles/CommunityProfileEditPage';
+import CommunityFriendsPage from './screens/profiles/CommunityFriendsPage';
+import VenueProfileEditPage from './screens/profiles/VenueProfileEditPage';
 import DjProfilePage from './screens/profiles/DjProfilePage';
 import BookerProfilePage from './screens/profiles/BookerProfilePage';
 import VenueProfilePage from './screens/profiles/VenueProfilePage';
@@ -91,6 +93,8 @@ const SCREENS = {
   switchProfile: SwitchProfilePage,
   profile: ProfilePage,
   communityProfileEdit: CommunityProfileEditPage,
+  communityFriends: CommunityFriendsPage,
+  venueProfileEdit: VenueProfileEditPage,
   feed: FeedPage, // ✅ AJOUT: Route pour le feed
   createFeedPost: CreateFeedPostPage, // ✅ AJOUT: Route pour créer un post
   tutorial: TutorialPage, // ✅ AJOUT: Route pour le tutoriel

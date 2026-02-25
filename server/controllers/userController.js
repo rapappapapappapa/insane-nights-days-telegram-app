@@ -54,6 +54,7 @@ const getUserProfiles = async (req, res) => {
         type: 'DJ',
         artistName: d.artistName,
         city: d.city,
+        profileImage: d.profileImage,
       })),
       booker: user.bookers.map((b) => ({
         id: b.id,
@@ -69,6 +70,8 @@ const getUserProfiles = async (req, res) => {
         type: 'VENUE',
         venueName: v.venueName,
         address: v.address,
+        profileImage: v.profileImage,
+        bannerImage: v.bannerImage,
       })),
     };
 
@@ -830,6 +833,316 @@ const updateCommunityProfile = async (req, res) => {
   }
 };
 
+/**
+ * Récupère l'ID du profil Communauté de l'utilisateur connecté
+ */
+const getMyCommunityId = async (userId) => {
+  const community = await prisma.userCommunity.findFirst({
+    where: { userId },
+  });
+  return community?.id ?? null;
+};
+
+/**
+ * Liste des amis (Communauté) - relations avec status ACCEPTED
+ */
+const getCommunityFriends = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const myCommunityId = await getMyCommunityId(userId);
+    if (!myCommunityId) {
+      return sendError(res, 'Profil Communauté requis pour accéder aux amis.', 400);
+    }
+    const friendships = await prisma.communityFriend.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { requesterCommunityId: myCommunityId },
+          { requestedCommunityId: myCommunityId },
+        ],
+      },
+      include: {
+        requester: { select: { id: true, pseudo: true, profileImage: true } },
+        requested: { select: { id: true, pseudo: true, profileImage: true } },
+      },
+    });
+    const friends = friendships.map((f) => {
+      const other = f.requesterCommunityId === myCommunityId ? f.requested : f.requester;
+      return {
+        id: f.id,
+        communityId: other.id,
+        pseudo: other.pseudo || 'Anonyme',
+        profileImage: other.profileImage,
+        since: f.createdAt,
+      };
+    });
+    return sendSuccess(res, { friends });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Liste des demandes d'amis reçues (status PENDING)
+ */
+const getCommunityFriendRequests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const myCommunityId = await getMyCommunityId(userId);
+    if (!myCommunityId) {
+      return sendError(res, 'Profil Communauté requis.', 400);
+    }
+    const requests = await prisma.communityFriend.findMany({
+      where: {
+        requestedCommunityId: myCommunityId,
+        status: 'PENDING',
+      },
+      include: {
+        requester: { select: { id: true, pseudo: true, profileImage: true } },
+      },
+    });
+    const list = requests.map((r) => ({
+      id: r.id,
+      communityId: r.requester.id,
+      pseudo: r.requester.pseudo || 'Anonyme',
+      profileImage: r.requester.profileImage,
+      createdAt: r.createdAt,
+    }));
+    return sendSuccess(res, { requests: list });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Envoyer une demande d'ami
+ * body: { requestedCommunityId }
+ */
+const sendCommunityFriendRequest = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { requestedCommunityId } = req.body ?? {};
+    if (!requestedCommunityId) {
+      return sendError(res, 'requestedCommunityId requis.', 400);
+    }
+    const myCommunityId = await getMyCommunityId(userId);
+    if (!myCommunityId) {
+      return sendError(res, 'Profil Communauté requis.', 400);
+    }
+    if (requestedCommunityId === myCommunityId) {
+      return sendError(res, 'Impossible de s\'ajouter soi-même.', 400);
+    }
+    const targetExists = await prisma.userCommunity.findUnique({
+      where: { id: requestedCommunityId },
+    });
+    if (!targetExists) {
+      return sendError(res, 'Profil Communauté introuvable.', 404);
+    }
+    const existing = await prisma.communityFriend.findUnique({
+      where: {
+        requesterCommunityId_requestedCommunityId: {
+          requesterCommunityId: myCommunityId,
+          requestedCommunityId,
+        },
+      },
+    });
+    if (existing) {
+      if (existing.status === 'ACCEPTED') {
+        return sendError(res, 'Vous êtes déjà amis.', 400);
+      }
+      if (existing.status === 'PENDING') {
+        return sendError(res, 'Demande déjà envoyée.', 400);
+      }
+      return sendError(res, 'Action impossible.', 400);
+    }
+    const reverse = await prisma.communityFriend.findUnique({
+      where: {
+        requesterCommunityId_requestedCommunityId: {
+          requesterCommunityId: requestedCommunityId,
+          requestedCommunityId: myCommunityId,
+        },
+      },
+    });
+    if (reverse) {
+      if (reverse.status === 'PENDING') {
+        return sendError(res, 'Cette personne vous a déjà envoyé une demande. Acceptez-la.', 400);
+      }
+      if (reverse.status === 'ACCEPTED') {
+        return sendError(res, 'Vous êtes déjà amis.', 400);
+      }
+    }
+    await prisma.communityFriend.create({
+      data: {
+        requesterCommunityId: myCommunityId,
+        requestedCommunityId,
+        status: 'PENDING',
+      },
+    });
+    return sendSuccess(res, { message: 'Demande envoyée.' });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Accepter ou refuser une demande d'ami
+ * body: { action: 'accept'|'decline' }
+ */
+const respondToCommunityFriendRequest = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { action } = req.body ?? {};
+    if (!id || !action || !['accept', 'decline'].includes(action)) {
+      return sendError(res, 'Paramètre id et action (accept|decline) requis.', 400);
+    }
+    const myCommunityId = await getMyCommunityId(userId);
+    if (!myCommunityId) {
+      return sendError(res, 'Profil Communauté requis.', 400);
+    }
+    const friendship = await prisma.communityFriend.findUnique({
+      where: { id },
+    });
+    if (!friendship || friendship.requestedCommunityId !== myCommunityId || friendship.status !== 'PENDING') {
+      return sendError(res, 'Demande introuvable ou déjà traitée.', 404);
+    }
+    if (action === 'accept') {
+      await prisma.communityFriend.update({
+        where: { id },
+        data: { status: 'ACCEPTED' },
+      });
+      return sendSuccess(res, { message: 'Demande acceptée.' });
+    }
+    await prisma.communityFriend.delete({
+      where: { id },
+    });
+    return sendSuccess(res, { message: 'Demande refusée.' });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Retirer un ami
+ */
+const removeCommunityFriend = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const myCommunityId = await getMyCommunityId(userId);
+    if (!myCommunityId) {
+      return sendError(res, 'Profil Communauté requis.', 400);
+    }
+    const friendship = await prisma.communityFriend.findUnique({
+      where: { id },
+    });
+    if (!friendship || friendship.status !== 'ACCEPTED') {
+      return sendError(res, 'Amitié introuvable.', 404);
+    }
+    const isMine = friendship.requesterCommunityId === myCommunityId || friendship.requestedCommunityId === myCommunityId;
+    if (!isMine) {
+      return sendError(res, 'Non autorisé.', 403);
+    }
+    await prisma.communityFriend.delete({
+      where: { id },
+    });
+    return sendSuccess(res, { message: 'Ami retiré.' });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Récupère le profil Venue de l'utilisateur connecté (premier lieu)
+ */
+const getVenueProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const venue = await prisma.userVenue.findFirst({
+      where: { userId },
+    });
+    if (!venue) {
+      return sendError(res, 'Profil Lieu non trouvé.', 404);
+    }
+    return sendSuccess(res, {
+      profile: {
+        id: venue.id,
+        venueName: venue.venueName,
+        address: venue.address,
+        profileImage: venue.profileImage,
+        bannerImage: venue.bannerImage,
+      },
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Met à jour le profil Venue (nom, adresse - champs de base)
+ */
+const updateVenueProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { venueName, address } = req.body ?? {};
+    const venue = await prisma.userVenue.findFirst({
+      where: { userId },
+    });
+    if (!venue) {
+      return sendError(res, 'Profil Lieu non trouvé.', 404);
+    }
+    const updateData = {};
+    if (venueName !== undefined && String(venueName).trim()) updateData.venueName = String(venueName).trim();
+    if (address !== undefined && String(address).trim()) updateData.address = String(address).trim();
+    const updated = await prisma.userVenue.update({
+      where: { id: venue.id },
+      data: updateData,
+    });
+    return sendSuccess(res, {
+      profile: {
+        id: updated.id,
+        venueName: updated.venueName,
+        address: updated.address,
+        profileImage: updated.profileImage,
+        bannerImage: updated.bannerImage,
+      },
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
+ * Rechercher des profils Communauté par pseudo
+ * GET ?q=pseudo
+ */
+const searchCommunities = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) {
+      return sendSuccess(res, { results: [] });
+    }
+    const myCommunityId = await getMyCommunityId(userId);
+    const communities = await prisma.userCommunity.findMany({
+      where: {
+        pseudo: { contains: q, mode: 'insensitive' },
+        id: myCommunityId ? { not: myCommunityId } : undefined,
+      },
+      select: { id: true, pseudo: true, profileImage: true },
+      take: 20,
+    });
+    const results = communities.map((c) => ({
+      id: c.id,
+      pseudo: c.pseudo || 'Anonyme',
+      profileImage: c.profileImage,
+    }));
+    return sendSuccess(res, { results });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
 module.exports = {
   getUserProfiles,
   switchProfile,
@@ -842,5 +1155,13 @@ module.exports = {
   updateDjProfile,
   getCommunityProfile,
   updateCommunityProfile,
+  getCommunityFriends,
+  getCommunityFriendRequests,
+  sendCommunityFriendRequest,
+  respondToCommunityFriendRequest,
+  removeCommunityFriend,
+  searchCommunities,
+  getVenueProfile,
+  updateVenueProfile,
 };
 

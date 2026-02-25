@@ -186,6 +186,8 @@ model UserVenue {
   userId                 String
   venueName              String
   address                String
+  profileImage           String?
+  bannerImage            String?
   averageRatingCommunity Float         @default(0.0)
   averageRatingBooker    Float         @default(0.0)
   averageRatingDj        Float         @default(0.0)

@@ -82,6 +82,14 @@ const menuItems = [
     onlyWhenLoggedIn: true,
   },
   {
+    id: 'communityFriends',
+    emoji: '👥',
+    title: 'Mes amis',
+    description: 'Recherche et liste d\'amis Communauté',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
     id: 'admin',
     emoji: '🛡️',
     title: 'Admin',

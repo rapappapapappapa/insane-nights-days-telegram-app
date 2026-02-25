@@ -243,6 +243,10 @@ CMD ["npm", "start"]
 - **Prettier** pour le formatage
 - **Conventional Commits** pour les messages
 
+## 📋 Changelog
+
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des modifications. À mettre à jour à chaque changement significatif.
+
 ## 📄 Licence
 
 **MIT License** - Voir le fichier [LICENSE](LICENSE) pour plus de détails.

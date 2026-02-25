@@ -17,11 +17,12 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
-import { api } from '../../api/config';
+import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
@@ -215,7 +216,30 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
       >
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>I</Text>
+            {(() => {
+              const activeType = profiles?.activeProfileType || authUser?.activeProfileType;
+              let imageUrl = null;
+              let initial = username?.charAt(0)?.toUpperCase() || '?';
+              if (profiles?.profiles && activeType) {
+                if (activeType === 'COMMUNITY' && profiles.profiles.community?.[0]?.profileImage) {
+                  imageUrl = profiles.profiles.community[0].profileImage;
+                  initial = profiles.profiles.community[0].pseudo?.charAt(0)?.toUpperCase() || initial;
+                } else if (activeType === 'DJ' && profiles.profiles.dj?.[0]?.profileImage) {
+                  imageUrl = profiles.profiles.dj[0].profileImage;
+                  initial = profiles.profiles.dj[0].artistName?.charAt(0)?.toUpperCase() || initial;
+                } else if (activeType === 'BOOKER' && profiles.profiles.booker?.[0]?.profileImage) {
+                  imageUrl = profiles.profiles.booker[0].profileImage;
+                  initial = profiles.profiles.booker[0].pseudo?.charAt(0)?.toUpperCase() || initial;
+                } else if (activeType === 'VENUE' && profiles.profiles.venue?.[0]) {
+                  imageUrl = profiles.profiles.venue[0].profileImage;
+                  initial = profiles.profiles.venue[0].venueName?.charAt(0)?.toUpperCase() || initial;
+                }
+              }
+              if (imageUrl) {
+                return <Image source={{ uri: normalizeMediaUrl(imageUrl) }} style={styles.avatarImage} />;
+              }
+              return <Text style={styles.avatarText}>{initial}</Text>;
+            })()}
           </View>
           <Text style={styles.title}>👤 Mes Profils</Text>
           <Text style={styles.subtitle}>Gère tes profils et bascule entre eux</Text>
@@ -512,7 +536,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.profileEditButton}
-                          onPress={() => navigate('djDashboard')}
+                          onPress={() => navigate('djDashboard', { openSection: 'profil' })}
                         >
                           <Text style={styles.profileEditButtonText}>Modifier</Text>
                         </TouchableOpacity>
@@ -582,7 +606,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.profileEditButton}
-                          onPress={() => navigate('venueDashboard')}
+                          onPress={() => navigate('venueProfileEdit')}
                         >
                           <Text style={styles.profileEditButtonText}>Modifier</Text>
                         </TouchableOpacity>
@@ -697,6 +721,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
   },
   avatarText: {
     color: '#0b0b0e',

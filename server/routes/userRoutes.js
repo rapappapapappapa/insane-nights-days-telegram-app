@@ -88,6 +88,62 @@ router.get('/community/profile', authenticateToken, userController.getCommunityP
 router.put('/community/profile', authenticateToken, userController.updateCommunityProfile);
 
 /**
+ * @route GET /api/user/community/friends
+ * @desc Liste des amis (Communauté)
+ * @access Private
+ */
+router.get('/community/friends', authenticateToken, userController.getCommunityFriends);
+
+/**
+ * @route GET /api/user/community/friends/requests
+ * @desc Demandes d'amis reçues
+ * @access Private
+ */
+router.get('/community/friends/requests', authenticateToken, userController.getCommunityFriendRequests);
+
+/**
+ * @route POST /api/user/community/friends/request
+ * @desc Envoyer une demande d'ami (body: { requestedCommunityId })
+ * @access Private
+ */
+router.post('/community/friends/request', authenticateToken, userController.sendCommunityFriendRequest);
+
+/**
+ * @route PUT /api/user/community/friends/requests/:id
+ * @desc Accepter/refuser une demande (body: { action: 'accept'|'decline' })
+ * @access Private
+ */
+router.put('/community/friends/requests/:id', authenticateToken, userController.respondToCommunityFriendRequest);
+
+/**
+ * @route DELETE /api/user/community/friends/:id
+ * @desc Retirer un ami
+ * @access Private
+ */
+router.delete('/community/friends/:id', authenticateToken, userController.removeCommunityFriend);
+
+/**
+ * @route GET /api/user/venue/profile
+ * @desc Récupère le profil Venue de l'utilisateur connecté
+ * @access Private
+ */
+router.get('/venue/profile', authenticateToken, userController.getVenueProfile);
+
+/**
+ * @route PUT /api/user/venue/profile
+ * @desc Met à jour le profil Venue (venueName, address)
+ * @access Private
+ */
+router.put('/venue/profile', authenticateToken, userController.updateVenueProfile);
+
+/**
+ * @route GET /api/user/community/search
+ * @desc Rechercher des profils Communauté par pseudo (?q=...)
+ * @access Private
+ */
+router.get('/community/search', authenticateToken, userController.searchCommunities);
+
+/**
  * @route GET /api/user/:userId
  * @desc Récupère les informations d'un utilisateur par son ID
  * @access Public
@@ -96,7 +152,7 @@ router.put('/community/profile', authenticateToken, userController.updateCommuni
  */
 router.get('/:userId', (req, res, next) => {
   // Éviter de matcher /dj comme userId (pour laisser passer /dj/profile)
-  if (req.params.userId === 'dj' || req.params.userId === 'profiles' || req.params.userId === 'me' || req.params.userId === 'community') {
+  if (['dj', 'profiles', 'me', 'community', 'venue'].includes(req.params.userId)) {
     return res.status(404).json({ success: false, message: 'Route non trouvée' });
   }
   userController.getUserById(req, res, next);

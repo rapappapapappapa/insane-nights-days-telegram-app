@@ -1309,6 +1309,71 @@ const api = {
     return data;
   },
 
+  // Amis Communauté
+  getCommunityFriends: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/friends', {}, token);
+  },
+  getCommunityFriendRequests: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/friends/requests', {}, token);
+  },
+  sendCommunityFriendRequest: async (token, requestedCommunityId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/friends/request', {
+      method: 'POST',
+      body: JSON.stringify({ requestedCommunityId }),
+    }, token);
+  },
+  respondToCommunityFriendRequest: async (token, requestId, action) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/user/community/friends/requests/${requestId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    }, token);
+  },
+  removeCommunityFriend: async (token, friendshipId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/user/community/friends/${friendshipId}`, {
+      method: 'DELETE',
+    }, token);
+  },
+  searchCommunities: async (token, query) => {
+    if (!token) throw new Error('Token requis.');
+    const q = encodeURIComponent((query || '').trim());
+    return apiRequest(`/api/user/community/search?q=${q}`, {}, token);
+  },
+
+  getVenueProfile: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/venue/profile', {}, token);
+  },
+  updateVenueProfile: async (token, { venueName, address }) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/venue/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ venueName: venueName?.trim() || null, address: address?.trim() || null }),
+    }, token);
+  },
+  uploadVenueProfileImage: async (token, imageUri, type = 'profile') => {
+    if (!token) throw new Error('Token requis.');
+    const formData = new FormData();
+    formData.append('image', {
+      uri: imageUri,
+      type: getMimeType(imageUri, 'photo'),
+      name: getFileName(imageUri),
+    });
+    const url = `${API_CONFIG.BASE_URL}/api/user/venue/profile/upload-image?type=${type}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Erreur upload');
+    return data;
+  },
+
   // ✅ AJOUT: Uploader une image pour un post du feed
   uploadFeedPostImage: async (token, imageUri) => {
     if (!token) {

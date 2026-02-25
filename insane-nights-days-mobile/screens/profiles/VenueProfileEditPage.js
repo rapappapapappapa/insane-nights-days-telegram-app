@@ -1,3 +1,8 @@
+/**
+ * Page d'édition du profil Lieu (Venue)
+ * Photo, bannière, nom, adresse
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -20,12 +25,10 @@ import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-const GENRE_OPTIONS = ['Techno', 'House', 'Deep House', 'Trance', 'Drum & Bass', 'Hip-Hop', 'R&B', 'Pop', 'Electro', 'Minimal', 'Ambient', 'Autre'];
-
-export default function CommunityProfileEditPage() {
+export default function VenueProfileEditPage() {
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();
-  const { goBack, navigate } = useNavigation();
+  const { goBack } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -34,8 +37,8 @@ export default function CommunityProfileEditPage() {
   const [uploadingProfile, setUploadingProfile] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [profile, setProfile] = useState(null);
-  const [pseudo, setPseudo] = useState('');
-  const [genres, setGenres] = useState('');
+  const [venueName, setVenueName] = useState('');
+  const [address, setAddress] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
 
@@ -47,11 +50,11 @@ export default function CommunityProfileEditPage() {
     if (!user?.token) return;
     setLoading(true);
     try {
-      const res = await api.getCommunityProfile(user.token);
+      const res = await api.getVenueProfile(user.token);
       if (res?.success && res.profile) {
         setProfile(res.profile);
-        setPseudo(res.profile.pseudo || '');
-        setGenres(res.profile.genres || '');
+        setVenueName(res.profile.venueName || '');
+        setAddress(res.profile.address || '');
         setProfileImage(res.profile.profileImage);
         setBannerImage(res.profile.bannerImage);
       } else {
@@ -81,7 +84,7 @@ export default function CommunityProfileEditPage() {
     if (type === 'banner') {
       setUploadingBanner(true);
       try {
-        const res = await api.uploadCommunityProfileImage(user.token, uri, 'banner');
+        const res = await api.uploadVenueProfileImage(user.token, uri, 'banner');
         setBannerImage(res.bannerImage);
         showSuccess(language === 'fr' ? 'Bannière mise à jour' : 'Banner updated');
       } catch (e) {
@@ -92,7 +95,7 @@ export default function CommunityProfileEditPage() {
     } else {
       setUploadingProfile(true);
       try {
-        const res = await api.uploadCommunityProfileImage(user.token, uri, 'profile');
+        const res = await api.uploadVenueProfileImage(user.token, uri, 'profile');
         setProfileImage(res.profileImage);
         showSuccess(language === 'fr' ? 'Photo mise à jour' : 'Photo updated');
       } catch (e) {
@@ -107,7 +110,7 @@ export default function CommunityProfileEditPage() {
     if (!user?.token || saving) return;
     setSaving(true);
     try {
-      await api.updateCommunityProfile(user.token, { pseudo, genres });
+      await api.updateVenueProfile(user.token, { venueName, address });
       showSuccess(language === 'fr' ? 'Profil enregistré' : 'Profile saved');
     } catch (e) {
       showError(e?.message || 'Erreur');
@@ -116,11 +119,7 @@ export default function CommunityProfileEditPage() {
     }
   };
 
-  const addGenre = (g) => {
-    const list = genres ? genres.split(',').map((s) => s.trim()).filter(Boolean) : [];
-    if (list.includes(g)) return;
-    setGenres([...list, g].join(', '));
-  };
+  const fr = language === 'fr';
 
   if (loading) {
     return (
@@ -128,7 +127,7 @@ export default function CommunityProfileEditPage() {
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF1744" />
-          <Text style={styles.loadingText}>{language === 'fr' ? 'Chargement...' : 'Loading...'}</Text>
+          <Text style={styles.loadingText}>{fr ? 'Chargement...' : 'Loading...'}</Text>
         </View>
       </View>
     );
@@ -139,10 +138,10 @@ export default function CommunityProfileEditPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <TouchableOpacity style={[styles.backBtn, { top: insets.top + 10 }]} onPress={goBack}>
-          <Text style={styles.backBtnText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{language === 'fr' ? 'Profil non trouvé' : 'Profile not found'}</Text>
+          <Text style={styles.errorText}>{fr ? 'Profil non trouvé' : 'Profile not found'}</Text>
         </View>
       </View>
     );
@@ -152,19 +151,14 @@ export default function CommunityProfileEditPage() {
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
       <StatusBar style="light" />
       <TouchableOpacity style={[styles.backBtn, { top: insets.top + 10 }]} onPress={goBack}>
-        <Text style={styles.backBtnText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+        <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
       </TouchableOpacity>
 
       <View style={[styles.header, { paddingTop: insets.top + 60 }]}>
-        <Text style={styles.title}>{language === 'fr' ? 'Profil Communauté' : 'Community Profile'}</Text>
+        <Text style={styles.title}>{fr ? 'Profil Lieu' : 'Venue Profile'}</Text>
 
         {bannerImage ? (
-          <TouchableOpacity
-            style={styles.bannerWrap}
-            onPress={() => pickImage('banner')}
-            disabled={uploadingBanner}
-            activeOpacity={0.9}
-          >
+          <TouchableOpacity style={styles.bannerWrap} onPress={() => pickImage('banner')} disabled={uploadingBanner} activeOpacity={0.9}>
             <Image source={{ uri: normalizeMediaUrl(bannerImage) }} style={styles.banner} />
             {uploadingBanner && (
               <View style={styles.overlayLoaderWrap}>
@@ -173,25 +167,15 @@ export default function CommunityProfileEditPage() {
             )}
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={styles.bannerPlaceholder}
-            onPress={() => pickImage('banner')}
-            disabled={uploadingBanner}
-            activeOpacity={0.9}
-          >
+          <TouchableOpacity style={styles.bannerPlaceholder} onPress={() => pickImage('banner')} disabled={uploadingBanner} activeOpacity={0.9}>
             <Ionicons name="image-outline" size={40} color="rgba(255,255,255,0.5)" />
-            <Text style={styles.placeholderText}>{language === 'fr' ? 'Ajouter une bannière' : 'Add banner'}</Text>
+            <Text style={styles.placeholderText}>{fr ? 'Ajouter une bannière' : 'Add banner'}</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.avatarWrap}>
           {profileImage ? (
-            <TouchableOpacity
-              onPress={() => pickImage('profile')}
-              disabled={uploadingProfile}
-              activeOpacity={0.9}
-              style={styles.avatarTouchWrap}
-            >
+            <TouchableOpacity onPress={() => pickImage('profile')} disabled={uploadingProfile} activeOpacity={0.9} style={styles.avatarTouchWrap}>
               <Image source={{ uri: normalizeMediaUrl(profileImage) }} style={styles.avatar} />
               {uploadingProfile && (
                 <View style={styles.avatarLoaderWrap}>
@@ -200,50 +184,34 @@ export default function CommunityProfileEditPage() {
               )}
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={styles.avatarPlaceholder}
-              onPress={() => pickImage('profile')}
-              disabled={uploadingProfile}
-              activeOpacity={0.9}
-            >
-              <Ionicons name="person" size={50} color="rgba(255,255,255,0.6)" />
+            <TouchableOpacity style={styles.avatarPlaceholder} onPress={() => pickImage('profile')} disabled={uploadingProfile} activeOpacity={0.9}>
+              <Ionicons name="business" size={50} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.label}>{language === 'fr' ? 'Pseudo (affiché)' : 'Display name'}</Text>
+        <Text style={styles.label}>{fr ? 'Nom du lieu' : 'Venue name'}</Text>
         <TextInput
           style={styles.input}
-          value={pseudo}
-          onChangeText={setPseudo}
-          placeholder={language === 'fr' ? 'Ex: parano69100' : 'e.g. parano69100'}
+          value={venueName}
+          onChangeText={setVenueName}
+          placeholder={fr ? 'Ex: Club Insane' : 'e.g. Club Insane'}
           placeholderTextColor="rgba(255,255,255,0.4)"
         />
 
-        <Text style={styles.label}>{language === 'fr' ? 'Styles écoutés (séparés par des virgules)' : 'Music genres (comma-separated)'}</Text>
+        <Text style={styles.label}>{fr ? 'Adresse' : 'Address'}</Text>
         <TextInput
           style={styles.input}
-          value={genres}
-          onChangeText={setGenres}
-          placeholder="Techno, House, Deep House..."
+          value={address}
+          onChangeText={setAddress}
+          placeholder={fr ? 'Ex: 123 Rue de la Nuit, Paris' : 'e.g. 123 Rue de la Nuit, Paris'}
           placeholderTextColor="rgba(255,255,255,0.4)"
         />
-        <View style={styles.genreChips}>
-          {GENRE_OPTIONS.map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[styles.chip, genres.includes(g) && styles.chipActive]}
-              onPress={() => addGenre(g)}
-            >
-              <Text style={[styles.chipText, genres.includes(g) && styles.chipTextActive]}>{g}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{language === 'fr' ? 'Enregistrer' : 'Save'}</Text>}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{fr ? 'Enregistrer' : 'Save'}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -284,13 +252,6 @@ const styles = StyleSheet.create({
   form: { paddingHorizontal: 20 },
   label: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },
-  genreChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,23,68,0.3)' },
-  chipActive: { backgroundColor: 'rgba(255,23,68,0.3)', borderColor: '#FF1744' },
-  chipText: { color: '#fff', fontSize: 13 },
-  chipTextActive: { color: '#FF1744', fontWeight: '600' },
-  friendsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,23,68,0.4)', marginBottom: 16 },
-  friendsBtnText: { color: '#FF1744', fontSize: 15, fontWeight: '600' },
   saveBtn: { backgroundColor: '#FF1744', padding: 16, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

@@ -56,6 +56,9 @@ export default function HomePage() {
   const [postToReport, setPostToReport] = useState(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
+  const [feedError, setFeedError] = useState(null);
+
+  const fetchAbortRef = useRef(null);
 
   const reportPost = (postId) => {
     if (!user?.token) {
@@ -103,9 +106,21 @@ export default function HomePage() {
   
   // ✅ NOTE: Le formulaire de connexion/inscription est maintenant sur LoginPage (plein écran).
 
-  // ✅ AJOUT: Charger le feed au démarrage
+  // ✅ AJOUT: Charger le feed au démarrage (avec annulation au démontage + timeout de sécurité)
   useEffect(() => {
+    fetchAbortRef.current = { cancelled: false };
     fetchFeed();
+    const safetyTimeout = setTimeout(() => {
+      if (fetchAbortRef.current && !fetchAbortRef.current.cancelled) {
+        setLoadingFeed(false);
+        setRefreshing(false);
+        setFeedError(language === 'fr' ? 'Chargement trop long. Vérifie ta connexion.' : 'Loading took too long. Check your connection.');
+      }
+    }, 20000);
+    return () => {
+      if (fetchAbortRef.current) fetchAbortRef.current.cancelled = true;
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   // ✅ AJOUT: Vérifier les likes au chargement du feed
@@ -135,10 +150,13 @@ export default function HomePage() {
     } else {
       setLoadingFeed(true);
     }
+    setFeedError(null);
 
     try {
       const response = await api.getFeed(50, 0); // ✅ AUGMENTÉ: Récupérer 50 éléments pour voir plus de posts historiques
+      if (fetchAbortRef.current?.cancelled) return;
       if (response && response.success && Array.isArray(response.feed)) {
+        setFeedError(null);
         setFeed(response.feed);
         const likesCountState = {};
         response.feed.forEach(item => {
@@ -151,13 +169,17 @@ export default function HomePage() {
         setFeed([]);
       }
     } catch (error) {
+      if (fetchAbortRef.current?.cancelled) return;
       console.error('Erreur récupération feed:', error);
       if (!handleTokenError(error)) {
         setFeed([]);
+        setFeedError(error?.message || (language === 'fr' ? 'Impossible de charger le feed' : 'Unable to load feed'));
       }
     } finally {
-      setLoadingFeed(false);
-      setRefreshing(false);
+      if (!fetchAbortRef.current?.cancelled) {
+        setLoadingFeed(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -459,6 +481,21 @@ export default function HomePage() {
               <Text style={styles.loadingText}>
                 {language === 'fr' ? 'Chargement du feed...' : 'Loading feed...'}
               </Text>
+            </View>
+          ) : feedError ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.5)" />
+              <Text style={styles.errorText}>{feedError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => fetchFeed()}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="refresh" size={20} color="#FF1744" style={{ marginRight: 8 }} />
+                <Text style={styles.retryButtonText}>
+                  {language === 'fr' ? 'Réessayer' : 'Retry'}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <ScrollView
@@ -1070,6 +1107,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 12,
     fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 23, 68, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 23, 68, 0.4)',
+  },
+  retryButtonText: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '600',
   },
   // ✅ POST: Styles pour les posts du feed
   postCard: {

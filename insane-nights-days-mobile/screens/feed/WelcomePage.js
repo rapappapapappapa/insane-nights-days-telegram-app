@@ -60,6 +60,9 @@ export default function WelcomePage() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [postToDelete, setPostToDelete] = useState(null);
   const [feedTab, setFeedTab] = useState('all'); // 'all' | 'following' - style X
+  const [feedError, setFeedError] = useState(null);
+
+  const fetchAbortRef = useRef(null);
 
   const reportPost = (postId) => {
     if (!user?.token) {

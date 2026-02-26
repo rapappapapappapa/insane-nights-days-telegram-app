@@ -428,10 +428,14 @@ const sendEmailVerification = async (req, res) => {
       return sendSuccess(res, { message: 'Email déjà vérifié.' });
     }
 
-    // Anti-spam: 1 envoi / 60s
+    // Anti-spam: 1 envoi / 60s (bypass si code expiré > 30 min ou timestamp invalide)
     if (user.emailVerificationSentAt) {
       const last = new Date(user.emailVerificationSentAt);
-      if (now.getTime() - last.getTime() < 60 * 1000) {
+      const diffMs = now.getTime() - last.getTime();
+      const invalidOrFuture = isNaN(diffMs) || diffMs < 0;
+      const codeExpired = diffMs > 30 * 60 * 1000; // 30 min
+      const tooSoon = diffMs < 60 * 1000; // 60 s
+      if (!invalidOrFuture && !codeExpired && tooSoon) {
         return sendError(res, 'Veuillez patienter avant de renvoyer un code.', 429);
       }
     }
@@ -441,14 +445,6 @@ const sendEmailVerification = async (req, res) => {
     const salt = (process.env.AUTH_CODE_SALT || '').trim();
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        emailVerificationCodeHash: codeHash,
-        emailVerificationSentAt: now,
-      },
-    });
 
     const subject = 'Insane Nights & Days — Vérification email';
     const text = `Ton code de vérification est: ${code}\n\nIl expire dans 30 minutes.`;
@@ -463,6 +459,15 @@ const sendEmailVerification = async (req, res) => {
       const debugCode = process.env.DEBUG_LOGS === 'true' ? code : undefined;
       return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
     }
+
+    // Mettre à jour la DB uniquement après envoi réussi (évite de bloquer si l'envoi a échoué)
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationCodeHash: codeHash,
+        emailVerificationSentAt: now,
+      },
+    });
 
     return sendSuccess(res, { message: 'Code envoyé.' });
   } catch (e) {

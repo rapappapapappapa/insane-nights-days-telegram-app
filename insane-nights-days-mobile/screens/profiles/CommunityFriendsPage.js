@@ -221,7 +221,11 @@ export default function CommunityFriendsPage() {
         <View style={styles.emptySearchBox}>
           <Ionicons name="search" size={32} color="rgba(255,255,255,0.4)" />
           <Text style={styles.emptySearchText}>{fr ? 'Aucun profil trouvé avec ce pseudo.' : 'No profile found with this pseudo.'}</Text>
-          <Text style={styles.emptySearchHint}>{fr ? 'Vérifie l\'orthographe ou demande le pseudo exact.' : 'Check spelling or ask for the exact pseudo.'}</Text>
+          <Text style={styles.emptySearchHint}>
+            {fr
+              ? 'La personne doit avoir un pseudo Communauté défini (Mes Profils → Éditer profil Communauté).'
+              : 'The person must have a Community pseudo set (My Profiles → Edit Community profile).'}
+          </Text>
         </View>
       )}
 

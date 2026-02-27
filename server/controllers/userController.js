@@ -428,15 +428,16 @@ const sendEmailVerification = async (req, res) => {
       return sendSuccess(res, { message: 'Email déjà vérifié.' });
     }
 
-    // Anti-spam: 1 envoi / 60s (bypass si code expiré > 30 min ou timestamp invalide)
+    // Anti-spam: bloquer seulement si dernier envoi < 30s (évite double-clic)
     if (user.emailVerificationSentAt) {
       const last = new Date(user.emailVerificationSentAt);
       const diffMs = now.getTime() - last.getTime();
       const invalidOrFuture = isNaN(diffMs) || diffMs < 0;
       const codeExpired = diffMs > 30 * 60 * 1000; // 30 min
-      const tooSoon = diffMs < 60 * 1000; // 60 s
+      const tooSoon = diffMs < 30 * 1000; // 30 s
       if (!invalidOrFuture && !codeExpired && tooSoon) {
-        return sendError(res, 'Veuillez patienter avant de renvoyer un code.', 429);
+        const waitSec = Math.ceil((30 * 1000 - diffMs) / 1000);
+        return sendError(res, `Veuillez patienter ${waitSec}s avant de renvoyer un code.`, 429);
       }
     }
 

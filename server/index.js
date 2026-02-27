@@ -3227,6 +3227,14 @@ app.post(
       },
     });
 
+    // Sync UserDj.profileImage / bannerImage quand on uploade une photo de profil ou bannière
+    if (title === 'profile' || title === 'banner') {
+      await prisma.userDj.update({
+        where: { id: djId },
+        data: title === 'profile' ? { profileImage: fileUrl } : { bannerImage: fileUrl },
+      });
+    }
+
     console.log('[UPLOAD MEDIA FILE] Média créé avec succès:', media.id, fileUrl);
 
     res.json({
@@ -7139,7 +7147,16 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       skip: offset,
       orderBy: { createdAt: 'desc' },
       include: {
-        dj: { select: { artistName: true, profileImage: true, city: true } },
+        dj: {
+          select: { artistName: true, profileImage: true, city: true },
+          include: {
+            media: {
+              where: { type: 'photo', title: 'profile' },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+        },
         booker: { select: { pseudo: true, nom: true, prenom: true, bookerType: true, profileImage: true } },
         author: { select: { username: true, activeProfileType: true } },
       },
@@ -7186,11 +7203,12 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
         author: { id: post.authorId, username: post.author.username },
       };
       if (post.dj) {
+        const djProfileImg = post.dj.profileImage || post.dj.media?.[0]?.url;
         formattedPost.dj = {
           id: post.djId,
           userId: post.authorId,
           artistName: post.dj.artistName,
-          profileImage: normalizeImageUrl(post.dj.profileImage),
+          profileImage: normalizeImageUrl(djProfileImg),
           city: post.dj.city,
         };
       }
@@ -7265,6 +7283,13 @@ app.get('/api/feed', async (req, res) => {
             artistName: true,
             profileImage: true,
             city: true,
+          },
+          include: {
+            media: {
+              where: { type: 'photo', title: 'profile' },
+              take: 1,
+              orderBy: { createdAt: 'desc' },
+            },
           },
         },
         booker: {
@@ -7393,11 +7418,12 @@ app.get('/api/feed', async (req, res) => {
 
       // Si c'est un DJ
       if (post.dj) {
+        const djProfileImg = post.dj.profileImage || post.dj.media?.[0]?.url;
         formattedPost.dj = {
           id: post.djId,
           userId: post.authorId,
           artistName: post.dj.artistName,
-          profileImage: normalizeImageUrl(post.dj.profileImage), // ✅ CORRECTION: Normaliser l'URL de l'image de profil
+          profileImage: normalizeImageUrl(djProfileImg),
           city: post.dj.city,
         };
       }

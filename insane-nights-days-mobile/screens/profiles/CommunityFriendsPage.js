@@ -1,6 +1,6 @@
 /**
  * Page Amis Communauté
- * Recherche, liste d'amis, demandes reçues
+ * Recherche par pseudo (unique), demande d'ajout, liste d'amis, demandes reçues
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -39,10 +39,13 @@ export default function CommunityFriendsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(null);
   const [respondingRequest, setRespondingRequest] = useState(null);
   const [removingFriend, setRemovingFriend] = useState(null);
   const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests'
+
+  const fr = language === 'fr';
 
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
@@ -71,24 +74,60 @@ export default function CommunityFriendsPage() {
     setRefreshing(false);
   };
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
     if (!q || q.length < 2) {
       setSearchResults([]);
+      setHasSearched(false);
+      if (q.length > 0) {
+        showError(fr ? 'Saisis au moins 2 caractères pour rechercher.' : 'Enter at least 2 characters to search.');
+      }
       return;
     }
     setSearching(true);
+    setHasSearched(true);
     try {
       const res = await api.searchCommunities(user.token, q);
       if (res?.success && res.results) {
         setSearchResults(res.results);
+      } else {
+        setSearchResults([]);
       }
     } catch (e) {
       showError(e?.message || 'Erreur');
+      setSearchResults([]);
     } finally {
       setSearching(false);
     }
-  };
+  }, [searchQuery, user?.token, fr, showError]);
+
+  // Recherche automatique après saisie (debounce 500ms)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setHasSearched(false);
+      setSearchResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      setHasSearched(true);
+      try {
+        const res = await api.searchCommunities(user.token, q);
+        if (res?.success && res.results) {
+          setSearchResults(res.results);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (e) {
+        showError(e?.message || 'Erreur');
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [searchQuery, user?.token, showError]);
 
   const handleSendRequest = async (communityId) => {
     if (!user?.token) return;
@@ -133,8 +172,6 @@ export default function CommunityFriendsPage() {
     }
   };
 
-  const fr = language === 'fr';
-
   if (!user?.token) {
     return (
       <View style={styles.container}>
@@ -156,25 +193,41 @@ export default function CommunityFriendsPage() {
         <Text style={styles.subtitle}>{fr ? 'Recherche et gère tes amis Communauté' : 'Search and manage your Community friends'}</Text>
       </View>
 
-      {/* Recherche */}
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={fr ? 'Rechercher par pseudo...' : 'Search by pseudo...'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-        <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} disabled={searching || searchQuery.trim().length < 2}>
-          {searching ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="search" size={22} color="#fff" />}
-        </TouchableOpacity>
+      {/* Ajouter un ami - Recherche par pseudo */}
+      <View style={styles.addFriendSection}>
+        <Text style={styles.addFriendTitle}>{fr ? 'Ajouter un ami' : 'Add a friend'}</Text>
+        <Text style={styles.addFriendHint}>{fr ? 'Recherche par pseudo (unique)' : 'Search by pseudo (unique)'}</Text>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={fr ? 'Pseudo de ton ami...' : 'Your friend\'s pseudo...'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity style={[styles.searchBtn, (searching || searchQuery.trim().length < 2) && styles.searchBtnDisabled]} onPress={handleSearch} disabled={searching || searchQuery.trim().length < 2}>
+            {searching ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="person-add" size={22} color="#fff" />}
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {searching && <Text style={styles.searchingText}>{fr ? 'Recherche en cours...' : 'Searching...'}</Text>}
+
+      {hasSearched && !searching && searchResults.length === 0 && (
+        <View style={styles.emptySearchBox}>
+          <Ionicons name="search" size={32} color="rgba(255,255,255,0.4)" />
+          <Text style={styles.emptySearchText}>{fr ? 'Aucun profil trouvé avec ce pseudo.' : 'No profile found with this pseudo.'}</Text>
+          <Text style={styles.emptySearchHint}>{fr ? 'Vérifie l\'orthographe ou demande le pseudo exact.' : 'Check spelling or ask for the exact pseudo.'}</Text>
+        </View>
+      )}
 
       {searchResults.length > 0 && (
         <View style={styles.searchResults}>
-          <Text style={styles.sectionTitle}>{fr ? 'Résultats' : 'Results'}</Text>
+          <Text style={styles.sectionTitle}>{fr ? 'Résultats — Clique sur + pour envoyer une demande' : 'Results — Tap + to send a request'}</Text>
           {searchResults.map((r) => (
             <View key={r.id} style={styles.resultRow}>
               {r.profileImage ? (
@@ -276,7 +329,7 @@ export default function CommunityFriendsPage() {
         )}
       </ScrollView>
 
-      {toast.visible && <Toast message={toast.message} type={toast.type} onHide={hideToast} />}
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
     </View>
   );
 }
@@ -288,9 +341,17 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', paddingBottom: 16 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 4 },
-  searchRow: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, gap: 8 },
+  addFriendSection: { paddingHorizontal: 20, marginBottom: 16, paddingVertical: 12, backgroundColor: 'rgba(255,23,68,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,23,68,0.25)' },
+  addFriendTitle: { color: '#FF1744', fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  addFriendHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 10 },
+  searchRow: { flexDirection: 'row', gap: 8 },
   searchInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 16 },
   searchBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FF1744', alignItems: 'center', justifyContent: 'center' },
+  searchBtnDisabled: { opacity: 0.5 },
+  searchingText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, paddingHorizontal: 20, marginBottom: 8 },
+  emptySearchBox: { padding: 24, marginHorizontal: 20, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, alignItems: 'center', gap: 8 },
+  emptySearchText: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
+  emptySearchHint: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
   searchResults: { paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 8 },
   resultRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },

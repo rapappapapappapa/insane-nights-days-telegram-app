@@ -257,13 +257,13 @@ export default function LoginPage() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {toast.visible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onHide={hideToast}
-        />
-      )}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={hideToast}
+        duration={toast.type === 'error' ? 5000 : 3000}
+      />
 
       <Modal visible={resetVisible} transparent animationType="fade" onRequestClose={() => setResetVisible(false)}>
         <View style={styles.modalOverlay}>

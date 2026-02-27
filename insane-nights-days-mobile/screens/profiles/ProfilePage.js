@@ -64,6 +64,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const [emailCode, setEmailCode] = useState('');
   const [sendingEmailCode, setSendingEmailCode] = useState(false);
   const [verifyingEmailCode, setVerifyingEmailCode] = useState(false);
+  const [emailCodeCooldown, setEmailCodeCooldown] = useState(0); // secondes avant de pouvoir renvoyer
 
   useEffect(() => {
     setForm({ username });
@@ -297,9 +298,9 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   {!emailVerified ? (
                     <View style={styles.emailVerifyBox}>
                       <TouchableOpacity
-                        style={[styles.smallButton, sendingEmailCode && styles.smallButtonDisabled]}
+                        style={[styles.smallButton, (sendingEmailCode || emailCodeCooldown > 0) && styles.smallButtonDisabled]}
                         onPress={async () => {
-                          if (!authUser?.token || sendingEmailCode) return;
+                          if (!authUser?.token || sendingEmailCode || emailCodeCooldown > 0) return;
                           setSendingEmailCode(true);
                           try {
                             const res = await api.sendEmailVerificationCode(authUser.token);

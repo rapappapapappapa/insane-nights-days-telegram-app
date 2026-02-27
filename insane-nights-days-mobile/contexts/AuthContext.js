@@ -135,7 +135,8 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      return { success: false, error: error.message ?? 'Erreur de connexion.' };
+      const msg = error?.payload?.message || error?.message || 'Erreur de connexion.';
+      return { success: false, error: msg };
     }
   }, []);
 
@@ -154,7 +155,7 @@ export function AuthProvider({ children }) {
       if (!response.success) {
         return { 
           success: false, 
-          error: response.message ?? "Erreur d'inscription." 
+          error: response.message || "Erreur d'inscription." 
         };
       }
 
@@ -181,7 +182,8 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      return { success: false, error: error.message ?? "Erreur d'inscription." };
+      const msg = error?.payload?.message || error?.message || "Erreur d'inscription.";
+      return { success: false, error: msg };
     }
   }, []);
 

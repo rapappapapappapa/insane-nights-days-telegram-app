@@ -3,18 +3,26 @@
  */
 
 /**
- * Normalise un email en minuscules et supprime les espaces
+ * Supprime les caractères invisibles (zero-width, RTL, etc.) pouvant venir du clavier mobile
+ * @param {string} str - Chaîne à nettoyer
+ * @returns {string}
+ */
+const sanitizeInvisibleChars = (str = '') =>
+  String(str).replace(/[\u200B-\u200D\uFEFF\u202A-\u202E\u2060]/g, '');
+
+/**
+ * Normalise un email en minuscules, supprime espaces et caractères invisibles
  * @param {string} email - L'email à normaliser
  * @returns {string} L'email normalisé
  */
-const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const normalizeEmail = (email = '') => sanitizeInvisibleChars(email).trim().toLowerCase();
 
 /**
  * Vérifie si une chaîne est un email valide
  * @param {string} email - L'email à valider
  * @returns {boolean} True si l'email est valide
  */
-const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizeInvisibleChars(email).trim());
 
 /**
  * Valide un mot de passe
@@ -47,8 +55,8 @@ const validateRegistration = (data) => {
     return { valid: false, message: 'Email, pseudo et mot de passe sont requis.' };
   }
 
-  let finalEmail = email.trim();
-  const finalUsername = username.trim();
+  let finalEmail = sanitizeInvisibleChars(email).trim();
+  const finalUsername = sanitizeInvisibleChars(username).trim();
 
   // Si c'est un email (contient @), valider le format
   if (finalEmail.includes('@')) {
@@ -91,6 +99,7 @@ const validateLogin = (data) => {
 };
 
 module.exports = {
+  sanitizeInvisibleChars,
   normalizeEmail,
   isValidEmail,
   validatePassword,

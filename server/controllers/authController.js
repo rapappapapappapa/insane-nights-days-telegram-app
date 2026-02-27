@@ -21,9 +21,15 @@ const register = async (req, res) => {
   try {
     const { email, username, password } = req.body ?? {};
 
+    // Log pour diagnostic (email masqué, domaine visible)
+    const domain = (email && typeof email === 'string' && email.includes('@')) ? email.split('@')[1] : '?';
+    const masked = email ? `${String(email).slice(0, 2)}***@${domain}` : '?';
+    console.log('[register] Tentative inscription:', { emailMasked: masked, username: username?.slice(0, 8) + '***' });
+
     // Valider les données d'inscription
     const validation = validateRegistration({ email, username, password });
     if (!validation.valid) {
+      console.log('[register] Validation échouée:', validation.message);
       return sendError(res, validation.message, 400);
     }
 
@@ -35,6 +41,7 @@ const register = async (req, res) => {
     });
 
     if (existingUserByEmail) {
+      console.log('[register] Email déjà utilisé:', masked);
       return sendError(res, 'Cet email ou pseudo est déjà utilisé.', 409);
     }
 
@@ -44,6 +51,7 @@ const register = async (req, res) => {
     });
 
     if (existingUserByUsername) {
+      console.log('[register] Pseudo déjà utilisé');
       return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
     }
 
@@ -66,12 +74,14 @@ const register = async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    console.log('[register] Compte créé:', masked);
     return sendSuccess(res, {
       message: 'Compte créé avec succès.',
       user: sanitizeUser(newUser),
       token: token,
     }, 201);
   } catch (error) {
+    console.error('[register] Erreur:', error.message, error.code);
     handleError(error, res, "Erreur lors de l'inscription.");
   }
 };

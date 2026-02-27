@@ -71,7 +71,7 @@ export default function LoginPage() {
       showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
       setTimeout(() => navigate(nextScreen || 'welcome'), 300);
     } else {
-      showError(result.error ?? (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
+      showError(result.error || (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
     }
   };
 
@@ -102,7 +102,7 @@ export default function LoginPage() {
       setConfirmPassword('');
       setTimeout(() => navigate(nextScreen || 'welcome'), 300);
     } else {
-      showError(result.error ?? (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
+      showError(result.error || (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
     }
   };
 

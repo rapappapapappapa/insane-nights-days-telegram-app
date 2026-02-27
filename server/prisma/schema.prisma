@@ -98,6 +98,8 @@ model UserCommunity {
   pseudo               String?   @unique
   friendshipsReceived  CommunityFriend[] @relation("FriendRequested")
   friendshipsRequested CommunityFriend[] @relation("FriendRequester")
+  eventGroupsCreated   EventGroup[]
+  eventGroupMemberships EventGroupMember[]
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -288,6 +290,38 @@ model Event {
   payments      Payment[]
   tickets       Ticket[]
   venueRatings  VenueRating[]
+  eventGroups   EventGroup[]
+}
+
+model EventGroup {
+  id                  String              @id @default(uuid())
+  eventId             String
+  creatorCommunityId  String
+  name                String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  creator             UserCommunity       @relation(fields: [creatorCommunityId], references: [id], onDelete: Cascade)
+  members             EventGroupMember[]
+
+  @@unique([eventId, creatorCommunityId])
+  @@index([eventId])
+  @@index([creatorCommunityId])
+}
+
+model EventGroupMember {
+  id          String              @id @default(uuid())
+  groupId     String
+  communityId String
+  status      EventGroupMemberStatus @default(INVITED)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  group       EventGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  community   UserCommunity       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, communityId])
+  @@index([groupId])
+  @@index([communityId])
 }
 
 model EventDj {
@@ -530,6 +564,12 @@ enum CommunityFriendStatus {
   PENDING
   ACCEPTED
   BLOCKED
+}
+
+enum EventGroupMemberStatus {
+  INVITED
+  JOINED
+  DECLINED
 }
 
 enum EventStatus {

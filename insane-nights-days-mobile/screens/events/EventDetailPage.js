@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,8 @@ import {
   View,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -89,6 +91,14 @@ export default function EventDetailPage() {
   const [error, setError] = useState(null);
   const [buyingTicket, setBuyingTicket] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [eventGroups, setEventGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [invitingGroupId, setInvitingGroupId] = useState(null);
+  const [friends, setFriends] = useState([]);
+  const [selectedFriends, setSelectedFriends] = useState([]);
+  const [inviting, setInviting] = useState(false);
 
   // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
   useEffect(() => {
@@ -314,6 +324,103 @@ export default function EventDetailPage() {
     }
   }, [user?.isAuthenticated, user?.token]);
 
+  const fetchEventGroups = useCallback(async () => {
+    if (!user?.token || !eventId) return;
+    setLoadingGroups(true);
+    try {
+      const res = await api.getEventGroups(user.token, eventId);
+      if (res?.success && res.groups) setEventGroups(res.groups);
+    } catch (e) {
+      setEventGroups([]);
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, [user?.token, eventId]);
+
+  useEffect(() => {
+    if (user?.token && eventId && userProfiles?.activeProfileType === 'COMMUNITY' && userProfiles?.profiles?.community?.length) {
+      fetchEventGroups();
+    }
+  }, [user?.token, eventId, userProfiles?.activeProfileType, userProfiles?.profiles?.community, fetchEventGroups]);
+
+  const normalizeGroup = (g) => ({
+    id: g.id,
+    name: g.name,
+    creator: g.creator,
+    members: (g.members || []).map((m) => ({
+      id: m.id,
+      communityId: m.communityId || m.community?.id,
+      pseudo: m.pseudo ?? m.community?.pseudo ?? 'Anonyme',
+      profileImage: m.profileImage ?? m.community?.profileImage,
+      status: m.status,
+    })),
+  });
+
+  const handleCreateOrOpenGroup = async () => {
+    if (!user?.token || !hasActiveCommunityProfile()) {
+      showError(language === 'fr' ? 'Profil Communauté requis.' : 'Community profile required.');
+      return;
+    }
+    setCreatingGroup(true);
+    try {
+      const res = await api.createEventGroup(user.token, eventId);
+      if (res?.success && res.group) {
+        const normalized = normalizeGroup(res.group);
+        setEventGroups((prev) => {
+          const exists = prev.some((g) => g.id === normalized.id);
+          if (exists) return prev;
+          return [...prev, normalized];
+        });
+        setInvitingGroupId(normalized.id);
+        setSelectedFriends([]);
+        const friendsRes = await api.getCommunityFriends(user.token);
+        if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
+        setInviteModalVisible(true);
+      } else {
+        showError(res?.message || 'Erreur');
+      }
+    } catch (e) {
+      showError(e?.message || 'Erreur');
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const handleInviteFriends = async () => {
+    if (!invitingGroupId || selectedFriends.length === 0) return;
+    setInviting(true);
+    try {
+      const res = await api.inviteToEventGroup(
+        user.token,
+        eventId,
+        invitingGroupId,
+        selectedFriends.map((f) => f.communityId)
+      );
+      if (res?.success) {
+        showSuccess(language === 'fr' ? `${res.invited || 0} ami(s) invité(s)` : `${res.invited || 0} friend(s) invited`);
+        setInviteModalVisible(false);
+        setInvitingGroupId(null);
+        setSelectedFriends([]);
+        fetchEventGroups();
+      } else {
+        showError(res?.message || 'Erreur');
+      }
+    } catch (e) {
+      showError(e?.message || 'Erreur');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const openInviteModal = (groupId) => {
+    setInvitingGroupId(groupId);
+    setSelectedFriends([]);
+    api.getCommunityFriends(user.token).then((friendsRes) => {
+      if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
+    });
+    setInviteModalVisible(true);
+  };
+
   const loadUserProfiles = async () => {
     if (!user?.token) return;
     setLoadingProfiles(true);
@@ -427,6 +534,58 @@ export default function EventDetailPage() {
             </View>
           )}
 
+          {/* Aller avec des amis - Groupes d'événements */}
+          {isEventUpcoming() && user?.isAuthenticated && hasActiveCommunityProfile() && (
+            <View style={styles.friendsSection}>
+              <Text style={styles.friendsSectionTitle}>
+                {language === 'fr' ? '👥 Aller avec des amis' : '👥 Go with friends'}
+              </Text>
+              <Text style={styles.friendsSectionHint}>
+                {language === 'fr' ? 'Crée un groupe et invite tes amis à cet événement.' : 'Create a group and invite friends to this event.'}
+              </Text>
+              {loadingGroups ? (
+                <ActivityIndicator size="small" color="#FF1744" style={{ marginVertical: 12 }} />
+              ) : eventGroups.length > 0 ? (
+                <>
+                  {eventGroups.map((g) => (
+                    <View key={g.id} style={styles.groupCard}>
+                      <View style={styles.groupHeader}>
+                        <Text style={styles.groupName}>{g.name || (language === 'fr' ? 'Mon groupe' : 'My group')}</Text>
+                        <TouchableOpacity style={styles.inviteMoreBtn} onPress={() => openInviteModal(g.id)}>
+                          <Text style={styles.inviteMoreBtnText}>+ {language === 'fr' ? 'Inviter' : 'Invite'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.groupMembers}>
+                        {g.members?.map((m) => (
+                          <View key={m.id} style={styles.memberChip}>
+                            <Text style={styles.memberChipText}>
+                              {m.pseudo} {m.status === 'JOINED' ? '✓' : m.status === 'INVITED' ? '?' : '✕'}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.friendsButton, creatingGroup && styles.friendsButtonDisabled]}
+                onPress={handleCreateOrOpenGroup}
+                disabled={creatingGroup}
+              >
+                {creatingGroup ? (
+                  <ActivityIndicator color="#0b0b0e" size="small" />
+                ) : (
+                  <Text style={styles.friendsButtonText}>
+                    {eventGroups.length > 0
+                      ? (language === 'fr' ? 'Créer un autre groupe' : 'Create another group')
+                      : (language === 'fr' ? 'Créer un groupe' : 'Create a group')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           {isEventUpcoming() ? (
             user?.isAuthenticated && !hasActiveCommunityProfile() ? (
               <View style={styles.warningCard}>
@@ -493,6 +652,55 @@ export default function EventDetailPage() {
 
         </View>
       </ScrollView>
+
+      {/* Modal inviter des amis */}
+      <Modal visible={inviteModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{language === 'fr' ? 'Inviter des amis' : 'Invite friends'}</Text>
+            <Text style={styles.modalHint}>{language === 'fr' ? 'Sélectionne les amis à inviter' : 'Select friends to invite'}</Text>
+            <FlatList
+              data={friends}
+              keyExtractor={(item) => item.communityId}
+              style={styles.friendsList}
+              renderItem={({ item }) => {
+                const isSelected = selectedFriends.some((f) => f.communityId === item.communityId);
+                return (
+                  <TouchableOpacity
+                    style={[styles.friendItem, isSelected && styles.friendItemSelected]}
+                    onPress={() => {
+                      setSelectedFriends((prev) =>
+                        isSelected ? prev.filter((f) => f.communityId !== item.communityId) : [...prev, item]
+                      );
+                    }}
+                  >
+                    <Text style={styles.friendItemText}>{item.pseudo}</Text>
+                    {isSelected && <Text style={styles.friendItemCheck}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => { setInviteModalVisible(false); setInvitingGroupId(null); }}>
+                <Text style={styles.modalCancelText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalInviteBtn, (inviting || selectedFriends.length === 0) && styles.modalInviteBtnDisabled]}
+                onPress={handleInviteFriends}
+                disabled={inviting || selectedFriends.length === 0}
+              >
+                {inviting ? (
+                  <ActivityIndicator color="#0b0b0e" size="small" />
+                ) : (
+                  <Text style={styles.modalInviteText}>
+                    {language === 'fr' ? `Inviter (${selectedFriends.length})` : `Invite (${selectedFriends.length})`}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Toast pour les notifications */}
       <Toast
@@ -735,5 +943,172 @@ const styles = StyleSheet.create({
     color: '#0b0b0e',
     fontSize: 16,
     fontWeight: '700',
+  },
+  friendsSection: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: 'rgba(255,23,68,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+  },
+  friendsSectionTitle: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  friendsSectionHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  friendsButton: {
+    backgroundColor: 'rgba(255,23,68,0.3)',
+    borderWidth: 1,
+    borderColor: '#FF1744',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  friendsButtonDisabled: {
+    opacity: 0.6,
+  },
+  friendsButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  groupCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  groupName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  inviteMoreBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,23,68,0.3)',
+    borderRadius: 8,
+  },
+  inviteMoreBtnText: {
+    color: '#FF1744',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  groupMembers: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  memberChip: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  memberChipText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    backgroundColor: '#141419',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  modalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  friendsList: {
+    maxHeight: 220,
+    marginBottom: 16,
+  },
+  friendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  friendItemSelected: {
+    backgroundColor: 'rgba(255,23,68,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.5)',
+  },
+  friendItemText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  friendItemCheck: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalInviteBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FF1744',
+    alignItems: 'center',
+  },
+  modalInviteBtnDisabled: {
+    opacity: 0.5,
+  },
+  modalInviteText: {
+    color: '#0b0b0e',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

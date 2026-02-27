@@ -28,7 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function CommunityFriendsPage() {
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();
-  const { goBack } = useNavigation();
+  const { goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -43,21 +43,29 @@ export default function CommunityFriendsPage() {
   const [sendingRequest, setSendingRequest] = useState(null);
   const [respondingRequest, setRespondingRequest] = useState(null);
   const [removingFriend, setRemovingFriend] = useState(null);
-  const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests'
+  const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'eventInvites'
+  const [eventInvites, setEventInvites] = useState([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
+  const [respondingInvite, setRespondingInvite] = useState(null);
 
   const fr = language === 'fr';
 
   const fetchData = useCallback(async () => {
     if (!user?.token) return;
     try {
-      const [friendsRes, requestsRes] = await Promise.all([
+      setLoadingInvites(true);
+      const [friendsRes, requestsRes, invitesRes] = await Promise.all([
         api.getCommunityFriends(user.token),
         api.getCommunityFriendRequests(user.token),
+        api.getEventGroupInvitations(user.token),
       ]);
       if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
       if (requestsRes?.success && requestsRes.requests) setRequests(requestsRes.requests);
+      if (invitesRes?.success && invitesRes.invitations) setEventInvites(invitesRes.invitations);
     } catch (e) {
       showError(e?.message || (language === 'fr' ? 'Erreur chargement' : 'Load error'));
+    } finally {
+      setLoadingInvites(false);
     }
   }, [user?.token, language, showError]);
 
@@ -155,6 +163,20 @@ export default function CommunityFriendsPage() {
       showError(e?.message || 'Erreur');
     } finally {
       setRespondingRequest(null);
+    }
+  };
+
+  const handleRespondEventInvite = async (inviteId, groupId, action) => {
+    if (!user?.token) return;
+    setRespondingInvite(inviteId);
+    try {
+      await api.respondToEventGroupInvitation(user.token, groupId, action);
+      showSuccess(action === 'join' ? (fr ? 'Tu as rejoint le groupe !' : 'You joined the group!') : (fr ? 'Invitation refusée' : 'Invitation declined'));
+      setEventInvites((prev) => prev.filter((i) => i.id !== inviteId));
+    } catch (e) {
+      showError(e?.message || 'Erreur');
+    } finally {
+      setRespondingInvite(null);
     }
   };
 
@@ -264,6 +286,10 @@ export default function CommunityFriendsPage() {
           <Text style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}>{fr ? 'Demandes' : 'Requests'}</Text>
           {requests.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{requests.length}</Text></View>}
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'eventInvites' && styles.tabActive]} onPress={() => setActiveTab('eventInvites')}>
+          <Text style={[styles.tabText, activeTab === 'eventInvites' && styles.tabTextActive]}>{fr ? 'Événements' : 'Events'}</Text>
+          {eventInvites.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{eventInvites.length}</Text></View>}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -293,6 +319,46 @@ export default function CommunityFriendsPage() {
                   disabled={removingFriend === f.id}
                 >
                   {removingFriend === f.id ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="person-remove" size={20} color="#FF1744" />}
+                </TouchableOpacity>
+              </View>
+            ))
+          )
+        ) : activeTab === 'eventInvites' ? (
+          eventInvites.length === 0 ? (
+            <Text style={styles.emptyText}>{fr ? 'Aucune invitation à un événement.' : 'No event invitations.'}</Text>
+          ) : (
+            eventInvites.map((inv) => (
+              <View key={inv.id} style={styles.eventInviteCard}>
+                <Text style={styles.eventInviteTitle}>
+                  {(inv.creator?.pseudo || 'Quelqu\'un')} {fr ? 't\'invite à' : 'invites you to'}
+                </Text>
+                <Text style={styles.eventInviteEvent}>{inv.event?.title || 'Événement'}</Text>
+                {inv.event?.date && (
+                  <Text style={styles.eventInviteDate}>
+                    {new Date(inv.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} • {inv.event?.time || ''}
+                  </Text>
+                )}
+                <View style={styles.eventInviteActions}>
+                  <TouchableOpacity
+                    style={[styles.eventInviteJoinBtn, respondingInvite === inv.id && styles.btnDisabled]}
+                    onPress={() => handleRespondEventInvite(inv.id, inv.groupId, 'join')}
+                    disabled={respondingInvite === inv.id}
+                  >
+                    {respondingInvite === inv.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.eventInviteJoinBtnText}>{fr ? 'Rejoindre' : 'Join'}</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.eventInviteDeclineBtn, respondingInvite === inv.id && styles.btnDisabled]}
+                    onPress={() => handleRespondEventInvite(inv.id, inv.groupId, 'decline')}
+                    disabled={respondingInvite === inv.id}
+                  >
+                    <Text style={styles.eventInviteDeclineBtnText}>{fr ? 'Refuser' : 'Decline'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.eventInviteLink}
+                  onPress={() => navigate('eventDetail', { eventId: inv.event?.id })}
+                >
+                  <Text style={styles.eventInviteLinkText}>{fr ? 'Voir l\'événement →' : 'View event →'}</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -390,4 +456,15 @@ const styles = StyleSheet.create({
   declineBtnText: { color: '#fff', fontSize: 16 },
   btnDisabled: { opacity: 0.6 },
   errorText: { color: '#fff', textAlign: 'center', marginTop: 60, fontSize: 16 },
+  eventInviteCard: { padding: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,23,68,0.2)' },
+  eventInviteTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 4 },
+  eventInviteEvent: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  eventInviteDate: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 12 },
+  eventInviteActions: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  eventInviteJoinBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
+  eventInviteJoinBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  eventInviteDeclineBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  eventInviteDeclineBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  eventInviteLink: { alignSelf: 'flex-start', paddingVertical: 4 },
+  eventInviteLinkText: { color: '#FF1744', fontSize: 14, fontWeight: '600' },
 });

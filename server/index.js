@@ -23,6 +23,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const { authenticateToken, requireAdmin } = require('./middleware/auth');
 const authController = require('./controllers/authController');
+const userController = require('./controllers/userController');
 const bcrypt = require('bcryptjs');
 const {
   MEDIA_STORAGE,
@@ -1664,6 +1665,12 @@ app.get('/api/events', async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
+
+// Groupes d'événements (amis qui vont ensemble) - AVANT /api/events/:eventId
+app.post('/api/events/:eventId/groups', authenticateToken, userController.createEventGroup);
+app.get('/api/events/:eventId/groups', authenticateToken, userController.getEventGroups);
+app.post('/api/events/:eventId/groups/:groupId/invite', authenticateToken, userController.inviteToEventGroup);
+app.put('/api/event-groups/:groupId/respond', authenticateToken, userController.respondToEventGroupInvitation);
 
 app.get('/api/events/:eventId', async (req, res) => {
   try {

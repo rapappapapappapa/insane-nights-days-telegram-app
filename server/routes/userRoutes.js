@@ -151,6 +151,13 @@ router.get('/community/pseudo/check', authenticateToken, userController.checkCom
 router.get('/community/search', authenticateToken, userController.searchCommunities);
 
 /**
+ * @route GET /api/user/community/event-groups/invitations
+ * @desc Mes invitations à des groupes d'événements
+ * @access Private
+ */
+router.get('/community/event-groups/invitations', authenticateToken, userController.getEventGroupInvitations);
+
+/**
  * @route GET /api/user/:userId
  * @desc Récupère les informations d'un utilisateur par son ID
  * @access Public

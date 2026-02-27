@@ -1338,6 +1338,38 @@ const api = {
       method: 'DELETE',
     }, token);
   },
+
+  // Groupes d'événements (amis qui vont ensemble)
+  createEventGroup: async (token, eventId, { name, friendCommunityIds } = {}) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/events/${eventId}/groups`, {
+      method: 'POST',
+      body: JSON.stringify({ name: name || null, friendCommunityIds: friendCommunityIds || [] }),
+    }, token);
+  },
+  getEventGroups: async (token, eventId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/events/${eventId}/groups`, {}, token);
+  },
+  inviteToEventGroup: async (token, eventId, groupId, communityIds) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/events/${eventId}/groups/${groupId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ communityIds }),
+    }, token);
+  },
+  respondToEventGroupInvitation: async (token, groupId, action) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/event-groups/${groupId}/respond`, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    }, token);
+  },
+  getEventGroupInvitations: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/community/event-groups/invitations', {}, token);
+  },
+
   searchCommunities: async (token, query) => {
     if (!token) throw new Error('Token requis.');
     const q = encodeURIComponent((query || '').trim());

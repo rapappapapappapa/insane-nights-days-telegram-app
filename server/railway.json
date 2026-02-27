@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node scripts/fix-duplicate-community-pseudo.js 2>/dev/null || true && node scripts/drop-pseudo-constraint-if-exists.js 2>/dev/null || true && npx prisma db push --accept-data-loss && npm start",
+    "startCommand": "node scripts/ensure-user-username.js 2>/dev/null || true && node scripts/fix-duplicate-community-pseudo.js 2>/dev/null || true && node scripts/drop-pseudo-constraint-if-exists.js 2>/dev/null || true && npx prisma db push --accept-data-loss && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

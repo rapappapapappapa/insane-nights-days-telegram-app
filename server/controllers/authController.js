@@ -100,27 +100,13 @@ const login = async (req, res) => {
         where: { email: normalizedEmail },
       });
     } else {
-      // Sinon, chercher par pseudo (username)
+      // Sinon, chercher par pseudo (username) - insensible à la casse (PostgreSQL)
       const usernameSearch = email.trim();
-      
-      // Chercher d'abord avec la casse exacte
       user = await prisma.user.findFirst({
-        where: { username: usernameSearch },
+        where: {
+          username: { equals: usernameSearch, mode: 'insensitive' },
+        },
       });
-      
-      // Si pas trouvé, essayer avec une recherche insensible à la casse
-      if (!user) {
-        try {
-          const users = await prisma.$queryRaw`
-            SELECT * FROM User WHERE LOWER(username) = LOWER(${usernameSearch})
-          `;
-          if (users && users.length > 0) {
-            user = users[0];
-          }
-        } catch (queryError) {
-          console.error('[LOGIN] Erreur requête brute:', queryError);
-        }
-      }
     }
 
     if (!user) {

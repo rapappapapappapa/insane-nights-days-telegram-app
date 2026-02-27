@@ -7148,7 +7148,6 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: {
         dj: {
-          select: { artistName: true, profileImage: true, city: true },
           include: {
             media: {
               where: { type: 'photo', title: 'profile' },
@@ -7279,11 +7278,6 @@ app.get('/api/feed', async (req, res) => {
       // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte ou d'installation
       include: {
         dj: {
-          select: {
-            artistName: true,
-            profileImage: true,
-            city: true,
-          },
           include: {
             media: {
               where: { type: 'photo', title: 'profile' },

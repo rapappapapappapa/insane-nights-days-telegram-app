@@ -1283,6 +1283,10 @@ const api = {
     if (!token) throw new Error('Token requis.');
     return apiRequest('/api/user/community/profile', {}, token);
   },
+  getCommunityProfileById: async (token, communityId) => {
+    if (!token || !communityId) throw new Error('Token et communityId requis.');
+    return apiRequest(`/api/user/community/${communityId}`, {}, token);
+  },
   updateCommunityProfile: async (token, { pseudo, genres }) => {
     if (!token) throw new Error('Token requis.');
     return apiRequest('/api/user/community/profile', {

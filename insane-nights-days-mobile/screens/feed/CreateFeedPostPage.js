@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -33,6 +33,21 @@ export default function CreateFeedPostPage() {
   const [selectedImageUri, setSelectedImageUri] = useState(null); // URI locale de l'image sélectionnée
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  /**
+   * ✅ Règle: Seuls les DJ et Booker peuvent créer des posts. Les Community peuvent commenter mais pas poster.
+   */
+  useEffect(() => {
+    const activeType = user?.activeProfileType;
+    if (user && activeType && activeType !== 'DJ' && activeType !== 'BOOKER') {
+      showError(
+        language === 'fr'
+          ? 'Seuls les profils DJ et Booker peuvent créer des posts. Les profils Community peuvent commenter.'
+          : 'Only DJ and Booker profiles can create posts. Community profiles can comment.'
+      );
+      goBack();
+    }
+  }, [user?.id, user?.activeProfileType]);
 
   /**
    * ✅ AJOUT: Sélectionner une image depuis la galerie

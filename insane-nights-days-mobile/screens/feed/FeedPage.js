@@ -685,9 +685,12 @@ export default function FeedPage() {
                         size={18} 
                         color={expandedComments[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
                       />
-                      {postComments[item.id] && postComments[item.id].length > 0 && (
-                        <Text style={styles.postActionText}>
-                          {postComments[item.id].length}
+                      {(postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)) > 0 && (
+                        <Text style={[
+                          styles.postActionText,
+                          expandedComments[item.id] && styles.postActionTextLiked
+                        ]}>
+                          {postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)}
                         </Text>
                       )}
                     </TouchableOpacity>

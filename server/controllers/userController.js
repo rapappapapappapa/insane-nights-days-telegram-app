@@ -771,6 +771,36 @@ const updateDjProfile = async (req, res) => {
 };
 
 /**
+ * Récupère le profil public d'un profil Communauté par ID (pour voir un ami)
+ * GET /api/user/community/:communityId
+ * Retourne uniquement les infos publiques : pseudo, profileImage, bannerImage, genres
+ */
+const getCommunityProfileById = async (req, res) => {
+  try {
+    const { communityId } = req.params;
+    if (!communityId) return sendError(res, 'communityId requis.', 400);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(communityId)) return sendError(res, 'Profil introuvable.', 404);
+    const community = await prisma.userCommunity.findUnique({
+      where: { id: communityId },
+      select: { id: true, pseudo: true, profileImage: true, bannerImage: true, genres: true },
+    });
+    if (!community) return sendError(res, 'Profil introuvable.', 404);
+    return sendSuccess(res, {
+      profile: {
+        id: community.id,
+        pseudo: community.pseudo || 'Anonyme',
+        profileImage: community.profileImage,
+        bannerImage: community.bannerImage,
+        genres: community.genres,
+      },
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur serveur');
+  }
+};
+
+/**
  * Récupère le profil Communauté de l'utilisateur connecté (premier profil)
  */
 const getCommunityProfile = async (req, res) => {
@@ -1451,6 +1481,7 @@ module.exports = {
   getCurrentDjProfile,
   updateDjProfile,
   getCommunityProfile,
+  getCommunityProfileById,
   updateCommunityProfile,
   getCommunityFriends,
   getCommunityFriendRequests,

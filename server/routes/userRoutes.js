@@ -158,6 +158,13 @@ router.get('/community/search', authenticateToken, userController.searchCommunit
 router.get('/community/event-groups/invitations', authenticateToken, userController.getEventGroupInvitations);
 
 /**
+ * @route GET /api/user/community/:communityId
+ * @desc Voir le profil public d'un profil Communauté (ami)
+ * @access Private
+ */
+router.get('/community/:communityId', authenticateToken, userController.getCommunityProfileById);
+
+/**
  * @route GET /api/user/:userId
  * @desc Récupère les informations d'un utilisateur par son ID
  * @access Public

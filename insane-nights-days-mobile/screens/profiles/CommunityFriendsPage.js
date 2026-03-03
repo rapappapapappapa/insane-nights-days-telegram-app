@@ -256,14 +256,20 @@ export default function CommunityFriendsPage() {
           <Text style={styles.sectionTitle}>{fr ? 'Résultats — Clique sur + pour envoyer une demande' : 'Results — Tap + to send a request'}</Text>
           {searchResults.map((r) => (
             <View key={r.id} style={styles.resultRow}>
-              {r.profileImage ? (
-                <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
-              ) : (
-                <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                  <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                </View>
-              )}
-              <Text style={styles.resultPseudo}>{r.pseudo}</Text>
+              <TouchableOpacity
+                style={styles.resultRowTouch}
+                onPress={() => navigate('communityProfile', { communityId: r.id })}
+                activeOpacity={0.7}
+              >
+                {r.profileImage ? (
+                  <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
+                ) : (
+                  <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
+                  </View>
+                )}
+                <Text style={styles.resultPseudo}>{r.pseudo}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.addBtn, sendingRequest === r.id && styles.addBtnDisabled]}
                 onPress={() => handleSendRequest(r.id)}
@@ -305,14 +311,20 @@ export default function CommunityFriendsPage() {
           ) : (
             friends.map((f) => (
               <View key={f.id} style={styles.friendRow}>
-                {f.profileImage ? (
-                  <Image source={{ uri: normalizeMediaUrl(f.profileImage) }} style={styles.avatarSmall} />
-                ) : (
-                  <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                    <Text style={styles.avatarInitial}>{f.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                  </View>
-                )}
-                <Text style={styles.friendPseudo}>{f.pseudo}</Text>
+                <TouchableOpacity
+                  style={styles.friendRowTouch}
+                  onPress={() => navigate('communityProfile', { communityId: f.communityId })}
+                  activeOpacity={0.7}
+                >
+                  {f.profileImage ? (
+                    <Image source={{ uri: normalizeMediaUrl(f.profileImage) }} style={styles.avatarSmall} />
+                  ) : (
+                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
+                      <Text style={styles.avatarInitial}>{f.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.friendPseudo}>{f.pseudo}</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.removeBtn, removingFriend === f.id && styles.removeBtnDisabled]}
                   onPress={() => handleRemoveFriend(f.id)}
@@ -329,9 +341,14 @@ export default function CommunityFriendsPage() {
           ) : (
             eventInvites.map((inv) => (
               <View key={inv.id} style={styles.eventInviteCard}>
-                <Text style={styles.eventInviteTitle}>
-                  {(inv.creator?.pseudo || 'Quelqu\'un')} {fr ? 't\'invite à' : 'invites you to'}
-                </Text>
+                <TouchableOpacity
+                  onPress={() => inv.creator?.id && navigate('communityProfile', { communityId: inv.creator.id })}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.eventInviteTitle}>
+                    {(inv.creator?.pseudo || 'Quelqu\'un')} {fr ? 't\'invite à' : 'invites you to'}
+                  </Text>
+                </TouchableOpacity>
                 <Text style={styles.eventInviteEvent}>{inv.event?.title || 'Événement'}</Text>
                 {inv.event?.date && (
                   <Text style={styles.eventInviteDate}>
@@ -369,14 +386,20 @@ export default function CommunityFriendsPage() {
           ) : (
             requests.map((r) => (
               <View key={r.id} style={styles.requestRow}>
-                {r.profileImage ? (
-                  <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
-                ) : (
-                  <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                    <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                  </View>
-                )}
-                <Text style={styles.requestPseudo}>{r.pseudo}</Text>
+                <TouchableOpacity
+                  style={styles.requestRowTouch}
+                  onPress={() => r.communityId && navigate('communityProfile', { communityId: r.communityId })}
+                  activeOpacity={0.7}
+                >
+                  {r.profileImage ? (
+                    <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
+                  ) : (
+                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
+                      <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.requestPseudo}>{r.pseudo}</Text>
+                </TouchableOpacity>
                 <View style={styles.requestActions}>
                   <TouchableOpacity
                     style={[styles.acceptBtn, respondingRequest === r.id && styles.btnDisabled]}
@@ -425,6 +448,7 @@ const styles = StyleSheet.create({
   searchResults: { paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 8 },
   resultRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
+  resultRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   resultPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 12, gap: 8 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)', gap: 6 },
@@ -438,8 +462,10 @@ const styles = StyleSheet.create({
   loader: { marginTop: 40 },
   emptyText: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 40, fontSize: 16 },
   friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
+  friendRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   friendPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
   requestRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
+  requestRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   requestPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
   requestActions: { flexDirection: 'row', gap: 8 },
   avatarSmall: { width: 44, height: 44, borderRadius: 22 },

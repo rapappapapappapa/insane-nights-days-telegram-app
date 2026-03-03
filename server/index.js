@@ -6745,7 +6745,7 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
     if (!user || (user.activeProfileType !== 'DJ' && user.activeProfileType !== 'BOOKER')) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les DJs et les Bookers peuvent créer des posts.',
+        message: 'Seuls les DJs et les Bookers peuvent créer des posts. Les profils Community peuvent commenter.',
       });
     }
 
@@ -7154,6 +7154,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       skip: offset,
       orderBy: { createdAt: 'desc' },
       include: {
+        _count: { select: { comments: true } },
         dj: {
           include: {
             media: {
@@ -7204,6 +7205,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
         content: post.content,
         imageUrl: normalizeImageUrl(post.imageUrl),
         likes: post.likes,
+        commentsCount: post._count?.comments ?? 0,
         createdAt: post.createdAt,
         profileType,
         author: { id: post.authorId, username: post.author.username },
@@ -7284,6 +7286,7 @@ app.get('/api/feed', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte ou d'installation
       include: {
+        _count: { select: { comments: true } },
         dj: {
           include: {
             media: {
@@ -7409,6 +7412,7 @@ app.get('/api/feed', async (req, res) => {
         content: post.content,
         imageUrl: normalizeImageUrl(post.imageUrl), // ✅ CORRECTION: Normaliser l'URL de l'image
         likes: post.likes,
+        commentsCount: post._count?.comments ?? 0,
         createdAt: post.createdAt,
         profileType: profileType, // ✅ CORRECTION: Utiliser djId/bookerId pour déterminer le type, pas activeProfileType
         author: {

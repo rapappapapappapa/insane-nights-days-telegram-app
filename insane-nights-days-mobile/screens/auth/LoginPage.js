@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const [acceptedCgu, setAcceptedCgu] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
 
@@ -87,6 +88,12 @@ export default function LoginPage() {
     }
     if (password.length < 6) {
       showError(language === 'fr' ? 'Mot de passe trop court (min 6).' : 'Password too short (min 6).');
+      return;
+    }
+    if (!acceptedCgu) {
+      showError(language === 'fr'
+        ? 'Vous devez accepter les CGU et la politique de confidentialité.'
+        : 'You must accept the Terms of Use and Privacy Policy.');
       return;
     }
 
@@ -207,6 +214,31 @@ export default function LoginPage() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
+                <View style={styles.cguRow}>
+                  <TouchableOpacity
+                    style={[styles.checkbox, acceptedCgu && styles.checkboxChecked]}
+                    onPress={() => setAcceptedCgu(!acceptedCgu)}
+                    activeOpacity={0.7}
+                  >
+                    {acceptedCgu && <Ionicons name="checkmark" size={14} color="#0b0b0e" />}
+                  </TouchableOpacity>
+                  <View style={styles.cguTextWrap}>
+                    <Text style={styles.cguText}>
+                      {language === 'fr' ? "J'accepte les " : 'I accept the '}
+                    </Text>
+                    <TouchableOpacity onPress={() => navigate('legal', { type: 'cgu' })}>
+                      <Text style={styles.cguLink}>{language === 'fr' ? 'CGU' : 'Terms of Use'}</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.cguText}>
+                      {language === 'fr' ? ' et la ' : ' and '}
+                    </Text>
+                    <TouchableOpacity onPress={() => navigate('legal', { type: 'privacy' })}>
+                      <Text style={styles.cguLink}>
+                        {language === 'fr' ? 'politique de confidentialité' : 'Privacy Policy'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
                 <TouchableOpacity
                   style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                   onPress={handleRegister}
@@ -547,6 +579,42 @@ const styles = StyleSheet.create({
   forgotLinkText: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  cguRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#FF1744',
+    borderColor: '#FF1744',
+  },
+  cguTextWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  cguText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+  },
+  cguLink: {
+    color: '#FF1744',
+    fontSize: 12,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },

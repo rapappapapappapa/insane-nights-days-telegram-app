@@ -315,6 +315,24 @@ export default function DrawerContent({ navigation }) {
         })}
       </View>
 
+      <View style={styles.legalLinks}>
+        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'cgu' })}>
+          <Text style={styles.legalLinkText}>CGU</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalSeparator}>•</Text>
+        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'cgv' })}>
+          <Text style={styles.legalLinkText}>CGV</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalSeparator}>•</Text>
+        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'mentions' })}>
+          <Text style={styles.legalLinkText}>Mentions légales</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalSeparator}>•</Text>
+        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'privacy' })}>
+          <Text style={styles.legalLinkText}>Confidentialité</Text>
+        </TouchableOpacity>
+      </View>
+
       {isLoggedIn ? (
         <View style={styles.logoutSection}>
           <TouchableOpacity
@@ -487,5 +505,23 @@ const styles = StyleSheet.create({
     color: '#FF1744',
     fontSize: 14,
     fontWeight: '900',
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  legalLinkText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  legalSeparator: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
   },
 });

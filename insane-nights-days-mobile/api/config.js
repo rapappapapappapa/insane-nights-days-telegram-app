@@ -563,6 +563,22 @@ const api = {
     );
   },
 
+  // RGPD: Export des données personnelles
+  exportUserData: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest('/api/user/me/export', { noCache: true }, token);
+  },
+
+  // RGPD: Suppression du compte
+  deleteAccount: async (token, password) => {
+    if (!token) throw new Error('Token requis.');
+    if (!password) throw new Error('Mot de passe requis pour confirmer.');
+    return apiRequest('/api/user/me', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    }, token);
+  },
+
   // =========================================================================
   // EMAIL VERIFICATION / PASSWORD RESET
   // =========================================================================

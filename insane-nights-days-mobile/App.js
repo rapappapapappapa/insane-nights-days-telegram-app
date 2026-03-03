@@ -62,6 +62,7 @@ import NotificationsPage from './screens/notifications/NotificationsPage';
 import RankingPage from './screens/ranking/RankingPage';
 
 import TutorialPage from './screens/tutorial/TutorialPage';
+import LegalPage from './screens/legal/LegalPage';
 
 const SCREENS = {
   home: HomePage,
@@ -102,6 +103,7 @@ const SCREENS = {
   tutorial: TutorialPage, // ✅ AJOUT: Route pour le tutoriel
   notifications: NotificationsPage, // ✅ AJOUT: Route notifications (feed)
   admin: AdminPage, // ✅ AJOUT: Route admin (visible uniquement pour admins)
+  legal: LegalPage, // CGU, CGV, mentions légales, politique de confidentialité
 };
 
 function AppContent() {

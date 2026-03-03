@@ -10,6 +10,8 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
@@ -38,15 +40,48 @@ const PORT = Number(process.env.PORT) || 8080;
 // Derrière Railway/Cloudflare: utiliser X-Forwarded-*
 app.set('trust proxy', 1);
 
-// Configuration Express
-// ✅ CORS (indispensable pour la Web App / pages.dev)
-// On utilise un CORS large (demo) car l'app utilise des Bearer tokens (pas de cookies).
+// ✅ Sécurité: Helmet (headers HTTP sécurisés)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // Désactivé pour éviter conflits avec les API
+}));
+
+// ✅ Sécurité: CORS restrictif en production
+// ALLOWED_ORIGINS: comma-separated (ex: https://app.example.com,https://app.pages.dev)
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : ['*'];
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (allowedOrigins[0] === '*' || !origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('CORS non autorisé'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.options('*', cors());
+
+// ✅ Sécurité: Rate limiting général (100 req/15min par IP)
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 100,
+  message: { success: false, message: 'Trop de requêtes. Réessayez plus tard.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', generalLimiter);
+
+// ✅ Sécurité: Rate limiting strict sur auth (5 req/15min par IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 // Note: Stripe webhooks ont besoin du body brut pour vérifier la signature.
 app.use(express.json({
   limit: '50mb',

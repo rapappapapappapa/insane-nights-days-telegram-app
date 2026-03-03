@@ -37,6 +37,20 @@ router.post('/switch-profile', authenticateToken, userController.switchProfile);
 router.post('/change-password', authenticateToken, userController.changePassword);
 
 /**
+ * @route GET /api/user/me/export
+ * @desc Export des données personnelles (RGPD - droit à la portabilité)
+ * @access Private
+ */
+router.get('/me/export', authenticateToken, userController.exportUserData);
+
+/**
+ * @route DELETE /api/user/me
+ * @desc Suppression du compte (RGPD - droit à l'effacement)
+ * @access Private
+ */
+router.delete('/me', authenticateToken, userController.deleteAccount);
+
+/**
  * @route GET /api/user/me
  * @desc Récupère les informations de l'utilisateur connecté avec son dernier ticket
  * @access Private (nécessite authentification)

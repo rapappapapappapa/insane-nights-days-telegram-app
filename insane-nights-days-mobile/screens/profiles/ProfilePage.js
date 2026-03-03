@@ -18,6 +18,9 @@ import {
   View,
   ActivityIndicator,
   Image,
+  Alert,
+  Modal,
+  Share,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../contexts/AuthContext';
@@ -34,7 +37,7 @@ import { useToast } from '../../hooks/useToast';
  * @param {Function} props.onUpdateUser - Callback pour mettre à jour l'utilisateur (optionnel)
  */
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
-  const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser } = useAuth();
+  const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser, logout } = useAuth();
   const { navigate } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
@@ -65,6 +68,10 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const [sendingEmailCode, setSendingEmailCode] = useState(false);
   const [verifyingEmailCode, setVerifyingEmailCode] = useState(false);
   const [emailCodeCooldown, setEmailCodeCooldown] = useState(0); // secondes avant de pouvoir renvoyer
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
 
   useEffect(() => {
     setForm({ username });
@@ -463,6 +470,109 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
             )}
           </View>
         )}
+
+        {/* Section Données et confidentialité (RGPD) */}
+        {isAuthenticated && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📋 Données et confidentialité</Text>
+            <Text style={styles.rgpdDescription}>
+              Exportez vos données ou supprimez votre compte (RGPD).
+            </Text>
+            <View style={styles.rgpdButtons}>
+              <TouchableOpacity
+                style={[styles.rgpdButton, exportingData && styles.rgpdButtonDisabled]}
+                onPress={async () => {
+                  if (!authUser?.token || exportingData) return;
+                  setExportingData(true);
+                  try {
+                    const data = await api.exportUserData(authUser.token);
+                    const jsonStr = JSON.stringify(data, null, 2);
+                    await Share.share({
+                      message: jsonStr,
+                      title: 'Mes données Insane Nights & Days',
+                    });
+                    showSuccess('Données exportées. Partagez ou enregistrez-les.');
+                  } catch (e) {
+                    showError(e?.message || 'Erreur lors de l\'export.');
+                  } finally {
+                    setExportingData(false);
+                  }
+                }}
+                disabled={exportingData}
+              >
+                {exportingData ? (
+                  <ActivityIndicator size="small" color="#0b0b0e" />
+                ) : (
+                  <Text style={styles.rgpdButtonText}>Exporter mes données</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.rgpdButtonDanger]}
+                onPress={() => setDeleteModalVisible(true)}
+              >
+                <Text style={styles.rgpdButtonDangerText}>Supprimer mon compte</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Modal suppression compte */}
+        <Modal visible={deleteModalVisible} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Supprimer mon compte</Text>
+              <Text style={styles.modalText}>
+                Cette action est irréversible. Toutes vos données seront effacées. Entrez votre mot de passe pour confirmer.
+              </Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Mot de passe"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                secureTextEntry
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => {
+                    setDeleteModalVisible(false);
+                    setDeletePassword('');
+                  }}
+                  disabled={deletingAccount}
+                >
+                  <Text style={styles.modalCancelText}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalDeleteButton, (!deletePassword || deletingAccount) && styles.modalButtonDisabled]}
+                  onPress={async () => {
+                    if (!authUser?.token || !deletePassword || deletingAccount) return;
+                    setDeletingAccount(true);
+                    try {
+                      await api.deleteAccount(authUser.token, deletePassword);
+                      setDeleteModalVisible(false);
+                      setDeletePassword('');
+                      showSuccess('Compte supprimé.');
+                      await logout();
+                      navigate('home');
+                    } catch (e) {
+                      showError(e?.message || 'Mot de passe incorrect ou erreur.');
+                    } finally {
+                      setDeletingAccount(false);
+                    }
+                  }}
+                  disabled={!deletePassword || deletingAccount}
+                >
+                  {deletingAccount ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.modalDeleteText}>Supprimer définitivement</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Section Profils */}
         {isAuthenticated && (
@@ -1050,6 +1160,111 @@ const styles = StyleSheet.create({
   createProfileBtnText: {
     color: '#0b0b0e',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  rgpdDescription: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    marginBottom: 14,
+    lineHeight: 18,
+  },
+  rgpdButtons: {
+    gap: 10,
+  },
+  rgpdButton: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.4)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  rgpdButtonDisabled: {
+    opacity: 0.6,
+  },
+  rgpdButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rgpdButtonDanger: {
+    backgroundColor: 'rgba(239,68,68,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.5)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  rgpdButtonDangerText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#1a1a1f',
+    borderRadius: 18,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  modalText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#0b0b0e',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.4)',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+  modalCancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  modalCancelText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalDeleteButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#ef4444',
+  },
+  modalButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalDeleteText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '700',
   },
 });

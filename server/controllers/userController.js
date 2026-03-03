@@ -1470,6 +1470,114 @@ const getEventGroupInvitations = async (req, res) => {
   }
 };
 
+/**
+ * Export des données personnelles (RGPD - droit à la portabilité)
+ * GET /api/user/me/export
+ */
+const exportUserData = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        communities: true,
+        djs: true,
+        bookers: true,
+        venues: true,
+        tickets: { include: { event: { select: { id: true, title: true, date: true } } } },
+      },
+    });
+    if (!user) return sendError(res, 'Utilisateur non trouvé.', 404);
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        createdAt: user.createdAt,
+        emailVerified: user.emailVerified,
+      },
+      communities: user.communities.map((c) => ({
+        id: c.id,
+        pseudo: c.pseudo,
+        nom: c.nom,
+        prenom: c.prenom,
+        pays: c.pays,
+        genres: c.genres,
+        createdAt: c.createdAt,
+      })),
+      djs: user.djs.map((d) => ({
+        id: d.id,
+        artistName: d.artistName,
+        city: d.city,
+        genre: d.genre,
+        bio: d.bio,
+        createdAt: d.createdAt,
+      })),
+      bookers: user.bookers.map((b) => ({
+        id: b.id,
+        pseudo: b.pseudo,
+        nom: b.nom,
+        prenom: b.prenom,
+        bookerType: b.bookerType,
+        createdAt: b.createdAt,
+      })),
+      venues: user.venues.map((v) => ({
+        id: v.id,
+        venueName: v.venueName,
+        address: v.address,
+        createdAt: v.createdAt,
+      })),
+      tickets: user.tickets.map((t) => ({
+        id: t.id,
+        eventId: t.eventId,
+        event: t.event,
+        purchaseDate: t.purchaseDate,
+      })),
+    };
+
+    res.setHeader('Content-Disposition', `attachment; filename="insane-export-${userId.slice(0, 8)}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    return res.json(exportData);
+  } catch (error) {
+    handleError(error, res, 'Erreur export données');
+  }
+};
+
+/**
+ * Suppression du compte (RGPD - droit à l'effacement)
+ * DELETE /api/user/me
+ * body: { password: string } - confirmation par mot de passe
+ */
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body ?? {};
+
+    if (!password) {
+      return sendError(res, 'Le mot de passe est requis pour confirmer la suppression.', 400);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return sendError(res, 'Utilisateur non trouvé.', 404);
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return sendError(res, 'Mot de passe incorrect.', 401);
+    }
+
+    await prisma.user.delete({ where: { id: userId } });
+
+    return sendSuccess(res, {
+      message: 'Compte supprimé. Vos données ont été effacées.',
+    });
+  } catch (error) {
+    handleError(error, res, 'Erreur suppression compte');
+  }
+};
+
 module.exports = {
   getUserProfiles,
   switchProfile,
@@ -1497,5 +1605,7 @@ module.exports = {
   inviteToEventGroup,
   respondToEventGroupInvitation,
   getEventGroupInvitations,
+  exportUserData,
+  deleteAccount,
 };
 

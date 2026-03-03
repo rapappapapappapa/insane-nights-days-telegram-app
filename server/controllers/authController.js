@@ -5,7 +5,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
-const { validateRegistration, validateLogin, normalizeEmail, validatePassword, isValidEmail } = require('../utils/validation');
+const { validateRegistration, validateLogin, normalizeEmail, validatePassword, isValidEmail, parseBirthDate, validateAge } = require('../utils/validation');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
@@ -19,7 +19,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
  */
 const register = async (req, res) => {
   try {
-    const { email, username, password } = req.body ?? {};
+    const { email, username, password, birthDate: birthDateStr, certifiedMajor } = req.body ?? {};
 
     // Log pour diagnostic (email masqué, domaine visible)
     const domain = (email && typeof email === 'string' && email.includes('@')) ? email.split('@')[1] : '?';
@@ -31,6 +31,22 @@ const register = async (req, res) => {
     if (!validation.valid) {
       console.log('[register] Validation échouée:', validation.message);
       return sendError(res, validation.message, 400);
+    }
+
+    // Valider date de naissance et majorité
+    if (!birthDateStr || !birthDateStr.trim()) {
+      return sendError(res, 'La date de naissance est requise.', 400);
+    }
+    const parsed = parseBirthDate(birthDateStr.trim());
+    if (!parsed.valid) {
+      return sendError(res, parsed.message, 400);
+    }
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) {
+      return sendError(res, ageCheck.message, 403);
+    }
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
     }
 
     const { normalizedData } = validation;
@@ -62,6 +78,7 @@ const register = async (req, res) => {
         email: normalizedData.email,
         username: normalizedData.username,
         password: hashedPassword,
+        birthDate: parsed.date,
         score: 100,
         level: 1,
       },

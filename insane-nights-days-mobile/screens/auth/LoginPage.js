@@ -43,8 +43,18 @@ export default function LoginPage() {
   const [resetConfirm, setResetConfirm] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [acceptedCgu, setAcceptedCgu] = useState(false);
+  const [birthDate, setBirthDate] = useState('');
+  const [certifiedMajor, setCertifiedMajor] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
+
+  const handleBirthDateChange = (value) => {
+    const cleaned = value.replace(/[^0-9]/g, '');
+    let formatted = cleaned;
+    if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+    if (cleaned.length > 4) formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
+    setBirthDate(formatted.length > 10 ? formatted.slice(0, 10) : formatted);
+  };
 
   // ✅ Si déjà connecté, rediriger (mais PAS pendant le render)
   useEffect(() => {
@@ -96,9 +106,21 @@ export default function LoginPage() {
         : 'You must accept the Terms of Use and Privacy Policy.');
       return;
     }
+    if (!birthDate || birthDate.replace(/\//g, '').length !== 8) {
+      showError(language === 'fr'
+        ? 'Date de naissance requise (format jj/mm/aaaa).'
+        : 'Birth date required (dd/mm/yyyy format).');
+      return;
+    }
+    if (!certifiedMajor) {
+      showError(language === 'fr'
+        ? 'Vous devez certifier avoir 18 ans ou plus.'
+        : 'You must certify that you are 18 or older.');
+      return;
+    }
 
     setLoading(true);
-    const result = await register({ email, username, password });
+    const result = await register({ email, username, password, birthDate, certifiedMajor });
     setLoading(false);
 
     if (result.success) {
@@ -107,6 +129,9 @@ export default function LoginPage() {
       setUsername('');
       setPassword('');
       setConfirmPassword('');
+      setBirthDate('');
+      setCertifiedMajor(false);
+      setAcceptedCgu(false);
       setTimeout(() => navigate(nextScreen || 'welcome'), 300);
     } else {
       showError(result.error || (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
@@ -214,6 +239,30 @@ export default function LoginPage() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
+                <Text style={styles.label}>{language === 'fr' ? 'Date de naissance' : 'Birth date'}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  keyboardType="number-pad"
+                  value={birthDate}
+                  onChangeText={handleBirthDateChange}
+                  maxLength={10}
+                />
+                <View style={styles.cguRow}>
+                  <TouchableOpacity
+                    style={[styles.checkbox, certifiedMajor && styles.checkboxChecked]}
+                    onPress={() => setCertifiedMajor(!certifiedMajor)}
+                    activeOpacity={0.7}
+                  >
+                    {certifiedMajor && <Ionicons name="checkmark" size={14} color="#0b0b0e" />}
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cguTextWrap} onPress={() => setCertifiedMajor(!certifiedMajor)} activeOpacity={0.7}>
+                    <Text style={styles.cguText}>
+                      {language === 'fr' ? 'Je certifie avoir 18 ans ou plus' : 'I certify that I am 18 or older'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={styles.cguRow}>
                   <TouchableOpacity
                     style={[styles.checkbox, acceptedCgu && styles.checkboxChecked]}

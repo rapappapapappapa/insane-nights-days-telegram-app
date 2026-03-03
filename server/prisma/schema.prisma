@@ -28,6 +28,7 @@ model User {
   emailVerifiedAt           DateTime?
   passwordResetCodeHash     String?
   passwordResetExpiresAt    DateTime?
+  birthDate                 DateTime?
   adminActions              AdminActionLog[]
   feedNotificationsAsActor  FeedNotification[] @relation("NotificationActor")
   feedNotifications         FeedNotification[]

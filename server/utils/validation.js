@@ -98,7 +98,63 @@ const validateLogin = (data) => {
   return { valid: true };
 };
 
+/** Âge minimum requis (majeur) */
+const MIN_AGE = 18;
+
+/**
+ * Parse une date de naissance au format jj/mm/aaaa
+ * @param {string} dateStr - Date au format jj/mm/aaaa
+ * @returns {{valid: boolean, date?: Date, message?: string}}
+ */
+const parseBirthDate = (dateStr = '') => {
+  const cleaned = String(dateStr).replace(/[^0-9/]/g, '');
+  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) {
+    return { valid: false, message: 'Date invalide. Format attendu : jj/mm/aaaa' };
+  }
+  const [, day, month, year] = match;
+  const d = parseInt(day, 10);
+  const m = parseInt(month, 10) - 1;
+  const y = parseInt(year, 10);
+  if (y < 1900 || y > new Date().getFullYear()) {
+    return { valid: false, message: 'Année invalide.' };
+  }
+  if (m < 0 || m > 11) return { valid: false, message: 'Mois invalide.' };
+  if (d < 1 || d > 31) return { valid: false, message: 'Jour invalide.' };
+  const date = new Date(y, m, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) {
+    return { valid: false, message: 'Date invalide.' };
+  }
+  return { valid: true, date };
+};
+
+/**
+ * Vérifie qu'une personne a au moins MIN_AGE ans
+ * @param {Date} birthDate - Date de naissance
+ * @returns {{valid: boolean, age?: number, message?: string}}
+ */
+const validateAge = (birthDate) => {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  if (age < MIN_AGE) {
+    return { valid: false, age, message: `Vous devez avoir au moins ${MIN_AGE} ans pour vous inscrire.` };
+  }
+  return { valid: true, age };
+};
+
 module.exports = {
+  sanitizeInvisibleChars,
+  normalizeEmail,
+  isValidEmail,
+  validatePassword,
+  validateRegistration,
+  validateLogin,
+  parseBirthDate,
+  validateAge,
+  MIN_AGE,
+};
   sanitizeInvisibleChars,
   normalizeEmail,
   isValidEmail,

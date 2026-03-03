@@ -140,9 +140,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const register = useCallback(async ({ email, username, password }) => {
+  const register = useCallback(async ({ email, username, password, birthDate, certifiedMajor }) => {
     try {
-      const response = await api.register({ email, username, password });
+      const response = await api.register({ email, username, password, birthDate, certifiedMajor });
       
       // Si le backend n'est pas accessible, api.register retourne null
       if (!response) {

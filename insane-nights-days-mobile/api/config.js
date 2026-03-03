@@ -257,10 +257,10 @@ const api = {
   },
 
   // Inscription utilisateur
-  register: async ({ email, username, password }) => {
+  register: async ({ email, username, password, birthDate, certifiedMajor }) => {
     return apiRequest(API_CONFIG.ENDPOINTS.AUTH_REGISTER, {
       method: 'POST',
-      body: JSON.stringify({ email, username, password }),
+      body: JSON.stringify({ email, username, password, birthDate, certifiedMajor }),
     });
   },
 

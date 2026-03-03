@@ -155,11 +155,3 @@ module.exports = {
   validateAge,
   MIN_AGE,
 };
-  sanitizeInvisibleChars,
-  normalizeEmail,
-  isValidEmail,
-  validatePassword,
-  validateRegistration,
-  validateLogin,
-};
-

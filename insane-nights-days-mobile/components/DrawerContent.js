@@ -21,7 +21,7 @@ const menuItems = [
     id: 'login',
     emoji: '🔐',
     title: 'Connexion',
-    description: 'Se connecter à votre compte',
+    description: 'Se connecter ou s\'inscrire',
     onlyWhenLoggedOut: true,
   },
   {
@@ -66,13 +66,6 @@ const menuItems = [
     onlyWhenLoggedIn: true,
     // Achats = tickets => uniquement Communauté
     onlyForActiveProfileTypes: ['COMMUNITY'],
-  },
-  {
-    id: 'accountType',
-    emoji: '✨',
-    title: 'Créer un compte',
-    description: 'Inscription & progression',
-    onlyWhenLoggedOut: true,
   },
   {
     id: 'profile',

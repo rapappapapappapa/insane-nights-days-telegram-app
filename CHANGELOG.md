@@ -1,48 +1,75 @@
 # Changelog
 
-Toutes les modifications notables du projet sont documentées dans ce fichier.
-
-Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
+Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## [Non publié]
+## Semaine du 3-9 mars 2026
 
 ### Ajouté
-- **Système d'amis (Communauté)** : API (liste amis, demandes reçues, envoi, accept/refuse, retrait) + page "Mes amis" avec recherche par pseudo, onglets Amis/Demandes
-- **Mes Profils** : Hub central pour gérer tous les profils (Communauté, DJ, Booker, Lieu) depuis une seule page
-- **Profil Communauté** : Page d'édition avec photo, bannière, pseudo et genres (chips)
-- **API profil Communauté** : Endpoints `GET/PUT /api/user/community/profile` et upload photo/bannière
-- **Bouton Feed** : Accès rapide au feed depuis le menu drawer
-- **Avatar dynamique** : La page "Mes Profils" affiche la photo du profil actif (ou l'initiale si pas de photo)
-- **Profil Lieu (Venue)** : `profileImage` et `bannerImage`, API get/update/upload, page VenueProfileEditPage
-
-### Modifié
-- **Drawer** : "Mon Profil" renommé en "Mes Profils" ; suppression de "Mon profil Booker" et "Changer de profil" ; ajout "Mes amis" (visible en profil Communauté)
-- **ProfilePage** : Transformée en hub avec boutons "Modifier" pour chaque type de profil
-- **CommunityProfileEditPage** : Correction du layout (avatar écrasé, overlap bannière)
-- **getUserProfiles** : Ajout de `profileImage` pour les profils DJ et Venue dans la réponse API
-- **ProfilePage** : Bouton "Modifier" DJ → djDashboard avec `openSection: 'profil'` ; Lieu → venueProfileEdit
-- **CommunityProfileEditPage** : Bouton "Mes amis" vers CommunityFriendsPage
+- **Version web** : Client React avec WelcomePage, auth, feed, événements, profil, tickets
+- **Blocage mineurs** : Date de naissance + case "Je certifie avoir 18 ans" à l'inscription
+- **Préparation sortie** : Pages légales (CGU, CGV, mentions, confidentialité), case CGU obligatoire à l'inscription
+- **RGPD** : Export des données et suppression de compte dans ProfilePage
+- **Sécurité backend** : Helmet, CORS, rate limiting
 
 ### Corrigé
-- **Mailer** : Support Resend (gratuit 3000/mois) en plus de SMTP ; vérification email et mot de passe oublié fonctionnent ; `/api/health` indique si l'email est configuré
+- **validation.js** : Suppression du bloc d'export dupliqué (SyntaxError)
 
-### Technique
-- **Mailer** : `RESEND_API_KEY` + `RESEND_FROM` (prioritaire) ou SMTP_* ; logging des erreurs ; `emailConfigured` et `emailProvider` dans `/api/health`
-- **API amis** : `GET/POST/PUT/DELETE /api/user/community/friends*`, `GET /api/user/community/search?q=`
-- **Pseudo Communauté unique** : Contrainte unique sur `UserCommunity.pseudo` (recherche d'amis) ; distinct du `artistName` DJ
-- **Schema Prisma** : Modèle `UserCommunity` avec `pseudo`, `profileImage`, `bannerImage`, `genres` ; modèle `CommunityFriend` (PENDING, ACCEPTED, BLOCKED) ; `UserVenue` avec `profileImage`, `bannerImage`
-- **Styles ProfilePage** : `noProfilesBox`, `createProfileBtn`, `createProfileBtnText`
+---
+
+## Semaine du 24 février - 2 mars 2026
+
+### Ajouté
+- **Système d'amis (Communauté)** : API + page "Mes amis" avec recherche par pseudo, onglets Amis/Demandes
+- **Mes Profils** : Hub central pour gérer tous les profils (Communauté, DJ, Booker, Lieu)
+- **Profil Communauté** : Édition avec photo, bannière, pseudo et genres (chips)
+- **Profil Lieu (Venue)** : profileImage, bannerImage, API, page VenueProfileEditPage
+- **Groupes d'événements** : Créer groupe, inviter amis, accepter/refuser invitations
+- **Mailer** : Support Resend (3000/mois gratuit) + SMTP
+- **Vérification email** : Envoi code, confirmation, mot de passe oublié
+- **Bouton Feed** : Accès rapide au feed depuis le menu drawer
+
+### Modifié
+- **Drawer** : "Mon Profil" → "Mes Profils", ajout "Mes amis" (profil Communauté)
+- **ProfilePage** : Hub avec boutons "Modifier" par type de profil
+- **getUserProfiles** : Ajout profileImage pour DJ et Venue
+
+### Corrigé
+- **CommunityProfileEditPage** : Layout (avatar écrasé, overlap bannière)
+- **Inscription Gmail** : Logs, sanitization email, affichage erreurs
+- **Login/inscription** : Colonne username manquante, script ensure-user-username
+- **Feed Prisma** : select+include incompatibles sur relation dj
+- **Photos profil DJ** : Sync UserDj + fallback DjMedia
+- **Anti-spam vérif email** : Bypass si code expiré, délai 30s
+- **Feed loading loop** : Correction boucle infinie
+- **Recherche amis** : Debounce, feedback, section "Ajouter un ami"
+- **Toast** : Remplace Alert à l'inscription
+
+---
+
+## Semaine du 17-23 février 2026
+
+### Ajouté
+- **Abonnements** : Suivre / ne plus suivre un profil DJ ou Booker
+- **Feed Abonnements** : Onglets "Pour tous" | "Abonnements" (style X)
+- **Profils Booker publics** : Page publique avec bouton Suivre
+
+### Modifié
+- **Toast** : Remplace Alert.alert pour les messages simples
+
+### Corrigé
+- **Navigation** : Lien vers profil DJ/Booker depuis le feed
+- **Feed following** : Parenthèse en trop dans la requête
 
 ---
 
 ## Comment maintenir ce fichier
 
-À chaque modification significative, ajouter une entrée sous la section appropriée :
+À chaque fin de semaine (ou quand tu fais un push important), ajoute une entrée sous **Semaine du [lundi] - [dimanche]** :
+
 - **Ajouté** : Nouvelles fonctionnalités
 - **Modifié** : Changements dans des fonctionnalités existantes
 - **Corrigé** : Corrections de bugs
-- **Technique** : Détails techniques (migrations, config, etc.)
 
-Pour une nouvelle version publiée, créer une section `## [X.Y.Z] - YYYY-MM-DD` et déplacer le contenu de `[Non publié]` vers cette section.
+Si aucune section pour la semaine en cours n'existe, crée-la en haut du fichier.

@@ -327,11 +327,6 @@ export default function LoginPage() {
                 >
                   {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('accountType')}>
-                  <Text style={styles.secondaryButtonText}>
-                    {language === 'fr' ? 'Créer un compte' : 'Create an account'}
-                  </Text>
-                </TouchableOpacity>
               </>
             )}
           </View>

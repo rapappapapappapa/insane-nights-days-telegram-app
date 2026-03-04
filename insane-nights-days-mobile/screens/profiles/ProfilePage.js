@@ -577,7 +577,15 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         {/* Section Profils */}
         {isAuthenticated && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Mes Profils</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Mes Profils</Text>
+              <TouchableOpacity
+                style={styles.addProfileButton}
+                onPress={() => navigate('switchProfile')}
+              >
+                <Text style={styles.addProfileButtonText}>+ Ajouter</Text>
+              </TouchableOpacity>
+            </View>
             {loadingProfiles ? (
               <ActivityIndicator color="#FF1744" style={{ marginVertical: 20 }} />
             ) : profiles ? (
@@ -902,6 +910,19 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: '#ffffff',
     fontSize: 18,
+    fontWeight: '700',
+  },
+  addProfileButton: {
+    backgroundColor: 'rgba(255,23,68,0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.5)',
+  },
+  addProfileButtonText: {
+    color: '#FF1744',
+    fontSize: 14,
     fontWeight: '700',
   },
   editButton: {

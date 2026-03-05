@@ -12,7 +12,7 @@
  *    - Formulaire: ancien mot de passe, nouveau, confirmation
  *    - api.changePassword(token, oldPassword, newPassword, confirmPassword)
  * 
- * 2. SWITCHER DE PROFIL (Community / DJ / Booker / Venue)
+ * 2. SWITCHER DE PROFIL (Community / DJ / Organisateur / Venue)
  *    - api.getUserProfiles(token) pour lister les profils
  *    - api.switchProfile(token, profileType)
  *    - Afficher le profil actif et permettre de basculer

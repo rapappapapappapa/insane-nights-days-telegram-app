@@ -13,6 +13,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **RGPD** : Export des données et suppression de compte dans ProfilePage
 - **Sécurité backend** : Helmet, CORS, rate limiting
 
+### Modifié
+- **Booker → Organisateur** : Remplacement de "Booker" par "Organisateur" dans toute l'interface (labels, titres, descriptions)
+- **Drawer** : Un seul bouton "Connexion" (inscription via onglet sur la page login)
+- **LoginPage** : Suppression du bouton "Créer un compte" (amenait à AccountType avant compte, redondant avec onglet Inscription)
+
 ### Corrigé
 - **validation.js** : Suppression du bloc d'export dupliqué (SyntaxError)
 
@@ -22,7 +27,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Ajouté
 - **Système d'amis (Communauté)** : API + page "Mes amis" avec recherche par pseudo, onglets Amis/Demandes
-- **Mes Profils** : Hub central pour gérer tous les profils (Communauté, DJ, Booker, Lieu)
+- **Mes Profils** : Hub central pour gérer tous les profils (Communauté, DJ, Organisateur, Lieu)
 - **Profil Communauté** : Édition avec photo, bannière, pseudo et genres (chips)
 - **Profil Lieu (Venue)** : profileImage, bannerImage, API, page VenueProfileEditPage
 - **Groupes d'événements** : Créer groupe, inviter amis, accepter/refuser invitations
@@ -51,7 +56,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 17-23 février 2026
 
 ### Ajouté
-- **Abonnements** : Suivre / ne plus suivre un profil DJ ou Booker
+- **Abonnements** : Suivre / ne plus suivre un profil DJ ou Organisateur
 - **Feed Abonnements** : Onglets "Pour tous" | "Abonnements" (style X)
 - **Profils Booker publics** : Page publique avec bouton Suivre
 
@@ -59,7 +64,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Toast** : Remplace Alert.alert pour les messages simples
 
 ### Corrigé
-- **Navigation** : Lien vers profil DJ/Booker depuis le feed
+- **Navigation** : Lien vers profil DJ/Organisateur depuis le feed
 - **Feed following** : Parenthèse en trop dans la requête
 
 ---

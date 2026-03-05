@@ -84,7 +84,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   }, [isAuthenticated, authUser?.token]);
 
   /**
-   * Récupère tous les profils de l'utilisateur (Community, DJ, Booker, Venue)
+   * Récupère tous les profils de l'utilisateur (Community, DJ, Organisateur, Venue)
    */
   const fetchProfiles = async () => {
     if (!authUser?.token) return;
@@ -664,10 +664,10 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   </View>
                 )}
 
-                {/* Profils Booker */}
+                {/* Profils Organisateur */}
                 {profiles.profiles?.booker && profiles.profiles.booker.length > 0 && (
                   <View style={styles.profileSection}>
-                    <Text style={styles.profileSectionTitle}>📅 Booker</Text>
+                    <Text style={styles.profileSectionTitle}>📅 Organisateur</Text>
                     {profiles.profiles.booker.map((profile) => (
                       <View key={profile.id} style={styles.profileItemRow}>
                         <TouchableOpacity

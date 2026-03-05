@@ -13,7 +13,7 @@ Pour chaque fonctionnalité, **demande-moi le code en commentaire** et je te fou
 | Liens CGU / Confidentialité | `LoginPage.js` | Liens cliquables vers les pages légales |
 | Validation champs en temps réel | `LoginPage.js` | Messages d'erreur sous chaque champ |
 | Changer mot de passe | `ProfilePage.js` | Formulaire ancien/nouveau/confirmation |
-| Switcher de profil | `ProfilePage.js` | Basculer Community / DJ / Booker / Venue |
+| Switcher de profil | `ProfilePage.js` | Basculer Community / DJ / Organisateur / Venue |
 | Export données RGPD | `ProfilePage.js` | Télécharger ses données |
 | Suppression de compte | `ProfilePage.js` | Supprimer son compte avec confirmation |
 
@@ -23,7 +23,7 @@ Pour chaque fonctionnalité, **demande-moi le code en commentaire** et je te fou
 
 | Fonctionnalité | Fichier | Description |
 |----------------|---------|-------------|
-| Créer un post | `FeedPage.js` | Bouton + modal pour les DJs/Bookers |
+| Créer un post | `FeedPage.js` | Bouton + modal pour les DJs/Organisateurs |
 | Liker un post | `FeedPage.js` | Bouton cœur + compteur |
 | Commentaires | `FeedPage.js` | Afficher + ajouter des commentaires |
 | Pagination / infinite scroll | `FeedPage.js` | Charger plus de posts au scroll |

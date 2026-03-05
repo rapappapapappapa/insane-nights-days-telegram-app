@@ -234,7 +234,7 @@ function AppContent() {
           visible={hasNewMessage}
           message={
             latest
-              ? `${latest.profileType === 'DJ' ? 'DJ' : 'Booker'}${latest.eventTitle ? ` • ${latest.eventTitle}` : ''}${latest.preview ? ` — ${latest.preview}` : ''}`
+              ? `${latest.profileType === 'DJ' ? 'DJ' : 'Organisateur'}${latest.eventTitle ? ` • ${latest.eventTitle}` : ''}${latest.preview ? ` — ${latest.preview}` : ''}`
               : (language === 'fr' ? 'Vous avez reçu un nouveau message' : 'You have received a new message')
           }
           onPress={handleNotificationPress}

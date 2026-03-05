@@ -645,7 +645,7 @@ export default function DjProfilePage() {
                     {review.raterType === 'COMMUNITY'
                       ? language === 'fr' ? 'Communauté' : 'Community'
                       : review.raterType === 'BOOKER'
-                      ? 'Booker'
+                      ? (language === 'fr' ? 'Organisateur' : 'Organizer')
                       : language === 'fr' ? 'Lieu' : 'Venue'}
                   </Text>
                 </View>

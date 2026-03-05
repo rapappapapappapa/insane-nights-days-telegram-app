@@ -294,7 +294,7 @@ export default function FeedPage() {
   };
 
   /**
-   * ✅ FONCTION: Naviguer vers le profil d'un Booker
+   * ✅ FONCTION: Naviguer vers le profil d'un Organisateur
    */
   const handleBookerPress = (bookerId) => {
     if (bookerId) {
@@ -537,8 +537,8 @@ export default function FeedPage() {
                     : 'Log in to see posts from profiles you follow')
                 : feedTab === 'following'
                 ? (language === 'fr'
-                    ? 'Suis des DJs ou des bookers pour voir leurs posts ici'
-                    : 'Follow DJs or bookers to see their posts here')
+                    ? 'Suis des DJs ou des organisateurs pour voir leurs posts ici'
+                    : 'Follow DJs or organizers to see their posts here')
                 : (language === 'fr'
                     ? 'Le feed est vide pour le moment'
                     : 'The feed is empty for now')
@@ -548,15 +548,15 @@ export default function FeedPage() {
           feed.map((item) => {
             if (item.type === 'post') {
               const isDj = item.profileType === 'DJ';
-              // Booker posts can sometimes miss the embedded booker object (old data / partial responses),
+              // Posts organisateur peuvent parfois manquer l'objet booker (anciennes données),
               // so fallback to author username instead of showing "Utilisateur".
               const profileName = isDj
                 ? item.dj?.artistName
                 : (item.booker?.name || item.author?.username);
-              const profileImage = isDj ? item.dj?.profileImage : item.booker?.profileImage;
+              const profileImage = isDj ? item.dj?.profileImage : item.booker?.profileImage; // booker = organisateur (API)
               const profileLocation = isDj ? item.dj?.city : null;
               const imageUri = normalizeMediaUrl(item.imageUrl);
-              const avatarUri = normalizeMediaUrl(profileImage); // ✅ CORRECTION: Afficher la photo de profil pour DJs et Bookers
+              const avatarUri = normalizeMediaUrl(profileImage); // ✅ Afficher la photo de profil pour DJs et Organisateurs
               // ✅ SUPPRIMÉ: isBrokenImage n'est plus nécessaire car ImageWithRetry gère les erreurs
               
               return (
@@ -611,7 +611,7 @@ export default function FeedPage() {
                               color="#fff" 
                             />
                             <Text style={styles.profileBadgeText}>
-                              {isDj ? 'DJ' : 'Booker'}
+                              {isDj ? 'DJ' : 'Organisateur'}
                             </Text>
                           </View>
                         </View>
@@ -665,7 +665,8 @@ export default function FeedPage() {
                       <Ionicons 
                         name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                         size={18} 
-                        color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                        color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
+                        style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
                       />
                       {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                         <Text style={[

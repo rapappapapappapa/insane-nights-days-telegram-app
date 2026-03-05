@@ -7,11 +7,11 @@ Objectif : **Finaliser la v1 de l'app mobile** pour savoir quoi reproduire sur l
 ## ✅ Déjà en place (mobile)
 
 - Auth : inscription, connexion, date de naissance, certification majorité
-- Profils : Community, DJ, Booker, Venue (création, édition, switch)
+- Profils : Community, DJ, Organisateur, Venue (création, édition, switch)
 - Feed : posts, événements, like, commentaires, onglets Pour tous / Abonnements
 - Événements : liste, détail, achat ticket (Stripe)
 - Tickets : liste, QR code
-- Dashboards : DJ (bookings, chat, profil), Booker (événements, chat), Venue
+- Dashboards : DJ (bookings, chat, profil), Organisateur (événements, chat), Venue
 - Amis Communauté : liste, demandes, recherche
 - Notifications : feed + chat
 - CGU, CGV, mentions légales, politique de confidentialité
@@ -69,7 +69,7 @@ Une fois la v1 mobile validée, aligner la webapp sur :
 
 1. **Pages à avoir** : Welcome (feed), Events, EventDetail, Profile, Tickets, Login
 2. **Fonctionnalités prioritaires** : auth, feed, événements, achat ticket (Stripe)
-3. **Fonctionnalités secondaires** : dashboards DJ/Booker/Venue, amis, notifications
+3. **Fonctionnalités secondaires** : dashboards DJ/Organisateur/Venue, amis, notifications
 
 Voir `client/FEATURES_A_IMPLEMENTER.md` pour le détail des features web à implémenter.
 

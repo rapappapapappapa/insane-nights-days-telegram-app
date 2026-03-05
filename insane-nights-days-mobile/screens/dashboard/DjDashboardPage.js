@@ -1515,8 +1515,8 @@ export default function DjDashboardPage() {
 
           <Text style={styles.comingSoon}>
             {language === 'fr'
-              ? 'Le prix sera fixé via un contrat avec le booker (dans le chat privé).'
-              : 'Pricing will be agreed via a contract with the booker (in private chat).'}
+              ? 'Le prix sera fixé via un contrat avec l\'organisateur (dans le chat privé).'
+              : 'Pricing will be agreed via a contract with the organizer (in private chat).'}
           </Text>
 
             <View style={styles.inputGroup}>
@@ -1686,7 +1686,7 @@ export default function DjDashboardPage() {
                             {booking.booker && (
                               <View style={styles.bookingInfo}>
                                 <Text style={styles.bookingInfoLabel}>
-                                  👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                                  👤 {language === 'fr' ? 'Organisateur' : 'Organizer'}
                                 </Text>
                                 <Text style={styles.bookingInfoValue}>
                                   {booking.booker.name} ({booking.booker.type})
@@ -1844,7 +1844,7 @@ export default function DjDashboardPage() {
                       {booking.booker && (
                         <View style={styles.bookingInfo}>
                           <Text style={styles.bookingInfoLabel}>
-                            👤 {language === 'fr' ? 'Booker' : 'Booker'}
+                            👤 {language === 'fr' ? 'Organisateur' : 'Organizer'}
                           </Text>
                           <Text style={styles.bookingInfoValue}>
                             {booking.booker.name} ({booking.booker.type})
@@ -1864,7 +1864,7 @@ export default function DjDashboardPage() {
                               onPress={() => openChat(booking.id)}
                             >
                               <Text style={styles.invitationButtonText}>
-                                💬 {language === 'fr' ? 'Chat avec le booker' : 'Chat with booker'}
+                                💬 {language === 'fr' ? 'Chat avec l\'organisateur' : 'Chat with organizer'}
                               </Text>
                             </TouchableOpacity>
                             {/* Bouton chat de groupe */}
@@ -1949,7 +1949,7 @@ export default function DjDashboardPage() {
 
                   <Text style={styles.reviewSummaryMeta}>
                     {language === 'fr' ? 'Communauté' : 'Community'}: {ratingsData?.ratings?.totalRatingsCommunity ?? 0} •{' '}
-                    Booker: {ratingsData?.ratings?.totalRatingsBooker ?? 0} •{' '}
+                    {language === 'fr' ? 'Organisateur' : 'Organizer'}: {ratingsData?.ratings?.totalRatingsBooker ?? 0} •{' '}
                     {language === 'fr' ? 'Lieu' : 'Venue'}: {ratingsData?.ratings?.totalRatingsVenue ?? 0}
                   </Text>
                 </View>
@@ -1963,7 +1963,7 @@ export default function DjDashboardPage() {
                             {r.raterType === 'COMMUNITY'
                               ? (language === 'fr' ? 'Communauté' : 'Community')
                               : r.raterType === 'BOOKER'
-                                ? 'Booker'
+                                ? (language === 'fr' ? 'Organisateur' : 'Organizer')
                                 : (language === 'fr' ? 'Lieu' : 'Venue')}
                           </Text>
                           <StarRating rating={Number(r.rating || 0)} size={16} showStars={true} />
@@ -2663,8 +2663,8 @@ export default function DjDashboardPage() {
                     ) : (
                       <Text style={styles.contractHint}>
                         {language === 'fr'
-                          ? 'En attente de la réponse du booker.'
-                          : 'Waiting for booker response.'}
+                          ? 'En attente de la réponse de l\'organisateur.'
+                          : 'Waiting for organizer response.'}
                       </Text>
                     )
                   ) : contractData?.status === 'SIGNED' ? (
@@ -2674,8 +2674,8 @@ export default function DjDashboardPage() {
                   ) : (
                     <Text style={styles.contractHint}>
                       {language === 'fr'
-                        ? 'En attente du booker.'
-                        : 'Waiting for booker.'}
+                        ? 'En attente de l\'organisateur.'
+                        : 'Waiting for organizer.'}
                     </Text>
                   )}
                 </View>
@@ -2738,7 +2738,7 @@ export default function DjDashboardPage() {
                             </View>
                           )}
                           <Text style={styles.chatMessageSenderName}>
-                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Booker' : 'DJ')}
+                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Organisateur' : 'DJ')}
                           </Text>
                         </TouchableOpacity>
                       )}

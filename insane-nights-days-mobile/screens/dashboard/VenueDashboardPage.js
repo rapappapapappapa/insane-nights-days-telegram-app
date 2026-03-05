@@ -390,7 +390,7 @@ export default function VenueDashboardPage() {
           <Text style={styles.ratingValue}>{(ratings.averageRatingGlobal ?? 0).toFixed(1)} / 5</Text>
         </View>
         <Text style={styles.ratingDetail}>
-          {language === 'fr' ? 'Communauté' : 'Community'}: {(ratings.averageRatingCommunity ?? 0).toFixed(1)} · {language === 'fr' ? 'Bookers' : 'Bookers'}: {(ratings.averageRatingBooker ?? 0).toFixed(1)} · DJs: {(ratings.averageRatingDj ?? 0).toFixed(1)}
+          {language === 'fr' ? 'Communauté' : 'Community'}: {(ratings.averageRatingCommunity ?? 0).toFixed(1)} · {language === 'fr' ? 'Organisateurs' : 'Organizers'}: {(ratings.averageRatingBooker ?? 0).toFixed(1)} · DJs: {(ratings.averageRatingDj ?? 0).toFixed(1)}
         </Text>
 
         {ratings.allRatings?.length ? (

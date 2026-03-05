@@ -226,17 +226,20 @@ export default function WelcomePage() {
         setRefreshing(false);
         return;
       } else {
-        response = await api.getFeed(50, 0);
+        response = await api.getFeed(50, 0, user?.token || null);
       }
       if (response && response.success && Array.isArray(response.feed)) {
         setFeed(response.feed);
         const likesCountState = {};
+        const likedState = {};
         response.feed.forEach(item => {
           if (item.type === 'post') {
             likesCountState[item.id] = item.likes || 0;
+            if (item.liked === true) likedState[item.id] = true;
           }
         });
         setPostLikesCount(likesCountState);
+        setLikedPosts(prev => ({ ...prev, ...likedState }));
       } else {
         setFeed([]);
       }
@@ -547,7 +550,7 @@ export default function WelcomePage() {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Afficher "Dashboard Booker" et les listes DJ / Lieux pour les Bookers */}
+                {/* Afficher "Dashboard Organisateur" et les listes DJ / Lieux pour les Organisateurs */}
                 {user?.activeProfileType === 'BOOKER' && (
                   <>
                     <TouchableOpacity
@@ -556,7 +559,7 @@ export default function WelcomePage() {
                     >
                       <MaterialIcons name="event" size={36} color="#FF1744" />
                       <Text style={styles.actionText}>
-                        {language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}
+                        {language === 'fr' ? 'Dashboard Organisateur' : 'Organiser Dashboard'}
                       </Text>
                     </TouchableOpacity>
 
@@ -645,7 +648,7 @@ export default function WelcomePage() {
             
             {/* Boutons à droite */}
             <View style={styles.feedHeaderRight}>
-              {/* ✅ Cloche "MESSAGES" (chat DJ/Booker) */}
+              {/* ✅ Cloche "MESSAGES" (chat DJ/Organisateur) */}
               {user?.isAuthenticated && chatUnreadCount > 0 && (
                 <TouchableOpacity
                   style={styles.notificationsButton}
@@ -742,8 +745,8 @@ export default function WelcomePage() {
                           : 'Log in to see posts from profiles you follow')
                       : feedTab === 'following'
                       ? (language === 'fr'
-                          ? 'Suis des DJs ou des bookers pour voir leurs posts ici'
-                          : 'Follow DJs or bookers to see their posts here')
+                          ? 'Suis des DJs ou des organisateurs pour voir leurs posts ici'
+                          : 'Follow DJs or organizers to see their posts here')
                       : (language === 'fr'
                           ? 'Le feed est vide pour le moment'
                           : 'The feed is empty for now')
@@ -807,7 +810,7 @@ export default function WelcomePage() {
                                     color="#fff" 
                                   />
                                   <Text style={styles.profileBadgeText}>
-                                    {isDj ? 'DJ' : 'Booker'}
+                                    {isDj ? 'DJ' : 'Organisateur'}
                                   </Text>
                                 </View>
                               </View>
@@ -867,7 +870,8 @@ export default function WelcomePage() {
                             <Ionicons 
                               name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                               size={18} 
-                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
+                              style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
                             />
                             {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                               <Text style={[

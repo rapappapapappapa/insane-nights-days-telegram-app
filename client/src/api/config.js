@@ -74,6 +74,10 @@ export const api = {
     apiRequest(`/api/feed?limit=${limit}&offset=${offset}`),
   getFeedFollowing: (token, limit = 50, offset = 0) =>
     apiRequest(`/api/feed/following?limit=${limit}&offset=${offset}`, {}, token),
+  toggleLikePost: (token, postId) =>
+    apiRequest(`/api/feed/post/${postId}/like`, { method: 'POST' }, token),
+  checkPostLiked: (token, postId) =>
+    apiRequest(`/api/feed/post/${postId}/like`, {}, token),
 };
 
 export const API_BASE_URL = API_BASE;

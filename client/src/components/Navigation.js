@@ -18,7 +18,7 @@
  *    - Lien vers /notifications
  *
  * 3. SWITCHER DE PROFIL
- *    - Dropdown pour basculer Community / DJ / Booker / Venue
+ *    - Dropdown pour basculer Community / DJ / Organisateur / Venue
  *    - api.switchProfile(token, profileType)
  */
 

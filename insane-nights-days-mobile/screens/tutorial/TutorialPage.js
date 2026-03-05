@@ -29,15 +29,15 @@ export default function TutorialPage() {
       icon: 'musical-notes',
       title: language === 'fr' ? 'Bienvenue sur NOX' : 'Welcome to NOX',
       description: language === 'fr' 
-        ? 'NOX est la plateforme qui connecte les DJs, les bookers et les lieux pour créer des événements inoubliables.'
-        : 'NOX is the platform that connects DJs, bookers and venues to create unforgettable events.',
+        ? 'NOX est la plateforme qui connecte les DJs, les organisateurs et les lieux pour créer des événements inoubliables.'
+        : 'NOX is the platform that connects DJs, organizers and venues to create unforgettable events.',
     },
     {
       icon: 'person',
       title: language === 'fr' ? 'Créez votre profil' : 'Create your profile',
       description: language === 'fr'
-        ? 'Choisissez votre type de compte : DJ, Booker ou Lieu. Complétez votre profil pour être découvert.'
-        : 'Choose your account type: DJ, Booker or Venue. Complete your profile to be discovered.',
+        ? 'Choisissez votre type de compte : DJ, Organisateur ou Lieu. Complétez votre profil pour être découvert.'
+        : 'Choose your account type: DJ, Organizer or Venue. Complete your profile to be discovered.',
     },
     {
       icon: 'calendar',
@@ -50,8 +50,8 @@ export default function TutorialPage() {
       icon: 'chatbubbles',
       title: language === 'fr' ? 'Communiquez facilement' : 'Communicate easily',
       description: language === 'fr'
-        ? 'Discutez avec les DJs, bookers et organisateurs directement dans l\'application.'
-        : 'Chat with DJs, bookers and organizers directly in the app.',
+        ? 'Discutez avec les DJs et organisateurs directement dans l\'application.'
+        : 'Chat with DJs and organizers directly in the app.',
     },
     {
       icon: 'newspaper',

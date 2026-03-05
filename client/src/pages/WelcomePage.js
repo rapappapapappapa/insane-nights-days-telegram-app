@@ -15,10 +15,18 @@ const WelcomePage = () => {
   const [feed, setFeed] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [feedTab, setFeedTab] = useState('all');
+  const [likedPosts, setLikedPosts] = useState({});
+  const [postLikesCount, setPostLikesCount] = useState({});
 
   useEffect(() => {
     loadFeed();
   }, [feedTab, user?.token]);
+
+  useEffect(() => {
+    if (user?.token && feed.length > 0) {
+      checkLikes();
+    }
+  }, [feed, user?.token]);
 
   const loadFeed = async () => {
     setLoadingFeed(true);
@@ -31,6 +39,11 @@ const WelcomePage = () => {
       }
       if (res?.success && Array.isArray(res.feed)) {
         setFeed(res.feed);
+        const counts = {};
+        res.feed.forEach((item) => {
+          if (item.type === 'post') counts[item.id] = item.likes ?? 0;
+        });
+        setPostLikesCount(counts);
       } else {
         setFeed([]);
       }
@@ -39,6 +52,30 @@ const WelcomePage = () => {
     } finally {
       setLoadingFeed(false);
     }
+  };
+
+  const checkLikes = async () => {
+    if (!user?.token) return;
+    const postIds = feed.filter((i) => i.type === 'post').map((i) => i.id);
+    const liked = {};
+    for (const postId of postIds) {
+      try {
+        const res = await api.checkPostLiked(user.token, postId);
+        if (res?.success) liked[postId] = res.liked;
+      } catch {}
+    }
+    setLikedPosts(liked);
+  };
+
+  const handleToggleLike = async (postId) => {
+    if (!user?.token) return;
+    try {
+      const res = await api.toggleLikePost(user.token, postId);
+      if (res?.success) {
+        setLikedPosts((prev) => ({ ...prev, [postId]: res.liked }));
+        setPostLikesCount((prev) => ({ ...prev, [postId]: res.likesCount ?? 0 }));
+      }
+    } catch {}
   };
 
   const formatDate = (dateString) => {
@@ -150,7 +187,7 @@ const WelcomePage = () => {
               {feedTab === 'following' && !user?.token
                 ? 'Connecte-toi pour voir les posts des profils que tu suis'
                 : feedTab === 'following'
-                ? 'Suis des DJs ou des bookers pour voir leurs posts ici'
+                ? 'Suis des DJs ou des organisateurs pour voir leurs posts ici'
                 : 'Le feed est vide pour le moment'}
             </p>
             <Link to="/events" className="text-[#FF6B35] hover:underline">Voir les événements →</Link>
@@ -194,7 +231,7 @@ const WelcomePage = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-white">{profileName || 'Anonyme'}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${isDj ? 'bg-[#FF6B35]/20 text-[#FF6B35]' : 'bg-green-500/20 text-green-400'}`}>
-                          {isDj ? 'DJ' : 'Booker'}
+                          {isDj ? 'DJ' : 'Organisateur'}
                         </span>
                       </div>
                       <p className="text-white/50 text-xs">{formatDate(item.createdAt)}</p>
@@ -204,6 +241,20 @@ const WelcomePage = () => {
                   {item.imageUrl && (
                     <img src={normalizeUrl(item.imageUrl)} alt="" className="mt-3 ml-[52px] rounded-xl max-h-64 w-full object-cover" />
                   )}
+                  <div className="flex gap-6 mt-2 ml-[52px]">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLike(item.id)}
+                      className="flex items-center gap-1.5 text-sm hover:opacity-80 transition"
+                    >
+                      <span className={likedPosts[item.id] ? 'text-[#FF6B35]' : 'text-white/50'}>
+                        {likedPosts[item.id] ? '❤️' : '🤍'}
+                      </span>
+                      <span className={likedPosts[item.id] ? 'text-[#FF6B35]' : 'text-white/60'}>
+                        {postLikesCount[item.id] ?? item.likes ?? 0}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               );
             })}

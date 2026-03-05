@@ -18,7 +18,7 @@
  * 
  * 3. TÉMOIGNAGES / AVANTAGES
  *    - Section "Pourquoi Insane ?" avec icônes
- *    - Témoignages de DJs ou bookers
+ *    - Témoignages de DJs ou organisateurs
  */
 
 import React, { useState, useEffect } from 'react';

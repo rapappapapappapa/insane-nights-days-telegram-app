@@ -21,7 +21,7 @@ import { Toast } from '../../components/Toast';
 import { api } from '../../api/config';
 
 /**
- * ✅ MODIFICATION: Page pour créer un nouveau post dans le feed (DJ et Booker)
+ * ✅ MODIFICATION: Page pour créer un nouveau post dans le feed (DJ et Organisateur)
  */
 export default function CreateFeedPostPage() {
   const { language } = useLanguage();
@@ -35,15 +35,15 @@ export default function CreateFeedPostPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   /**
-   * ✅ Règle: Seuls les DJ et Booker peuvent créer des posts. Les Community peuvent commenter mais pas poster.
+   * ✅ Règle: Seuls les DJ et Organisateur peuvent créer des posts. Les Community peuvent commenter mais pas poster.
    */
   useEffect(() => {
     const activeType = user?.activeProfileType;
     if (user && activeType && activeType !== 'DJ' && activeType !== 'BOOKER') {
       showError(
         language === 'fr'
-          ? 'Seuls les profils DJ et Booker peuvent créer des posts. Les profils Community peuvent commenter.'
-          : 'Only DJ and Booker profiles can create posts. Community profiles can comment.'
+          ? 'Seuls les profils DJ et Organisateur peuvent créer des posts. Les profils Community peuvent commenter.'
+          : 'Only DJ and Organisateur profiles can create posts. Community profiles can comment.'
       );
       goBack();
     }
@@ -145,8 +145,8 @@ export default function CreateFeedPostPage() {
     if (activeType !== 'DJ' && activeType !== 'BOOKER') {
       showError(
         language === 'fr'
-          ? 'Seuls les profils DJ et Booker peuvent poster. Passe sur ton profil Booker ou DJ via le menu.'
-          : 'Only DJ and Booker profiles can post. Switch to your Booker or DJ profile via the menu.'
+          ? 'Seuls les profils DJ et Organisateur peuvent poster. Passe sur ton profil Organisateur ou DJ via le menu.'
+          : 'Only DJ and Organisateur profiles can post. Switch to your Organisateur or DJ profile via the menu.'
       );
       return;
     }

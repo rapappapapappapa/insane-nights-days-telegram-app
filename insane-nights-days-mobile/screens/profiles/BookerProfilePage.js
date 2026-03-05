@@ -73,7 +73,7 @@ export default function BookerProfilePage() {
         setBooker(null);
       }
     } catch (error) {
-      console.error('Erreur récupération profil Booker:', error);
+      console.error('Erreur récupération profil Organisateur:', error);
       showError(language === 'fr' ? 'Impossible de charger le profil.' : 'Unable to load profile.');
       setBooker(null);
     } finally {
@@ -93,7 +93,7 @@ export default function BookerProfilePage() {
       } else {
         await api.followBooker(user.token, booker.id);
         setFollowing(true);
-        showSuccess(language === 'fr' ? 'Vous suivez ce booker.' : 'You now follow this booker.');
+        showSuccess(language === 'fr' ? 'Vous suivez cet organisateur.' : 'You now follow this organizer.');
       }
     } catch (e) {
       showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
@@ -132,7 +132,7 @@ export default function BookerProfilePage() {
     );
   }
 
-  const displayName = booker.name || booker.pseudo || `${booker.nom || ''} ${booker.prenom || ''}`.trim() || 'Booker';
+  const displayName = booker.name || booker.pseudo || `${booker.nom || ''} ${booker.prenom || ''}`.trim() || 'Organisateur';
   const avatarUri = normalizeMediaUrl(booker.profileImage);
 
   return (

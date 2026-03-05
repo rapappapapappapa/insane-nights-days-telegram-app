@@ -24,8 +24,8 @@ const accountTypes = [
   {
     id: 'booker',
     emoji: '📅',
-    titleFr: 'Booker',
-    titleEn: 'Booker',
+    titleFr: 'Organisateur',
+    titleEn: 'Organizer',
     descriptionFr: 'Gérez vos événements',
     descriptionEn: 'Manage your events',
   },

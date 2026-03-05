@@ -28,7 +28,7 @@
  * 
  * 5. FEED "FOLLOWING" (optionnel)
  *    - Onglet "Pour toi" vs "Abonnements"
- *    - api.getFeedFollowing(token) pour les posts des DJs/Bookers suivis
+ *    - api.getFeedFollowing(token) pour les posts des DJs/Organisateurs suivis
  */
 
 import React, { useState, useEffect } from 'react';

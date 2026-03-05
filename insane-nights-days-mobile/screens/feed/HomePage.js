@@ -533,7 +533,7 @@ export default function HomePage() {
                     const profileName = isDj
                       ? item.dj?.artistName
                       : (item.booker?.name || item.author?.username);
-                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : normalizeMediaUrl(item.booker?.profileImage); // ✅ CORRECTION: Afficher la photo de profil pour DJs et Bookers
+                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : normalizeMediaUrl(item.booker?.profileImage); // DJs et Organisateurs
                     const profileLocation = isDj ? item.dj?.city : null;
                     
                     const isAuthor = user?.id && item.author?.id === user.id;
@@ -584,7 +584,7 @@ export default function HomePage() {
                                     color="#fff" 
                                   />
                                   <Text style={styles.profileBadgeText}>
-                                    {isDj ? 'DJ' : 'Booker'}
+                                    {isDj ? 'DJ' : 'Organisateur'}
                                   </Text>
                                 </View>
                               </View>
@@ -654,7 +654,8 @@ export default function HomePage() {
                             <Ionicons 
                               name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                               size={18} 
-                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
+                              style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
                             />
                             {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                               <Text style={[

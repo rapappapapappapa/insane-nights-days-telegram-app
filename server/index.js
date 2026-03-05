@@ -27,6 +27,7 @@ const { authenticateToken, requireAdmin } = require('./middleware/auth');
 const authController = require('./controllers/authController');
 const userController = require('./controllers/userController');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const {
   MEDIA_STORAGE,
   makeObjectKey,
@@ -7232,6 +7233,15 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       return imageUrl;
     };
 
+    const userLikedPostIds = new Set();
+    if (posts.length > 0) {
+      const userLikes = await prisma.feedPostLike.findMany({
+        where: { userId, postId: { in: posts.map((p) => p.id) } },
+        select: { postId: true },
+      });
+      userLikes.forEach((l) => userLikedPostIds.add(l.postId));
+    }
+
     const formattedPosts = posts.map((post) => {
       const profileType = post.djId ? 'DJ' : (post.bookerId ? 'BOOKER' : null);
       const formattedPost = {
@@ -7240,6 +7250,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
         content: post.content,
         imageUrl: normalizeImageUrl(post.imageUrl),
         likes: post.likes,
+        liked: userLikedPostIds.has(post.id),
         commentsCount: post._count?.comments ?? 0,
         createdAt: post.createdAt,
         profileType,
@@ -7310,6 +7321,19 @@ app.get('/api/feed', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50; // ✅ AUGMENTÉ: De 20 à 50 par défaut pour voir plus de posts
     const offset = parseInt(req.query.offset) || 0;
+
+    // ✅ Optionnel: récupérer l'utilisateur si token présent (pour inclure liked dans la réponse)
+    let currentUserId = null;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production');
+        currentUserId = decoded.userId;
+      } catch (e) {
+        // Token invalide ou expiré, ignorer
+      }
+    }
 
     // Récupérer les posts récents (triés par date décroissante)
     // ✅ CORRECTION: Pas de filtre par date - tous les posts sont visibles pour tous les utilisateurs
@@ -7436,6 +7460,20 @@ app.get('/api/feed', async (req, res) => {
       return imageUrl;
     };
 
+    // ✅ Récupérer les likes de l'utilisateur connecté pour inclure liked dans chaque post
+    let userLikedPostIds = new Set();
+    if (currentUserId && posts.length > 0) {
+      const postIds = posts.map((p) => p.id);
+      const userLikes = await prisma.feedPostLike.findMany({
+        where: {
+          userId: currentUserId,
+          postId: { in: postIds },
+        },
+        select: { postId: true },
+      });
+      userLikedPostIds = new Set(userLikes.map((l) => l.postId));
+    }
+
     // Formater les posts
     const formattedPosts = posts.map((post) => {
       // ✅ CORRECTION: Déterminer le profileType selon djId/bookerId au moment de la création, pas activeProfileType actuel
@@ -7447,6 +7485,7 @@ app.get('/api/feed', async (req, res) => {
         content: post.content,
         imageUrl: normalizeImageUrl(post.imageUrl), // ✅ CORRECTION: Normaliser l'URL de l'image
         likes: post.likes,
+        liked: currentUserId ? userLikedPostIds.has(post.id) : undefined, // ✅ Statut like pour l'utilisateur connecté
         commentsCount: post._count?.comments ?? 0,
         createdAt: post.createdAt,
         profileType: profileType, // ✅ CORRECTION: Utiliser djId/bookerId pour déterminer le type, pas activeProfileType

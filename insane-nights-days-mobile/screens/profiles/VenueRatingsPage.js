@@ -113,7 +113,7 @@ export default function VenueRatingsPage() {
 
           <View style={styles.ratingCard}>
             <Text style={styles.ratingCardTitle}>
-              {language === 'fr' ? 'Booker' : 'Booker'}
+              {language === 'fr' ? 'Organisateur' : 'Organizer'}
             </Text>
             <StarRating rating={ratings.averageRatingBooker} size={28} />
             <Text style={styles.ratingCardCount}>
@@ -145,7 +145,7 @@ export default function VenueRatingsPage() {
                     {review.raterType === 'COMMUNITY'
                       ? language === 'fr' ? '👥 Communauté' : '👥 Community'
                       : review.raterType === 'BOOKER'
-                      ? language === 'fr' ? '📅 Booker' : '📅 Booker'
+                      ? language === 'fr' ? '📅 Organisateur' : '📅 Organizer'
                       : language === 'fr' ? '🎧 DJ' : '🎧 DJ'}
                   </Text>
                   <StarRating rating={review.rating} size={18} showStars={false} />

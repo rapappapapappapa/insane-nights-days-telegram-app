@@ -27,7 +27,7 @@ Les présentes Conditions Générales d'Utilisation (CGU) régissent l'utilisati
 
 ## 2. Description du service
 
-Insane Nights & Days est une plateforme mettant en relation la communauté, les DJs, les bookers et les lieux pour la découverte et l'organisation d'événements musicaux.
+Insane Nights & Days est une plateforme mettant en relation la communauté, les DJs, les organisateurs et les lieux pour la découverte et l'organisation d'événements musicaux.
 
 ## 3. Inscription et compte
 
@@ -72,7 +72,7 @@ These Terms of Use govern the use of the Insane Nights & Days application. By cr
 
 ## 2. Service description
 
-Insane Nights & Days is a platform connecting the community, DJs, bookers and venues for discovering and organizing music events.
+Insane Nights & Days is a platform connecting the community, DJs, organizers and venues for discovering and organizing music events.
 
 ## 3. Registration and account
 
@@ -235,7 +235,7 @@ The application may use cookies or similar technologies for the proper functioni
 
 Nous collectons :
 - Données d'identification (email, pseudo, nom, prénom)
-- Données de profil (selon le type : DJ, Booker, Lieu, Communauté)
+- Données de profil (selon le type : DJ, Organisateur, Lieu, Communauté)
 - Données de paiement (traitées par Stripe, nous ne stockons pas les numéros de carte)
 - Données d'utilisation (connexions, interactions)
 
@@ -294,7 +294,7 @@ Cette politique peut être mise à jour. Vous serez informé des changements sig
 
 We collect:
 - Identification data (email, username, name)
-- Profile data (depending on type: DJ, Booker, Venue, Community)
+- Profile data (depending on type: DJ, Organisateur, Venue, Community)
 - Payment data (processed by Stripe, we do not store card numbers)
 - Usage data (logins, interactions)
 

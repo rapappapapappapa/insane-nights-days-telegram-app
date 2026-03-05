@@ -1030,7 +1030,7 @@ export default function BookerDashboardPage() {
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{language === 'fr' ? 'Dashboard Booker' : 'Booker Dashboard'}</Text>
+          <Text style={styles.title}>{language === 'fr' ? 'Dashboard Organisateur' : 'Organiser Dashboard'}</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.messagesButton}
@@ -1183,7 +1183,7 @@ export default function BookerDashboardPage() {
                     keyboardType="phone-pad"
                   />
 
-                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Type de booker' : 'Booker Type'}</Text>
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Type d\'organisateur' : 'Organiser Type'}</Text>
                   <View style={styles.bookerTypeContainer}>
                     {['INDEPENDENT', 'AGENCY', 'VENUE'].map((type) => (
                       <TouchableOpacity
@@ -1753,7 +1753,7 @@ export default function BookerDashboardPage() {
                             </View>
                           )}
                           <Text style={styles.chatMessageSenderName}>
-                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Booker' : 'DJ')}
+                            {msg.senderInfo.name || (msg.senderInfo.type === 'BOOKER' ? 'Organisateur' : 'DJ')}
                           </Text>
                         </TouchableOpacity>
                       )}

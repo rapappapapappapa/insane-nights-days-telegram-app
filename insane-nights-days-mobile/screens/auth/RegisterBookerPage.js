@@ -38,7 +38,7 @@ export default function RegisterBookerPage() {
   const [showBookerTypeModal, setShowBookerTypeModal] = useState(false);
   const scrollViewRef = useRef(null);
 
-  // Types de bookers disponibles
+  // Types d'organisateurs disponibles
   const bookerTypes = [
     { value: 'Indépendant', label: language === 'fr' ? 'Indépendant' : 'Independent' },
     { value: 'Agence', label: language === 'fr' ? 'Agence' : 'Agency' },
@@ -168,11 +168,11 @@ export default function RegisterBookerPage() {
 
       // Succès !
       showSuccess(language === 'fr'
-        ? 'Profil Booker créé avec succès !'
-        : 'Booker profile created successfully!');
+        ? 'Profil Organisateur créé avec succès !'
+        : 'Organizer profile created successfully!');
       setTimeout(() => navigate('welcome'), 1500);
     } catch (error) {
-      console.error('Erreur création profil Booker:', error);
+      console.error('Erreur création profil Organisateur:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
     } finally {
       setLoading(false);
@@ -202,7 +202,7 @@ export default function RegisterBookerPage() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>
-            {language === 'fr' ? 'Compte Booker' : 'Booker Account'}
+            {language === 'fr' ? 'Compte Organisateur' : 'Organiser Account'}
           </Text>
         </View>
 
@@ -285,7 +285,7 @@ export default function RegisterBookerPage() {
           />
 
           <Text style={styles.label}>
-            {language === 'fr' ? 'Type de booker' : 'Booker type'}
+            {language === 'fr' ? 'Type d\'organisateur' : 'Organiser type'}
           </Text>
           <TouchableOpacity
             style={styles.input}
@@ -316,7 +316,7 @@ export default function RegisterBookerPage() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal de sélection du type de booker */}
+      {/* Modal de sélection du type d'organisateur */}
       <Modal
         visible={showBookerTypeModal}
         transparent={true}
@@ -327,7 +327,7 @@ export default function RegisterBookerPage() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {language === 'fr' ? 'Sélectionner un type de booker' : 'Select a booker type'}
+                {language === 'fr' ? 'Sélectionner un type d\'organisateur' : 'Select an organiser type'}
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}

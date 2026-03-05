@@ -1258,8 +1258,8 @@ const api = {
   // Récupérer le feed d'actualité (posts + événements)
   // ✅ CORRECTION: Désactiver le cache pour toujours récupérer les posts les plus récents
   // Cela garantit que les nouveaux utilisateurs voient tous les posts historiques
-  getFeed: async (limit = 20, offset = 0) => {
-    return apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, { noCache: true });
+  getFeed: async (limit = 20, offset = 0, token = null) => {
+    return apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, { noCache: true }, token);
   },
 
   getFeedFollowing: async (token, limit = 50, offset = 0) => {

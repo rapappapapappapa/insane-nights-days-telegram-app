@@ -71,7 +71,7 @@ const menuItems = [
     id: 'profile',
     emoji: '👤',
     title: 'Mes Profils',
-    description: 'Modifier tes profils (DJ, Booker, Communauté...)',
+    description: 'Modifier tes profils (DJ, Organisateur, Communauté...)',
     onlyWhenLoggedIn: true,
   },
   {
@@ -184,7 +184,7 @@ export default function DrawerContent({ navigation }) {
       case 'DJ':
         return 'DJ';
       case 'BOOKER':
-        return 'Booker';
+        return 'Organisateur';
       case 'VENUE':
         return 'Lieu';
       case 'COMMUNITY':
@@ -215,7 +215,7 @@ export default function DrawerContent({ navigation }) {
         return {
           id: 'bookerDashboard',
           emoji: '📋',
-          title: 'Dashboard Booker',
+          title: 'Dashboard Organisateur',
           description: 'Messages & événements',
           showBadge: true,
           badgeCount: unreadByProfileType?.BOOKER ?? unreadCount,
@@ -270,7 +270,7 @@ export default function DrawerContent({ navigation }) {
             ) : null}
             {(unreadByProfileType?.BOOKER || 0) > 0 ? (
               <View style={styles.unreadChip}>
-                <Text style={styles.unreadChipText}>Booker +{unreadByProfileType.BOOKER}</Text>
+                <Text style={styles.unreadChipText}>Organisateur +{unreadByProfileType.BOOKER}</Text>
               </View>
             ) : null}
           </View>

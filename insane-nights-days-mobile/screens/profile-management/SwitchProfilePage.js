@@ -37,8 +37,8 @@ const profileTypes = [
   {
     type: 'BOOKER',
     emoji: '📅',
-    titleFr: 'Booker',
-    titleEn: 'Booker',
+    titleFr: 'Organisateur',
+    titleEn: 'Organizer',
     descriptionFr: 'Organiser des événements',
     descriptionEn: 'Organize events',
     registerScreen: 'registerBooker',

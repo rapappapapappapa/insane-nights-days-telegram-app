@@ -35,15 +35,20 @@ const WelcomePage = () => {
       if (feedTab === 'following' && user?.token) {
         res = await api.getFeedFollowing(user.token, 50, 0);
       } else {
-        res = await api.getFeed(50, 0);
+        res = await api.getFeed(50, 0, user?.token ?? null);
       }
       if (res?.success && Array.isArray(res.feed)) {
         setFeed(res.feed);
         const counts = {};
+        const liked = {};
         res.feed.forEach((item) => {
-          if (item.type === 'post') counts[item.id] = item.likes ?? 0;
+          if (item.type === 'post') {
+            counts[item.id] = item.likes ?? 0;
+            if (item.liked === true) liked[item.id] = true;
+          }
         });
         setPostLikesCount(counts);
+        setLikedPosts((prev) => ({ ...prev, ...liked }));
       } else {
         setFeed([]);
       }
@@ -245,12 +250,16 @@ const WelcomePage = () => {
                     <button
                       type="button"
                       onClick={() => handleToggleLike(item.id)}
-                      className="flex items-center gap-1.5 text-sm hover:opacity-80 transition"
+                      className="flex items-center gap-1.5 text-sm hover:opacity-80 transition focus:outline-none"
+                      title={(likedPosts[item.id] ?? item.liked) ? 'Ne plus aimer' : 'J\'aime'}
                     >
-                      <span className={likedPosts[item.id] ? 'text-[#FF6B35]' : 'text-white/50'}>
-                        {likedPosts[item.id] ? '❤️' : '🤍'}
+                      <span
+                        className={`select-none ${(likedPosts[item.id] ?? item.liked) ? 'text-red-500' : 'text-white/50'}`}
+                        style={(likedPosts[item.id] ?? item.liked) ? { color: '#ef4444' } : {}}
+                      >
+                        {(likedPosts[item.id] ?? item.liked) ? '❤️' : '🤍'}
                       </span>
-                      <span className={likedPosts[item.id] ? 'text-[#FF6B35]' : 'text-white/60'}>
+                      <span className={(likedPosts[item.id] ?? item.liked) ? 'text-red-500 font-medium' : 'text-white/60'}>
                         {postLikesCount[item.id] ?? item.likes ?? 0}
                       </span>
                     </button>

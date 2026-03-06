@@ -70,8 +70,8 @@ export const api = {
     apiRequest('/api/auth/forgot-password', { method: 'POST', body: { email } }),
   resetPassword: (body) =>
     apiRequest('/api/auth/reset-password', { method: 'POST', body }),
-  getFeed: (limit = 20, offset = 0) =>
-    apiRequest(`/api/feed?limit=${limit}&offset=${offset}`),
+  getFeed: (limit = 20, offset = 0, token = null) =>
+    apiRequest(`/api/feed?limit=${limit}&offset=${offset}`, {}, token),
   getFeedFollowing: (token, limit = 50, offset = 0) =>
     apiRequest(`/api/feed/following?limit=${limit}&offset=${offset}`, {}, token),
   toggleLikePost: (token, postId) =>

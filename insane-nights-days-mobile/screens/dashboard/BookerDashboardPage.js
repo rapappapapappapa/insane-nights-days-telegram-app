@@ -112,11 +112,20 @@ export default function BookerDashboardPage() {
   const [contractEditorVisible, setContractEditorVisible] = useState(false);
   const [contractDraft, setContractDraft] = useState({
     priceEur: '',
-    depositEur: '',
+    depositPercent: '',
     paymentTerms: '',
     cancellation: '',
     notes: '',
   });
+  const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
+
+  const PAYMENT_TERMS_OPTIONS = [
+    { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
+    { value: 'j-1_prestation', labelFr: 'J-1 prestation', labelEn: 'D-1 performance' },
+    { value: 'j+1_prestation', labelFr: 'J+1 prestation', labelEn: 'D+1 performance' },
+    { value: 'j+15', labelFr: 'J+15', labelEn: 'D+15' },
+    { value: 'j+30', labelFr: 'J+30', labelEn: 'D+30' },
+  ];
 
   // Date & heure avec sélecteurs stylés
   const [tempDate, setTempDate] = useState(eventDateTime);
@@ -176,7 +185,7 @@ export default function BookerDashboardPage() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
+  
   // Gérer les sélections depuis routeParams (ex: ajout DJ à un événement existant)
   const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, eventId: null, slotIndex: null });
   const currentDjId = routeParams?.selectedDjId;
@@ -569,7 +578,7 @@ export default function BookerDashboardPage() {
         const p = res.contract?.payload || {};
         setContractDraft({
           priceEur: p?.priceEur != null ? String(p.priceEur) : '',
-          depositEur: p?.depositEur != null ? String(p.depositEur) : '',
+          depositPercent: p?.depositPercent != null ? String(p.depositPercent) : '',
           paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
           cancellation: p?.cancellation ? String(p.cancellation) : '',
           notes: p?.notes ? String(p.notes) : '',
@@ -587,7 +596,7 @@ export default function BookerDashboardPage() {
     try {
       const payload = {
         priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
-        depositEur: contractDraft.depositEur ? Number(String(contractDraft.depositEur).replace(',', '.')) : null,
+        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
         paymentTerms: contractDraft.paymentTerms?.trim() || null,
         cancellation: contractDraft.cancellation?.trim() || null,
         notes: contractDraft.notes?.trim() || null,
@@ -643,7 +652,7 @@ export default function BookerDashboardPage() {
     try {
       const payload = {
         priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
-        depositEur: contractDraft.depositEur ? Number(String(contractDraft.depositEur).replace(',', '.')) : null,
+        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
         paymentTerms: contractDraft.paymentTerms?.trim() || null,
         cancellation: contractDraft.cancellation?.trim() || null,
         notes: contractDraft.notes?.trim() || null,
@@ -1565,9 +1574,22 @@ export default function BookerDashboardPage() {
         <View style={styles.chatModalContainer}>
           <KeyboardAvoidingView
             style={styles.chatModalContent}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
           >
+            <ScrollView
+              ref={chatScrollViewRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={true}
+              onContentSizeChange={() => {
+                if (chatScrollViewRef.current) {
+                  chatScrollViewRef.current.scrollToEnd({ animated: true });
+                }
+              }}
+            >
             {/* Header du chat */}
             <View style={styles.chatHeaderContainer}>
             <View style={styles.chatHeader}>
@@ -1627,12 +1649,12 @@ export default function BookerDashboardPage() {
                   <Text style={styles.contractLineStrong}>
                     {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (language === 'fr' ? 'À définir' : 'To define')}
                   </Text>
-                  {contractData?.payload?.depositEur != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositEur} €` : ''}
+                  {contractData?.payload?.depositPercent != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositPercent} %` : ''}
                 </Text>
 
                 {contractData?.payload?.paymentTerms ? (
                   <Text style={styles.contractSmall} numberOfLines={2}>
-                    💳 {cleanText(contractData.payload.paymentTerms)}
+                    💳 {PAYMENT_TERMS_OPTIONS.find(o => o.value === contractData.payload.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || cleanText(contractData.payload.paymentTerms)}
                   </Text>
                 ) : null}
                 {contractData?.payload?.cancellation ? (
@@ -1703,16 +1725,7 @@ export default function BookerDashboardPage() {
                 <ActivityIndicator size="large" color="#FF1744" />
               </View>
             ) : (
-              <ScrollView
-                ref={chatScrollViewRef}
-                style={styles.chatMessagesContainer}
-                contentContainerStyle={styles.chatMessagesContent}
-                onContentSizeChange={() => {
-                  if (chatScrollViewRef.current) {
-                    chatScrollViewRef.current.scrollToEnd({ animated: true });
-                  }
-                }}
-              >
+              <View style={styles.chatMessagesContainer}>
                 {chatMessages.length === 0 ? (
                   <View style={styles.chatEmptyState}>
                     <Text style={styles.chatEmptyStateText}>
@@ -1813,8 +1826,10 @@ export default function BookerDashboardPage() {
                     </View>
                   ))
                 )}
-              </ScrollView>
+              </View>
             )}
+
+            </ScrollView>
 
             {/* Input pour envoyer un message */}
             <View style={styles.chatInputContainer}>
@@ -1847,8 +1862,17 @@ export default function BookerDashboardPage() {
               animationType="fade"
               onRequestClose={() => setContractEditorVisible(false)}
             >
-              <View style={styles.contractModalOverlay}>
+              <KeyboardAvoidingView
+                style={styles.contractModalOverlay}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              >
                 <View style={styles.contractModalCard}>
+                  <ScrollView
+                    contentContainerStyle={{ paddingBottom: 24 }}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                  >
                   <Text style={styles.contractModalTitle}>
                     {language === 'fr' ? 'Contrat (brouillon)' : 'Contract (draft)'}
                   </Text>
@@ -1863,25 +1887,32 @@ export default function BookerDashboardPage() {
                     keyboardType="numeric"
                   />
 
-                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (€) (optionnel)' : 'Deposit (€) (optional)'}</Text>
+                  <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (%) (optionnel)' : 'Deposit (%) (optional)'}</Text>
                   <TextInput
                     style={styles.contractModalInput}
-                    value={contractDraft.depositEur}
-                    onChangeText={(v) => setContractDraft((p) => ({ ...p, depositEur: v }))}
-                    placeholder="100"
+                    value={contractDraft.depositPercent}
+                    onChangeText={(v) => setContractDraft((p) => ({ ...p, depositPercent: v }))}
+                    placeholder="30"
                     placeholderTextColor="rgba(255,255,255,0.4)"
                     keyboardType="numeric"
                   />
 
                   <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}</Text>
-                  <TextInput
-                    style={[styles.contractModalInput, { height: 60 }]}
-                    value={contractDraft.paymentTerms}
-                    onChangeText={(v) => setContractDraft((p) => ({ ...p, paymentTerms: v }))}
-                    placeholder={language === 'fr' ? 'Ex: solde à la fin du set' : 'Ex: balance after performance'}
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    multiline
-                  />
+                  <TouchableOpacity
+                    style={[styles.contractModalInput, styles.contractModalDropdown]}
+                    onPress={() => setShowPaymentTermsModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.contractModalInputText,
+                      !contractDraft.paymentTerms && { color: 'rgba(255,255,255,0.4)' },
+                    ]}>
+                      {contractDraft.paymentTerms
+                        ? (PAYMENT_TERMS_OPTIONS.find(o => o.value === contractDraft.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || contractDraft.paymentTerms)
+                        : (language === 'fr' ? 'Sélectionner' : 'Select')}
+                    </Text>
+                    <Text style={styles.contractModalChevron}>▼</Text>
+                  </TouchableOpacity>
 
                   <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
                   <TextInput
@@ -1921,6 +1952,49 @@ export default function BookerDashboardPage() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  </ScrollView>
+                </View>
+              </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Modal sélection modalités de paiement */}
+            <Modal
+              visible={showPaymentTermsModal}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowPaymentTermsModal(false)}
+            >
+              <View style={styles.paymentTermsOverlay}>
+                <TouchableOpacity
+                  style={StyleSheet.absoluteFill}
+                  activeOpacity={1}
+                  onPress={() => setShowPaymentTermsModal(false)}
+                />
+                <View style={styles.paymentTermsModalContent}>
+                  <Text style={styles.contractModalTitle}>
+                    {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
+                  </Text>
+                  {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
+                      onPress={() => {
+                        setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
+                        setShowPaymentTermsModal(false);
+                      }}
+                    >
+                      <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
+                        {language === 'fr' ? opt.labelFr : opt.labelEn}
+                      </Text>
+                      {contractDraft.paymentTerms === opt.value && <Text style={styles.paymentTermsCheck}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    style={styles.paymentTermsClose}
+                    onPress={() => setShowPaymentTermsModal(false)}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Fermer' : 'Close'}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </Modal>
@@ -2241,6 +2315,70 @@ const styles = StyleSheet.create({
     color: '#fff',
     backgroundColor: 'rgba(255,255,255,0.04)',
     fontSize: 13,
+  },
+  contractModalDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contractModalInputText: {
+    color: '#fff',
+    fontSize: 13,
+    flex: 1,
+  },
+  contractModalChevron: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
+    marginLeft: 8,
+  },
+  paymentTermsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  paymentTermsModalContent: {
+    backgroundColor: '#0b0b0e',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  paymentTermsOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  paymentTermsOptionSelected: {
+    borderColor: 'rgba(255,23,68,0.5)',
+    backgroundColor: 'rgba(255,23,68,0.1)',
+  },
+  paymentTermsOptionText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+  },
+  paymentTermsOptionTextSelected: {
+    color: '#FF1744',
+    fontWeight: '800',
+  },
+  paymentTermsCheck: {
+    color: '#FF1744',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  paymentTermsClose: {
+    marginTop: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   contractModalActions: {
     flexDirection: 'row',

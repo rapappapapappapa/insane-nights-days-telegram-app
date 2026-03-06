@@ -3691,6 +3691,7 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
 
     const resolvePaymentStatus = (ed, eventStatus) => {
       if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
+      if (ed?.contractStatus === 'SIGNED') return 'PENDING'; // Contrat signé = paiement en attente
       if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
       return 'UPCOMING';
     };
@@ -5594,6 +5595,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           eventDjIdMap[ed.djId] = ed.id; // ID de l'EventDj pour le chat
           const resolvePaymentStatus = () => {
             if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
+            if (ed?.contractStatus === 'SIGNED') return 'PENDING'; // Contrat signé = paiement en attente
             if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
             return 'UPCOMING';
           };
@@ -5763,6 +5765,24 @@ const loadEventDjWithAccess = async (eventDjId, userId) => {
   return { ed, isDj, isBooker };
 };
 
+/** Crée un message de notification contrat dans le chat (pour l'autre partie) */
+const createContractNotificationMessage = async (eventDjId, senderId, content) => {
+  try {
+    await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventDjId,
+        senderId,
+        content,
+        read: false,
+        deleted: false,
+      },
+    });
+  } catch (err) {
+    console.error('Erreur création message notification contrat:', err);
+  }
+};
+
 // GET contrat
 app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, res) => {
   try {
@@ -5872,6 +5892,14 @@ app.post('/api/contracts/event-djs/:eventDjId/send', authenticateToken, async (r
       },
     });
 
+    // Notification au DJ : nouvelle offre de contrat
+    const eventTitle = ed.event?.title ? ` (${ed.event.title})` : '';
+    await createContractNotificationMessage(
+      eventDjId,
+      userId,
+      `📋 Nouvelle offre de contrat reçue${eventTitle}`
+    );
+
     return res.json({
       success: true,
       contract: {
@@ -5926,6 +5954,14 @@ app.post('/api/contracts/event-djs/:eventDjId/counter', authenticateToken, async
         contractVersion: { increment: 1 },
       },
     });
+
+    // Notification à l'autre partie : contre-proposition reçue
+    const eventTitle = ed.event?.title ? ` (${ed.event.title})` : '';
+    await createContractNotificationMessage(
+      eventDjId,
+      userId,
+      `📋 Contre-proposition reçue${eventTitle}`
+    );
 
     return res.json({
       success: true,
@@ -5991,9 +6027,22 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
     const next = shouldSign
       ? await prisma.eventDj.update({
           where: { id: eventDjId },
-          data: { contractStatus: 'SIGNED' },
+          data: {
+            contractStatus: 'SIGNED',
+            // Mettre paymentStatus à PENDING après validation du prix (contrat signé)
+            ...(updated.paymentStatus !== 'PAID' && !updated.paidAt
+              ? { paymentStatus: 'PENDING' }
+              : {}),
+          },
         })
       : updated;
+
+    // Notification à l'autre partie : contrat accepté ou signé
+    const eventTitle = ed.event?.title ? ` (${ed.event.title})` : '';
+    const notifContent = shouldSign
+      ? `📋 Contrat signé !${eventTitle}`
+      : `📋 Contrat accepté${eventTitle}`;
+    await createContractNotificationMessage(eventDjId, userId, notifContent);
 
     return res.json({
       success: true,

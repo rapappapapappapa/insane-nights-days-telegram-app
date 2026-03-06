@@ -140,13 +140,13 @@ export default function CreateFeedPostPage() {
       return;
     }
 
-    // Vérifier que le profil actif est DJ ou Booker (backend refuse sinon)
+    // Vérifier que le profil actif est DJ ou Organisateur (backend refuse sinon)
     const activeType = user?.activeProfileType;
     if (activeType !== 'DJ' && activeType !== 'BOOKER') {
       showError(
         language === 'fr'
           ? 'Seuls les profils DJ et Organisateur peuvent poster. Passe sur ton profil Organisateur ou DJ via le menu.'
-          : 'Only DJ and Organisateur profiles can post. Switch to your Organisateur or DJ profile via the menu.'
+          : 'Only DJ and Organizer profiles can post. Switch to your Organizer or DJ profile via the menu.'
       );
       return;
     }

@@ -63,6 +63,7 @@ export default function WelcomePage() {
   const [feedError, setFeedError] = useState(null);
 
   const fetchAbortRef = useRef(null);
+  const toggledLikeRef = useRef({}); // postId -> { liked, at } - évite que checkLikes écrase un like récent
 
   const reportPost = (postId) => {
     if (!user?.token) {
@@ -272,7 +273,14 @@ export default function WelcomePage() {
       }
     }
 
-    setLikedPosts(likesState);
+    setLikedPosts(prev => {
+      const next = { ...likesState };
+      const now = Date.now();
+      for (const [id, { liked, at }] of Object.entries(toggledLikeRef.current)) {
+        if (now - at < 5000) next[id] = liked; // Garder le like récent
+      }
+      return next;
+    });
   };
 
   /**
@@ -290,6 +298,7 @@ export default function WelcomePage() {
     try {
       const response = await api.toggleLikePost(user.token, postId);
       if (response && response.success) {
+        toggledLikeRef.current[postId] = { liked: response.liked, at: Date.now() };
         setLikedPosts(prev => ({
           ...prev,
           [postId]: response.liked,
@@ -559,7 +568,7 @@ export default function WelcomePage() {
                     >
                       <MaterialIcons name="event" size={36} color="#FF1744" />
                       <Text style={styles.actionText}>
-                        {language === 'fr' ? 'Dashboard Organisateur' : 'Organiser Dashboard'}
+                        {language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
                       </Text>
                     </TouchableOpacity>
 
@@ -793,7 +802,7 @@ export default function WelcomePage() {
                               ) : (
                                 <View style={[styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
                                   <Text style={styles.avatarText}>
-                                    {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'B')}
+                                    {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'O')}
                                   </Text>
                                 </View>
                               )}

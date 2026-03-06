@@ -58,7 +58,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté
 - **Abonnements** : Suivre / ne plus suivre un profil DJ ou Organisateur
 - **Feed Abonnements** : Onglets "Pour tous" | "Abonnements" (style X)
-- **Profils Booker publics** : Page publique avec bouton Suivre
+- **Profils Organisateur publics** : Page publique avec bouton Suivre
 
 ### Modifié
 - **Toast** : Remplace Alert.alert pour les messages simples

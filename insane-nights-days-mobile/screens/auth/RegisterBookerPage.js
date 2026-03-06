@@ -285,7 +285,7 @@ export default function RegisterBookerPage() {
           />
 
           <Text style={styles.label}>
-            {language === 'fr' ? 'Type d\'organisateur' : 'Organiser type'}
+            {language === 'fr' ? 'Type d\'organisateur' : 'Organizer type'}
           </Text>
           <TouchableOpacity
             style={styles.input}
@@ -327,7 +327,7 @@ export default function RegisterBookerPage() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {language === 'fr' ? 'Sélectionner un type d\'organisateur' : 'Select an organiser type'}
+                {language === 'fr' ? 'Sélectionner un type d\'organisateur' : 'Select an organizer type'}
               </Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}

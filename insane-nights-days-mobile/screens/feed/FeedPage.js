@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer } from 'react';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -125,6 +125,7 @@ export default function FeedPage() {
 
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [postToReport, setPostToReport] = useState(null);
+  const toggledLikeRef = useRef({}); // évite que checkLikes écrase un like récent
 
   const reportPost = (postId) => {
     if (!user?.token) {
@@ -331,7 +332,13 @@ export default function FeedPage() {
       }
     }
 
-    dispatchPostState({ type: 'SET_LIKES_STATE', likedPosts: likesState, likesCount: likesCountState });
+    // Ne pas écraser les likes récemment togglés (race condition)
+    const merged = { ...likesState };
+    const now = Date.now();
+    for (const [id, { liked, at }] of Object.entries(toggledLikeRef.current)) {
+      if (now - at < 5000) merged[id] = liked;
+    }
+    dispatchPostState({ type: 'SET_LIKES_STATE', likedPosts: merged, likesCount: likesCountState });
   };
 
   /**
@@ -349,7 +356,7 @@ export default function FeedPage() {
     try {
       const response = await api.toggleLikePost(user.token, postId);
       if (response && response.success) {
-        // Mettre à jour l'état local avec dispatch
+        toggledLikeRef.current[postId] = { liked: response.liked, at: Date.now() };
         dispatchPostState({ type: 'SET_LIKED_POST', postId, liked: response.liked });
         dispatchPostState({ type: 'SET_LIKES_COUNT', postId, count: response.likesCount });
         // ✅ AJOUT: Rafraîchir les notifications après un like
@@ -593,7 +600,7 @@ export default function FeedPage() {
                         {(!avatarUri || brokenPostImages[`avatar-${item.id}`]) && (
                           <View style={[StyleSheet.absoluteFill, styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
                             <Text style={styles.avatarText}>
-                              {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'B')}
+                              {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'O')}
                             </Text>
                           </View>
                         )}

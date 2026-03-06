@@ -59,6 +59,7 @@ export default function HomePage() {
   const [feedError, setFeedError] = useState(null);
 
   const fetchAbortRef = useRef(null);
+  const toggledLikeRef = useRef({}); // postId -> { liked, at } - évite que checkLikes écrase un like récent
 
   const reportPost = (postId) => {
     if (!user?.token) {
@@ -567,7 +568,7 @@ export default function HomePage() {
                               ) : (
                                 <View style={[styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
                                   <Text style={styles.avatarText}>
-                                    {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'B')}
+                                    {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'O')}
                                   </Text>
                                 </View>
                               )}

@@ -224,7 +224,7 @@ const WelcomePage = () => {
                       <img src={normalizeUrl(profileImage)} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isDj ? 'bg-[#FF6B35]/30' : 'bg-green-500/30'}`}>
-                        {profileName?.charAt(0) || (isDj ? 'D' : 'B')}
+                        {profileName?.charAt(0) || (isDj ? 'D' : 'O')}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

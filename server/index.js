@@ -1341,7 +1341,7 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Profil Booker créé avec succès.',
+      message: 'Profil Organisateur créé avec succès.',
       profile: {
         id: bookerProfile.id,
         nom: bookerProfile.nom,

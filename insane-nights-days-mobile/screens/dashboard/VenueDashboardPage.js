@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,9 @@ import {
   Dimensions,
   Platform,
   Linking,
+  Modal,
+  KeyboardAvoidingView,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,15 +27,30 @@ import VideoPlayer from '../../components/VideoPlayer';
 import StarRating from '../../components/StarRating';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useNotifications } from '../../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
+function cleanText(s) {
+  if (!s) return '';
+  return String(s).replace(/\s+/g, ' ').trim();
+}
+
 const { width } = Dimensions.get('window');
+
+const PAYMENT_TERMS_OPTIONS = [
+  { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
+  { value: 'j-1_prestation', labelFr: 'J-1 prestation', labelEn: 'D-1 performance' },
+  { value: 'j+1_prestation', labelFr: 'J+1 prestation', labelEn: 'D+1 performance' },
+  { value: 'j+15', labelFr: 'J+15', labelEn: 'D+15' },
+  { value: 'j+30', labelFr: 'J+30', labelEn: 'D+30' },
+];
 
 export default function VenueDashboardPage() {
   const { language } = useLanguage();
   const { goBack, navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { user } = useAuth();
+  const { refreshUnreadCount, markAllAsRead } = useNotifications();
 
   // Drawer global géré dans App.js
   const [loading, setLoading] = useState(true);
@@ -44,7 +62,36 @@ export default function VenueDashboardPage() {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [ratings, setRatings] = useState(null);
   const [deletingMediaId, setDeletingMediaId] = useState(null);
-  const [activeTab, setActiveTab] = useState('infos'); // infos | medias | avis
+  const shouldOpenBookings = !!routeParams?.openBookings || !!routeParams?.openChatEventVenueId;
+  const [activeTab, setActiveTab] = useState(shouldOpenBookings ? 'bookings' : 'infos'); // infos | medias | avis | bookings
+
+  // Bookings
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [processingInvitation, setProcessingInvitation] = useState(null);
+
+  // Chat
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [selectedChatEventVenueId, setSelectedChatEventVenueId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [loadingChatMessages, setLoadingChatMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [newMessageText, setNewMessageText] = useState('');
+  const chatScrollViewRef = useRef(null);
+
+  // Contrat
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractData, setContractData] = useState(null);
+  const [contractBooking, setContractBooking] = useState(null);
+  const [contractEditorVisible, setContractEditorVisible] = useState(false);
+  const [contractDraft, setContractDraft] = useState({
+    priceEur: '',
+    depositPercent: '',
+    paymentTerms: '',
+    cancellation: '',
+    notes: '',
+  });
+  const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
 
   const loadVenue = async () => {
     if (!user?.token) return;
@@ -103,6 +150,186 @@ export default function VenueDashboardPage() {
     loadVenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.token, routeParams?.venueId]);
+
+  const fetchBookings = async () => {
+    if (!user?.token) return;
+    setLoadingBookings(true);
+    try {
+      const response = await api.getVenueBookings(user.token);
+      if (response?.success) {
+        setBookings(response.bookings || []);
+      }
+    } catch (error) {
+      console.error('Erreur récupération bookings lieu:', error);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'bookings' && user?.token) {
+      fetchBookings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user?.token]);
+
+  const openVenueChat = async (eventVenueId) => {
+    setSelectedChatEventVenueId(eventVenueId);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventVenueId);
+    await markAllAsRead();
+    await loadVenueContract(eventVenueId);
+  };
+
+  const loadChatMessages = async (eventVenueId) => {
+    if (!user?.token || !eventVenueId) return;
+    setLoadingChatMessages(true);
+    try {
+      const response = await api.getVenueMessages(user.token, eventVenueId);
+      if (response?.success && Array.isArray(response.messages)) {
+        setChatMessages(response.messages);
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] loadChatMessages error:', e);
+    } finally {
+      setLoadingChatMessages(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!user?.token || !newMessageText.trim() || sendingMessage || !selectedChatEventVenueId) return;
+    const messageText = newMessageText.trim();
+    setNewMessageText('');
+    setSendingMessage(true);
+    try {
+      const response = await api.sendVenueMessage(user.token, selectedChatEventVenueId, messageText);
+      if (response?.success) {
+        await loadChatMessages(selectedChatEventVenueId);
+      } else {
+        showError(response?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] sendMessage error:', e);
+      showError(language === 'fr' ? 'Erreur envoi message.' : 'Message send error.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const loadVenueContract = async (eventVenueId) => {
+    if (!user?.token || !eventVenueId) return;
+    setContractLoading(true);
+    try {
+      const res = await api.getVenueContract(user.token, eventVenueId);
+      if (res?.success) {
+        setContractData(res.contract || null);
+        setContractBooking(res.booking || null);
+        const p = res.contract?.payload || {};
+        setContractDraft({
+          priceEur: p?.priceEur != null ? String(p.priceEur) : '',
+          depositPercent: p?.depositPercent != null ? String(p.depositPercent) : '',
+          paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
+          cancellation: p?.cancellation ? String(p.cancellation) : '',
+          notes: p?.notes ? String(p.notes) : '',
+        });
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] loadVenueContract error:', e);
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
+  const saveContractDraft = async () => {
+    if (!user?.token || !selectedChatEventVenueId) return;
+    try {
+      const payload = {
+        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
+        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
+        paymentTerms: contractDraft.paymentTerms?.trim() || null,
+        cancellation: contractDraft.cancellation?.trim() || null,
+        notes: contractDraft.notes?.trim() || null,
+      };
+      const res = await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
+        setContractEditorVisible(false);
+        await loadVenueContract(selectedChatEventVenueId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] saveContractDraft error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const sendContract = async () => {
+    if (!user?.token || !selectedChatEventVenueId) return;
+    try {
+      const res = await api.sendVenueContract(user.token, selectedChatEventVenueId);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat envoyé au lieu.' : 'Contract sent to venue.');
+        await loadVenueContract(selectedChatEventVenueId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] sendContract error:', e);
+      showError(language === 'fr' ? 'Erreur envoi contrat.' : 'Contract send error.');
+    }
+  };
+
+  const acceptContract = async () => {
+    if (!user?.token || !selectedChatEventVenueId) return;
+    try {
+      const res = await api.acceptVenueContract(user.token, selectedChatEventVenueId);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
+        await loadVenueContract(selectedChatEventVenueId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] acceptContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const counterContract = async () => {
+    if (!user?.token || !selectedChatEventVenueId) return;
+    try {
+      const payload = {
+        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
+        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
+        paymentTerms: contractDraft.paymentTerms?.trim() || null,
+        cancellation: contractDraft.cancellation?.trim() || null,
+        notes: contractDraft.notes?.trim() || null,
+      };
+      const res = await api.counterVenueContract(user.token, selectedChatEventVenueId, payload);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
+        setContractEditorVisible(false);
+        await loadVenueContract(selectedChatEventVenueId);
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+      }
+    } catch (e) {
+      console.error('[VenueDashboard] counterContract error:', e);
+      showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.token) return;
+    const eventVenueId = routeParams?.openChatEventVenueId;
+    if (eventVenueId) {
+      setActiveTab('bookings');
+      openVenueChat(eventVenueId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.token, routeParams?.openChatEventVenueId]);
 
   const pickMedia = async (mediaType) => {
     if (!venue) return;

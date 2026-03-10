@@ -51,7 +51,7 @@ export default function BookerDashboardPage() {
   const [loadingEvents, setLoadingEvents] = useState(false);
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
   const shouldOpenBookings =
-    !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
+    !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId || !!routeParams?.openChatEventVenueId;
   const shouldOpenProfil = routeParams?.openSection === 'profil';
   
   // ✅ MODIFICATION: Ajouter une section "Profil" avec activeSection (profil, events)
@@ -97,8 +97,10 @@ export default function BookerDashboardPage() {
   // Chat
   const [chatModalVisible, setChatModalVisible] = useState(false);
   const [selectedChatEventDjId, setSelectedChatEventDjId] = useState(null);
+  const [selectedChatEventVenueId, setSelectedChatEventVenueId] = useState(null);
   const [selectedChatEventId, setSelectedChatEventId] = useState(null); // Pour les chats de groupe
   const [isGroupChat, setIsGroupChat] = useState(false);
+  const [isVenueChat, setIsVenueChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -558,13 +560,27 @@ export default function BookerDashboardPage() {
 
   const openGroupChat = async (eventId) => {
     setSelectedChatEventDjId(null);
+    setSelectedChatEventVenueId(null);
     setSelectedChatEventId(eventId);
     setIsGroupChat(true);
+    setIsVenueChat(false);
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventId, true);
-    // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
     await markAllAsRead();
+  };
+
+  const openVenueChat = async (eventVenueId) => {
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(null);
+    setSelectedChatEventVenueId(eventVenueId);
+    setIsGroupChat(false);
+    setIsVenueChat(true);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventVenueId, false, true);
+    await markAllAsRead();
+    await loadVenueContract(eventVenueId);
   };
 
   const loadContract = async (eventDjId) => {
@@ -592,7 +608,9 @@ export default function BookerDashboardPage() {
   };
 
   const saveContractDraft = async () => {
-    if (!user?.token || !selectedChatEventDjId) return;
+    if (!user?.token) return;
+    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    if (!id) return;
     try {
       const payload = {
         priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
@@ -601,11 +619,14 @@ export default function BookerDashboardPage() {
         cancellation: contractDraft.cancellation?.trim() || null,
         notes: contractDraft.notes?.trim() || null,
       };
-      const res = await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
+      const res = isVenueChat
+        ? await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload)
+        : await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         setContractEditorVisible(false);
-        await loadContract(selectedChatEventDjId);
+        if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
       }
@@ -616,12 +637,17 @@ export default function BookerDashboardPage() {
   };
 
   const sendContract = async () => {
-    if (!user?.token || !selectedChatEventDjId) return;
+    if (!user?.token) return;
+    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    if (!id) return;
     try {
-      const res = await api.sendBookingContract(user.token, selectedChatEventDjId);
+      const res = isVenueChat
+        ? await api.sendVenueContract(user.token, selectedChatEventVenueId)
+        : await api.sendBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
-        showSuccess(language === 'fr' ? 'Contrat envoyé au DJ.' : 'Contract sent to DJ.');
-        await loadContract(selectedChatEventDjId);
+        showSuccess(isVenueChat ? (language === 'fr' ? 'Contrat envoyé au lieu.' : 'Contract sent to venue.') : (language === 'fr' ? 'Contrat envoyé au DJ.' : 'Contract sent to DJ.'));
+        if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
       }
@@ -632,12 +658,17 @@ export default function BookerDashboardPage() {
   };
 
   const acceptContract = async () => {
-    if (!user?.token || !selectedChatEventDjId) return;
+    if (!user?.token) return;
+    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    if (!id) return;
     try {
-      const res = await api.acceptBookingContract(user.token, selectedChatEventDjId);
+      const res = isVenueChat
+        ? await api.acceptVenueContract(user.token, selectedChatEventVenueId)
+        : await api.acceptBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
-        await loadContract(selectedChatEventDjId);
+        if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’accepter.' : 'Unable to accept.'));
       }
@@ -648,7 +679,9 @@ export default function BookerDashboardPage() {
   };
 
   const counterContract = async () => {
-    if (!user?.token || !selectedChatEventDjId) return;
+    if (!user?.token) return;
+    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    if (!id) return;
     try {
       const payload = {
         priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
@@ -657,11 +690,14 @@ export default function BookerDashboardPage() {
         cancellation: contractDraft.cancellation?.trim() || null,
         notes: contractDraft.notes?.trim() || null,
       };
-      const res = await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
+      const res = isVenueChat
+        ? await api.counterVenueContract(user.token, selectedChatEventVenueId, payload)
+        : await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
-        await loadContract(selectedChatEventDjId);
+        if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
       }
@@ -671,11 +707,36 @@ export default function BookerDashboardPage() {
     }
   };
 
+  const loadVenueContract = async (eventVenueId) => {
+    if (!user?.token || !eventVenueId) return;
+    setContractLoading(true);
+    try {
+      const res = await api.getVenueContract(user.token, eventVenueId);
+      if (res?.success) {
+        setContractData(res.contract || null);
+        setContractBooking(res.booking || null);
+        const p = res.contract?.payload || {};
+        setContractDraft({
+          priceEur: p?.priceEur != null ? String(p.priceEur) : '',
+          depositPercent: p?.depositPercent != null ? String(p.depositPercent) : '',
+          paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
+          cancellation: p?.cancellation ? String(p.cancellation) : '',
+          notes: p?.notes ? String(p.notes) : '',
+        });
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] loadVenueContract error:', e);
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
   // ✅ Ouvrir automatiquement la conversation depuis une notification (BOOKER)
   useEffect(() => {
     if (!user?.token) return;
     const type = routeParams?.openChatType;
     const eventDjId = routeParams?.openChatEventDjId;
+    const eventVenueId = routeParams?.openChatEventVenueId;
     const eventId = routeParams?.openChatEventId;
 
     if (shouldOpenBookings) {
@@ -684,20 +745,27 @@ export default function BookerDashboardPage() {
 
     if (type === 'PRIVATE' && eventDjId) {
       openChat(eventDjId);
+    } else if (type === 'PRIVATE' && eventVenueId) {
+      openVenueChat(eventVenueId);
     } else if (type === 'GROUP' && eventId) {
       openGroupChat(eventId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventId]);
+  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventVenueId, routeParams?.openChatEventId]);
 
-  const loadChatMessages = async (id, isGroup = false) => {
+  const loadChatMessages = async (id, isGroup = false, isVenue = false) => {
     if (!user?.token || !id) return;
     
     setLoadingChatMessages(true);
     try {
-      const response = isGroup 
-        ? await api.getGroupMessages(user.token, id)
-        : await api.getMessages(user.token, id);
+      let response;
+      if (isGroup) {
+        response = await api.getGroupMessages(user.token, id);
+      } else if (isVenue) {
+        response = await api.getVenueMessages(user.token, id);
+      } else {
+        response = await api.getMessages(user.token, id);
+      }
       if (response && response.success && response.messages) {
         setChatMessages(response.messages);
         setTimeout(() => {
@@ -716,7 +784,7 @@ export default function BookerDashboardPage() {
 
   const sendMessage = async () => {
     if (!user?.token || !newMessageText.trim() || sendingMessage) return;
-    if (!isGroupChat && !selectedChatEventDjId) return;
+    if (!isGroupChat && !selectedChatEventDjId && !selectedChatEventVenueId) return;
     if (isGroupChat && !selectedChatEventId) return;
     
     const messageText = newMessageText.trim();
@@ -724,11 +792,17 @@ export default function BookerDashboardPage() {
     setSendingMessage(true);
     
     try {
-      const response = isGroupChat
-        ? await api.sendGroupMessage(user.token, selectedChatEventId, messageText)
-        : await api.sendMessage(user.token, selectedChatEventDjId, messageText);
+      let response;
+      if (isGroupChat) {
+        response = await api.sendGroupMessage(user.token, selectedChatEventId, messageText);
+      } else if (isVenueChat) {
+        response = await api.sendVenueMessage(user.token, selectedChatEventVenueId, messageText);
+      } else {
+        response = await api.sendMessage(user.token, selectedChatEventDjId, messageText);
+      }
       if (response && response.success) {
-        await loadChatMessages(isGroupChat ? selectedChatEventId : selectedChatEventDjId, isGroupChat);
+        const id = isGroupChat ? selectedChatEventId : (isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId);
+        await loadChatMessages(id, isGroupChat, isVenueChat);
       } else {
         showError(response?.message || (language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.'));
         setNewMessageText(messageText);
@@ -1267,7 +1341,17 @@ export default function BookerDashboardPage() {
                   </Text>
                   <Text style={styles.eventInfo}>⏰ {event.time}</Text>
                   {event.venue && (
-                    <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
+                    <View style={styles.venueRow}>
+                      <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
+                      {event.venue.eventVenueId && (
+                        <TouchableOpacity
+                          style={styles.chatButtonSmall}
+                          onPress={() => openVenueChat(event.venue.eventVenueId)}
+                        >
+                          <Text style={styles.chatButtonSmallText}>💬</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   )}
                   {/* Bouton chat de groupe - placé en premier pour être plus visible */}
                   <TouchableOpacity
@@ -1563,8 +1647,10 @@ export default function BookerDashboardPage() {
         onRequestClose={() => {
           setChatModalVisible(false);
           setSelectedChatEventDjId(null);
+          setSelectedChatEventVenueId(null);
           setSelectedChatEventId(null);
           setIsGroupChat(false);
+          setIsVenueChat(false);
           setChatMessages([]);
           setNewMessageText('');
           // Rafraîchir le compteur après fermeture
@@ -1597,8 +1683,10 @@ export default function BookerDashboardPage() {
                 onPress={() => {
                   setChatModalVisible(false);
                   setSelectedChatEventDjId(null);
+                  setSelectedChatEventVenueId(null);
                   setSelectedChatEventId(null);
                   setIsGroupChat(false);
+                  setIsVenueChat(false);
                   setChatMessages([]);
                   setNewMessageText('');
                   // Rafraîchir le compteur après fermeture
@@ -1618,12 +1706,14 @@ export default function BookerDashboardPage() {
             </View>
             </View>
 
-            {/* ✅ Contrat (uniquement chat privé) */}
-            {!isGroupChat && selectedChatEventDjId ? (
+            {/* ✅ Contrat (chat privé DJ ou Lieu) */}
+            {!isGroupChat && (selectedChatEventDjId || selectedChatEventVenueId) ? (
               <View style={styles.contractCard}>
                 <View style={styles.contractTopRow}>
                   <Text style={styles.contractTitle}>
-                    🧾 {language === 'fr' ? 'Contrat de booking' : 'Booking contract'}
+                    🧾 {isVenueChat
+                      ? (language === 'fr' ? 'Contrat lieu' : 'Venue contract')
+                      : (language === 'fr' ? 'Contrat de booking' : 'Booking contract')}
                   </Text>
                   {contractLoading ? (
                     <ActivityIndicator size="small" color="#FF1744" />
@@ -1679,12 +1769,14 @@ export default function BookerDashboardPage() {
                         onPress={sendContract}
                       >
                         <Text style={styles.contractButtonTextDark}>
-                          {language === 'fr' ? 'Envoyer au DJ' : 'Send to DJ'}
+                          {isVenueChat
+                            ? (language === 'fr' ? 'Envoyer au lieu' : 'Send to venue')
+                            : (language === 'fr' ? 'Envoyer au DJ' : 'Send to DJ')}
                         </Text>
                       </TouchableOpacity>
                     </>
                   ) : contractData?.status === 'SENT' ? (
-                    contractData?.sentBy === 'DJ' ? (
+                    (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
                       <>
                         <TouchableOpacity
                           style={[styles.contractButton, styles.contractButtonSecondary]}
@@ -1705,9 +1797,9 @@ export default function BookerDashboardPage() {
                       </>
                     ) : (
                       <Text style={styles.contractHint}>
-                        {language === 'fr'
-                          ? 'En attente de l’acceptation du DJ.'
-                          : 'Waiting for DJ acceptance.'}
+                        {isVenueChat
+                          ? (language === 'fr' ? "En attente de l’acceptation du lieu." : 'Waiting for venue acceptance.')
+                          : (language === 'fr' ? "En attente de l’acceptation du DJ." : 'Waiting for DJ acceptance.')}
                       </Text>
                     )
                   ) : (

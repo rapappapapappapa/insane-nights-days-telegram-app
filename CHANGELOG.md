@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 3-9 mars 2026
+## Semaine du 3-6 mars 2026 (mar. - ven.)
 
 ### Ajouté
 - **Version web** : Client React avec WelcomePage, auth, feed, événements, profil, tickets
@@ -17,13 +17,20 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Booker → Organisateur** : Remplacement de "Booker" par "Organisateur" dans toute l'interface (labels, titres, descriptions)
 - **Drawer** : Un seul bouton "Connexion" (inscription via onglet sur la page login)
 - **LoginPage** : Suppression du bouton "Créer un compte" (amenait à AccountType avant compte, redondant avec onglet Inscription)
+- **Notifications contrat** : Message dans le chat quand une offre est proposée, une contre-proposition envoyée ou un contrat accepté/signé (déclenche la notification push existante)
+
+### Modifié
+- **Contrats** : Le statut de paiement passe à « Paiement en attente » (PENDING) après validation du prix (contrat signé)
+- **Accompte** : Passage en pourcentage (%) au lieu d'un montant fixe en €
+- **Modalités de paiement** : Menu déroulant avec les options — jour booking, j-1 prestation, j+1 prestation, j+15, j+30
+- **Page négociation (iPhone)** : Contenu scrollable pour éviter que le clavier masque les champs (KeyboardAvoidingView + ScrollView)
 
 ### Corrigé
 - **validation.js** : Suppression du bloc d'export dupliqué (SyntaxError)
 
 ---
 
-## Semaine du 24 février - 2 mars 2026
+## Semaine du 24-27 février 2026 (mar. - ven.)
 
 ### Ajouté
 - **Système d'amis (Communauté)** : API + page "Mes amis" avec recherche par pseudo, onglets Amis/Demandes
@@ -53,7 +60,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 17-23 février 2026
+## Semaine du 18-21 février 2026 (mar. - ven.)
 
 ### Ajouté
 - **Abonnements** : Suivre / ne plus suivre un profil DJ ou Organisateur
@@ -71,7 +78,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Comment maintenir ce fichier
 
-À chaque fin de semaine (ou quand tu fais un push important), ajoute une entrée sous **Semaine du [lundi] - [dimanche]** :
+À chaque fin de semaine (ou quand tu fais un push important), ajoute une entrée sous **Semaine du [mardi] - [vendredi]** (mar. - ven.) :
 
 - **Ajouté** : Nouvelles fonctionnalités
 - **Modifié** : Changements dans des fonctionnalités existantes

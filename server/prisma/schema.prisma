@@ -201,6 +201,7 @@ model UserVenue {
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
   events                 Event[]
+  eventVenues            EventVenue[]
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   media                  VenueMedia[]
   ratings                VenueRating[]
@@ -287,6 +288,7 @@ model Event {
   booker        UserBooker?   @relation(fields: [bookerId], references: [id])
   venue         UserVenue?    @relation(fields: [venueId], references: [id])
   eventDjs      EventDj[]
+  eventVenues   EventVenue[]
   groupMessages Message[]
   payments      Payment[]
   tickets       Ticket[]
@@ -354,21 +356,54 @@ model EventDj {
   @@index([status])
 }
 
+model EventVenue {
+  id                String                @id @default(uuid())
+  eventId           String
+  venueId           String
+  status            InvitationStatus      @default(PENDING)
+  paymentStatus     BookingPaymentStatus  @default(UPCOMING)
+  paymentAmount     Int?
+  paymentCurrency   String                @default("eur")
+  paidAt            DateTime?
+  invoiceNumber     String?
+  contractStatus    BookingContractStatus @default(DRAFT)
+  contractVersion   Int                   @default(1)
+  contractPayload   Json?
+  contractHash      String?
+  contractSentAt    DateTime?
+  contractSentBy    ContractPartyVenue?
+  bookerAcceptedAt  DateTime?
+  venueAcceptedAt   DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  event             Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venue             UserVenue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  messages          Message[]
+
+  @@unique([eventId, venueId])
+  @@index([eventId])
+  @@index([venueId])
+  @@index([status])
+}
+
 model Message {
-  id        String      @id @default(uuid())
-  type      MessageType @default(PRIVATE)
-  eventDjId String?
-  eventId   String?
-  senderId  String
-  content   String
-  read      Boolean     @default(false)
-  deleted   Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  eventDj   EventDj?    @relation(fields: [eventDjId], references: [id], onDelete: Cascade)
-  event     Event?      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  type        MessageType  @default(PRIVATE)
+  eventDjId   String?
+  eventVenueId String?
+  eventId     String?
+  senderId    String
+  content     String
+  read        Boolean      @default(false)
+  deleted     Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  eventDj     EventDj?     @relation(fields: [eventDjId], references: [id], onDelete: Cascade)
+  eventVenue  EventVenue?  @relation(fields: [eventVenueId], references: [id], onDelete: Cascade)
+  event       Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventDjId])
+  @@index([eventVenueId])
   @@index([eventId])
   @@index([senderId])
   @@index([type])
@@ -600,6 +635,11 @@ enum BookingContractStatus {
 enum ContractParty {
   BOOKER
   DJ
+}
+
+enum ContractPartyVenue {
+  BOOKER
+  VENUE
 }
 
 enum MessageType {

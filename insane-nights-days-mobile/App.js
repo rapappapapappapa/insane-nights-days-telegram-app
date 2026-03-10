@@ -145,8 +145,8 @@ function AppContent() {
   const handleNotificationPress = async () => {
     if (!user?.isAuthenticated) return;
 
-    // ✅ Si on a une notif "latest", on navigue là où il y a à lire (DJ vs BOOKER)
-    if (latest?.profileType === 'DJ' || latest?.profileType === 'BOOKER') {
+    // ✅ Si on a une notif "latest", on navigue là où il y a à lire (DJ vs BOOKER vs VENUE)
+    if (latest?.profileType === 'DJ' || latest?.profileType === 'BOOKER' || latest?.profileType === 'VENUE') {
       const targetProfile = latest.profileType;
 
       // Si on n'est pas sur le bon profil, basculer automatiquement
@@ -157,15 +157,15 @@ function AppContent() {
             await refreshCurrentUser();
           }
         } catch (e) {
-          // best-effort: on continue quand même vers le dashboard
           console.warn('[App] Auto switch profile failed:', e?.message ?? e);
         }
       }
 
       const params = {
         openBookings: true,
-        openChatType: latest.messageType ?? null, // 'PRIVATE' | 'GROUP'
+        openChatType: latest.messageType ?? null,
         openChatEventDjId: latest.eventDjId ?? null,
+        openChatEventVenueId: latest.eventVenueId ?? null,
         openChatEventId: latest.eventId ?? null,
         openChatPreview: latest.preview ?? null,
         openChatEventTitle: latest.eventTitle ?? null,
@@ -173,6 +173,8 @@ function AppContent() {
 
       if (targetProfile === 'DJ') {
         navigate('djDashboard', params);
+      } else if (targetProfile === 'VENUE') {
+        navigate('venueDashboard', params);
       } else {
         navigate('bookerDashboard', params);
       }

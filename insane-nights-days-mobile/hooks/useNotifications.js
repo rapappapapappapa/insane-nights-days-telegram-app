@@ -38,6 +38,7 @@ export function useNotifications() {
         const nextByType = {
           DJ: Number(response?.byProfileType?.DJ || 0),
           BOOKER: Number(response?.byProfileType?.BOOKER || 0),
+          VENUE: Number(response?.byProfileType?.VENUE || 0),
         };
         const nextLatest = response?.latest ?? null;
         const previousCount = previousCountRef.current;

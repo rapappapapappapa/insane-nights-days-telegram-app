@@ -3733,6 +3733,94 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint pour récupérer les bookings d'un lieu (événements où il est associé via EventVenue)
+app.get('/api/venue/bookings', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const venue = await prisma.userVenue.findFirst({
+      where: { userId },
+    });
+
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const eventVenues = await prisma.eventVenue.findMany({
+      where: { venueId: venue.id },
+      include: {
+        event: {
+          include: {
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+                address: true,
+              },
+            },
+            booker: {
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                bookerType: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          date: 'desc',
+        },
+      },
+    });
+
+    const resolvePaymentStatus = (ev, eventStatus) => {
+      if (ev?.paymentStatus === 'PAID' || ev?.paidAt) return 'PAID';
+      if (ev?.contractStatus === 'SIGNED') return 'PENDING';
+      if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
+      return 'UPCOMING';
+    };
+
+    const bookings = eventVenues.map((ev) => ({
+      id: ev.id,
+      eventVenueId: ev.id,
+      eventId: ev.event.id,
+      eventTitle: ev.event.title,
+      eventDate: ev.event.date,
+      eventTime: ev.event.time,
+      eventLocation: ev.event.location,
+      eventStatus: ev.event.status,
+      invitationStatus: ev.status,
+      paymentStatus: resolvePaymentStatus(ev, ev.event.status),
+      paymentAmount: ev.paymentAmount ?? null,
+      paymentCurrency: ev.paymentCurrency ?? 'eur',
+      paidAt: ev.paidAt ?? null,
+      invoiceNumber: ev.invoiceNumber ?? null,
+      venue: ev.event.venue ? {
+        id: ev.event.venue.id,
+        name: ev.event.venue.venueName,
+        address: ev.event.venue.address,
+      } : null,
+      booker: ev.event.booker ? {
+        id: ev.event.booker.id,
+        name: `${ev.event.booker.prenom} ${ev.event.booker.nom}`,
+        type: ev.event.booker.bookerType,
+      } : null,
+      createdAt: ev.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error('Erreur récupération bookings lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 /**
  * Accepte une invitation à un événement
  * @route PUT /api/dj/invitations/:invitationId/accept
@@ -3911,6 +3999,125 @@ app.put('/api/dj/invitations/:invitationId/reject', authenticateToken, async (re
     });
   } catch (error) {
     console.error('Erreur refus invitation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Accepte une invitation lieu à un événement
+ * @route PUT /api/venue/invitations/:eventVenueId/accept
+ */
+app.put('/api/venue/invitations/:eventVenueId/accept', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+
+    const venue = await prisma.userVenue.findFirst({ where: { userId } });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ev) {
+      return res.status(404).json({ success: false, message: 'Invitation non trouvée.' });
+    }
+    if (ev.venueId !== venue.id) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à modifier cette invitation.' });
+    }
+    if (ev.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${ev.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    const updated = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: { status: 'ACCEPTED' },
+      include: {
+        event: {
+          include: {
+            venue: { select: { id: true, venueName: true, address: true } },
+            booker: { select: { id: true, nom: true, prenom: true, bookerType: true } },
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation acceptée avec succès.',
+      invitation: {
+        id: updated.id,
+        eventId: updated.event.id,
+        eventTitle: updated.event.title,
+        eventDate: updated.event.date,
+        eventTime: updated.event.time,
+        invitationStatus: updated.status,
+        venue: updated.event.venue ? { id: updated.event.venue.id, name: updated.event.venue.venueName, address: updated.event.venue.address } : null,
+        booker: updated.event.booker ? { id: updated.event.booker.id, name: `${updated.event.booker.prenom} ${updated.event.booker.nom}`, type: updated.event.booker.bookerType } : null,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur acceptation invitation lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Refuse une invitation lieu à un événement
+ * @route PUT /api/venue/invitations/:eventVenueId/reject
+ */
+app.put('/api/venue/invitations/:eventVenueId/reject', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+
+    const venue = await prisma.userVenue.findFirst({ where: { userId } });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ev) {
+      return res.status(404).json({ success: false, message: 'Invitation non trouvée.' });
+    }
+    if (ev.venueId !== venue.id) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à modifier cette invitation.' });
+    }
+    if (ev.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${ev.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    const updated = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: { status: 'REJECTED' },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation refusée.',
+      invitation: {
+        id: updated.id,
+        eventId: updated.event.id,
+        eventTitle: updated.event.title,
+        invitationStatus: updated.status,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur refus invitation lieu:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -4127,6 +4334,109 @@ app.get('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) => 
 });
 
 /**
+ * Envoyer un message dans une conversation Organisateur ↔ Lieu
+ * @route POST /api/chat/event-venue/:eventVenueId/messages
+ */
+app.post('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Le contenu du message est requis.' });
+    }
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { include: { booker: true } }, venue: true },
+    });
+    if (!ev) return res.status(404).json({ success: false, message: 'Conversation non trouvée.' });
+
+    const isBooker = ev.event?.booker?.userId === userId;
+    const isVenue = ev.venue?.userId === userId;
+    if (!isBooker && !isVenue) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const message = await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventVenueId,
+        senderId: userId,
+        content: content.trim(),
+        read: false,
+        deleted: false,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Message envoyé.',
+      data: { id: message.id, content: message.content, senderId: message.senderId, read: message.read, createdAt: message.createdAt },
+    });
+  } catch (error) {
+    console.error('Erreur envoi message EventVenue:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Récupérer les messages Organisateur ↔ Lieu
+ * @route GET /api/chat/event-venue/:eventVenueId/messages
+ */
+app.get('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { include: { booker: true } }, venue: true },
+    });
+    if (!ev) return res.status(404).json({ success: false, message: 'Conversation non trouvée.' });
+
+    const isBooker = ev.event?.booker?.userId === userId;
+    const isVenue = ev.venue?.userId === userId;
+    if (!isBooker && !isVenue) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+
+    const messages = await prisma.message.findMany({
+      where: { eventVenueId, type: 'PRIVATE' },
+      orderBy: { createdAt: 'asc' },
+      include: { eventVenue: { include: { event: true, venue: true } } },
+    });
+
+    const enrichedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        let senderInfo = null;
+        if (msg.senderId === ev.event?.booker?.userId) {
+          const b = await prisma.userBooker.findFirst({ where: { userId: msg.senderId }, select: { nom: true, prenom: true, profileImage: true } });
+          senderInfo = { type: 'BOOKER', name: b ? `${b.prenom} ${b.nom}` : 'Organisateur', image: b?.profileImage };
+        } else if (msg.senderId === ev.venue?.userId) {
+          const v = await prisma.userVenue.findFirst({ where: { userId: msg.senderId }, select: { venueName: true, profileImage: true } });
+          senderInfo = { type: 'VENUE', name: v?.venueName || 'Lieu', image: v?.profileImage };
+        }
+        return {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderInfo,
+          read: msg.read,
+          deleted: msg.deleted,
+          createdAt: msg.createdAt,
+          isOwn: msg.senderId === userId,
+        };
+      })
+    );
+
+    res.json({ success: true, messages: enrichedMessages });
+  } catch (error) {
+    console.error('Erreur récupération messages EventVenue:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * Marquer un message comme lu
  * @route PUT /api/chat/messages/:messageId/read
  */
@@ -4141,11 +4451,13 @@ app.put('/api/chat/messages/:messageId/read', authenticateToken, async (req, res
       include: {
         eventDj: {
           include: {
-            event: {
-              include: {
-                booker: true,
-              },
-            },
+            event: { include: { booker: true } },
+          },
+        },
+        eventVenue: {
+          include: {
+            event: { include: { booker: true } },
+            venue: true,
           },
         },
       },
@@ -4158,12 +4470,18 @@ app.put('/api/chat/messages/:messageId/read', authenticateToken, async (req, res
       });
     }
 
-    // Vérifier que l'utilisateur est autorisé (DJ ou booker, mais pas l'expéditeur)
-    const isDj = message.eventDj.djId === userId;
-    // bookerId dans Event pointe vers UserBooker.id, pas User.id
-    const isBooker = message.eventDj.event.booker && message.eventDj.event.booker.userId === userId;
+    let isAuthorized = false;
+    if (message.eventDj) {
+      const isDj = message.eventDj.djId === userId;
+      const isBooker = message.eventDj.event?.booker?.userId === userId;
+      isAuthorized = isDj || isBooker;
+    } else if (message.eventVenue) {
+      const isBooker = message.eventVenue.event?.booker?.userId === userId;
+      const isVenue = message.eventVenue.venue?.userId === userId;
+      isAuthorized = isBooker || isVenue;
+    }
 
-    if (!isDj && !isBooker) {
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: 'Vous n\'êtes pas autorisé à marquer ce message comme lu.',
@@ -4329,19 +4647,29 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
     let bookerLatestUnread = null;
 
     if (booker) {
-      const bookerPrivateUnread = await prisma.message.count({
+      const bookerPrivateUnreadDj = await prisma.message.count({
         where: {
           type: 'PRIVATE',
           read: false,
           deleted: false,
           senderId: { not: userId },
           eventDj: {
-            event: {
-              bookerId: booker.id,
-            },
+            event: { bookerId: booker.id },
           },
         },
       });
+      const bookerPrivateUnreadVenue = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventVenue: {
+            event: { bookerId: booker.id },
+          },
+        },
+      });
+      const bookerPrivateUnread = bookerPrivateUnreadDj + bookerPrivateUnreadVenue;
 
       const bookerEventIds = await prisma.event.findMany({
         where: { bookerId: booker.id },
@@ -4375,6 +4703,12 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
                 event: { bookerId: booker.id },
               },
             },
+            {
+              type: 'PRIVATE',
+              eventVenue: {
+                event: { bookerId: booker.id },
+              },
+            },
             ...(bookerEventIdList.length
               ? [
                   {
@@ -4392,23 +4726,67 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
               event: { select: { id: true, title: true } },
             },
           },
+          eventVenue: {
+            include: {
+              event: { select: { id: true, title: true } },
+            },
+          },
           event: { select: { id: true, title: true } },
         },
       });
     }
 
-    const totalUnread = djTotalUnread + bookerTotalUnread;
+    // --- VENUE side ---
+    const venue = await prisma.userVenue.findFirst({
+      where: { userId: userId },
+      select: { id: true },
+    });
+    let venueTotalUnread = 0;
+    let venueLatestUnread = null;
+    if (venue) {
+      venueTotalUnread = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventVenue: { venueId: venue.id },
+        },
+      });
+      venueLatestUnread = await prisma.message.findFirst({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventVenue: { venueId: venue.id },
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          eventVenue: {
+            include: { event: { select: { id: true, title: true } } },
+          },
+        },
+      });
+    }
 
-    const pickLatest = (a, b) => {
-      if (!a && !b) return null;
-      if (a && !b) return { profileType: 'DJ', msg: a };
-      if (!a && b) return { profileType: 'BOOKER', msg: b };
-      const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return aTime >= bTime ? { profileType: 'DJ', msg: a } : { profileType: 'BOOKER', msg: b };
+    const totalUnread = djTotalUnread + bookerTotalUnread + venueTotalUnread;
+
+    const pickLatest = (a, b, c) => {
+      const items = [
+        a && { profileType: 'DJ', msg: a },
+        b && { profileType: 'BOOKER', msg: b },
+        c && { profileType: 'VENUE', msg: c },
+      ].filter(Boolean);
+      if (items.length === 0) return null;
+      return items.reduce((best, cur) => {
+        const bestTime = best?.msg?.createdAt ? new Date(best.msg.createdAt).getTime() : 0;
+        const curTime = cur?.msg?.createdAt ? new Date(cur.msg.createdAt).getTime() : 0;
+        return curTime > bestTime ? cur : best;
+      });
     };
 
-    const latest = pickLatest(djLatestUnread, bookerLatestUnread);
+    const latest = pickLatest(djLatestUnread, bookerLatestUnread, venueLatestUnread);
 
     res.json({
       success: true,
@@ -4416,6 +4794,7 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
       byProfileType: {
         DJ: djTotalUnread,
         BOOKER: bookerTotalUnread,
+        VENUE: venueTotalUnread,
       },
       latest: latest
         ? {
@@ -4425,10 +4804,12 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
             preview: (latest.msg.content || '').slice(0, 160),
             createdAt: latest.msg.createdAt,
             eventDjId: latest.msg.eventDjId ?? null,
+            eventVenueId: latest.msg.eventVenueId ?? null,
             eventId: latest.msg.eventId ?? null,
             eventTitle:
               latest.msg.event?.title ??
               latest.msg.eventDj?.event?.title ??
+              latest.msg.eventVenue?.event?.title ??
               null,
           }
         : null,
@@ -4493,16 +4874,26 @@ app.put('/api/chat/mark-all-read', authenticateToken, async (req, res) => {
       });
 
       if (booker) {
-        // Marquer tous les messages privés non lus comme lus (reçus par le booker)
+        // Messages privés DJ
         await prisma.message.updateMany({
           where: {
             type: 'PRIVATE',
             read: false,
             senderId: { not: userId },
             eventDj: {
-              event: {
-                bookerId: booker.id,
-              },
+              event: { bookerId: booker.id },
+            },
+          },
+          data: { read: true },
+        });
+        // Messages privés Lieu
+        await prisma.message.updateMany({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventVenue: {
+              event: { bookerId: booker.id },
             },
           },
           data: { read: true },
@@ -4526,6 +4917,22 @@ app.put('/api/chat/mark-all-read', authenticateToken, async (req, res) => {
             data: { read: true },
           });
         }
+      }
+    } else if (user.activeProfileType === 'VENUE') {
+      const venue = await prisma.userVenue.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+      if (venue) {
+        await prisma.message.updateMany({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventVenue: { venueId: venue.id },
+          },
+          data: { read: true },
+        });
       }
     }
 
@@ -5577,6 +5984,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           },
         },
         eventDjs: true,
+        eventVenues: true,
       },
       orderBy: {
         date: 'desc',
@@ -5619,6 +6027,14 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           },
         });
 
+        const eventVenue = event.eventVenues?.[0];
+        const resolveVenuePaymentStatus = (ev) => {
+          if (!ev) return 'UPCOMING';
+          if (ev?.paymentStatus === 'PAID' || ev?.paidAt) return 'PAID';
+          if (ev?.contractStatus === 'SIGNED') return 'PENDING';
+          if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
+          return 'UPCOMING';
+        };
         return {
           id: event.id,
           title: event.title,
@@ -5632,7 +6048,18 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           description: event.description,
           image: event.image,
           status: event.status,
-          venue: event.venue,
+          venue: event.venue ? {
+            ...event.venue,
+            eventVenueId: eventVenue?.id ?? null,
+            venueInvitationStatus: eventVenue?.status ?? 'PENDING',
+            payment: {
+              paymentStatus: resolveVenuePaymentStatus(eventVenue),
+              paymentAmount: eventVenue?.paymentAmount ?? null,
+              paymentCurrency: eventVenue?.paymentCurrency ?? 'eur',
+              paidAt: eventVenue?.paidAt ?? null,
+              invoiceNumber: eventVenue?.invoiceNumber ?? null,
+            },
+          } : null,
           djs: djs.map((dj) => ({
             userId: dj.userId,
             artistName: dj.artistName,
@@ -5721,6 +6148,69 @@ app.put('/api/booker/event-djs/:eventDjId/payment', authenticateToken, async (re
 });
 
 /**
+ * ✅ Mettre à jour le statut de paiement d'un booking lieu (Booker -> Venue)
+ * @route PUT /api/booker/event-venues/:eventVenueId/payment
+ * body: { status: 'UPCOMING'|'PENDING'|'PAID', amount?: number (cents), currency?: 'eur', invoiceNumber?: string }
+ */
+app.put('/api/booker/event-venues/:eventVenueId/payment', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { status, amount, currency, invoiceNumber } = req.body ?? {};
+
+    const valid = ['UPCOMING', 'PENDING', 'PAID'];
+    if (!status || !valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'status doit être UPCOMING, PENDING ou PAID.' });
+    }
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: {
+        event: { include: { booker: true } },
+      },
+    });
+    if (!ev) return res.status(404).json({ success: false, message: 'Booking (EventVenue) introuvable.' });
+
+    const isOwner = ev.event?.booker?.userId === userId;
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const nextInvoiceNumber =
+      (typeof invoiceNumber === 'string' && invoiceNumber.trim())
+        ? invoiceNumber.trim()
+        : (status === 'PAID' && !ev.invoiceNumber)
+          ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
+          : ev.invoiceNumber;
+
+    const next = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        paymentStatus: status,
+        paymentAmount: typeof amount === 'number' ? Math.max(0, Math.floor(amount)) : ev.paymentAmount,
+        paymentCurrency: typeof currency === 'string' && currency ? currency.toLowerCase() : ev.paymentCurrency,
+        paidAt: status === 'PAID' ? new Date() : null,
+        invoiceNumber: nextInvoiceNumber,
+      },
+    });
+
+    return res.json({
+      success: true,
+      payment: {
+        paymentStatus: next.paymentStatus,
+        paymentAmount: next.paymentAmount,
+        paymentCurrency: next.paymentCurrency,
+        paidAt: next.paidAt,
+        invoiceNumber: next.invoiceNumber,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur update payment event-venue:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * ✅ Contrat booking (MVP) intégré au chat privé Booker <-> DJ
  *
  * Flow:
@@ -5780,6 +6270,24 @@ const createContractNotificationMessage = async (eventDjId, senderId, content) =
     });
   } catch (err) {
     console.error('Erreur création message notification contrat:', err);
+  }
+};
+
+/** Crée un message de notification contrat Organisateur ↔ Lieu */
+const createContractNotificationMessageVenue = async (eventVenueId, senderId, content) => {
+  try {
+    await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventVenueId,
+        senderId,
+        content,
+        read: false,
+        deleted: false,
+      },
+    });
+  } catch (err) {
+    console.error('Erreur création message notification contrat venue:', err);
   }
 };
 
@@ -6058,6 +6566,418 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
     });
   } catch (e) {
     console.error('Erreur accept contract:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Contrats Organisateur ↔ Lieu (même logique que EventDj)
+ */
+const loadEventVenueWithAccess = async (eventVenueId, userId) => {
+  const ev = await prisma.eventVenue.findUnique({
+    where: { id: eventVenueId },
+    include: { event: { include: { booker: true } }, venue: true },
+  });
+  if (!ev) return { error: { code: 404, message: 'EventVenue introuvable.' } };
+  const isBooker = ev.event?.booker?.userId === userId;
+  const isVenue = ev.venue?.userId === userId;
+  if (!isBooker && !isVenue) return { error: { code: 403, message: 'Accès refusé.' } };
+  return { ev, isBooker, isVenue };
+};
+
+app.get('/api/contracts/event-venues/:eventVenueId', authenticateToken, async (req, res) => {
+  try {
+    const { eventVenueId } = req.params;
+    const { ev, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    const sentBy = ev.contractSentBy ?? (ev.contractStatus === 'SENT' ? 'BOOKER' : null);
+    return res.json({
+      success: true,
+      contract: {
+        status: ev.contractStatus,
+        version: ev.contractVersion,
+        hash: ev.contractHash,
+        sentAt: ev.contractSentAt,
+        sentBy,
+        bookerAcceptedAt: ev.bookerAcceptedAt,
+        venueAcceptedAt: ev.venueAcceptedAt,
+        payload: ev.contractPayload,
+      },
+      booking: {
+        eventTitle: ev.event?.title,
+        eventDate: ev.event?.date,
+        venueName: ev.venue?.venueName,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur get contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/contracts/event-venues/:eventVenueId/draft', authenticateToken, async (req, res) => {
+  try {
+    const { eventVenueId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ev, isBooker, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut modifier le brouillon.' });
+    if (ev.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+    const next = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractPayload: payload ?? {},
+        contractHash: null,
+        contractSentAt: null,
+        contractSentBy: null,
+        bookerAcceptedAt: null,
+        venueAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    return res.json({ success: true, contract: { status: next.contractStatus, version: next.contractVersion, payload: next.contractPayload } });
+  } catch (e) {
+    console.error('Erreur save contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/send', authenticateToken, async (req, res) => {
+  try {
+    const { eventVenueId } = req.params;
+    const { ev, isBooker, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut envoyer le contrat.' });
+    if (ev.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+    const payload = ev.contractPayload ?? {};
+    const hash = hashContract(payload);
+    await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractStatus: 'SENT',
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: 'BOOKER',
+        bookerAcceptedAt: new Date(),
+        venueAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    await createContractNotificationMessageVenue(eventVenueId, req.user.id, `📋 Nouvelle offre de contrat reçue${eventTitle}`);
+    return res.json({ success: true, contract: { status: 'SENT' } });
+  } catch (e) {
+    console.error('Erreur send contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/counter', authenticateToken, async (req, res) => {
+  try {
+    const { eventVenueId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
+    const sender = isBooker ? 'BOOKER' : 'VENUE';
+    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
+    if (currentSentBy === sender) return res.status(400).json({ success: false, message: 'Tu as déjà la main.' });
+    const nextPayload = payload ?? {};
+    const hash = hashContract(nextPayload);
+    await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractStatus: 'SENT',
+        contractPayload: nextPayload,
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: sender,
+        bookerAcceptedAt: sender === 'BOOKER' ? new Date() : null,
+        venueAcceptedAt: sender === 'VENUE' ? new Date() : null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    await createContractNotificationMessageVenue(eventVenueId, req.user.id, `📋 Contre-proposition reçue${eventTitle}`);
+    return res.json({ success: true, contract: { status: 'SENT' } });
+  } catch (e) {
+    console.error('Erreur counter contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, async (req, res) => {
+  try {
+    const { eventVenueId } = req.params;
+    const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
+    const role = isBooker ? 'BOOKER' : (isVenue ? 'VENUE' : null);
+    if (!role) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
+    if (currentSentBy === role) return res.status(400).json({ success: false, message: 'Tu as déjà accepté.' });
+    const payload = ev.contractPayload ?? {};
+    const expectedHash = ev.contractHash ?? '';
+    const actualHash = hashContract(payload);
+    if (!expectedHash || expectedHash !== actualHash) return res.status(400).json({ success: false, message: 'Contrat invalide.' });
+    const now = new Date();
+    const data = {
+      contractSentBy: ev.contractSentBy ?? 'BOOKER',
+      bookerAcceptedAt: role === 'BOOKER' ? now : ev.bookerAcceptedAt,
+      venueAcceptedAt: role === 'VENUE' ? now : ev.venueAcceptedAt,
+    };
+    const updated = await prisma.eventVenue.update({ where: { id: eventVenueId }, data });
+    const shouldSign = !!updated.bookerAcceptedAt && !!updated.venueAcceptedAt;
+    if (shouldSign) {
+      await prisma.eventVenue.update({
+        where: { id: eventVenueId },
+        data: {
+          contractStatus: 'SIGNED',
+          ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
+        },
+      });
+    }
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
+    await createContractNotificationMessageVenue(eventVenueId, req.user.id, notifContent);
+    return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
+  } catch (e) {
+    console.error('Erreur accept contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Contrats Organisateur ↔ Lieu (EventVenue)
+ */
+const loadEventVenueWithAccess = async (eventVenueId, userId) => {
+  const ev = await prisma.eventVenue.findUnique({
+    where: { id: eventVenueId },
+    include: { event: { include: { booker: true } }, venue: true },
+  });
+  if (!ev) return { error: { code: 404, message: 'Booking (EventVenue) introuvable.' } };
+  const isBooker = ev.event?.booker?.userId === userId;
+  const isVenue = ev.venue?.userId === userId;
+  if (!isBooker && !isVenue) return { error: { code: 403, message: 'Accès refusé.' } };
+  return { ev, isBooker, isVenue };
+};
+
+app.get('/api/contracts/event-venues/:eventVenueId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+
+    const sentBy = ev.contractSentBy ?? (ev.contractStatus === 'SENT' ? 'BOOKER' : null);
+    return res.json({
+      success: true,
+      contract: {
+        status: ev.contractStatus,
+        version: ev.contractVersion,
+        hash: ev.contractHash,
+        sentAt: ev.contractSentAt,
+        sentBy,
+        bookerAcceptedAt: ev.bookerAcceptedAt,
+        venueAcceptedAt: ev.venueAcceptedAt,
+        payload: ev.contractPayload,
+      },
+      booking: {
+        eventTitle: ev.event?.title,
+        eventDate: ev.event?.date,
+        venueName: ev.venue?.venueName,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur get contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.put('/api/contracts/event-venues/:eventVenueId/draft', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ev, isBooker, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut modifier le contrat.' });
+    if (ev.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+
+    const next = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractPayload: payload ?? {},
+        contractHash: null,
+        contractSentAt: null,
+        contractSentBy: null,
+        bookerAcceptedAt: null,
+        venueAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    return res.json({ success: true, contract: { status: next.contractStatus, version: next.contractVersion, payload: next.contractPayload } });
+  } catch (e) {
+    console.error('Erreur save contract venue draft:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/send', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { ev, isBooker, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut envoyer le contrat.' });
+    if (ev.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+
+    const payload = ev.contractPayload ?? {};
+    const hash = hashContract(payload);
+
+    const next = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractStatus: 'SENT',
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: 'BOOKER',
+        bookerAcceptedAt: new Date(),
+        venueAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    await createContractNotificationMessageVenue(eventVenueId, userId, `📋 Nouvelle offre de contrat reçue${eventTitle}`);
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur send contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/counter', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
+
+    const sender = isBooker ? 'BOOKER' : 'VENUE';
+    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
+    if (currentSentBy === sender) return res.status(400).json({ success: false, message: 'Tu as déjà la main.' });
+
+    const nextPayload = payload ?? {};
+    const hash = hashContract(nextPayload);
+
+    const next = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: {
+        contractStatus: 'SENT',
+        contractPayload: nextPayload,
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: sender,
+        bookerAcceptedAt: sender === 'BOOKER' ? new Date() : null,
+        venueAcceptedAt: sender === 'VENUE' ? new Date() : null,
+        contractVersion: { increment: 1 },
+      },
+    });
+
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    await createContractNotificationMessageVenue(eventVenueId, userId, `📋 Contre-proposition reçue${eventTitle}`);
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        version: next.contractVersion,
+        payload: next.contractPayload,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+        venueAcceptedAt: next.venueAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur counter contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
+
+    const role = isBooker ? 'BOOKER' : (isVenue ? 'VENUE' : null);
+    if (!role) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
+    if (currentSentBy === role) return res.status(400).json({ success: false, message: 'Tu as déjà accepté cette version.' });
+
+    const payload = ev.contractPayload ?? {};
+    const expectedHash = ev.contractHash ?? '';
+    const actualHash = hashContract(payload);
+    if (!expectedHash || expectedHash !== actualHash) return res.status(400).json({ success: false, message: 'Contrat invalide.' });
+
+    const now = new Date();
+    const data = {
+      contractSentBy: ev.contractSentBy ?? 'BOOKER',
+      bookerAcceptedAt: role === 'BOOKER' ? now : ev.bookerAcceptedAt,
+      venueAcceptedAt: role === 'VENUE' ? now : ev.venueAcceptedAt,
+    };
+
+    const updated = await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data,
+    });
+
+    const shouldSign = !!updated.bookerAcceptedAt && !!updated.venueAcceptedAt;
+    const next = shouldSign
+      ? await prisma.eventVenue.update({
+          where: { id: eventVenueId },
+          data: {
+            contractStatus: 'SIGNED',
+            ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
+          },
+        })
+      : updated;
+
+    const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
+    const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
+    await createContractNotificationMessageVenue(eventVenueId, userId, notifContent);
+
+    return res.json({
+      success: true,
+      contract: {
+        status: next.contractStatus,
+        version: next.contractVersion,
+        hash: next.contractHash,
+        sentAt: next.contractSentAt,
+        sentBy: next.contractSentBy,
+        bookerAcceptedAt: next.bookerAcceptedAt,
+        venueAcceptedAt: next.venueAcceptedAt,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur accept contract venue:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -6468,6 +7388,12 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
             status: 'PENDING', // Les invitations commencent en PENDING
           })),
         },
+        eventVenues: {
+          create: {
+            venueId: venueId,
+            status: 'PENDING', // Invitation lieu en attente
+          },
+        },
       },
       include: {
         venue: {
@@ -6478,9 +7404,10 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
           },
         },
         eventDjs: {
-          include: {
-            // On récupérera les infos DJ séparément
-          },
+          include: {},
+        },
+        eventVenues: {
+          include: {},
         },
       },
     });
@@ -6503,7 +7430,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       // Ne pas bloquer la création de l'événement si le chat échoue
     }
 
-    // Créer automatiquement un message de bienvenue dans chaque chat privé
+    // Créer automatiquement un message de bienvenue dans chaque chat privé (DJ)
     for (const eventDj of event.eventDjs) {
       try {
         await prisma.message.create({
@@ -6518,7 +7445,25 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         });
       } catch (privateChatError) {
         console.error(`Erreur création message chat privé pour EventDj ${eventDj.id}:`, privateChatError);
-        // Ne pas bloquer la création de l'événement si un chat privé échoue
+      }
+    }
+
+    // Créer message de bienvenue dans le chat privé Organisateur ↔ Lieu
+    const eventVenues = event.eventVenues || [];
+    for (const ev of eventVenues) {
+      try {
+        await prisma.message.create({
+          data: {
+            type: 'PRIVATE',
+            eventVenueId: ev.id,
+            senderId: userId,
+            content: `👋 Bonjour ! Votre lieu a été sélectionné pour l'événement "${event.title}". N'hésitez pas à me contacter pour discuter des modalités.`,
+            read: false,
+            deleted: false,
+          },
+        });
+      } catch (e) {
+        console.error(`Erreur création message chat EventVenue ${ev.id}:`, e);
       }
     }
 

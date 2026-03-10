@@ -48,8 +48,11 @@ const API_CONFIG = {
     USER_DJ_PROFILE: '/api/user/dj/profile',
     BOOKER_PROFILE: '/api/booker/profile',
     DJ_BOOKINGS: '/api/dj/bookings',
+    VENUE_BOOKINGS: '/api/venue/bookings',
     DJ_ACCEPT_INVITATION: '/api/dj/invitations',
     DJ_REJECT_INVITATION: '/api/dj/invitations',
+    VENUE_ACCEPT_INVITATION: '/api/venue/invitations',
+    VENUE_REJECT_INVITATION: '/api/venue/invitations',
     VENUE_MEDIA: '/api/venue',
     BOOKER_AVAILABLE_DJS: '/api/booker/available-djs',
     BOOKER_VENUES: '/api/booker/venues',
@@ -58,6 +61,7 @@ const API_CONFIG = {
     BOOKER_DELETE_EVENT: '/api/booker/events',
     BOOKER_EVENTDJ_PAYMENT: '/api/booker/event-djs',
     CONTRACTS_EVENTDJS: '/api/contracts/event-djs',
+    CONTRACTS_EVENTVENUES: '/api/contracts/event-venues',
   },
 };
 
@@ -912,6 +916,12 @@ const api = {
     return apiRequest(API_CONFIG.ENDPOINTS.DJ_BOOKINGS, { noCache: true }, token);
   },
 
+  // Récupérer les bookings d'un lieu (événements où il est associé via EventVenue)
+  getVenueBookings: async (token) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.VENUE_BOOKINGS, { noCache: true }, token);
+  },
+
   // Accepter une invitation à un événement
   acceptInvitation: async (token, invitationId) => {
     if (!token) {
@@ -936,6 +946,26 @@ const api = {
       {
         method: 'PUT',
       },
+      token
+    );
+  },
+
+  // Accepter une invitation lieu à un événement
+  acceptVenueInvitation: async (token, eventVenueId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.VENUE_ACCEPT_INVITATION}/${eventVenueId}/accept`,
+      { method: 'PUT' },
+      token
+    );
+  },
+
+  // Refuser une invitation lieu à un événement
+  rejectVenueInvitation: async (token, eventVenueId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.VENUE_REJECT_INVITATION}/${eventVenueId}/reject`,
+      { method: 'PUT' },
       token
     );
   },
@@ -1146,6 +1176,50 @@ const api = {
     }
     // ✅ Jamais de cache pour le chat (sinon les nouveaux messages n'apparaissent pas)
     return apiRequest(`/api/chat/${eventDjId}/messages`, { noCache: true }, token);
+  },
+
+  // Chat Organisateur ↔ Lieu
+  sendVenueMessage: async (token, eventVenueId, content) => {
+    if (!token || !content?.trim()) throw new Error('Token et contenu requis.');
+    return apiRequest(
+      `/api/chat/event-venue/${eventVenueId}/messages`,
+      { method: 'POST', body: JSON.stringify({ content: content.trim() }) },
+      token
+    );
+  },
+  getVenueMessages: async (token, eventVenueId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/chat/event-venue/${eventVenueId}/messages`, { noCache: true }, token);
+  },
+
+  // Contrats Organisateur ↔ Lieu
+  getVenueContract: async (token, eventVenueId) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}`, { noCache: true }, token);
+  },
+  saveVenueContractDraft: async (token, eventVenueId, payload) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/draft`,
+      { method: 'PUT', body: JSON.stringify({ payload: payload || {} }) },
+      token
+    );
+  },
+  sendVenueContract: async (token, eventVenueId) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/send`, { method: 'POST' }, token);
+  },
+  acceptVenueContract: async (token, eventVenueId) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/accept`, { method: 'POST' }, token);
+  },
+  counterVenueContract: async (token, eventVenueId, payload) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/counter`,
+      { method: 'POST', body: JSON.stringify({ payload: payload || {} }) },
+      token
+    );
   },
 
   // Marquer un message comme lu

@@ -4,6 +4,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 10-13 mars 2026 (mar. - ven.)
+
+### Ajouté
+- **Contrat + chat Organisateur ↔ Lieu** : Même système que DJ ↔ Organisateur (EventVenue, négociation contrat, chat privé, notifications)
+  - Backend : routes chat/contrat EventVenue, unread-count et mark-all-read incluant les messages lieu
+  - Mobile : BookerDashboard (bouton chat lieu sur chaque événement), VenueDashboard (onglet Réservations + modal chat/contrat)
+  - Notifications : navigation vers le chat lieu depuis les notifications push (openChatEventVenueId)
+
+---
+
 ## Semaine du 3-6 mars 2026 (mar. - ven.)
 
 ### Ajouté

@@ -686,6 +686,7 @@ export default function VenueDashboardPage() {
           { id: 'infos', label: language === 'fr' ? 'Infos' : 'Info' },
           { id: 'medias', label: language === 'fr' ? 'Médias' : 'Media' },
           { id: 'avis', label: language === 'fr' ? 'Avis & Notes' : 'Reviews' },
+          { id: 'bookings', label: language === 'fr' ? 'Réservations' : 'Bookings' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.id}
@@ -821,6 +822,81 @@ export default function VenueDashboardPage() {
             {renderRatings()}
           </View>
         )}
+
+        {activeTab === 'bookings' && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{language === 'fr' ? 'Réservations' : 'Bookings'}</Text>
+            {loadingBookings ? (
+              <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                <ActivityIndicator color={Colors.primary} />
+                <Text style={styles.loadingText}>{language === 'fr' ? 'Chargement...' : 'Loading...'}</Text>
+              </View>
+            ) : bookings.length === 0 ? (
+              <Text style={styles.comingSoon}>
+                {language === 'fr' ? 'Aucune réservation pour le moment.' : 'No bookings yet.'}
+              </Text>
+            ) : (
+              <View style={styles.bookingsList}>
+                {bookings.map((booking) => {
+                  const eventDate = new Date(booking.eventDate);
+                  const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  });
+                  const statusColors = {
+                    UPCOMING: Colors.primary,
+                    ONGOING: '#4CAF50',
+                    FINISHED: Colors.textSecondary,
+                  };
+                  const statusLabels = {
+                    UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                    ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
+                    FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+                  };
+                  return (
+                    <View key={booking.id} style={styles.bookingCard}>
+                      <View style={styles.bookingHeader}>
+                        <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                        <View style={[styles.bookingStatus, { backgroundColor: (statusColors[booking.eventStatus] || Colors.primary) + '20' }]}>
+                          <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] || Colors.primary }]}>
+                            {statusLabels[booking.eventStatus] || booking.eventStatus}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>📅 {language === 'fr' ? 'Date' : 'Date'}</Text>
+                        <Text style={styles.bookingInfoValue}>
+                          {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                        </Text>
+                      </View>
+                      {booking.booker && (
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>👤 {language === 'fr' ? 'Organisateur' : 'Organizer'}</Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {booking.booker.name} ({booking.booker.type})
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.bookingInfo}>
+                        <Text style={styles.bookingInfoLabel}>📍 {language === 'fr' ? 'Adresse' : 'Address'}</Text>
+                        <Text style={styles.bookingInfoValue}>{booking.eventLocation || '-'}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.chatButton, { marginTop: 10 }]}
+                        onPress={() => openVenueChat(booking.eventVenueId)}
+                      >
+                        <Text style={styles.chatButtonText}>
+                          💬 {language === 'fr' ? 'Chat avec l\'organisateur' : 'Chat with organizer'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
       <VideoPlayer
         videoUrl={selectedVideo?.url}
@@ -828,6 +904,342 @@ export default function VenueDashboardPage() {
         visible={videoModalVisible}
         onClose={() => setVideoModalVisible(false)}
       />
+
+      {/* Modal de chat Organisateur ↔ Lieu */}
+      <Modal
+        visible={chatModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setChatModalVisible(false);
+          setSelectedChatEventVenueId(null);
+          setChatMessages([]);
+          setNewMessageText('');
+          refreshUnreadCount?.();
+        }}
+        presentationStyle="overFullScreen"
+      >
+        <View style={styles.chatModalContainer}>
+          <KeyboardAvoidingView
+            style={styles.chatModalContent}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+          >
+            <ScrollView
+              ref={chatScrollViewRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={true}
+              onContentSizeChange={() => {
+                if (chatScrollViewRef.current) {
+                  chatScrollViewRef.current.scrollToEnd({ animated: true });
+                }
+              }}
+            >
+              <View style={styles.chatHeaderContainer}>
+                <View style={styles.chatHeader}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setChatModalVisible(false);
+                      setSelectedChatEventVenueId(null);
+                      setChatMessages([]);
+                      setNewMessageText('');
+                      refreshUnreadCount?.();
+                    }}
+                    style={styles.chatCloseButton}
+                  >
+                    <Text style={styles.chatCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.chatHeaderTitle}>
+                    {language === 'fr' ? 'Chat avec l\'organisateur' : 'Chat with organizer'}
+                  </Text>
+                  <View style={{ width: 40 }} />
+                </View>
+              </View>
+
+              {/* Contrat Organisateur ↔ Lieu */}
+              {selectedChatEventVenueId ? (
+                <View style={styles.contractCard}>
+                  <View style={styles.contractTopRow}>
+                    <Text style={styles.contractTitle}>
+                      🧾 {language === 'fr' ? 'Contrat lieu' : 'Venue contract'}
+                    </Text>
+                    {contractLoading ? (
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    ) : (
+                      <Text style={styles.contractStatus}>
+                        {contractData?.status === 'SIGNED'
+                          ? (language === 'fr' ? 'Signé' : 'Signed')
+                          : contractData?.status === 'SENT'
+                            ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                            : (language === 'fr' ? 'Brouillon' : 'Draft')}
+                      </Text>
+                    )}
+                  </View>
+                  {contractBooking?.eventTitle ? (
+                    <Text style={styles.contractMeta} numberOfLines={2}>
+                      🎵 {contractBooking.eventTitle}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.contractLine}>
+                    💰 {language === 'fr' ? 'Prix' : 'Price'}:{' '}
+                    <Text style={styles.contractLineStrong}>
+                      {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (language === 'fr' ? 'À définir' : 'To define')}
+                    </Text>
+                    {contractData?.payload?.depositPercent != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositPercent} %` : ''}
+                  </Text>
+                  {contractData?.payload?.paymentTerms ? (
+                    <Text style={styles.contractSmall} numberOfLines={2}>
+                      💳 {PAYMENT_TERMS_OPTIONS.find(o => o.value === contractData.payload.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || cleanText(contractData.payload.paymentTerms)}
+                    </Text>
+                  ) : null}
+                  <View style={styles.contractActionsRow}>
+                    {contractData?.status === 'SENT' ? (
+                      contractData?.sentBy === 'BOOKER' ? (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.contractButton, styles.contractButtonSecondary]}
+                            onPress={() => setContractEditorVisible(true)}
+                          >
+                            <Text style={styles.contractButtonText}>
+                              {language === 'fr' ? 'Contre-proposer' : 'Counter'}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.contractButton, styles.contractButtonPrimary]}
+                            onPress={acceptContract}
+                          >
+                            <Text style={styles.contractButtonTextDark}>
+                              {language === 'fr' ? 'Accepter' : 'Accept'}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <Text style={styles.contractHint}>
+                          {language === 'fr' ? 'En attente de la réponse de l\'organisateur.' : 'Waiting for organizer response.'}
+                        </Text>
+                      )
+                    ) : contractData?.status === 'SIGNED' ? (
+                      <Text style={styles.contractHint}>
+                        {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
+                      </Text>
+                    ) : (
+                      <Text style={styles.contractHint}>
+                        {language === 'fr' ? 'En attente de l\'organisateur.' : 'Waiting for organizer.'}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Messages */}
+              {loadingChatMessages ? (
+                <View style={styles.chatLoadingContainer}>
+                  <ActivityIndicator size="large" color={Colors.primary} />
+                </View>
+              ) : (
+                <View style={styles.chatMessagesContainer}>
+                  {chatMessages.length === 0 ? (
+                    <View style={styles.chatEmptyState}>
+                      <Text style={styles.chatEmptyStateText}>
+                        {language === 'fr' ? 'Aucun message. Commencez la conversation !' : 'No messages yet. Start the conversation!'}
+                      </Text>
+                    </View>
+                  ) : (
+                    chatMessages.map((msg) => (
+                      <View
+                        key={msg.id}
+                        style={[
+                          styles.chatMessage,
+                          msg.isOwn ? styles.chatMessageOwn : styles.chatMessageOther,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.chatMessageBubble,
+                            msg.isOwn ? styles.chatMessageBubbleOwn : styles.chatMessageBubbleOther,
+                            msg.deleted && styles.chatMessageBubbleDeleted,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.chatMessageText,
+                              msg.isOwn ? styles.chatMessageTextOwn : styles.chatMessageTextOther,
+                              msg.deleted && styles.chatMessageTextDeleted,
+                            ]}
+                          >
+                            {msg.deleted
+                              ? (language === 'fr' ? 'message supprimé' : 'message deleted')
+                              : msg.content}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.chatMessageTime,
+                              msg.isOwn ? styles.chatMessageTimeOwn : styles.chatMessageTimeOther,
+                            ]}
+                          >
+                            {new Date(msg.createdAt).toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.chatInputContainer}>
+              <TextInput
+                style={styles.chatInput}
+                value={newMessageText}
+                onChangeText={setNewMessageText}
+                placeholder={language === 'fr' ? 'Tapez votre message...' : 'Type your message...'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.chatSendButton, sendingMessage && styles.chatSendButtonDisabled]}
+                onPress={sendMessage}
+                disabled={!newMessageText.trim() || sendingMessage}
+              >
+                {sendingMessage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.chatSendButtonText}>➤</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+
+        {/* Modal contre-proposition contrat */}
+        <Modal
+          visible={contractEditorVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setContractEditorVisible(false)}
+        >
+          <KeyboardAvoidingView
+            style={styles.contractModalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.contractModalCard}>
+              <ScrollView
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
+                </Text>
+                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Prix (€)' : 'Price (€)'}</Text>
+                <TextInput
+                  style={styles.contractModalInput}
+                  value={contractDraft.priceEur}
+                  onChangeText={(v) => setContractDraft((p) => ({ ...p, priceEur: v }))}
+                  placeholder="500"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (%)' : 'Deposit (%)'}</Text>
+                <TextInput
+                  style={styles.contractModalInput}
+                  value={contractDraft.depositPercent}
+                  onChangeText={(v) => setContractDraft((p) => ({ ...p, depositPercent: v }))}
+                  placeholder="30"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités' : 'Payment terms'}</Text>
+                <TouchableOpacity
+                  style={[styles.contractModalInput, styles.contractModalDropdown]}
+                  onPress={() => setShowPaymentTermsModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.contractModalInputText, !contractDraft.paymentTerms && { color: 'rgba(255,255,255,0.4)' }]}>
+                    {contractDraft.paymentTerms
+                      ? (PAYMENT_TERMS_OPTIONS.find(o => o.value === contractDraft.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || contractDraft.paymentTerms)
+                      : (language === 'fr' ? 'Sélectionner' : 'Select')}
+                  </Text>
+                  <Text style={styles.contractModalChevron}>▼</Text>
+                </TouchableOpacity>
+                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
+                <TextInput
+                  style={[styles.contractModalInput, { height: 60 }]}
+                  value={contractDraft.cancellation}
+                  onChangeText={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
+                  placeholder={language === 'fr' ? 'Ex: J-7: 50% dû' : 'Ex: D-7: 50% due'}
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  multiline
+                />
+                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes' : 'Notes'}</Text>
+                <TextInput
+                  style={[styles.contractModalInput, { height: 60 }]}
+                  value={contractDraft.notes}
+                  onChangeText={(v) => setContractDraft((p) => ({ ...p, notes: v }))}
+                  placeholder={language === 'fr' ? 'Ex: arrivée 20h' : 'Ex: arrival 8pm'}
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  multiline
+                />
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={() => setContractEditorVisible(false)}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={counterContract}
+                  >
+                    <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Modal sélection modalités */}
+        <Modal
+          visible={showPaymentTermsModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPaymentTermsModal(false)}
+        >
+          <TouchableOpacity
+            style={styles.paymentTermsOverlay}
+            activeOpacity={1}
+            onPress={() => setShowPaymentTermsModal(false)}
+          >
+            <View style={styles.paymentTermsModalContent}>
+              <Text style={styles.contractModalTitle}>
+                {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
+              </Text>
+              {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={styles.paymentTermOption}
+                  onPress={() => {
+                    setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
+                    setShowPaymentTermsModal(false);
+                  }}
+                >
+                  <Text style={styles.paymentTermOptionText}>
+                    {language === 'fr' ? opt.labelFr : opt.labelEn}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </Modal>
       
       {/* Toast pour les notifications */}
       <Toast
@@ -1113,4 +1525,199 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  // Bookings
+  bookingsList: { gap: 12 },
+  bookingCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+  },
+  bookingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  bookingTitle: { color: '#fff', fontSize: 16, fontWeight: '800', flex: 1 },
+  bookingStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  bookingStatusText: { fontSize: 12, fontWeight: '700' },
+  bookingInfo: { marginBottom: 6 },
+  bookingInfoLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 2 },
+  bookingInfoValue: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  chatButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+  },
+  chatButtonText: { color: '#0b0b0e', fontWeight: '800', fontSize: 14 },
+  // Chat modal
+  chatModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },
+  chatModalContent: {
+    flex: 1,
+    backgroundColor: '#0b0b0e',
+    marginTop: Platform.OS === 'ios' ? 50 : 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '100%',
+  },
+  chatHeaderContainer: { zIndex: 10 },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(26,26,31,0.95)',
+  },
+  chatCloseButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  chatCloseButtonText: { color: '#fff', fontSize: 24, fontWeight: '300' },
+  chatHeaderTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  contractCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.22)',
+    backgroundColor: 'rgba(255,23,68,0.06)',
+  },
+  contractTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  contractTitle: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  contractStatus: { color: Colors.primary, fontSize: 12, fontWeight: '800' },
+  contractMeta: { marginTop: 6, color: '#fff', fontSize: 12, fontWeight: '700' },
+  contractLine: { marginTop: 6, color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  contractLineStrong: { color: '#fff', fontWeight: '900' },
+  contractSmall: { marginTop: 4, color: 'rgba(255,255,255,0.6)', fontSize: 11 },
+  contractActionsRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
+  contractHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '700' },
+  contractButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contractButtonPrimary: { backgroundColor: Colors.primary },
+  contractButtonSecondary: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  contractButtonText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  contractButtonTextDark: { color: '#0b0b0e', fontSize: 12, fontWeight: '900' },
+  chatLoadingContainer: { padding: 40, alignItems: 'center' },
+  chatMessagesContainer: { padding: 16, paddingBottom: 20 },
+  chatEmptyState: { padding: 30, alignItems: 'center' },
+  chatEmptyStateText: { color: 'rgba(255,255,255,0.6)', fontSize: 14,
+    textAlign: 'center' },
+  chatMessage: { marginBottom: 10 },
+  chatMessageOwn: { alignItems: 'flex-end' },
+  chatMessageOther: { alignItems: 'flex-start' },
+  chatMessageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  chatMessageBubbleOwn: {
+    backgroundColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(255,23,68,0.4)',
+  },
+  chatMessageBubbleOther: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  chatMessageBubbleDeleted: { opacity: 0.6 },
+  chatMessageText: { fontSize: 15 },
+  chatMessageTextOwn: { color: '#fff' },
+  chatMessageTextOther: { color: '#fff' },
+  chatMessageTextDeleted: { color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' },
+  chatMessageTime: { fontSize: 11, marginTop: 4 },
+  chatMessageTimeOwn: { color: 'rgba(255,255,255,0.6)' },
+  chatMessageTimeOther: { color: 'rgba(255,255,255,0.5)' },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(26,26,31,0.95)',
+    gap: 10,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 15,
+    maxHeight: 100,
+  },
+  chatSendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatSendButtonDisabled: { opacity: 0.5 },
+  chatSendButtonText: { color: '#0b0b0e', fontSize: 18, fontWeight: '800' },
+  contractModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  contractModalCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+    backgroundColor: '#0b0b0e',
+  },
+  contractModalTitle: { color: '#fff', fontSize: 16, fontWeight: '900', marginBottom: 10 },
+  contractModalLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '700', marginTop: 10, marginBottom: 6 },
+  contractModalInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    fontSize: 13,
+  },
+  contractModalDropdown: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  contractModalInputText: { color: '#fff', fontSize: 13, flex: 1 },
+  contractModalChevron: { color: 'rgba(255,255,255,0.5)', fontSize: 10, marginLeft: 8 },
+  contractModalActions: { flexDirection: 'row', gap: 10, marginTop: 16, justifyContent: 'flex-end' },
+  paymentTermsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  paymentTermsModalContent: {
+    backgroundColor: '#0b0b0e',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  paymentTermOption: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  paymentTermOptionText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

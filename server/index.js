@@ -63,10 +63,10 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// ✅ Sécurité: Rate limiting général (100 req/15min par IP)
+// ✅ Sécurité: Rate limiting général (500 req/15min par IP)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 100,
+  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 500,
   message: { success: false, message: 'Trop de requêtes. Réessayez plus tard.' },
   standardHeaders: true,
   legacyHeaders: false,

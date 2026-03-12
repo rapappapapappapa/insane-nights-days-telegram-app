@@ -6,6 +6,7 @@ import { useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
 import { EventFormProvider } from './contexts/EventFormContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 import { useNavigation } from './contexts/NavigationContext';
 import { useNotifications } from './hooks/useNotifications';
 import { api } from './api/config';
@@ -264,7 +265,9 @@ export default function App() {
           <AuthProvider>
             <NavigationProvider>
               <EventFormProvider>
-                <AppContent />
+                <ConfirmProvider>
+                  <AppContent />
+                </ConfirmProvider>
               </EventFormProvider>
             </NavigationProvider>
           </AuthProvider>

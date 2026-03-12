@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Alert,
   Dimensions,
   Platform,
   Linking,
@@ -27,6 +26,7 @@ import VideoPlayer from '../../components/VideoPlayer';
 import StarRating from '../../components/StarRating';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -49,6 +49,7 @@ export default function VenueDashboardPage() {
   const { language } = useLanguage();
   const { goBack, navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
   const { user } = useAuth();
   const { refreshUnreadCount, markAllAsRead } = useNotifications();
 
@@ -356,34 +357,26 @@ export default function VenueDashboardPage() {
         // Vérifier si l'accès est limité (seulement photos sélectionnées)
         // Sur iOS, même si le statut est "granted", l'accès peut être limité
         if (finalStatus === 'granted' && (finalAccessPrivileges === 'limited' || finalAccessPrivileges === 'addOnly')) {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Accès limité détecté' : 'Limited Access Detected',
             language === 'fr' 
               ? 'L\'accès à la galerie semble limité. Pour sélectionner des vidéos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres iOS de l\'app (Réglages > [Nom de l\'app] > Photos > Toutes les photos).' 
               : 'Gallery access appears limited. To select videos, you must grant full access to all photos in iOS app settings (Settings > [App Name] > Photos > All Photos).',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              {
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-                onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              },
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
               {
                 text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
                 onPress: async () => {
-                  // Fallback vers DocumentPicker
                   try {
                     const docResult = await DocumentPicker.getDocumentAsync({
                       type: 'video/*',
                       copyToCacheDirectory: true,
                       multiple: false,
                     });
-
                     if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
-                      const videoUri = docResult.assets[0].uri;
                       setSavingMedia(true);
-                      await api.uploadVenueMediaFile(user.token, venue.id, videoUri, mediaType);
+                      await api.uploadVenueMediaFile(user.token, venue.id, docResult.assets[0].uri, mediaType);
                       await loadVenueMedia(venue.id);
                       showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                     }
@@ -393,27 +386,21 @@ export default function VenueDashboardPage() {
                   } finally {
                     setSavingMedia(false);
                   }
-                }
-              }
+                },
+              },
             ]
           );
           return;
         }
-        
         if (finalStatus !== 'granted') {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Permission requise' : 'Permission required',
             language === 'fr' 
               ? 'L\'accès à la galerie Photos est nécessaire pour sélectionner des vidéos. Veuillez l\'autoriser dans les paramètres de l\'app.' 
               : 'Photo library access is required to select videos. Please enable it in app settings.',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              { 
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-                onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              }
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
             ]
           );
           return;
@@ -450,34 +437,26 @@ export default function VenueDashboardPage() {
         console.error('[pickMedia] Erreur ImagePicker:', pickerError);
         
         if (errorMessage.includes('3164') || errorMessage.includes('PHPhotosErrorDomain')) {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Accès à la galerie requis' : 'Gallery Access Required',
             language === 'fr' 
               ? 'Pour sélectionner des vidéos depuis la galerie Photos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres de l\'app (pas seulement les photos sélectionnées).' 
               : 'To select videos from Photo Library, you must grant full access to all photos in app settings (not just selected photos).',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              { 
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-                onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              },
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
               {
                 text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
                 onPress: async () => {
-                  // Fallback vers DocumentPicker
                   try {
                     const docResult = await DocumentPicker.getDocumentAsync({
                       type: mediaType === 'video' ? 'video/*' : 'image/*',
                       copyToCacheDirectory: true,
                       multiple: false,
                     });
-
                     if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
-                      const fileUri = docResult.assets[0].uri;
                       setSavingMedia(true);
-                      await api.uploadVenueMediaFile(user.token, venue.id, fileUri, mediaType);
+                      await api.uploadVenueMediaFile(user.token, venue.id, docResult.assets[0].uri, mediaType);
                       await loadVenueMedia(venue.id);
                       showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                     }
@@ -487,8 +466,8 @@ export default function VenueDashboardPage() {
                   } finally {
                     setSavingMedia(false);
                   }
-                }
-              }
+                },
+              },
             ]
           );
           return;
@@ -516,34 +495,26 @@ export default function VenueDashboardPage() {
       // Gérer spécifiquement l'erreur 3164 iOS
       const errorMessage = error.message || error.toString() || '';
       if (errorMessage.includes('3164') || errorMessage.includes('PHPhotosErrorDomain')) {
-        Alert.alert(
+        showConfirm(
           language === 'fr' ? 'Accès à la galerie requis' : 'Gallery Access Required',
           language === 'fr' 
             ? 'Pour sélectionner des vidéos depuis la galerie Photos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres de l\'app (pas seulement les photos sélectionnées).' 
             : 'To select videos from Photo Library, you must grant full access to all photos in app settings (not just selected photos).',
           [
             { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-            { 
-              text: language === 'fr' ? 'Paramètres' : 'Settings', 
-              onPress: () => {
-                Linking.openURL('app-settings:');
-              }
-            },
+            { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
             {
               text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
               onPress: async () => {
-                // Fallback vers DocumentPicker
                 try {
                   const docResult = await DocumentPicker.getDocumentAsync({
                     type: 'video/*',
                     copyToCacheDirectory: true,
                     multiple: false,
                   });
-
                   if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
-                    const videoUri = docResult.assets[0].uri;
                     setSavingMedia(true);
-                    await api.uploadVenueMediaFile(user.token, venue.id, videoUri, mediaType);
+                    await api.uploadVenueMediaFile(user.token, venue.id, docResult.assets[0].uri, mediaType);
                     await loadVenueMedia(venue.id);
                     showSuccess(language === 'fr' ? 'Média ajouté au lieu.' : 'Media added to venue.');
                   }
@@ -553,8 +524,8 @@ export default function VenueDashboardPage() {
                 } finally {
                   setSavingMedia(false);
                 }
-              }
-            }
+              },
+            },
           ]
         );
       } else {
@@ -567,11 +538,9 @@ export default function VenueDashboardPage() {
 
   const handleDeleteMedia = async (media) => {
     if (!user?.token || !venue) return;
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Supprimer le média' : 'Delete media',
-      language === 'fr'
-        ? 'Confirmer la suppression de ce média ?'
-        : 'Confirm deletion of this media?',
+      language === 'fr' ? 'Confirmer la suppression de ce média ?' : 'Confirm deletion of this media?',
       [
         { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
         {

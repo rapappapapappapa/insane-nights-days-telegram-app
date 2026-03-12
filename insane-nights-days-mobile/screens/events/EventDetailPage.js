@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import * as Stripe from '../../utils/stripe';
 
 const mockEvents = [
@@ -73,6 +73,7 @@ export default function EventDetailPage() {
   const { routeParams, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
   const [userProfiles, setUserProfiles] = useState(null);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   
@@ -157,7 +158,7 @@ export default function EventDetailPage() {
     try {
       // ✅ Web: Stripe natif indisponible -> fallback mode test
       if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
-        Alert.alert(
+        showConfirm(
           language === 'fr' ? 'Paiement Stripe indisponible (Web)' : 'Stripe unavailable (Web)',
           language === 'fr'
             ? 'Stripe natif n’est pas disponible sur la version web. Voulez-vous continuer en mode démo (achat ticket sans paiement) ?'
@@ -266,7 +267,7 @@ export default function EventDetailPage() {
       { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
     ];
 
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Signaler cet événement' : 'Report this event',
       language === 'fr' ? 'Choisis une raison.' : 'Choose a reason.',
       [

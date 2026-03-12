@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 export default function AdminPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
 
   const isAdmin = (user?.role || 'USER') === 'ADMIN';
   const token = user?.token;
@@ -104,7 +106,7 @@ export default function AdminPage() {
 
   const deletePost = async (postId) => {
     if (!token) return;
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Supprimer' : 'Delete',
       language === 'fr' ? 'Supprimer ce post ?' : 'Delete this post?',
       [
@@ -172,7 +174,7 @@ export default function AdminPage() {
 
   const deleteEvent = async (eventId) => {
     if (!token) return;
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Supprimer' : 'Delete',
       language === 'fr' ? 'Supprimer cet événement ?' : 'Delete this event?',
       [

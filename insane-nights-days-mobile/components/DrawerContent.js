@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../contexts/ConfirmContext';
 import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
@@ -97,6 +98,7 @@ export default function DrawerContent({ navigation }) {
   const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
   const { showError, showSuccess } = useToast();
+  const { showConfirm } = useConfirm();
   const insets = useSafeAreaInsets();
 
   const [activeDjGenre, setActiveDjGenre] = useState(null);
@@ -126,7 +128,7 @@ export default function DrawerContent({ navigation }) {
           : '⚠️ Les OTA updates ne sont PAS activés.\n\nL\'app doit être rebuildée avec EAS Build pour que les updates fonctionnent.',
       ].join('\n');
 
-      Alert.alert(
+      showConfirm(
         'Informations Updates',
         updateInfo,
         [

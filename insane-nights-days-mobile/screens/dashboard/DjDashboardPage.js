@@ -14,7 +14,6 @@ import {
   Linking,
   KeyboardAvoidingView,
   Modal,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
@@ -30,6 +29,7 @@ import VideoPlayer from '../../components/VideoPlayer';
 import AudioPlayer from '../../components/AudioPlayer';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,6 +47,7 @@ export default function DjDashboardPage() {
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -419,17 +420,13 @@ export default function DjDashboardPage() {
 
   const handleRejectInvitation = async (invitationId) => {
     if (!user?.token || processingInvitation) return;
-    
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Refuser l\'invitation' : 'Reject invitation',
       language === 'fr' 
         ? 'Êtes-vous sûr de vouloir refuser cette invitation ?' 
         : 'Are you sure you want to reject this invitation?',
       [
-        {
-          text: language === 'fr' ? 'Annuler' : 'Cancel',
-          style: 'cancel',
-        },
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
         {
           text: language === 'fr' ? 'Refuser' : 'Reject',
           style: 'destructive',
@@ -438,11 +435,8 @@ export default function DjDashboardPage() {
             try {
               const response = await api.rejectInvitation(user.token, invitationId);
               if (response && response.success) {
-                // Recharger les bookings pour mettre à jour l'affichage
                 await fetchBookings();
-                showSuccess(language === 'fr' 
-                  ? 'Vous avez refusé l\'invitation à cet événement.'
-                  : 'You have rejected the invitation to this event.');
+                showSuccess(language === 'fr' ? 'Vous avez refusé l\'invitation à cet événement.' : 'You have rejected the invitation to this event.');
               } else {
                 showError(response?.message || (language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.'));
               }
@@ -836,19 +830,14 @@ export default function DjDashboardPage() {
         // Vérifier si l'accès est limité (seulement photos sélectionnées)
         // Même si l'utilisateur pense avoir donné l'accès complet, iOS peut toujours retourner 'limited'
         if (finalStatus === 'granted' && finalAccessPrivileges === 'limited') {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Accès limité détecté' : 'Limited Access Detected',
             language === 'fr' 
               ? 'L\'accès à la galerie semble limité. Pour sélectionner des vidéos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres iOS de l\'app (Réglages > [Nom de l\'app] > Photos > Toutes les photos).' 
               : 'Gallery access appears limited. To select videos, you must grant full access to all photos in iOS app settings (Settings > [App Name] > Photos > All Photos).',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-            {
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-              onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              }
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
             ]
           );
           return;
@@ -862,21 +851,16 @@ export default function DjDashboardPage() {
         });
 
         if (finalStatus !== 'granted') {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Permission requise' : 'Permission required',
             language === 'fr' 
               ? 'L\'accès à la galerie Photos est nécessaire pour sélectionner des vidéos. Veuillez l\'autoriser dans les paramètres de l\'app.' 
               : 'Photo library access is required to select videos. Please enable it in app settings.',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              { 
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-                onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              }
-          ]
-        );
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
+            ]
+          );
           return;
         }
       } else {
@@ -907,41 +891,30 @@ export default function DjDashboardPage() {
         // Si erreur 3164, c'est un problème de permissions iOS
         const errorMessage = pickerError.message || pickerError.toString() || '';
         if (errorMessage.includes('3164')) {
-          Alert.alert(
+          showConfirm(
             language === 'fr' ? 'Accès à la galerie requis' : 'Gallery Access Required',
             language === 'fr' 
               ? 'Pour sélectionner des vidéos depuis la galerie Photos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres de l\'app (pas seulement les photos sélectionnées).' 
               : 'To select videos from Photo Library, you must grant full access to all photos in app settings (not just selected photos).',
             [
               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-              { 
-                text: language === 'fr' ? 'Paramètres' : 'Settings', 
-                onPress: () => {
-                  Linking.openURL('app-settings:');
-                }
-              },
+              { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
               {
                 text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
                 onPress: async () => {
-                  // Fallback vers DocumentPicker
                   try {
                     const docResult = await DocumentPicker.getDocumentAsync({
                       type: 'video/*',
                       copyToCacheDirectory: true,
                       multiple: false,
                     });
-
                     if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
                       const videoUri = docResult.assets[0].uri;
-                      
                       try {
                         const response = await saveMedia('video', videoUri);
                         if (response && response.success && response.media) {
-                          // Utiliser l'URL retournée par le serveur (URL publique)
                           setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-                          showSuccess(
-                            language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully'
-                          );
+                          showSuccess(language === 'fr' ? 'Vidéo ajoutée avec succès' : 'Video added successfully');
                         } else {
                           setVideos([...videos, { id: null, url: videoUri }]);
                         }
@@ -951,12 +924,10 @@ export default function DjDashboardPage() {
                     }
                   } catch (docError) {
                     console.error('[pickVideo] Erreur DocumentPicker:', docError);
-        showError(
-          language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video'
-        );
+                    showError(language === 'fr' ? 'Impossible de sélectionner la vidéo' : 'Unable to select video');
                   }
-                }
-              }
+                },
+              },
             ]
           );
           return;
@@ -1042,33 +1013,25 @@ export default function DjDashboardPage() {
       // Gérer spécifiquement l'erreur 3164 iOS
       const errorMessage = error.message || error.toString() || '';
       if (errorMessage.includes('3164') || errorMessage.includes('PHPhotosErrorDomain')) {
-        Alert.alert(
+        showConfirm(
           language === 'fr' ? 'Accès à la galerie requis' : 'Gallery Access Required',
           language === 'fr' 
             ? 'Pour sélectionner des vidéos depuis la galerie Photos, vous devez autoriser l\'accès complet à toutes les photos dans les paramètres de l\'app (pas seulement les photos sélectionnées).' 
             : 'To select videos from Photo Library, you must grant full access to all photos in app settings (not just selected photos).',
           [
             { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-            { 
-              text: language === 'fr' ? 'Paramètres' : 'Settings', 
-              onPress: () => {
-                Linking.openURL('app-settings:');
-              }
-            },
+            { text: language === 'fr' ? 'Paramètres' : 'Settings', onPress: () => Linking.openURL('app-settings:') },
             {
               text: language === 'fr' ? 'Utiliser Documents' : 'Use Documents',
               onPress: async () => {
-                // Fallback vers DocumentPicker
                 try {
                   const docResult = await DocumentPicker.getDocumentAsync({
                     type: 'video/*',
                     copyToCacheDirectory: true,
                     multiple: false,
                   });
-
                   if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
                     const videoUri = docResult.assets[0].uri;
-                    
                     try {
                       const response = await saveMedia('video', videoUri);
                       if (response && response.success && response.media) {
@@ -2057,16 +2020,12 @@ export default function DjDashboardPage() {
                     style={styles.deleteButton}
                     onPress={() => {
                       if (photo.id) {
-                        Alert.alert(
+                        showConfirm(
                           language === 'fr' ? 'Supprimer' : 'Delete',
                           language === 'fr' ? 'Supprimer cette photo ?' : 'Delete this photo?',
                           [
                             { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                            { 
-                              text: language === 'fr' ? 'Supprimer' : 'Delete', 
-                              style: 'destructive',
-                              onPress: () => deleteMedia(photo.id, 'photo')
-                            }
+                            { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => deleteMedia(photo.id, 'photo') },
                           ]
                         );
                       } else {
@@ -2202,16 +2161,12 @@ export default function DjDashboardPage() {
                         onPress={(e) => {
                           e.stopPropagation();
                           if (video.id) {
-                            Alert.alert(
+                            showConfirm(
                               language === 'fr' ? 'Supprimer' : 'Delete',
                               language === 'fr' ? 'Supprimer cette vidéo ?' : 'Delete this video?',
                               [
                                 { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                                { 
-                                  text: language === 'fr' ? 'Supprimer' : 'Delete', 
-                                  style: 'destructive',
-                                  onPress: () => deleteMedia(video.id, 'video')
-                                }
+                                { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => deleteMedia(video.id, 'video') },
                               ]
                             );
                           } else {
@@ -2300,16 +2255,12 @@ export default function DjDashboardPage() {
                           style={styles.deleteButtonAudio}
                           onPress={() => {
                             if (audio.id) {
-                              Alert.alert(
+                              showConfirm(
                                 language === 'fr' ? 'Supprimer' : 'Delete',
                                 language === 'fr' ? 'Supprimer ce fichier audio ?' : 'Delete this audio file?',
                                 [
                                   { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                                  { 
-                                    text: language === 'fr' ? 'Supprimer' : 'Delete', 
-                                    style: 'destructive',
-                                    onPress: () => deleteMedia(audio.id, 'audio')
-                                  }
+                                  { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => deleteMedia(audio.id, 'audio') },
                                 ]
                               );
                             } else {
@@ -2760,18 +2711,14 @@ export default function DjDashboardPage() {
                         activeOpacity={0.8}
                         onLongPress={() => {
                           if (!msg.isOwn || msg.deleted) return;
-                          Alert.alert(
+                          showConfirm(
                             language === 'fr' ? 'Supprimer le message' : 'Delete message',
                             language === 'fr'
-                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par \"message supprimé\".'
-                              : 'Do you want to delete this message? It will be replaced by \"message deleted\".',
+                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par "message supprimé".'
+                              : 'Do you want to delete this message? It will be replaced by "message deleted".',
                             [
                               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                              {
-                                text: language === 'fr' ? 'Supprimer' : 'Delete',
-                                style: 'destructive',
-                                onPress: () => handleDeleteMessage(msg.id),
-                              },
+                              { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => handleDeleteMessage(msg.id) },
                             ]
                           );
                         }}

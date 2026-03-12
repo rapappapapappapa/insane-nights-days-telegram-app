@@ -12,6 +12,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
   - Mobile : BookerDashboard (bouton chat lieu sur chaque événement), VenueDashboard (onglet Réservations + modal chat/contrat)
   - Notifications : navigation vers le chat lieu depuis les notifications push (openChatEventVenueId)
 
+### Modifié
+- **Rate limiting** : Passage de 100 à 500 requêtes / 15 min par IP pour éviter le blocage du Feed
+
+### Corrigé
+- **Modalités paiement (DJ)** : Contre-proposition — sélection des modalités en section déroulante inline (évite les modals imbriqués qui bloquaient les touches)
+- **Sélection lieu (création event)** : Retour correct vers le formulaire de création (bookerEventDashboard) au lieu du dashboard principal ; reste sur l’étape Lieu pour afficher la sélection
+
 ---
 
 ## Semaine du 3-6 mars 2026 (mar. - ven.)

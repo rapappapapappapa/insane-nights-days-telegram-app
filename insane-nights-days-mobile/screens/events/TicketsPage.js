@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import QRCode from 'react-native-qrcode-svg';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -9,6 +9,7 @@ import { api } from '../../api/config';
 import Colors from '../../constants/colors';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 
 const formatPurchaseDate = (dateString) => {
   if (!dateString) {
@@ -33,6 +34,7 @@ export default function TicketsPage() {
   const { navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicketQR, setSelectedTicketQR] = useState(null);
@@ -77,8 +79,7 @@ export default function TicketsPage() {
       return;
     }
 
-    // Pour la confirmation de suppression, on garde Alert.alert car c'est une action destructive
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Supprimer le ticket' : 'Delete ticket',
       language === 'fr'
         ? 'Êtes-vous sûr de vouloir supprimer ce ticket ?'

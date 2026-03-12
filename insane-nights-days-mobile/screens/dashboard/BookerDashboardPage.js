@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +21,7 @@ import { useEventForm } from '../../contexts/EventFormContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,7 @@ export default function BookerDashboardPage() {
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
   const { formData, setFormData, eventDateTime, setEventDateTime, resetForm, addDj, removeDj, setVenue } = useEventForm();
 
@@ -866,16 +867,13 @@ export default function BookerDashboardPage() {
   };
 
   const handleDeleteEvent = async (eventId) => {
-    Alert.alert(
+    showConfirm(
       language === 'fr' ? 'Supprimer l\'événement' : 'Delete event',
       language === 'fr'
         ? 'Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.'
         : 'Are you sure you want to delete this event? This action is irreversible.',
       [
-        {
-          text: language === 'fr' ? 'Annuler' : 'Cancel',
-          style: 'cancel',
-        },
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
         {
           text: language === 'fr' ? 'Supprimer' : 'Delete',
           style: 'destructive',
@@ -886,7 +884,7 @@ export default function BookerDashboardPage() {
               const response = await api.deleteEvent(user.token, eventId);
               if (response && response.success) {
                 showSuccess(language === 'fr' ? 'L\'événement a été supprimé avec succès.' : 'The event has been deleted successfully.');
-                fetchMyEvents(); // Rafraîchir la liste
+                fetchMyEvents();
               } else {
                 showError(response?.message || (language === 'fr' ? 'Erreur lors de la suppression.' : 'Error deleting event.'));
               }
@@ -1866,18 +1864,14 @@ export default function BookerDashboardPage() {
                         activeOpacity={0.8}
                         onLongPress={() => {
                           if (!msg.isOwn || msg.deleted) return;
-                          Alert.alert(
+                          showConfirm(
                             language === 'fr' ? 'Supprimer le message' : 'Delete message',
                             language === 'fr'
-                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par \"message supprimé\".'
-                              : 'Do you want to delete this message? It will be replaced by \"message deleted\".',
+                              ? 'Voulez-vous supprimer ce message ? Il sera remplacé par "message supprimé".'
+                              : 'Do you want to delete this message? It will be replaced by "message deleted".',
                             [
                               { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                              {
-                                text: language === 'fr' ? 'Supprimer' : 'Delete',
-                                style: 'destructive',
-                                onPress: () => handleDeleteMessage(msg.id),
-                              },
+                              { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => handleDeleteMessage(msg.id) },
                             ]
                           );
                         }}

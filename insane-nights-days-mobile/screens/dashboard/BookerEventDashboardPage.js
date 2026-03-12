@@ -208,7 +208,7 @@ export default function BookerEventDashboardPage() {
     // Sélection de lieu
     if (currentVenueId && currentAction === 'select') {
       setVenue(currentVenueId);
-      setCurrentStep(3);
+      setCurrentStep(2); // Rester sur l'étape Lieu pour voir la sélection
     } else if (currentVenueId && currentAction === 'remove') {
       setVenue('');
     }
@@ -510,6 +510,7 @@ export default function BookerEventDashboardPage() {
                 onPress={() => {
                   navigate('selectVenue', {
                     selectedVenueId: formData.venueId,
+                    returnTo: 'bookerEventDashboard',
                   });
                 }}
               >

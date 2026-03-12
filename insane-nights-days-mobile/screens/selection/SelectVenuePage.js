@@ -18,7 +18,7 @@ export default function SelectVenuePage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const { selectedVenueId } = routeParams || {}; // ID déjà sélectionné
+  const { selectedVenueId, returnTo } = routeParams || {}; // ID déjà sélectionné, returnTo pour la navigation après sélection
   
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,7 @@ export default function SelectVenuePage() {
       venueName: venue.venueName,
       selectionMode: true, // Mode sélection
       selectedVenueId: selectedVenueId, // Passer l'ID déjà sélectionné
-      returnTo: 'selectVenue', // Retourner ici après sélection
+      returnTo: returnTo || 'selectVenue', // Retourner à la page d'origine (ex: bookerEventDashboard)
     });
   };
 

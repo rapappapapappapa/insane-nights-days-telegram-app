@@ -279,6 +279,7 @@ export default function DjDashboardPage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
+        setShowPaymentTermsModal(false);
         await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -2853,7 +2854,10 @@ export default function DjDashboardPage() {
               visible={contractEditorVisible}
               transparent={true}
               animationType="fade"
-              onRequestClose={() => setContractEditorVisible(false)}
+              onRequestClose={() => {
+          setContractEditorVisible(false);
+          setShowPaymentTermsModal(false);
+        }}
             >
               <KeyboardAvoidingView
                 style={styles.contractModalOverlay}
@@ -2893,7 +2897,7 @@ export default function DjDashboardPage() {
                   <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}</Text>
                   <TouchableOpacity
                     style={[styles.contractModalInput, styles.contractModalDropdown]}
-                    onPress={() => setShowPaymentTermsModal(true)}
+                    onPress={() => setShowPaymentTermsModal((v) => !v)}
                     activeOpacity={0.7}
                   >
                     <Text style={[
@@ -2904,8 +2908,27 @@ export default function DjDashboardPage() {
                         ? (PAYMENT_TERMS_OPTIONS.find(o => o.value === contractDraft.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || contractDraft.paymentTerms)
                         : (language === 'fr' ? 'Sélectionner' : 'Select')}
                     </Text>
-                    <Text style={styles.contractModalChevron}>▼</Text>
+                    <Text style={[styles.contractModalChevron, showPaymentTermsModal && { transform: [{ rotate: '180deg' }] }]}>▼</Text>
                   </TouchableOpacity>
+                  {showPaymentTermsModal ? (
+                    <View style={styles.paymentTermsInline}>
+                      {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                        <TouchableOpacity
+                          key={opt.value}
+                          style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
+                          onPress={() => {
+                            setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
+                            setShowPaymentTermsModal(false);
+                          }}
+                        >
+                          <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
+                            {language === 'fr' ? opt.labelFr : opt.labelEn}
+                          </Text>
+                          {contractDraft.paymentTerms === opt.value && <Text style={styles.paymentTermsCheck}>✓</Text>}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
 
                   <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
                   <TextInput
@@ -2930,7 +2953,10 @@ export default function DjDashboardPage() {
                   <View style={styles.contractModalActions}>
                     <TouchableOpacity
                       style={[styles.contractButton, styles.contractButtonSecondary]}
-                      onPress={() => setContractEditorVisible(false)}
+                      onPress={() => {
+                        setContractEditorVisible(false);
+                        setShowPaymentTermsModal(false);
+                      }}
                     >
                       <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                     </TouchableOpacity>
@@ -2946,47 +2972,6 @@ export default function DjDashboardPage() {
               </KeyboardAvoidingView>
             </Modal>
 
-            {/* Modal sélection modalités de paiement */}
-            <Modal
-              visible={showPaymentTermsModal}
-              transparent
-              animationType="slide"
-              onRequestClose={() => setShowPaymentTermsModal(false)}
-            >
-              <View style={styles.paymentTermsOverlay}>
-                <TouchableOpacity
-                  style={StyleSheet.absoluteFill}
-                  activeOpacity={1}
-                  onPress={() => setShowPaymentTermsModal(false)}
-                />
-                <View style={styles.paymentTermsModalContent}>
-                  <Text style={styles.contractModalTitle}>
-                    {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
-                  </Text>
-                  {PAYMENT_TERMS_OPTIONS.map((opt) => (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
-                      onPress={() => {
-                        setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
-                        setShowPaymentTermsModal(false);
-                      }}
-                    >
-                      <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
-                        {language === 'fr' ? opt.labelFr : opt.labelEn}
-                      </Text>
-                      {contractDraft.paymentTerms === opt.value && <Text style={styles.paymentTermsCheck}>✓</Text>}
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    style={styles.paymentTermsClose}
-                    onPress={() => setShowPaymentTermsModal(false)}
-                  >
-                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Fermer' : 'Close'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -4297,6 +4282,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginLeft: 8,
   },
+  paymentTermsInline: {
+    marginTop: 8,
+  },
   paymentTermsOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.65)',
@@ -4321,6 +4309,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginTop: 6,
+    marginBottom: 2,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },

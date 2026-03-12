@@ -126,8 +126,8 @@ export default function VenueProfilePage() {
             <TouchableOpacity 
               style={[styles.selectButton, isSelected && styles.selectButtonSelected]}
               onPress={() => {
-                // Retourner au dashboard avec la sélection
-                navigate('bookerDashboard', {
+                // Retourner à la page d'origine avec la sélection (bookerEventDashboard si création event, sinon bookerDashboard)
+                navigate(returnTo || 'bookerDashboard', {
                   selectedVenueId: venue.id,
                   selectedVenueName: venue.venueName,
                   action: isSelected ? 'remove' : 'select',

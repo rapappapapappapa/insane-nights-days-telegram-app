@@ -405,6 +405,22 @@ export default function BookerDashboardPage() {
       setCurrentStep(3);
     } else if (currentVenueId && currentAction === 'remove') {
       setVenue('');
+    } else if (currentVenueId && currentAction === 'replaceVenue' && currentEventId) {
+      (async () => {
+        try {
+          if (!user?.token) return;
+          const response = await api.addVenueToEvent(user.token, currentEventId, currentVenueId);
+          if (response?.success) {
+            fetchMyEvents();
+            showSuccess(language === 'fr' ? 'Lieu ajouté à l\'événement.' : 'Venue added to event.');
+          } else {
+            showError(response?.message || (language === 'fr' ? 'Impossible d\'ajouter ce lieu.' : 'Unable to add this venue.'));
+          }
+        } catch (error) {
+          console.error('Erreur ajout lieu à un événement:', error);
+          showError(language === 'fr' ? 'Erreur lors de l\'ajout du lieu.' : 'Error while adding venue.');
+        }
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDjId, currentVenueId, currentAction, currentSlotIndex, currentEventId]); // Inclure currentEventId dans les dépendances
@@ -1372,17 +1388,30 @@ export default function BookerDashboardPage() {
                     })}
                   </Text>
                   <Text style={styles.eventInfo}>⏰ {event.time}</Text>
-                  {event.venue && (
+                  {(event.venue || event.venueNeedsReplacement) && (
                     <View style={styles.venueRow}>
-                      <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
-                      {event.venue.eventVenueId && (
+                      {event.venue ? (
+                        <>
+                          <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
+                          {event.venue.eventVenueId && (
+                            <TouchableOpacity
+                              style={styles.chatButtonSmall}
+                              onPress={() => openVenueChat(event.venue.eventVenueId)}
+                            >
+                              <Text style={styles.chatButtonSmallText}>💬</Text>
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      ) : event.venueNeedsReplacement ? (
                         <TouchableOpacity
-                          style={styles.chatButtonSmall}
-                          onPress={() => openVenueChat(event.venue.eventVenueId)}
+                          style={styles.replaceVenueButton}
+                          onPress={() => navigate('selectVenue', { eventId: event.id, replaceMode: true, returnTo: 'bookerDashboard' })}
                         >
-                          <Text style={styles.chatButtonSmallText}>💬</Text>
+                          <Text style={styles.replaceVenueButtonText}>
+                            {language === 'fr' ? '🔄 Remplacer le lieu' : '🔄 Replace venue'}
+                          </Text>
                         </TouchableOpacity>
-                      )}
+                      ) : null}
                     </View>
                   )}
                   {/* Bouton chat de groupe - placé en premier pour être plus visible */}
@@ -1395,35 +1424,35 @@ export default function BookerDashboardPage() {
                     </Text>
                   </TouchableOpacity>
                   
-                  {event.djs && event.djs.length > 0 && (
-                    <View style={styles.djsList}>
-                      <Text style={styles.eventInfoLabel}>
-                        🎧 {language === 'fr' ? 'DJs' : 'DJs'}:
+                  <View style={styles.djsList}>
+                    <Text style={styles.eventInfoLabel}>
+                      🎧 {language === 'fr' ? 'DJs' : 'DJs'}:
                     </Text>
-                      <TouchableOpacity
-                        style={styles.addDjButton}
-                        onPress={() => {
-                          // Aller sur la sélection de DJ pour ajouter un nouveau DJ à cet événement
-                          navigate('selectDj', {
-                            selectedDjIds: event.djIds || [],
-                            eventId: event.id,
-                          });
-                        }}
-                      >
-                        <Text style={styles.addDjButtonText}>
-                          {language === 'fr' ? '+ Ajouter un DJ' : '+ Add DJ'}
-                        </Text>
-                      </TouchableOpacity>
-                      {event.djs.map((dj) => {
+                    <TouchableOpacity
+                      style={styles.addDjButton}
+                      onPress={() => {
+                        navigate('selectDj', {
+                          selectedDjIds: event.djIds || [],
+                          eventId: event.id,
+                        });
+                      }}
+                    >
+                      <Text style={styles.addDjButtonText}>
+                        {language === 'fr' ? '+ Ajouter / Remplacer un DJ' : '+ Add / Replace DJ'}
+                      </Text>
+                    </TouchableOpacity>
+                    {(event.djs || []).map((dj) => {
                         const statusColors = {
                           PENDING: '#FFA500',
                           ACCEPTED: '#4CAF50',
                           REJECTED: '#F44336',
+                          CANCELLED: '#9E9E9E',
                         };
                         const statusLabels = {
                           PENDING: language === 'fr' ? 'En attente' : 'Pending',
                           ACCEPTED: language === 'fr' ? 'Accepté' : 'Accepted',
                           REJECTED: language === 'fr' ? 'Refusé' : 'Rejected',
+                          CANCELLED: language === 'fr' ? 'Annulé' : 'Cancelled',
                         };
                         const status = dj.invitationStatus || 'PENDING';
                         const payStatus = dj?.payment?.paymentStatus || 'UPCOMING';
@@ -1477,8 +1506,7 @@ export default function BookerDashboardPage() {
                           </View>
                         );
                       })}
-                    </View>
-                  )}
+                  </View>
                   <Text style={styles.eventInfo}>💰 {event.price} €</Text>
                   <Text style={styles.eventInfo}>
                     {language === 'fr' ? 'Statut' : 'Status'}: {event.status}
@@ -3313,6 +3341,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  replaceVenueButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,165,0,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,165,0,0.6)',
+  },
+  replaceVenueButtonText: {
+    color: '#FFA500',
+    fontSize: 14,
+    fontWeight: '600',
   },
   chatButtonSmall: {
     width: 32,

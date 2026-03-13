@@ -1713,19 +1713,10 @@ app.get('/api/events/:eventId', async (req, res) => {
     const event = await prisma.event.findUnique({
       where: { id: req.params.eventId },
       include: {
-        venue: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
-          },
-        },
-        eventDjs: {
-          // djId pointe vers User.id
-        },
+        venue: true,
+        booker: { select: { id: true, userId: true, pseudo: true, nom: true, prenom: true } },
+        eventDjs: true,
+        eventVenues: true,
       },
     });
 
@@ -1733,20 +1724,19 @@ app.get('/api/events/:eventId', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Événement non trouvé' });
     }
 
-    // Récupérer les UserDj pour les DJs de cet événement
-    const djIds = event.eventDjs.map(ed => ed.djId);
-    const userDjs = await prisma.userDj.findMany({
+    const activeEventDjs = (event.eventDjs || []).filter((ed) => ed.status === 'ACCEPTED' || ed.status === 'PENDING');
+    const activeEventVenues = (event.eventVenues || []).filter((ev) => ev.status === 'ACCEPTED' || ev.status === 'PENDING');
+    const activeVenue = activeEventVenues[0] ? (await prisma.eventVenue.findUnique({
+      where: { id: activeEventVenues[0].id },
+      include: { venue: { select: { id: true, venueName: true, address: true } } },
+    })) : null;
+
+    const djIds = activeEventDjs.map((ed) => ed.djId);
+    const userDjs = djIds.length > 0 ? await prisma.userDj.findMany({
       where: { userId: { in: djIds } },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-      },
-    });
-    const djMap = new Map(userDjs.map(udj => [udj.userId, udj]));
+      select: { userId: true, id: true, artistName: true },
+    }) : [];
+    const djMap = new Map(userDjs.map((udj) => [udj.userId, udj]));
 
     const formattedEvent = {
       id: event.id,
@@ -1760,16 +1750,23 @@ app.get('/api/events/:eventId', async (req, res) => {
       genre: event.genre,
       image: event.image,
       description: event.description,
-      status: event.status || 'UPCOMING', // Statut de l'événement (UPCOMING, ONGOING, FINISHED)
-      djs: event.eventDjs.map((ed) => {
-        // Récupérer le nom du DJ depuis UserDj
+      status: event.status || 'UPCOMING',
+      djs: activeEventDjs.map((ed) => {
         const userDj = djMap.get(ed.djId);
-        const djName = userDj?.artistName || userDj?.user?.username || `DJ ${ed.djId.slice(0, 8)}`;
-        return djName;
+        const artistName = userDj?.artistName || `DJ ${ed.djId.slice(0, 8)}`;
+        return { userId: ed.djId, djId: userDj?.id, artistName };
       }),
-      djIds: event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
-      venueId: event.venueId,
-      venueName: event.venue?.venueName,
+      djIds: activeEventDjs.map((ed) => ed.djId),
+      booker: event.booker ? {
+        id: event.booker.id,
+        name: event.booker.pseudo?.trim() || `${event.booker.prenom || ''} ${event.booker.nom || ''}`.trim() || 'Organisateur',
+      } : null,
+      venue: activeVenue?.venue ? {
+        id: activeVenue.venue.id,
+        venueName: activeVenue.venue.venueName,
+      } : (event.venue ? { id: event.venue.id, venueName: event.venue.venueName } : null),
+      venueId: activeVenue?.venueId ?? event.venueId,
+      venueName: activeVenue?.venue?.venueName ?? event.venue?.venueName,
     };
 
     res.json({ success: true, event: formattedEvent });
@@ -3971,10 +3968,13 @@ app.put('/api/dj/invitations/:invitationId/reject', authenticateToken, async (re
       });
     }
 
+    const { reason } = req.body ?? {};
+    const rejectionReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
     // Mettre à jour le statut à REJECTED
     const updatedInvitation = await prisma.eventDj.update({
       where: { id: invitationId },
-      data: { status: 'REJECTED' },
+      data: { status: 'REJECTED', rejectionReason },
       include: {
         event: {
           select: {
@@ -3999,6 +3999,52 @@ app.put('/api/dj/invitations/:invitationId/reject', authenticateToken, async (re
     });
   } catch (error) {
     console.error('Erreur refus invitation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Annule un booking (après acceptation)
+ * @route PUT /api/dj/invitations/:invitationId/cancel
+ */
+app.put('/api/dj/invitations/:invitationId/cancel', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { invitationId } = req.params;
+
+    const invitation = await prisma.eventDj.findUnique({
+      where: { id: invitationId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: 'Booking introuvable.' });
+    }
+    if (invitation.djId !== userId) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (invitation.status !== 'ACCEPTED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Seul un booking accepté peut être annulé.',
+      });
+    }
+
+    const { reason } = req.body ?? {};
+    const cancellationReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
+    await prisma.eventDj.update({
+      where: { id: invitationId },
+      data: { status: 'CANCELLED', rejectionReason: cancellationReason },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Booking annulé.',
+      invitation: { id: invitation.id, eventId: invitation.event.id, invitationStatus: 'CANCELLED' },
+    });
+  } catch (error) {
+    console.error('Erreur annulation booking DJ:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -4100,9 +4146,12 @@ app.put('/api/venue/invitations/:eventVenueId/reject', authenticateToken, async 
       });
     }
 
+    const { reason } = req.body ?? {};
+    const rejectionReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
     const updated = await prisma.eventVenue.update({
       where: { id: eventVenueId },
-      data: { status: 'REJECTED' },
+      data: { status: 'REJECTED', rejectionReason },
       include: { event: { select: { id: true, title: true, date: true, time: true } } },
     });
 
@@ -4118,6 +4167,57 @@ app.put('/api/venue/invitations/:eventVenueId/reject', authenticateToken, async 
     });
   } catch (error) {
     console.error('Erreur refus invitation lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Annule un booking lieu (après acceptation)
+ * @route PUT /api/venue/invitations/:eventVenueId/cancel
+ */
+app.put('/api/venue/invitations/:eventVenueId/cancel', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+
+    const venue = await prisma.userVenue.findFirst({ where: { userId } });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const ev = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ev) {
+      return res.status(404).json({ success: false, message: 'Booking introuvable.' });
+    }
+    if (ev.venueId !== venue.id) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (ev.status !== 'ACCEPTED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Seul un booking accepté peut être annulé.',
+      });
+    }
+
+    const { reason } = req.body ?? {};
+    const cancellationReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
+    await prisma.eventVenue.update({
+      where: { id: eventVenueId },
+      data: { status: 'CANCELLED', rejectionReason: cancellationReason },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Booking annulé.',
+      invitation: { id: ev.id, eventId: ev.event.id, invitationStatus: 'CANCELLED' },
+    });
+  } catch (error) {
+    console.error('Erreur annulation booking lieu:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -5984,7 +6084,11 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           },
         },
         eventDjs: true,
-        eventVenues: true,
+        eventVenues: {
+          include: {
+            venue: { select: { id: true, venueName: true, address: true } },
+          },
+        },
       },
       orderBy: {
         date: 'desc',
@@ -6027,7 +6131,9 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           },
         });
 
-        const eventVenue = event.eventVenues?.[0];
+        const activeEventVenues = (event.eventVenues || []).filter((ev) => ev.status === 'ACCEPTED' || ev.status === 'PENDING');
+        const eventVenue = activeEventVenues[0] || event.eventVenues?.[0];
+        const activeEventDjs = (event.eventDjs || []).filter((ed) => ed.status === 'ACCEPTED' || ed.status === 'PENDING');
         const resolveVenuePaymentStatus = (ev) => {
           if (!ev) return 'UPCOMING';
           if (ev?.paymentStatus === 'PAID' || ev?.paidAt) return 'PAID';
@@ -6035,8 +6141,10 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };
-        const allDjContractsSigned = event.eventDjs.length > 0 && event.eventDjs.every((ed) => ed.contractStatus === 'SIGNED');
-        const allVenueContractsSigned = !event.eventVenues?.length || event.eventVenues.every((ev) => ev.contractStatus === 'SIGNED');
+        const allDjContractsSigned = activeEventDjs.length > 0 && activeEventDjs.every((ed) => ed.contractStatus === 'SIGNED');
+        const allVenueContractsSigned =
+          (event.eventVenues?.length === 0) ||
+          (activeEventVenues.length > 0 && activeEventVenues.every((ev) => ev.contractStatus === 'SIGNED'));
         const canPublishToFeed = allDjContractsSigned && allVenueContractsSigned && !event.publishedOnFeed;
         return {
           id: event.id,
@@ -6051,8 +6159,10 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           description: event.description,
           image: event.image,
           status: event.status,
-          venue: event.venue ? {
-            ...event.venue,
+          venue: eventVenue ? {
+            id: eventVenue.venue?.id ?? eventVenue.venueId,
+            venueName: eventVenue.venue?.venueName ?? event.venue?.venueName ?? null,
+            address: eventVenue.venue?.address ?? event.venue?.address ?? null,
             eventVenueId: eventVenue?.id ?? null,
             venueInvitationStatus: eventVenue?.status ?? 'PENDING',
             payment: {
@@ -6063,6 +6173,8 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
               invoiceNumber: eventVenue?.invoiceNumber ?? null,
             },
           } : null,
+          djIds: activeEventDjs.map((ed) => ed.djId),
+          venueNeedsReplacement: !activeEventVenues.length,
           djs: djs.map((dj) => ({
             userId: dj.userId,
             artistName: dj.artistName,
@@ -7423,6 +7535,79 @@ app.post('/api/booker/events/:eventId/djs', authenticateToken, async (req, res) 
     });
   } catch (error) {
     console.error('Erreur ajout DJ à un événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Ajouter un lieu à un événement existant (remplacement après annulation)
+ * @route POST /api/booker/events/:eventId/venues
+ */
+app.post('/api/booker/events/:eventId/venues', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+    const { venueId } = req.body;
+
+    if (!venueId) {
+      return res.status(400).json({ success: false, message: 'Le champ venueId est requis.' });
+    }
+
+    const booker = await prisma.userBooker.findFirst({ where: { userId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+    if (event.bookerId !== booker.id) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres événements.' });
+    }
+
+    const venue = await prisma.userVenue.findUnique({
+      where: { id: venueId },
+    });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Lieu non trouvé.' });
+    }
+
+    const existingEventVenue = await prisma.eventVenue.findUnique({
+      where: { eventId_venueId: { eventId, venueId } },
+    });
+    let newEventVenue;
+    if (existingEventVenue) {
+      if (existingEventVenue.status !== 'CANCELLED' && existingEventVenue.status !== 'REJECTED') {
+        return res.status(400).json({
+          success: false,
+          message: 'Ce lieu est déjà associé à cet événement.',
+        });
+      }
+      newEventVenue = await prisma.eventVenue.update({
+        where: { id: existingEventVenue.id },
+        data: { status: 'PENDING', rejectionReason: null },
+      });
+    } else {
+      newEventVenue = await prisma.eventVenue.create({
+        data: { eventId, venueId, status: 'PENDING' },
+      });
+    }
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { venueId },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Lieu ajouté à l\'événement avec succès.',
+      eventVenue: newEventVenue,
+    });
+  } catch (error) {
+    console.error('Erreur ajout lieu à un événement:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

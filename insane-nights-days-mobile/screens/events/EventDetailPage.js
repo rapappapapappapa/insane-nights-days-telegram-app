@@ -510,12 +510,54 @@ export default function EventDetailPage() {
               <Text style={styles.infoIcon}>📍</Text>
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
+            {event.venue && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>🏛️</Text>
+                <TouchableOpacity
+                  onPress={() => navigate('venueProfile', { venueId: event.venue.id })}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.linkText}>{event.venue.venueName}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {event.djs && event.djs.length > 0 && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoIcon}>🎤</Text>
-                <Text style={styles.infoText}>
-                  {Array.isArray(event.djs) ? event.djs.join(', ') : event.djs}
-                </Text>
+                <View style={styles.djList}>
+                  {(Array.isArray(event.djs) ? event.djs : []).map((dj, idx) => {
+                    const isObject = typeof dj === 'object' && dj !== null && (dj.userId || dj.djId);
+                    const name = isObject ? dj.artistName : String(dj);
+                    if (isObject) {
+                      return (
+                        <TouchableOpacity
+                          key={dj.userId || dj.djId || idx}
+                          onPress={() => navigate('djProfile', { djUserId: dj.userId, djId: dj.djId })}
+                          activeOpacity={0.7}
+                          style={styles.djChip}
+                        >
+                          <Text style={styles.linkText}>{name}</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                    return (
+                      <Text key={idx} style={styles.infoText}>{name}{idx < event.djs.length - 1 ? ', ' : ''}</Text>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+            {event.booker && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>📋</Text>
+                <TouchableOpacity
+                  onPress={() => navigate('bookerProfile', { bookerId: event.booker.id })}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.linkText}>
+                    {language === 'fr' ? 'Organisateur : ' : 'Organizer: '}{event.booker.name}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
             <View style={styles.infoRow}>
@@ -849,6 +891,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     flex: 1,
+  },
+  linkText: {
+    color: '#FF1744',
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  djList: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  djChip: {
+    paddingVertical: 2,
   },
   buyButton: {
     backgroundColor: '#FF1744',

@@ -7,6 +7,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 10-13 mars 2026 (mar. - ven.)
 
 ### Ajouté
+- **Refus / annulation avec raisons** : Menu déroulant de raisons (indisponible, tarif non adapté, déjà engagé, lieu non adapté, genre non adapté, autre) pour DJ et Lieu lors d’un refus ou d’une annulation
+- **Annulation après acceptation** : DJ et Lieu peuvent annuler un booking déjà accepté (statut CANCELLED), avec sélection de raison
+- **Remplacement après annulation** : L’organisateur peut remplacer un DJ ou un lieu annulé/refusé — bouton « Remplacer le lieu » quand le lieu a annulé, bouton « + Ajouter / Remplacer un DJ » pour les slots libérés
+  - Backend : endpoint `POST /api/booker/events/:eventId/venues`, `getBookerEvents` retourne `venueNeedsReplacement` et `djIds` (actifs uniquement)
+- **Ajout de DJ à tout moment** : Le bouton « + Ajouter / Remplacer un DJ » est visible pour tous les événements (même sans DJ), permettant d’ajouter des DJ après la création de l’événement
+- **Noms cliquables sur la page détail événement** : Clic sur le nom du DJ → profil DJ ; organisateur → profil organisateur ; lieu → profil lieu
+  - Backend : `GET /api/events/:eventId` retourne `djs` (tableau `{ userId, djId, artistName }`), `booker: { id, name }`, `venue: { id, venueName }`
+- **Publication sur le feed** : Choix explicite de publier un événement sur le feed — possible uniquement après validation de tous les contrats (DJ et lieu)
+  - Backend : champ `publishedOnFeed` sur Event, endpoint `POST /api/booker/events/:eventId/publish-to-feed`, feed filtré sur `publishedOnFeed=true`
+  - Mobile : bouton « Publier sur le feed » dans BookerDashboard (affiché quand tous contrats signés), badge « Publié sur le feed »
 - **Contrat + chat Organisateur ↔ Lieu** : Même système que DJ ↔ Organisateur (EventVenue, négociation contrat, chat privé, notifications)
   - Backend : routes chat/contrat EventVenue, unread-count et mark-all-read incluant les messages lieu
   - Mobile : BookerDashboard (bouton chat lieu sur chaque événement), VenueDashboard (onglet Réservations + modal chat/contrat)

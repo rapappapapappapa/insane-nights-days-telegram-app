@@ -74,6 +74,7 @@ export default function BookerDashboardPage() {
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [deletingEventId, setDeletingEventId] = useState(null);
+  const [publishingEventId, setPublishingEventId] = useState(null);
   const [markingPaymentEventDjId, setMarkingPaymentEventDjId] = useState(null);
 
   // ✅ Édition événement (champs limités)
@@ -866,6 +867,39 @@ export default function BookerDashboardPage() {
     }
   };
 
+  const handlePublishToFeed = async (eventId) => {
+    showConfirm(
+      language === 'fr' ? 'Publier sur le feed' : 'Publish to feed',
+      language === 'fr'
+        ? 'L\'événement sera visible par tous sur le feed. Continuer ?'
+        : 'The event will be visible to everyone on the feed. Continue?',
+      [
+        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+        {
+          text: language === 'fr' ? 'Publier' : 'Publish',
+          onPress: async () => {
+            if (!user?.token) return;
+            setPublishingEventId(eventId);
+            try {
+              const response = await api.publishEventToFeed(user.token, eventId);
+              if (response?.success) {
+                showSuccess(language === 'fr' ? 'Événement publié sur le feed.' : 'Event published to feed.');
+                fetchMyEvents();
+              } else {
+                showError(response?.message || (language === 'fr' ? 'Erreur lors de la publication.' : 'Error publishing.'));
+              }
+            } catch (error) {
+              console.error('Erreur publication feed:', error);
+              showError(error.message || (language === 'fr' ? 'Erreur lors de la publication.' : 'Error publishing.'));
+            } finally {
+              setPublishingEventId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteEvent = async (eventId) => {
     showConfirm(
       language === 'fr' ? 'Supprimer l\'événement' : 'Delete event',
@@ -1460,6 +1494,28 @@ export default function BookerDashboardPage() {
                       {language === 'fr' ? '✏️ Modifier' : '✏️ Edit'}
                     </Text>
                   </TouchableOpacity>
+                  {event.canPublishToFeed && (
+                    <TouchableOpacity
+                      style={[styles.publishFeedButton, publishingEventId === event.id && styles.publishFeedButtonDisabled]}
+                      onPress={() => handlePublishToFeed(event.id)}
+                      disabled={publishingEventId === event.id}
+                    >
+                      {publishingEventId === event.id ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.publishFeedButtonText}>
+                          📢 {language === 'fr' ? 'Publier sur le feed' : 'Publish to feed'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  {event.publishedOnFeed && (
+                    <View style={styles.publishedBadge}>
+                      <Text style={styles.publishedBadgeText}>
+                        ✓ {language === 'fr' ? 'Publié sur le feed' : 'Published on feed'}
+                      </Text>
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={[styles.deleteButton, deletingEventId === event.id && styles.deleteButtonDisabled]}
                     onPress={() => handleDeleteEvent(event.id)}
@@ -3186,6 +3242,36 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  publishFeedButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publishFeedButtonDisabled: {
+    opacity: 0.6,
+  },
+  publishFeedButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  publishedBadge: {
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  publishedBadgeText: {
+    color: '#4CAF50',
+    fontSize: 13,
     fontWeight: '600',
   },
   deleteButtonDisabled: {

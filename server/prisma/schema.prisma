@@ -279,10 +279,11 @@ model Event {
   genre         String
   description   String?
   image         String?
-  status        EventStatus   @default(UPCOMING)
-  venueId       String?
-  bookerId      String?
-  createdAt     DateTime      @default(now())
+  status          EventStatus   @default(UPCOMING)
+  publishedOnFeed Boolean       @default(false)
+  venueId         String?
+  bookerId        String?
+  createdAt       DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   djRatings     DjRating[]
   booker        UserBooker?   @relation(fields: [bookerId], references: [id])

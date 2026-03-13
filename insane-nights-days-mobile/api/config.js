@@ -1087,6 +1087,17 @@ const api = {
     );
   },
 
+  // Publier un événement sur le feed (uniquement si tous les contrats sont signés)
+  publishEventToFeed: async (token, eventId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventId) throw new Error('eventId requis.');
+    return apiRequest(
+      `/api/booker/events/${eventId}/publish-to-feed`,
+      { method: 'POST' },
+      token
+    );
+  },
+
   // Supprimer un événement (booker)
   deleteEvent: async (token, eventId) => {
     if (!token) {
@@ -1097,6 +1108,17 @@ const api = {
       {
         method: 'DELETE',
       },
+      token
+    );
+  },
+
+  // Publier un événement sur le feed (uniquement si tous les contrats sont signés)
+  publishEventToFeed: async (token, eventId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventId) throw new Error('eventId requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_EVENTS}/${eventId}/publish-to-feed`,
+      { method: 'POST' },
       token
     );
   },

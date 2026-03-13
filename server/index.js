@@ -6035,6 +6035,9 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };
+        const allDjContractsSigned = event.eventDjs.length > 0 && event.eventDjs.every((ed) => ed.contractStatus === 'SIGNED');
+        const allVenueContractsSigned = !event.eventVenues?.length || event.eventVenues.every((ev) => ev.contractStatus === 'SIGNED');
+        const canPublishToFeed = allDjContractsSigned && allVenueContractsSigned && !event.publishedOnFeed;
         return {
           id: event.id,
           title: event.title,
@@ -6067,6 +6070,8 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
             eventDjId: eventDjIdMap[dj.userId], // ID de l'EventDj pour le chat
             payment: paymentInfoMap[dj.userId] ?? { paymentStatus: 'UPCOMING' },
           })),
+          publishedOnFeed: event.publishedOnFeed ?? false,
+          canPublishToFeed,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
         };
@@ -6079,6 +6084,53 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur récupération événements booker:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Publier un événement sur le feed (uniquement si tous les contrats sont signés)
+ * @route POST /api/booker/events/:eventId/publish-to-feed
+ */
+app.post('/api/booker/events/:eventId/publish-to-feed', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+
+    const booker = await prisma.userBooker.findFirst({ where: { userId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, bookerId: booker.id },
+      include: { eventDjs: true, eventVenues: true },
+    });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement introuvable ou accès refusé.' });
+    }
+
+    if (event.publishedOnFeed) {
+      return res.status(400).json({ success: false, message: "L'événement est déjà publié sur le feed." });
+    }
+
+    const allDjSigned = event.eventDjs.length > 0 && event.eventDjs.every((ed) => ed.contractStatus === 'SIGNED');
+    const allVenueSigned = !event.eventVenues?.length || event.eventVenues.every((ev) => ev.contractStatus === 'SIGNED');
+    if (!allDjSigned || !allVenueSigned) {
+      return res.status(400).json({
+        success: false,
+        message: "Tous les contrats (DJ et lieu) doivent être signés avant de publier sur le feed.",
+      });
+    }
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { publishedOnFeed: true },
+    });
+
+    return res.json({ success: true, message: "L'événement a été publié sur le feed." });
+  } catch (error) {
+    console.error('Erreur publication feed:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -8132,10 +8184,11 @@ app.get('/api/feed', async (req, res) => {
       },
     });
 
-    // Récupérer les événements à venir (pour les annonces)
+    // Récupérer les événements à venir (pour les annonces) - uniquement ceux publiés sur le feed
     const upcomingEvents = await prisma.event.findMany({
       where: {
         status: 'UPCOMING',
+        publishedOnFeed: true,
         date: {
           gte: new Date(), // Événements futurs uniquement
         },

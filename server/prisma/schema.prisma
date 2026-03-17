@@ -346,6 +346,7 @@ model EventDj {
   contractSentBy   ContractParty?
   bookerAcceptedAt DateTime?
   djAcceptedAt     DateTime?
+  rejectionReason  String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   event            Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -375,6 +376,7 @@ model EventVenue {
   contractSentBy    ContractPartyVenue?
   bookerAcceptedAt  DateTime?
   venueAcceptedAt   DateTime?
+  rejectionReason   String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   event             Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -619,6 +621,7 @@ enum InvitationStatus {
   PENDING
   ACCEPTED
   REJECTED
+  CANCELLED
 }
 
 enum BookingPaymentStatus {

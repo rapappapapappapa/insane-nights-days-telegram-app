@@ -28,6 +28,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useNotifications } from '../../hooks/useNotifications';
+import RejectReasonModal from '../../components/RejectReasonModal';
 import { Ionicons } from '@expo/vector-icons';
 
 function cleanText(s) {
@@ -70,6 +71,9 @@ export default function VenueDashboardPage() {
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [processingInvitation, setProcessingInvitation] = useState(null);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectModalEventVenueId, setRejectModalEventVenueId] = useState(null);
+  const [rejectModalAction, setRejectModalAction] = useState('reject'); // 'reject' | 'cancel'
 
   // Chat
   const [chatModalVisible, setChatModalVisible] = useState(false);
@@ -319,6 +323,69 @@ export default function VenueDashboardPage() {
     } catch (e) {
       console.error('[VenueDashboard] counterContract error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const handleAcceptVenueInvitation = async (eventVenueId) => {
+    if (!user?.token || processingInvitation) return;
+    setProcessingInvitation(eventVenueId);
+    try {
+      const response = await api.acceptVenueInvitation(user.token, eventVenueId);
+      if (response?.success) {
+        await fetchBookings();
+        showSuccess(language === 'fr' ? 'Invitation acceptée.' : 'Invitation accepted.');
+      } else {
+        showError(response?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));
+      }
+    } catch (error) {
+      console.error('Erreur acceptation invitation lieu:', error);
+      showError(language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.');
+    } finally {
+      setProcessingInvitation(null);
+    }
+  };
+
+  const handleRejectVenueInvitation = (eventVenueId) => {
+    if (!user?.token || processingInvitation) return;
+    setRejectModalAction('reject');
+    setRejectModalEventVenueId(eventVenueId);
+    setRejectModalVisible(true);
+  };
+
+  const handleCancelVenueBooking = (eventVenueId) => {
+    if (!user?.token || processingInvitation) return;
+    setRejectModalAction('cancel');
+    setRejectModalEventVenueId(eventVenueId);
+    setRejectModalVisible(true);
+  };
+
+  const handleRejectVenueConfirm = async (reason) => {
+    if (!user?.token || !rejectModalEventVenueId) return;
+    setProcessingInvitation(rejectModalEventVenueId);
+    const isCancel = rejectModalAction === 'cancel';
+    try {
+      const response = isCancel
+        ? await api.cancelVenueBooking(user.token, rejectModalEventVenueId, reason)
+        : await api.rejectVenueInvitation(user.token, rejectModalEventVenueId, reason);
+      setRejectModalVisible(false);
+      setRejectModalEventVenueId(null);
+      if (response?.success) {
+        await fetchBookings();
+        showSuccess(
+          isCancel
+            ? (language === 'fr' ? 'Booking annulé.' : 'Booking cancelled.')
+            : (language === 'fr' ? 'Invitation refusée.' : 'Invitation rejected.')
+        );
+      } else {
+        showError(response?.message || (language === 'fr' ? (isCancel ? 'Impossible d\'annuler.' : 'Impossible de refuser.') : (isCancel ? 'Unable to cancel.' : 'Unable to reject.')));
+      }
+    } catch (error) {
+      setRejectModalVisible(false);
+      setRejectModalEventVenueId(null);
+      console.error(isCancel ? 'Erreur annulation lieu:' : 'Erreur refus invitation lieu:', error);
+      showError(language === 'fr' ? (isCancel ? 'Impossible d\'annuler.' : 'Impossible de refuser.') : (isCancel ? 'Unable to cancel.' : 'Unable to reject.'));
+    } finally {
+      setProcessingInvitation(null);
     }
   };
 
@@ -805,64 +872,136 @@ export default function VenueDashboardPage() {
                 {language === 'fr' ? 'Aucune réservation pour le moment.' : 'No bookings yet.'}
               </Text>
             ) : (
-              <View style={styles.bookingsList}>
-                {bookings.map((booking) => {
-                  const eventDate = new Date(booking.eventDate);
-                  const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  });
-                  const statusColors = {
-                    UPCOMING: Colors.primary,
-                    ONGOING: '#4CAF50',
-                    FINISHED: Colors.textSecondary,
-                  };
-                  const statusLabels = {
-                    UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
-                    ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
-                    FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+              <>
+                {(() => {
+                  const pendingInvitations = bookings.filter((b) => b.invitationStatus === 'PENDING');
+                  const acceptedBookings = bookings.filter((b) => b.invitationStatus === 'ACCEPTED');
+                  const renderBookingCard = (booking, showAcceptReject = false) => {
+                    const eventDate = new Date(booking.eventDate);
+                    const formattedDate = eventDate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    });
+                    const statusColors = {
+                      UPCOMING: Colors.primary,
+                      ONGOING: '#4CAF50',
+                      FINISHED: Colors.textSecondary,
+                    };
+                    const statusLabels = {
+                      UPCOMING: language === 'fr' ? 'À venir' : 'Upcoming',
+                      ONGOING: language === 'fr' ? 'En cours' : 'Ongoing',
+                      FINISHED: language === 'fr' ? 'Terminé' : 'Finished',
+                    };
+                    return (
+                      <View key={booking.id} style={[styles.bookingCard, showAcceptReject && { borderColor: 'rgba(255,165,0,0.4)' }]}>
+                        <View style={styles.bookingHeader}>
+                          <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                          <View style={[styles.bookingStatus, { backgroundColor: (statusColors[booking.eventStatus] || Colors.primary) + '20' }]}>
+                            <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] || Colors.primary }]}>
+                              {showAcceptReject ? (language === 'fr' ? 'En attente' : 'Pending') : (statusLabels[booking.eventStatus] || booking.eventStatus)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>📅 {language === 'fr' ? 'Date' : 'Date'}</Text>
+                          <Text style={styles.bookingInfoValue}>
+                            {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
+                          </Text>
+                        </View>
+                        {booking.booker && (
+                          <View style={styles.bookingInfo}>
+                            <Text style={styles.bookingInfoLabel}>👤 {language === 'fr' ? 'Organisateur' : 'Organizer'}</Text>
+                            <Text style={styles.bookingInfoValue}>
+                              {booking.booker.name} ({booking.booker.type})
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.bookingInfo}>
+                          <Text style={styles.bookingInfoLabel}>📍 {language === 'fr' ? 'Adresse' : 'Address'}</Text>
+                          <Text style={styles.bookingInfoValue}>{booking.eventLocation || '-'}</Text>
+                        </View>
+                        {showAcceptReject ? (
+                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                            <TouchableOpacity
+                              style={[styles.chatButton, { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                              onPress={() => openVenueChat(booking.eventVenueId)}
+                            >
+                              <Text style={styles.chatButtonText}>💬 {language === 'fr' ? 'Chat' : 'Chat'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.chatButton, { flex: 1, backgroundColor: '#EF4444' }]}
+                              onPress={() => handleRejectVenueInvitation(booking.eventVenueId)}
+                              disabled={processingInvitation === booking.eventVenueId}
+                            >
+                              {processingInvitation === booking.eventVenueId ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <Text style={styles.chatButtonText}>✕ {language === 'fr' ? 'Refuser' : 'Reject'}</Text>
+                              )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.chatButton, { flex: 1, backgroundColor: '#4CAF50' }]}
+                              onPress={() => handleAcceptVenueInvitation(booking.eventVenueId)}
+                              disabled={processingInvitation === booking.eventVenueId}
+                            >
+                              {processingInvitation === booking.eventVenueId ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <Text style={styles.chatButtonText}>✓ {language === 'fr' ? 'Accepter' : 'Accept'}</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                            <TouchableOpacity
+                              style={[styles.chatButton, { flex: 1 }]}
+                              onPress={() => openVenueChat(booking.eventVenueId)}
+                            >
+                              <Text style={styles.chatButtonText}>
+                                💬 {language === 'fr' ? 'Chat' : 'Chat'}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.chatButton, { flex: 1, backgroundColor: '#EF4444' }]}
+                              onPress={() => handleCancelVenueBooking(booking.eventVenueId)}
+                              disabled={processingInvitation === booking.eventVenueId}
+                            >
+                              {processingInvitation === booking.eventVenueId ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <Text style={styles.chatButtonText}>
+                                  ✕ {language === 'fr' ? 'Annuler' : 'Cancel'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    );
                   };
                   return (
-                    <View key={booking.id} style={styles.bookingCard}>
-                      <View style={styles.bookingHeader}>
-                        <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
-                        <View style={[styles.bookingStatus, { backgroundColor: (statusColors[booking.eventStatus] || Colors.primary) + '20' }]}>
-                          <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] || Colors.primary }]}>
-                            {statusLabels[booking.eventStatus] || booking.eventStatus}
+                    <View style={styles.bookingsList}>
+                      {pendingInvitations.length > 0 && (
+                        <View style={{ marginBottom: 16 }}>
+                          <Text style={[styles.sectionTitle, { fontSize: 15, marginBottom: 10 }]}>
+                            📩 {language === 'fr' ? 'Invitations en attente' : 'Pending invitations'}
                           </Text>
-                        </View>
-                      </View>
-                      <View style={styles.bookingInfo}>
-                        <Text style={styles.bookingInfoLabel}>📅 {language === 'fr' ? 'Date' : 'Date'}</Text>
-                        <Text style={styles.bookingInfoValue}>
-                          {formattedDate} {booking.eventTime && `à ${booking.eventTime}`}
-                        </Text>
-                      </View>
-                      {booking.booker && (
-                        <View style={styles.bookingInfo}>
-                          <Text style={styles.bookingInfoLabel}>👤 {language === 'fr' ? 'Organisateur' : 'Organizer'}</Text>
-                          <Text style={styles.bookingInfoValue}>
-                            {booking.booker.name} ({booking.booker.type})
-                          </Text>
+                          {pendingInvitations.map((b) => renderBookingCard(b, true))}
                         </View>
                       )}
-                      <View style={styles.bookingInfo}>
-                        <Text style={styles.bookingInfoLabel}>📍 {language === 'fr' ? 'Adresse' : 'Address'}</Text>
-                        <Text style={styles.bookingInfoValue}>{booking.eventLocation || '-'}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={[styles.chatButton, { marginTop: 10 }]}
-                        onPress={() => openVenueChat(booking.eventVenueId)}
-                      >
-                        <Text style={styles.chatButtonText}>
-                          💬 {language === 'fr' ? 'Chat avec l\'organisateur' : 'Chat with organizer'}
-                        </Text>
-                      </TouchableOpacity>
+                      {acceptedBookings.length > 0 && (
+                        <View>
+                          <Text style={[styles.sectionTitle, { fontSize: 15, marginBottom: 10 }]}>
+                            ✅ {language === 'fr' ? 'Réservations confirmées' : 'Confirmed bookings'}
+                          </Text>
+                          {acceptedBookings.map((b) => renderBookingCard(b, false))}
+                        </View>
+                      )}
                     </View>
                   );
-                })}
-              </View>
+                })()}
+              </>
             )}
           </View>
         )}
@@ -1210,6 +1349,19 @@ export default function VenueDashboardPage() {
         </Modal>
       </Modal>
       
+      <RejectReasonModal
+        visible={rejectModalVisible}
+        onClose={() => {
+          setRejectModalVisible(false);
+          setRejectModalEventVenueId(null);
+        }}
+        onConfirm={handleRejectVenueConfirm}
+        title={rejectModalAction === 'cancel' ? (language === 'fr' ? 'Annuler le booking' : 'Cancel booking') : (language === 'fr' ? 'Refuser l\'invitation' : 'Reject invitation')}
+        confirmLabel={rejectModalAction === 'cancel' ? (language === 'fr' ? 'Annuler' : 'Cancel') : (language === 'fr' ? 'Refuser' : 'Reject')}
+        language={language}
+        loading={processingInvitation === rejectModalEventVenueId}
+      />
+
       {/* Toast pour les notifications */}
       <Toast
         message={toast.message}

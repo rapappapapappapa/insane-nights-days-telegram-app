@@ -23,7 +23,7 @@ export default function VenueProfilePage() {
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
-  const { venueId, selectionMode, selectedVenueId, returnTo } = routeParams || {};
+  const { venueId, selectionMode, selectedVenueId, returnTo, eventId, replaceMode } = routeParams || {};
   
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +130,8 @@ export default function VenueProfilePage() {
                 navigate(returnTo || 'bookerDashboard', {
                   selectedVenueId: venue.id,
                   selectedVenueName: venue.venueName,
-                  action: isSelected ? 'remove' : 'select',
+                  action: replaceMode ? 'replaceVenue' : (isSelected ? 'remove' : 'select'),
+                  eventId: eventId || undefined,
                 });
               }}
             >

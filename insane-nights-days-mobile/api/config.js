@@ -936,8 +936,21 @@ const api = {
     );
   },
 
-  // Refuser une invitation à un événement
-  rejectInvitation: async (token, invitationId) => {
+  // Annuler un booking DJ (après acceptation)
+  cancelDjBooking: async (token, invitationId, reason = null) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.DJ_REJECT_INVITATION}/${invitationId}/cancel`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
+      },
+      token
+    );
+  },
+
+  // Refuser une invitation à un événement (reason optionnel)
+  rejectInvitation: async (token, invitationId, reason = null) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
@@ -945,6 +958,7 @@ const api = {
       `${API_CONFIG.ENDPOINTS.DJ_REJECT_INVITATION}/${invitationId}/reject`,
       {
         method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
       },
       token
     );
@@ -960,12 +974,28 @@ const api = {
     );
   },
 
+  // Annuler un booking lieu (après acceptation)
+  cancelVenueBooking: async (token, eventVenueId, reason = null) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.VENUE_REJECT_INVITATION}/${eventVenueId}/cancel`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
+      },
+      token
+    );
+  },
+
   // Refuser une invitation lieu à un événement
-  rejectVenueInvitation: async (token, eventVenueId) => {
+  rejectVenueInvitation: async (token, eventVenueId, reason = null) => {
     if (!token) throw new Error('Token d\'authentification requis.');
     return apiRequest(
       `${API_CONFIG.ENDPOINTS.VENUE_REJECT_INVITATION}/${eventVenueId}/reject`,
-      { method: 'PUT' },
+      {
+        method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
+      },
       token
     );
   },
@@ -1055,6 +1085,19 @@ const api = {
   },
 
   // Ajouter un DJ à un événement existant (Booker)
+  addVenueToEvent: async (token, eventId, venueId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventId || !venueId) throw new Error('eventId et venueId sont requis.');
+    return apiRequest(
+      `/api/booker/events/${eventId}/venues`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ venueId }),
+      },
+      token
+    );
+  },
+
   addDjToEvent: async (token, eventId, djId) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');

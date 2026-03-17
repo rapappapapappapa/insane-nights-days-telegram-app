@@ -32,6 +32,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
+import RejectReasonModal from '../../components/RejectReasonModal';
 import { Ionicons } from '@expo/vector-icons';
 
 function cleanText(s) {
@@ -418,38 +419,52 @@ export default function DjDashboardPage() {
     }
   };
 
-  const handleRejectInvitation = async (invitationId) => {
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectModalInvitationId, setRejectModalInvitationId] = useState(null);
+  const [rejectModalAction, setRejectModalAction] = useState('reject'); // 'reject' | 'cancel'
+
+  const handleRejectInvitation = (invitationId) => {
     if (!user?.token || processingInvitation) return;
-    showConfirm(
-      language === 'fr' ? 'Refuser l\'invitation' : 'Reject invitation',
-      language === 'fr' 
-        ? 'Êtes-vous sûr de vouloir refuser cette invitation ?' 
-        : 'Are you sure you want to reject this invitation?',
-      [
-        { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-        {
-          text: language === 'fr' ? 'Refuser' : 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            setProcessingInvitation(invitationId);
-            try {
-              const response = await api.rejectInvitation(user.token, invitationId);
-              if (response && response.success) {
-                await fetchBookings();
-                showSuccess(language === 'fr' ? 'Vous avez refusé l\'invitation à cet événement.' : 'You have rejected the invitation to this event.');
-              } else {
-                showError(response?.message || (language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.'));
-              }
-            } catch (error) {
-              console.error('Erreur refus invitation:', error);
-              showError(language === 'fr' ? 'Impossible de refuser l\'invitation.' : 'Unable to reject invitation.');
-            } finally {
-              setProcessingInvitation(null);
-            }
-          },
-        },
-      ]
-    );
+    setRejectModalAction('reject');
+    setRejectModalInvitationId(invitationId);
+    setRejectModalVisible(true);
+  };
+
+  const handleCancelBooking = (invitationId) => {
+    if (!user?.token || processingInvitation) return;
+    setRejectModalAction('cancel');
+    setRejectModalInvitationId(invitationId);
+    setRejectModalVisible(true);
+  };
+
+  const handleRejectConfirm = async (reason) => {
+    if (!user?.token || !rejectModalInvitationId) return;
+    setProcessingInvitation(rejectModalInvitationId);
+    const isCancel = rejectModalAction === 'cancel';
+    try {
+      const response = isCancel
+        ? await api.cancelDjBooking(user.token, rejectModalInvitationId, reason)
+        : await api.rejectInvitation(user.token, rejectModalInvitationId, reason);
+      setRejectModalVisible(false);
+      setRejectModalInvitationId(null);
+      if (response && response.success) {
+        await fetchBookings();
+        showSuccess(
+          isCancel
+            ? (language === 'fr' ? 'Booking annulé.' : 'Booking cancelled.')
+            : (language === 'fr' ? 'Vous avez refusé l\'invitation à cet événement.' : 'You have rejected the invitation to this event.')
+        );
+      } else {
+        showError(response?.message || (language === 'fr' ? (isCancel ? 'Impossible d\'annuler.' : 'Impossible de refuser l\'invitation.') : (isCancel ? 'Unable to cancel.' : 'Unable to reject invitation.')));
+      }
+    } catch (error) {
+      setRejectModalVisible(false);
+      setRejectModalInvitationId(null);
+      console.error(isCancel ? 'Erreur annulation:' : 'Erreur refus invitation:', error);
+      showError(language === 'fr' ? (isCancel ? 'Impossible d\'annuler.' : 'Impossible de refuser l\'invitation.') : (isCancel ? 'Unable to cancel.' : 'Unable to reject invitation.'));
+    } finally {
+      setProcessingInvitation(null);
+    }
   };
 
   useEffect(() => {
@@ -1832,25 +1847,39 @@ export default function DjDashboardPage() {
                         <Text style={styles.bookingInfoValue}>{booking.eventLocation}</Text>
                       </View>
                             
-                            <TouchableOpacity
-                              style={[styles.invitationButton, styles.chatButton, { marginTop: 10, width: '100%' }]}
-                              onPress={() => openChat(booking.id)}
-                            >
-                              <Text style={styles.invitationButtonText}>
-                                💬 {language === 'fr' ? 'Chat avec l\'organisateur' : 'Chat with organizer'}
-                              </Text>
-                            </TouchableOpacity>
-                            {/* Bouton chat de groupe */}
-                            {booking.eventId && (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
                               <TouchableOpacity
-                                style={[styles.invitationButton, styles.chatButton, { marginTop: 10, width: '100%', backgroundColor: '#2196F3' }]}
-                                onPress={() => openGroupChat(booking.eventId)}
+                                style={[styles.invitationButton, styles.chatButton, { flex: 1, minWidth: 100 }]}
+                                onPress={() => openChat(booking.id)}
                               >
                                 <Text style={styles.invitationButtonText}>
-                                  👥 {language === 'fr' ? 'Chat de groupe' : 'Group chat'}
+                                  💬 {language === 'fr' ? 'Chat' : 'Chat'}
                                 </Text>
                               </TouchableOpacity>
-                            )}
+                              {booking.eventId && (
+                                <TouchableOpacity
+                                  style={[styles.invitationButton, styles.chatButton, { flex: 1, minWidth: 100, backgroundColor: '#2196F3' }]}
+                                  onPress={() => openGroupChat(booking.eventId)}
+                                >
+                                  <Text style={styles.invitationButtonText}>
+                                    👥 {language === 'fr' ? 'Groupe' : 'Group'}
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                              <TouchableOpacity
+                                style={[styles.invitationButton, { flex: 1, minWidth: 100, backgroundColor: '#EF4444' }]}
+                                onPress={() => handleCancelBooking(booking.id)}
+                                disabled={processingInvitation === booking.id}
+                              >
+                                {processingInvitation === booking.id ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <Text style={styles.invitationButtonText}>
+                                    ✕ {language === 'fr' ? 'Annuler' : 'Cancel'}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            </View>
     </View>
   );
                 })}
@@ -2999,6 +3028,19 @@ export default function DjDashboardPage() {
           </View>
         </View>
       </Modal>
+
+      <RejectReasonModal
+        visible={rejectModalVisible}
+        onClose={() => {
+          setRejectModalVisible(false);
+          setRejectModalInvitationId(null);
+        }}
+        onConfirm={handleRejectConfirm}
+        title={rejectModalAction === 'cancel' ? (language === 'fr' ? 'Annuler le booking' : 'Cancel booking') : (language === 'fr' ? 'Refuser l\'invitation' : 'Reject invitation')}
+        confirmLabel={rejectModalAction === 'cancel' ? (language === 'fr' ? 'Annuler' : 'Cancel') : (language === 'fr' ? 'Refuser' : 'Reject')}
+        language={language}
+        loading={processingInvitation === rejectModalInvitationId}
+      />
 
       {/* Toast pour les notifications */}
       <Toast

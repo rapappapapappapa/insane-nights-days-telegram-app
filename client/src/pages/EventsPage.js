@@ -159,7 +159,7 @@ const EventsPage = () => {
               <div className="space-y-1 text-xs text-insane-white/80">
                 <div>📅 {event.date ? new Date(event.date).toLocaleDateString('fr-FR') : ''} • {event.time || ''}</div>
                 <div>📍 {event.location || ''}</div>
-                {event.djs?.length > 0 && <div>🎤 {event.djs.join(', ')}</div>}
+                {event.djs?.length > 0 && <div>🎤 {event.djs.map(dj => typeof dj === 'object' && dj?.artistName ? dj.artistName : String(dj)).join(', ')}</div>}
               </div>
               {event.capacity != null && (
                 <div className="mt-3 pt-3 border-t border-insane-orange/30">

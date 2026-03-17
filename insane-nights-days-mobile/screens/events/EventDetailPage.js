@@ -526,8 +526,8 @@ export default function EventDetailPage() {
                 <Text style={styles.infoIcon}>🎤</Text>
                 <View style={styles.djList}>
                   {(Array.isArray(event.djs) ? event.djs : []).map((dj, idx) => {
-                    const isObject = typeof dj === 'object' && dj !== null && (dj.userId || dj.djId);
-                    const name = isObject ? dj.artistName : String(dj);
+                    const isObject = typeof dj === 'object' && dj !== null;
+                    const name = isObject ? (dj.artistName || 'DJ') : String(dj);
                     if (isObject) {
                       return (
                         <TouchableOpacity

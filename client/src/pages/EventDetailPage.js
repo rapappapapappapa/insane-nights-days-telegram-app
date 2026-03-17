@@ -123,7 +123,7 @@ const EventDetailPage = () => {
           <p>📅 {event.date ? new Date(event.date).toLocaleDateString('fr-FR') : ''} à {event.time || ''}</p>
           <p>📍 {event.location || ''}</p>
           {event.venueName && <p>🏛️ {event.venueName}</p>}
-          {event.djs?.length > 0 && <p>🎤 {event.djs.join(', ')}</p>}
+          {event.djs?.length > 0 && <p>🎤 {event.djs.map(dj => typeof dj === 'object' && dj?.artistName ? dj.artistName : String(dj)).join(', ')}</p>}
         </div>
 
         {event.description && (

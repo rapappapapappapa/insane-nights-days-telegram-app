@@ -95,7 +95,7 @@ const EventCard = React.memo(({ event, onPress }) => {
             <View style={styles.eventInfoRow}>
               <Text style={styles.eventInfoIcon}>🎧</Text>
               <Text style={styles.eventInfoText}>
-                {event.djs.join(', ')}
+                {event.djs.map(dj => typeof dj === 'object' && dj?.artistName ? dj.artistName : String(dj)).join(', ')}
               </Text>
             </View>
           )}

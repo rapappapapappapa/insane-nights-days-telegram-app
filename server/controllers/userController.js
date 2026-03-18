@@ -447,7 +447,7 @@ const sendEmailVerification = async (req, res) => {
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
 
-    const subject = 'Insane Nights & Days — Vérification email';
+    const subject = 'Nox — Vérification email';
     const text = `Ton code de vérification est: ${code}\n\nIl expire dans 30 minutes.`;
     const html = `<p>Ton code de vérification est:</p><h2>${code}</h2><p>Il expire dans 30 minutes.</p>`;
 

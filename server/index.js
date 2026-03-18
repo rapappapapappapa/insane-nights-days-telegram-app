@@ -6716,6 +6716,12 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
       : `📋 Contrat accepté${eventTitle}`;
     await createContractNotificationMessage(eventDjId, userId, notifContent);
 
+    // Envoi du contrat par email aux deux parties une fois signé
+    if (shouldSign) {
+      const { sendContractSignedEmailDj } = require('./utils/contractEmail');
+      sendContractSignedEmailDj(eventDjId).catch((err) => console.error('[contract] Email:', err));
+    }
+
     return res.json({
       success: true,
       contract: {
@@ -6904,6 +6910,13 @@ app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, 
     const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
     const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
     await createContractNotificationMessageVenue(eventVenueId, req.user.id, notifContent);
+
+    // Envoi du contrat par email aux deux parties une fois signé
+    if (shouldSign) {
+      const { sendContractSignedEmailVenue } = require('./utils/contractEmail');
+      sendContractSignedEmailVenue(eventVenueId).catch((err) => console.error('[contract] Email:', err));
+    }
+
     return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
   } catch (e) {
     console.error('Erreur accept contract venue:', e);

@@ -203,7 +203,7 @@ const forgotPassword = async (req, res) => {
       },
     });
 
-    const subject = 'Insane Nights & Days — Réinitialisation du mot de passe';
+    const subject = 'Nox — Réinitialisation du mot de passe';
     const text = `Ton code de réinitialisation est: ${code}\n\nIl expire dans 15 minutes.`;
     const html = `<p>Ton code de réinitialisation est:</p><h2>${code}</h2><p>Il expire dans 15 minutes.</p>`;
 

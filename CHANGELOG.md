@@ -4,6 +4,21 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 17-19 mars 2026 (mar. - jeu.)
+
+### Ajouté
+- **Envoi des contrats signés par email** : Quand un contrat (Organisateur ↔ DJ ou Organisateur ↔ Lieu) est signé par les deux parties, un email récapitulatif est envoyé automatiquement à chacun (événement, montant, acompte, modalités de paiement)
+  - Backend : `server/utils/contractEmail.js`, appelé depuis les endpoints accept contrat
+
+### Modifié
+- **Rebrand Insane → Nox dans les emails** : Sujets des emails (contrats, vérification, mot de passe oublié) et `RESEND_FROM` utilisent désormais « Nox »
+- **Affichage DJ** : Correction du bug « [object Object] » sur la ligne DJ (EventCard, EventDetailPage, EventsPage client) — support du format `djs` en objets `{ artistName }`
+
+### Corrigé
+- **Config Resend** : `env.example` et `.env` mis à jour pour `noreply@nox.world` (domaine vérifié)
+
+---
+
 ## Semaine du 10-13 mars 2026 (mar. - ven.)
 
 ### Ajouté

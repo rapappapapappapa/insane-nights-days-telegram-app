@@ -62,6 +62,11 @@ const API_CONFIG = {
     BOOKER_EVENTDJ_PAYMENT: '/api/booker/event-djs',
     CONTRACTS_EVENTDJS: '/api/contracts/event-djs',
     CONTRACTS_EVENTVENUES: '/api/contracts/event-venues',
+    BOOKER_FRIENDS: '/api/booker/friends',
+    COMMUNITY_BOOKER_REQUESTS: '/api/community/booker-friend-requests',
+    COMMUNITY_STAFF_EVENTS: '/api/community/staff-events',
+    EVENT_STAFF: '/api/events',
+    SCAN_TICKET: '/api/events',
   },
 };
 
@@ -1176,6 +1181,65 @@ const api = {
         method: 'PUT',
         body: JSON.stringify(updates || {}),
       },
+      token
+    );
+  },
+
+  // ============================================
+  // Amis Organisateur + Staff + Scan QR
+  // ============================================
+  getBookerFriends: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_FRIENDS, {}, token);
+  },
+  addBookerFriend: async (token, communityId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.BOOKER_FRIENDS, {
+      method: 'POST',
+      body: JSON.stringify({ communityId }),
+    }, token);
+  },
+  getBookerFriendRequests: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.COMMUNITY_BOOKER_REQUESTS, {}, token);
+  },
+  getStaffEvents: async (token) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.COMMUNITY_STAFF_EVENTS, {}, token);
+  },
+  respondBookerFriendRequest: async (token, requestId, accept) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_FRIENDS}/${requestId}/respond`,
+      { method: 'PUT', body: JSON.stringify({ accept }) },
+      token
+    );
+  },
+  getEventStaff: async (token, eventId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`${API_CONFIG.ENDPOINTS.EVENT_STAFF}/${eventId}/staff`, {}, token);
+  },
+  addEventStaff: async (token, eventId, communityId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.EVENT_STAFF}/${eventId}/staff`,
+      { method: 'POST', body: JSON.stringify({ communityId }) },
+      token
+    );
+  },
+  removeEventStaff: async (token, eventId, communityId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.EVENT_STAFF}/${eventId}/staff/${communityId}`,
+      { method: 'DELETE' },
+      token
+    );
+  },
+  scanTicket: async (token, eventId, qrCode) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.SCAN_TICKET}/${eventId}/scan-ticket`,
+      { method: 'POST', body: JSON.stringify({ qrCode }) },
       token
     );
   },

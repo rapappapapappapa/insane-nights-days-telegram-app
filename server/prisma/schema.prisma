@@ -102,6 +102,8 @@ model UserCommunity {
   eventGroupsCreated   EventGroup[]
   eventGroupMemberships EventGroupMember[]
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookerCommunityFriends BookerCommunityFriend[]
+  eventStaff           EventStaff[]
 
   @@index([userId])
 }
@@ -166,20 +168,22 @@ model UserDj {
 }
 
 model UserBooker {
-  id           String         @id @default(uuid())
-  userId       String
-  nom          String
-  prenom       String
-  phonePro     String
-  bookerType   String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  profileImage String?
-  pseudo       String?
-  events       Event[]
-  feedPosts    FeedPost[]
-  followers    FollowBooker[]
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                   @id @default(uuid())
+  userId                String
+  nom                   String
+  prenom                String
+  phonePro              String
+  bookerType            String
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  profileImage          String?
+  pseudo                String?
+  events                Event[]
+  feedPosts             FeedPost[]
+  followers             FollowBooker[]
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookerCommunityFriends BookerCommunityFriend[]
+  eventStaffAdded       EventStaff[]             @relation("StaffAddedBy")
 
   @@index([userId])
 }
@@ -295,6 +299,7 @@ model Event {
   tickets       Ticket[]
   venueRatings  VenueRating[]
   eventGroups   EventGroup[]
+  eventStaff    EventStaff[]
 }
 
 model EventGroup {
@@ -384,9 +389,39 @@ model EventVenue {
   messages          Message[]
 
   @@unique([eventId, venueId])
-  @@index([eventId])
-  @@index([venueId])
+}
+
+model BookerCommunityFriend {
+  id          String              @id @default(uuid())
+  bookerId    String
+  communityId String
+  status      BookerFriendStatus  @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  booker      UserBooker          @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+  community   UserCommunity      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([bookerId, communityId])
+  @@index([bookerId])
+  @@index([communityId])
   @@index([status])
+}
+
+model EventStaff {
+  id               String        @id @default(uuid())
+  eventId          String
+  communityId      String
+  role             EventStaffRole @default(STAFF_SCAN)
+  addedByBookerId  String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  event            Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  community        UserCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  addedBy          UserBooker    @relation("StaffAddedBy", fields: [addedByBookerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, communityId])
+  @@index([eventId])
+  @@index([communityId])
 }
 
 model Message {
@@ -422,6 +457,7 @@ model Ticket {
   status          String        @default("valid")
   qrCode          String        @unique
   purchaseDate    DateTime      @default(now())
+  scannedAt       DateTime?
   djRatings       DjRating[]    @relation("DjRatingTickets")
   event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   payment         Payment?      @relation(fields: [paymentIntentId], references: [paymentIntentId])
@@ -603,6 +639,16 @@ enum CommunityFriendStatus {
   PENDING
   ACCEPTED
   BLOCKED
+}
+
+enum BookerFriendStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum EventStaffRole {
+  STAFF_SCAN
 }
 
 enum EventGroupMemberStatus {

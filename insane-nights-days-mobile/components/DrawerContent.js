@@ -84,6 +84,22 @@ const menuItems = [
     onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
+    id: 'staffEvents',
+    emoji: '📱',
+    title: 'Scanner billets',
+    description: 'Événements où tu es staff',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
+    id: 'bookerFriends',
+    emoji: '👥',
+    title: 'Mes amis',
+    description: 'Amis Communauté pour staff événements',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['BOOKER'],
+  },
+  {
     id: 'admin',
     emoji: '🛡️',
     title: 'Admin',

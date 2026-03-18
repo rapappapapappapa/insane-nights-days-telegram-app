@@ -38,6 +38,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Nox a besoin de la caméra pour scanner les QR codes des billets."
+        }
+      ],
       "expo-audio",
       "expo-video",
       "expo-updates",

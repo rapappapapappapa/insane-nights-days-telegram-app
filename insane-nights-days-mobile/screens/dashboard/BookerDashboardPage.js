@@ -1423,6 +1423,26 @@ export default function BookerDashboardPage() {
                       💬 {language === 'fr' ? 'Chat de groupe' : 'Group chat'}
                     </Text>
                   </TouchableOpacity>
+
+                  {/* Staff + Scan billets */}
+                  <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                    <TouchableOpacity
+                      style={[styles.chatButton, { flex: 1 }]}
+                      onPress={() => navigate('eventStaff', { eventId: event.id, eventTitle: event.title })}
+                    >
+                      <Text style={styles.chatButtonText}>
+                        👥 {language === 'fr' ? 'Staff' : 'Staff'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.chatButton, { flex: 1 }]}
+                      onPress={() => navigate('scanTicket', { eventId: event.id, eventTitle: event.title })}
+                    >
+                      <Text style={styles.chatButtonText}>
+                        📱 {language === 'fr' ? 'Scanner billets' : 'Scan tickets'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   
                   <View style={styles.djsList}>
                     <Text style={styles.eventInfoLabel}>

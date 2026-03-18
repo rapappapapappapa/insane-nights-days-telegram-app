@@ -36,11 +36,15 @@ import EventsPage from './screens/events/EventsPage';
 import EventDetailPage from './screens/events/EventDetailPage';
 import RateEventPage from './screens/events/RateEventPage';
 import TicketsPage from './screens/events/TicketsPage';
+import EventStaffPage from './screens/events/EventStaffPage';
+import ScanTicketPage from './screens/events/ScanTicketPage';
+import StaffEventsPage from './screens/events/StaffEventsPage';
 
 import ProfilePage from './screens/profiles/ProfilePage';
 import CommunityProfileEditPage from './screens/profiles/CommunityProfileEditPage';
 import CommunityProfilePage from './screens/profiles/CommunityProfilePage';
 import CommunityFriendsPage from './screens/profiles/CommunityFriendsPage';
+import BookerFriendsPage from './screens/profiles/BookerFriendsPage';
 import VenueProfileEditPage from './screens/profiles/VenueProfileEditPage';
 import DjProfilePage from './screens/profiles/DjProfilePage';
 import BookerProfilePage from './screens/profiles/BookerProfilePage';
@@ -98,6 +102,10 @@ const SCREENS = {
   communityProfileEdit: CommunityProfileEditPage,
   communityProfile: CommunityProfilePage,
   communityFriends: CommunityFriendsPage,
+  bookerFriends: BookerFriendsPage,
+  eventStaff: EventStaffPage,
+  scanTicket: ScanTicketPage,
+  staffEvents: StaffEventsPage,
   venueProfileEdit: VenueProfileEditPage,
   feed: FeedPage, // ✅ AJOUT: Route pour le feed
   createFeedPost: CreateFeedPostPage, // ✅ AJOUT: Route pour créer un post

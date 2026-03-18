@@ -43,10 +43,12 @@ export default function CommunityFriendsPage() {
   const [sendingRequest, setSendingRequest] = useState(null);
   const [respondingRequest, setRespondingRequest] = useState(null);
   const [removingFriend, setRemovingFriend] = useState(null);
-  const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'eventInvites'
+  const [activeTab, setActiveTab] = useState('friends'); // 'friends' | 'requests' | 'eventInvites' | 'bookerRequests'
   const [eventInvites, setEventInvites] = useState([]);
   const [loadingInvites, setLoadingInvites] = useState(false);
   const [respondingInvite, setRespondingInvite] = useState(null);
+  const [bookerRequests, setBookerRequests] = useState([]);
+  const [respondingBookerRequest, setRespondingBookerRequest] = useState(null);
 
   const fr = language === 'fr';
 
@@ -54,14 +56,16 @@ export default function CommunityFriendsPage() {
     if (!user?.token) return;
     try {
       setLoadingInvites(true);
-      const [friendsRes, requestsRes, invitesRes] = await Promise.all([
+      const [friendsRes, requestsRes, invitesRes, bookerRequestsRes] = await Promise.all([
         api.getCommunityFriends(user.token),
         api.getCommunityFriendRequests(user.token),
         api.getEventGroupInvitations(user.token),
+        api.getBookerFriendRequests(user.token),
       ]);
       if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
       if (requestsRes?.success && requestsRes.requests) setRequests(requestsRes.requests);
       if (invitesRes?.success && invitesRes.invitations) setEventInvites(invitesRes.invitations);
+      if (bookerRequestsRes?.success && bookerRequestsRes.requests) setBookerRequests(bookerRequestsRes.requests);
     } catch (e) {
       showError(e?.message || (language === 'fr' ? 'Erreur chargement' : 'Load error'));
     } finally {
@@ -296,6 +300,10 @@ export default function CommunityFriendsPage() {
           <Text style={[styles.tabText, activeTab === 'eventInvites' && styles.tabTextActive]}>{fr ? 'Événements' : 'Events'}</Text>
           {eventInvites.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{eventInvites.length}</Text></View>}
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'bookerRequests' && styles.tabActive]} onPress={() => setActiveTab('bookerRequests')}>
+          <Text style={[styles.tabText, activeTab === 'bookerRequests' && styles.tabTextActive]}>{fr ? 'Orga' : 'Orga'}</Text>
+          {bookerRequests.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{bookerRequests.length}</Text></View>}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -332,6 +340,61 @@ export default function CommunityFriendsPage() {
                 >
                   {removingFriend === f.id ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="person-remove" size={20} color="#FF1744" />}
                 </TouchableOpacity>
+              </View>
+            ))
+          )
+        ) : activeTab === 'bookerRequests' ? (
+          bookerRequests.length === 0 ? (
+            <Text style={styles.emptyText}>{fr ? 'Aucune demande d\'organisateur.' : 'No organizer requests.'}</Text>
+          ) : (
+            bookerRequests.map((r) => (
+              <View key={r.id} style={styles.requestRow}>
+                <TouchableOpacity
+                  style={styles.requestRowTouch}
+                  onPress={() => r.bookerId && navigate('bookerProfile', { bookerId: r.bookerId })}
+                  activeOpacity={0.7}
+                >
+                  {r.profileImage ? (
+                    <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
+                  ) : (
+                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
+                      <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.requestPseudo}>{r.pseudo} {fr ? '(organisateur)' : '(organizer)'}</Text>
+                </TouchableOpacity>
+                <View style={styles.requestActions}>
+                  <TouchableOpacity
+                    style={[styles.acceptBtn, respondingBookerRequest === r.id && styles.btnDisabled]}
+                    onPress={async () => {
+                      setRespondingBookerRequest(r.id);
+                      try {
+                        const res = await api.respondBookerFriendRequest(user.token, r.id, true);
+                        if (res?.success) { showSuccess(fr ? 'Demande acceptée.' : 'Request accepted.'); fetchData(); }
+                        else showError(res?.message);
+                      } catch (e) { showError(e?.message); }
+                      setRespondingBookerRequest(null);
+                    }}
+                    disabled={respondingBookerRequest === r.id}
+                  >
+                    {respondingBookerRequest === r.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>✓</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.declineBtn, respondingBookerRequest === r.id && styles.btnDisabled]}
+                    onPress={async () => {
+                      setRespondingBookerRequest(r.id);
+                      try {
+                        const res = await api.respondBookerFriendRequest(user.token, r.id, false);
+                        if (res?.success) { showSuccess(fr ? 'Demande refusée.' : 'Request declined.'); fetchData(); }
+                        else showError(res?.message);
+                      } catch (e) { showError(e?.message); }
+                      setRespondingBookerRequest(null);
+                    }}
+                    disabled={respondingBookerRequest === r.id}
+                  >
+                    <Text style={styles.declineBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )

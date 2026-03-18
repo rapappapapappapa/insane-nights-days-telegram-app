@@ -7,6 +7,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 17-19 mars 2026 (mar. - jeu.)
 
 ### Ajouté
+- **Staff & scan de billets** : Les organisateurs peuvent ajouter des profils Communauté comme amis, les assigner comme staff sur des événements (rôle scan QR) et scanner les billets à l'entrée
+  - Backend : modèles `BookerCommunityFriend`, `EventStaff`, champ `Ticket.scannedAt` ; endpoints `GET/POST /api/booker/friends`, `GET /api/community/booker-friend-requests`, `PUT /api/booker/friends/:id/respond`, `GET/POST/DELETE /api/events/:eventId/staff`, `POST /api/events/:eventId/scan-ticket`, `GET /api/community/staff-events`
+  - Scan autorisé uniquement le jour de l'événement (vérification date)
+  - Mobile : BookerFriendsPage (amis organisateur), CommunityFriendsPage onglet « Orga » (demandes reçues), EventStaffPage (liste staff + ajout parmi les amis), ScanTicketPage (caméra QR), StaffEventsPage (événements où je suis staff)
+  - Navigation : boutons « Staff » et « Scanner billets » sur chaque carte d'événement (BookerDashboard) ; entrée menu « Scanner billets » pour profil Communauté (événements staff)
 - **Envoi des contrats signés par email** : Quand un contrat (Organisateur ↔ DJ ou Organisateur ↔ Lieu) est signé par les deux parties, un email récapitulatif est envoyé automatiquement à chacun (événement, montant, acompte, modalités de paiement)
   - Backend : `server/utils/contractEmail.js`, appelé depuis les endpoints accept contrat
 

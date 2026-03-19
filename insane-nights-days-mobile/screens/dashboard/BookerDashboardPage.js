@@ -1270,6 +1270,15 @@ export default function BookerDashboardPage() {
                 <Text style={styles.sectionTitle}>
                   {language === 'fr' ? 'Mon Profil' : 'My Profile'}
                 </Text>
+
+                {/* Bannière infos légales vides */}
+                {!(bookerProfile?.companyName || bookerProfile?.address || bookerProfile?.postalCode || bookerProfile?.city || bookerProfile?.country || bookerProfile?.siret) && (
+                  <View style={styles.legalBanner}>
+                    <Text style={styles.legalBannerText}>
+                      📋 {language === 'fr' ? 'Complétez vos infos légales (société, SIRET, adresse) pour les contrats. Faites défiler vers le bas.' : 'Complete your legal info (company, SIRET, address) for contracts. Scroll down.'}
+                    </Text>
+                  </View>
+                )}
                 
                 {/* Photo de profil */}
                 <View style={styles.profileImageContainer}>
@@ -1337,39 +1346,6 @@ export default function BookerDashboardPage() {
                     keyboardType="phone-pad"
                   />
 
-                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Type d\'organisateur' : 'Organizer Type'}</Text>
-                  <View style={styles.bookerTypeContainer}>
-                    {['INDEPENDENT', 'AGENCY', 'VENUE'].map((type) => (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.bookerTypeButton,
-                          profileForm.bookerType === type && styles.bookerTypeButtonActive,
-                        ]}
-                        onPress={() => setProfileForm((p) => ({ ...p, bookerType: type }))}
-                      >
-                        <Text
-                          style={[
-                            styles.bookerTypeButtonText,
-                            profileForm.bookerType === type && styles.bookerTypeButtonTextActive,
-                          ]}
-                        >
-                          {type === 'INDEPENDENT'
-                            ? language === 'fr'
-                              ? 'Indépendant'
-                              : 'Independent'
-                            : type === 'AGENCY'
-                            ? language === 'fr'
-                              ? 'Agence'
-                              : 'Agency'
-                            : language === 'fr'
-                            ? 'Lieu'
-                            : 'Venue'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
                   {(() => {
                     const legalEditable = !(bookerProfile?.companyName || bookerProfile?.address || bookerProfile?.postalCode || bookerProfile?.city || bookerProfile?.country || bookerProfile?.siret);
                     return (
@@ -1408,6 +1384,39 @@ export default function BookerDashboardPage() {
                       </>
                     );
                   })()}
+
+                  <Text style={styles.inputLabel}>{language === 'fr' ? 'Type d\'organisateur' : 'Organizer Type'}</Text>
+                  <View style={styles.bookerTypeContainer}>
+                    {['INDEPENDENT', 'AGENCY', 'VENUE'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.bookerTypeButton,
+                          profileForm.bookerType === type && styles.bookerTypeButtonActive,
+                        ]}
+                        onPress={() => setProfileForm((p) => ({ ...p, bookerType: type }))}
+                      >
+                        <Text
+                          style={[
+                            styles.bookerTypeButtonText,
+                            profileForm.bookerType === type && styles.bookerTypeButtonTextActive,
+                          ]}
+                        >
+                          {type === 'INDEPENDENT'
+                            ? language === 'fr'
+                              ? 'Indépendant'
+                              : 'Independent'
+                            : type === 'AGENCY'
+                            ? language === 'fr'
+                              ? 'Agence'
+                              : 'Agency'
+                            : language === 'fr'
+                            ? 'Lieu'
+                            : 'Venue'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
                   <TouchableOpacity
                     style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
@@ -3123,6 +3132,19 @@ const styles = StyleSheet.create({
   bookerTypeButtonTextActive: {
     color: '#FF1744',
     fontWeight: '800',
+  },
+  legalBanner: {
+    backgroundColor: 'rgba(255,23,68,0.15)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  legalBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 20,
   },
   legalSectionTitle: {
     marginTop: 20,

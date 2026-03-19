@@ -1269,6 +1269,14 @@ export default function DjDashboardPage() {
               {language === 'fr' ? 'INFORMATIONS D\'ARTISTE' : 'ARTIST INFORMATION'}
         </Text>
 
+            {!(djProfile?.legalName || djProfile?.address || djProfile?.postalCode || djProfile?.country || djProfile?.siret || djProfile?.vatNumber) && (
+              <View style={styles.legalBanner}>
+                <Text style={styles.legalBannerText}>
+                  📋 {language === 'fr' ? 'Complétez vos infos légales (nom civil, SIRET, adresse) pour les contrats. Faites défiler vers le bas.' : 'Complete your legal info (legal name, SIRET, address) for contracts. Scroll down.'}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{language === 'fr' ? 'Nom d\'artiste' : 'Artist Name'}</Text>
               <View style={styles.readOnlyInput}>
@@ -1337,38 +1345,6 @@ export default function DjDashboardPage() {
                   </Text>
                 </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Bio courte' : 'Short Bio'}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={bio}
-                onChangeText={setBio}
-                placeholder={language === 'fr' ? 'Votre biographie...' : 'Your biography...'}
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                multiline
-                numberOfLines={4}
-              />
-                </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Date de naissance' : 'Date of Birth'}</Text>
-              <View style={styles.readOnlyInput}>
-                <Text style={styles.readOnlyText}>{birthDate || '-'}</Text>
-              </View>
-              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Genre musical principal' : 'Main Music Genre'}</Text>
-              <TextInput
-                style={styles.input}
-                value={genre}
-                onChangeText={setGenre}
-                placeholder="Techno"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-              />
-          </View>
-
             {(() => {
               const legalEditable = !(djProfile?.legalName || djProfile?.address || djProfile?.postalCode || djProfile?.country || djProfile?.siret || djProfile?.vatNumber);
               return (
@@ -1403,6 +1379,38 @@ export default function DjDashboardPage() {
                 </View>
               );
             })()}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Bio courte' : 'Short Bio'}</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder={language === 'fr' ? 'Votre biographie...' : 'Your biography...'}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                multiline
+                numberOfLines={4}
+              />
+                </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Date de naissance' : 'Date of Birth'}</Text>
+              <View style={styles.readOnlyInput}>
+                <Text style={styles.readOnlyText}>{birthDate || '-'}</Text>
+              </View>
+              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Genre musical principal' : 'Main Music Genre'}</Text>
+              <TextInput
+                style={styles.input}
+                value={genre}
+                onChangeText={setGenre}
+                placeholder="Techno"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+          </View>
 
             {/* Zones de déplacement */}
             <View style={styles.inputGroup}>
@@ -3454,6 +3462,15 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
+  legalBanner: {
+    backgroundColor: 'rgba(255,23,68,0.15)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  legalBannerText: { color: '#fff', fontSize: 14, lineHeight: 20 },
   legalSectionTitle: { marginTop: 16 },
   legalHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 12 },
   readOnlyLegalWrap: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, marginBottom: 12 },

@@ -122,8 +122,19 @@ export default function VenueProfileEditPage() {
     if (!user?.token || saving) return;
     setSaving(true);
     try {
-      await api.updateVenueProfile(user.token, { venueName, address });
+      const payload = { venueName, address };
+      const legalEditable = !(profile?.companyName || profile?.legalRepresentative || profile?.postalCode || profile?.city || profile?.country || profile?.siret);
+      if (legalEditable) {
+        payload.companyName = companyName?.trim() || null;
+        payload.legalRepresentative = legalRepresentative?.trim() || null;
+        payload.postalCode = postalCode?.trim() || null;
+        payload.city = city?.trim() || null;
+        payload.country = country?.trim() || null;
+        payload.siret = siret?.trim() || null;
+      }
+      await api.updateVenueProfile(user.token, payload);
       showSuccess(language === 'fr' ? 'Profil enregistré' : 'Profile saved');
+      await fetchProfile();
     } catch (e) {
       showError(e?.message || 'Erreur');
     } finally {
@@ -204,6 +215,13 @@ export default function VenueProfileEditPage() {
       </View>
 
       <View style={styles.form}>
+        {!(profile?.companyName || profile?.legalRepresentative || profile?.postalCode || profile?.city || profile?.country || profile?.siret) && (
+          <View style={styles.legalBanner}>
+            <Text style={styles.legalBannerText}>
+              📋 {fr ? 'Complétez vos infos légales (société, SIRET, représentant) pour les contrats.' : 'Complete your legal info (company, SIRET, representative) for contracts.'}
+            </Text>
+          </View>
+        )}
         <Text style={styles.label}>{fr ? 'Nom du lieu' : 'Venue name'}</Text>
         <TextInput
           style={styles.input}
@@ -292,6 +310,15 @@ const styles = StyleSheet.create({
   form: { paddingHorizontal: 20 },
   label: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },
+  legalBanner: {
+    backgroundColor: 'rgba(255,23,68,0.15)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.3)',
+  },
+  legalBannerText: { color: '#fff', fontSize: 14, lineHeight: 20 },
   legalSectionTitle: { marginTop: 20 },
   legalHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 12 },
   readOnlyLegalWrap: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, marginBottom: 16 },

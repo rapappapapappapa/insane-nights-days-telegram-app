@@ -68,6 +68,7 @@ const getUserProfiles = async (req, res) => {
         pseudo: b.pseudo,
         nom: b.nom,
         prenom: b.prenom,
+        phonePro: b.phonePro,
         bookerType: b.bookerType,
         profileImage: b.profileImage,
         companyName: b.companyName,

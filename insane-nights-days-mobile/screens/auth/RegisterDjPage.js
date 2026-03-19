@@ -32,6 +32,12 @@ export default function RegisterDjPage() {
     city: '',
     phone: '',
     dateNaissance: '',
+    legalName: '',
+    address: '',
+    postalCode: '',
+    country: '',
+    siret: '',
+    vatNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -196,6 +202,12 @@ export default function RegisterDjPage() {
         city: formData.city,
         phone: formData.phone,
         birthDate: formData.dateNaissance,
+        legalName: formData.legalName?.trim() || undefined,
+        address: formData.address?.trim() || undefined,
+        postalCode: formData.postalCode?.trim() || undefined,
+        country: formData.country?.trim() || undefined,
+        siret: formData.siret?.trim() || undefined,
+        vatNumber: formData.vatNumber?.trim() || undefined,
       });
 
       if (!response) {
@@ -367,6 +379,63 @@ export default function RegisterDjPage() {
               }
             }}
           />
+
+          <Text style={[styles.label, styles.legalSectionTitle]}>
+            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
+          </Text>
+          <Text style={styles.legalHint}>
+            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
+          </Text>
+          <Text style={styles.label}>{language === 'fr' ? 'Nom légal' : 'Legal name'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Nom civil complet' : 'Full legal name'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.legalName}
+            onChangeText={(value) => handleChange('legalName', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.address}
+            onChangeText={(value) => handleChange('address', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '75001' : '75001'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.postalCode}
+            onChangeText={(value) => handleChange('postalCode', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'France' : 'France'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.country}
+            onChangeText={(value) => handleChange('country', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.siret}
+            onChangeText={(value) => handleChange('siret', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'N° TVA' : 'VAT number'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'FR12345678901' : 'FR12345678901'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.vatNumber}
+            onChangeText={(value) => handleChange('vatNumber', value)}
+          />
         </View>
 
         <TouchableOpacity
@@ -473,6 +542,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '400',
     fontStyle: 'italic',
+  },
+  legalSectionTitle: {
+    marginTop: 20,
+  },
+  legalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginBottom: 12,
   },
 });
 

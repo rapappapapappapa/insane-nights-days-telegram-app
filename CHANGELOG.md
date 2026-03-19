@@ -14,6 +14,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
   - Navigation : boutons « Staff » et « Scanner billets » sur chaque carte d'événement (BookerDashboard) ; entrée menu « Scanner billets » pour profil Communauté (événements staff)
 - **Envoi des contrats signés par email** : Quand un contrat (Organisateur ↔ DJ ou Organisateur ↔ Lieu) est signé par les deux parties, un email récapitulatif est envoyé automatiquement à chacun (événement, montant, acompte, modalités de paiement)
   - Backend : `server/utils/contractEmail.js`, appelé depuis les endpoints accept contrat
+- **Contrats en PDF** : Lorsqu'un contrat est signé par les deux parties, un PDF formaté est généré et joint à l'email envoyé à l'organisateur et au DJ/lieu
+  - Contrat DJ : sections Organisateur (nom, raison sociale, adresse, SIRET), DJ (nom d'artiste, nom civil, adresse, SIRET, TVA), objet (événement, date, lieu), conditions financières, annulation, notes, signatures
+  - Contrat Lieu : sections Organisateur, Lieu (raison sociale, représentant légal, adresse, SIRET), objet, conditions financières, annulation, notes, signatures
+  - Backend : `server/utils/contractPdf.js` (pdfkit), `server/utils/mailer.js` (support pièces jointes)
 
 ### Modifié
 - **Sécurité** :

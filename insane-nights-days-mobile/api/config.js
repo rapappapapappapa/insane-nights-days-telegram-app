@@ -297,46 +297,58 @@ const api = {
   },
 
   // Créer un profil DJ (nécessite un token JWT)
-  createDjProfile: async ({ token, pseudo, artistName, email, city, phone, birthDate }) => {
+  createDjProfile: async ({ token, pseudo, artistName, email, city, phone, birthDate, legalName, address, postalCode, country, siret, vatNumber }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
+    const body = { artistName, city, phone, birthDate };
+    if (legalName != null) body.legalName = legalName;
+    if (address != null) body.address = address;
+    if (postalCode != null) body.postalCode = postalCode;
+    if (country != null) body.country = country;
+    if (siret != null) body.siret = siret;
+    if (vatNumber != null) body.vatNumber = vatNumber;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PROFILE_DJ,
-      {
-        method: 'POST',
-        body: JSON.stringify({ artistName, city, phone, birthDate }),
-      },
+      { method: 'POST', body: JSON.stringify(body) },
       token
     );
   },
 
   // Créer un profil Booker (nécessite un token JWT)
-  createBookerProfile: async ({ token, pseudo, nom, prenom, email, phonePro, bookerType }) => {
+  createBookerProfile: async ({ token, pseudo, nom, prenom, email, phonePro, bookerType, companyName, address, postalCode, city, country, siret }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
+    const body = { nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null };
+    if (companyName != null) body.companyName = companyName;
+    if (address != null) body.address = address;
+    if (postalCode != null) body.postalCode = postalCode;
+    if (city != null) body.city = city;
+    if (country != null) body.country = country;
+    if (siret != null) body.siret = siret;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PROFILE_BOOKER,
-      {
-        method: 'POST',
-        body: JSON.stringify({ nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null }),
-      },
+      { method: 'POST', body: JSON.stringify(body) },
       token
     );
   },
 
   // Créer un profil Venue (nécessite un token JWT)
-  createVenueProfile: async ({ token, pseudo, venueName, email, address }) => {
+  createVenueProfile: async ({ token, pseudo, venueName, email, address, companyName, legalRepresentative, postalCode, city, country, siret }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
+    const body = { venueName, address };
+    if (companyName != null) body.companyName = companyName;
+    if (legalRepresentative != null) body.legalRepresentative = legalRepresentative;
+    if (postalCode != null) body.postalCode = postalCode;
+    if (city != null) body.city = city;
+    if (country != null) body.country = country;
+    if (siret != null) body.siret = siret;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PROFILE_VENUE,
-      {
-        method: 'POST',
-        body: JSON.stringify({ venueName, address }),
-      },
+      { method: 'POST', body: JSON.stringify(body) },
       token
     );
   },
@@ -691,16 +703,20 @@ const api = {
   },
 
   // ✅ AJOUT: Mettre à jour le profil Booker
-  updateBookerProfile: async (token, nom, prenom, phonePro, bookerType, pseudo = null) => {
+  updateBookerProfile: async (token, nom, prenom, phonePro, bookerType, pseudo = null, legalFields = {}) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
+    const body = { nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null };
+    if (legalFields.companyName !== undefined) body.companyName = legalFields.companyName;
+    if (legalFields.address !== undefined) body.address = legalFields.address;
+    if (legalFields.postalCode !== undefined) body.postalCode = legalFields.postalCode;
+    if (legalFields.city !== undefined) body.city = legalFields.city;
+    if (legalFields.country !== undefined) body.country = legalFields.country;
+    if (legalFields.siret !== undefined) body.siret = legalFields.siret;
     return apiRequest(
       API_CONFIG.ENDPOINTS.BOOKER_PROFILE,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ nom, prenom, phonePro, bookerType, pseudo: pseudo?.trim() || null }),
-      },
+      { method: 'PUT', body: JSON.stringify(body) },
       token
     );
   },
@@ -1608,12 +1624,16 @@ const api = {
     if (!token) throw new Error('Token requis.');
     return apiRequest('/api/user/venue/profile', {}, token);
   },
-  updateVenueProfile: async (token, { venueName, address }) => {
+  updateVenueProfile: async (token, { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret }) => {
     if (!token) throw new Error('Token requis.');
-    return apiRequest('/api/user/venue/profile', {
-      method: 'PUT',
-      body: JSON.stringify({ venueName: venueName?.trim() || null, address: address?.trim() || null }),
-    }, token);
+    const body = { venueName: venueName?.trim() || null, address: address?.trim() || null };
+    if (companyName !== undefined) body.companyName = companyName;
+    if (legalRepresentative !== undefined) body.legalRepresentative = legalRepresentative;
+    if (postalCode !== undefined) body.postalCode = postalCode;
+    if (city !== undefined) body.city = city;
+    if (country !== undefined) body.country = country;
+    if (siret !== undefined) body.siret = siret;
+    return apiRequest('/api/user/venue/profile', { method: 'PUT', body: JSON.stringify(body) }, token);
   },
   uploadVenueProfileImage: async (token, imageUri, type = 'profile') => {
     if (!token) throw new Error('Token requis.');

@@ -131,6 +131,12 @@ model UserDj {
   city                   String
   phone                  String
   birthDate              String
+  legalName              String?
+  address                String?
+  postalCode             String?
+  country                String?
+  siret                  String?
+  vatNumber              String?
   bio                    String?
   genre                  String?
   mainCity               String?
@@ -174,6 +180,12 @@ model UserBooker {
   prenom                String
   phonePro              String
   bookerType            String
+  companyName           String?
+  address               String?
+  postalCode            String?
+  city                  String?
+  country               String?
+  siret                 String?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   profileImage          String?
@@ -193,6 +205,12 @@ model UserVenue {
   userId                 String
   venueName              String
   address                String
+  companyName            String?
+  legalRepresentative    String?
+  postalCode             String?
+  city                   String?
+  country                String?
+  siret                  String?
   profileImage           String?
   bannerImage            String?
   averageRatingCommunity Float         @default(0.0)

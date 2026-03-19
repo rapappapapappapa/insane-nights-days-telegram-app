@@ -1,10 +1,12 @@
 /**
  * Envoi des contrats signés par email aux parties (Organisateur ↔ DJ, Organisateur ↔ Lieu)
  * Appelé après qu'un contrat soit passé en statut SIGNED.
+ * Génère un PDF formaté et l'attache à l'email.
  */
 
 const { PrismaClient } = require('@prisma/client');
 const { sendMail, isConfigured } = require('./mailer');
+const { generateDjContractPdf, generateVenueContractPdf } = require('./contractPdf');
 
 const prisma = new PrismaClient();
 
@@ -41,13 +43,13 @@ h1{color:#FF1744;font-size:20px}
   <div class="detail"><span class="label">${isFr ? 'Montant' : 'Amount'}:</span> ${amount != null ? `${amount} ${(currency || 'EUR').toUpperCase()}` : '-'}</div>
   ${depositPercent != null ? `<div class="detail"><span class="label">${isFr ? 'Acompte' : 'Deposit'}:</span> ${depositPercent} %</div>` : ''}
   <div class="detail"><span class="label">${isFr ? 'Modalités de paiement' : 'Payment terms'}:</span> ${termsLabel}</div>
-  <p style="margin-top:24px;font-size:12px;color:#999">${isFr ? 'Conservez cet email comme preuve du contrat.' : 'Keep this email as proof of the contract.'}</p>
+  <p style="margin-top:24px;font-size:12px;color:#999">${isFr ? 'Le contrat signé en PDF est joint à cet email.' : 'The signed contract PDF is attached to this email.'}</p>
 </body>
 </html>`;
 }
 
 /**
- * Envoie le contrat signé (EventDj) par email à l'organisateur et au DJ
+ * Envoie le contrat signé (EventDj) par email à l'organisateur et au DJ, avec PDF joint
  */
 async function sendContractSignedEmailDj(eventDjId) {
   if (!isConfigured()) return;
@@ -66,11 +68,11 @@ async function sendContractSignedEmailDj(eventDjId) {
         : null,
       prisma.user.findUnique({ where: { id: ed.djId }, select: { email: true } }),
     ]);
-    const djProfile = await prisma.userDj.findUnique({ where: { userId: ed.djId }, select: { artistName: true } });
+    const djProfile = await prisma.userDj.findFirst({ where: { userId: ed.djId } });
     const artistName = djProfile?.artistName || 'DJ';
 
     const payload = ed.contractPayload || {};
-    const amount = ed.paymentAmount ?? payload.amount ?? null;
+    const amount = ed.paymentAmount ?? payload.priceEur ?? payload.amount ?? null;
     const currency = (ed.paymentCurrency || payload.currency || 'eur').toUpperCase();
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = payload.paymentTerms ?? null;
@@ -89,10 +91,26 @@ async function sendContractSignedEmailDj(eventDjId) {
       paymentTerms,
     });
 
+    // Générer le PDF du contrat
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await generateDjContractPdf({
+        event: ed.event,
+        booker: ed.event?.booker,
+        dj: djProfile,
+        eventDj: ed,
+        venue: ed.event?.venue,
+      });
+    } catch (pdfErr) {
+      console.error('[contractEmail] Erreur génération PDF DJ:', pdfErr);
+    }
+
     const subject = `[Nox] Contrat signé - ${ed.event?.title || 'Événement'} - ${artistName}`;
     const emails = [...new Set([bookerUser?.email, djUser?.email].filter(Boolean))];
+    const attachments = pdfBuffer ? [{ filename: `Contrat_DJ_${ed.event?.title || 'evenement'}_${artistName}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_'), content: pdfBuffer }] : [];
+
     for (const email of emails) {
-      await sendMail({ to: email, subject, html });
+      await sendMail({ to: email, subject, html, attachments });
     }
   } catch (err) {
     console.error('[contractEmail] Erreur envoi contrat DJ:', err);
@@ -100,7 +118,7 @@ async function sendContractSignedEmailDj(eventDjId) {
 }
 
 /**
- * Envoie le contrat signé (EventVenue) par email à l'organisateur et au lieu
+ * Envoie le contrat signé (EventVenue) par email à l'organisateur et au lieu, avec PDF joint
  */
 async function sendContractSignedEmailVenue(eventVenueId) {
   if (!isConfigured()) return;
@@ -122,7 +140,7 @@ async function sendContractSignedEmailVenue(eventVenueId) {
     const venueName = ev.venue?.venueName || 'Lieu';
 
     const payload = ev.contractPayload || {};
-    const amount = ev.paymentAmount ?? payload.amount ?? null;
+    const amount = ev.paymentAmount ?? payload.priceEur ?? payload.amount ?? null;
     const currency = (ev.paymentCurrency || payload.currency || 'eur').toUpperCase();
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = payload.paymentTerms ?? null;
@@ -141,10 +159,25 @@ async function sendContractSignedEmailVenue(eventVenueId) {
       paymentTerms,
     });
 
+    // Générer le PDF du contrat
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await generateVenueContractPdf({
+        event: ev.event,
+        booker: ev.event?.booker,
+        venue: ev.venue,
+        eventVenue: ev,
+      });
+    } catch (pdfErr) {
+      console.error('[contractEmail] Erreur génération PDF Venue:', pdfErr);
+    }
+
     const subject = `[Nox] Contrat signé - ${ev.event?.title || 'Événement'} - ${venueName}`;
     const emails = [...new Set([bookerUser?.email, venueUser?.email].filter(Boolean))];
+    const attachments = pdfBuffer ? [{ filename: `Contrat_Lieu_${ev.event?.title || 'evenement'}_${venueName}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_'), content: pdfBuffer }] : [];
+
     for (const email of emails) {
-      await sendMail({ to: email, subject, html });
+      await sendMail({ to: email, subject, html, attachments });
     }
   } catch (err) {
     console.error('[contractEmail] Erreur envoi contrat Venue:', err);

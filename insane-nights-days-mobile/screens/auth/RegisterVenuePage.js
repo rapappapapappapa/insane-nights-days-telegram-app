@@ -29,6 +29,12 @@ export default function RegisterVenuePage() {
     venueName: '',
     email: user?.email || '',
     address: '',
+    companyName: '',
+    legalRepresentative: '',
+    postalCode: '',
+    city: '',
+    country: '',
+    siret: '',
   });
   const [loading, setLoading] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState([]);
@@ -245,6 +251,12 @@ export default function RegisterVenuePage() {
         venueName: formData.venueName,
         email: formData.email,
         address: formData.address,
+        companyName: formData.companyName?.trim() || undefined,
+        legalRepresentative: formData.legalRepresentative?.trim() || undefined,
+        postalCode: formData.postalCode?.trim() || undefined,
+        city: formData.city?.trim() || undefined,
+        country: formData.country?.trim() || undefined,
+        siret: formData.siret?.trim() || undefined,
       });
 
       if (!response) {
@@ -409,6 +421,63 @@ export default function RegisterVenuePage() {
               ))}
             </View>
           )}
+
+          <Text style={[styles.label, styles.legalSectionTitle]}>
+            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
+          </Text>
+          <Text style={styles.legalHint}>
+            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
+          </Text>
+          <Text style={styles.label}>{language === 'fr' ? 'Société / Raison sociale' : 'Company name'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.companyName}
+            onChangeText={(value) => handleChange('companyName', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Représentant légal' : 'Legal representative'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Nom du représentant' : 'Representative name'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.legalRepresentative}
+            onChangeText={(value) => handleChange('legalRepresentative', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '75001' : '75001'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.postalCode}
+            onChangeText={(value) => handleChange('postalCode', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Ville' : 'City'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Paris' : 'Paris'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.city}
+            onChangeText={(value) => handleChange('city', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'France' : 'France'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.country}
+            onChangeText={(value) => handleChange('country', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.siret}
+            onChangeText={(value) => handleChange('siret', value)}
+          />
         </View>
 
         <TouchableOpacity
@@ -539,5 +608,13 @@ const styles = StyleSheet.create({
     color: '#0b0b0e',
     fontSize: 18,
     fontWeight: '800',
+  },
+  legalSectionTitle: {
+    marginTop: 20,
+  },
+  legalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginBottom: 12,
   },
 });

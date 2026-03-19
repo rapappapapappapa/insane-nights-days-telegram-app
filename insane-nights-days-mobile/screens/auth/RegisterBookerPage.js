@@ -32,6 +32,12 @@ export default function RegisterBookerPage() {
     email: user?.email || '',
     phonePro: '',
     bookerType: '',
+    companyName: '',
+    address: '',
+    postalCode: '',
+    city: '',
+    country: '',
+    siret: '',
   });
   const [loading, setLoading] = useState(false);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -120,6 +126,12 @@ export default function RegisterBookerPage() {
         email: formData.email,
         phonePro: formData.phonePro,
         bookerType: formData.bookerType,
+        companyName: formData.companyName?.trim() || undefined,
+        address: formData.address?.trim() || undefined,
+        postalCode: formData.postalCode?.trim() || undefined,
+        city: formData.city?.trim() || undefined,
+        country: formData.country?.trim() || undefined,
+        siret: formData.siret?.trim() || undefined,
       });
 
       if (!response) {
@@ -299,6 +311,63 @@ export default function RegisterBookerPage() {
             </Text>
             <Text style={styles.chevron}>▼</Text>
           </TouchableOpacity>
+
+          <Text style={[styles.label, styles.legalSectionTitle]}>
+            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
+          </Text>
+          <Text style={styles.legalHint}>
+            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
+          </Text>
+          <Text style={styles.label}>{language === 'fr' ? 'Société / Raison sociale' : 'Company name'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.companyName}
+            onChangeText={(value) => handleChange('companyName', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.address}
+            onChangeText={(value) => handleChange('address', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '75001' : '75001'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.postalCode}
+            onChangeText={(value) => handleChange('postalCode', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Ville' : 'City'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Paris' : 'Paris'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.city}
+            onChangeText={(value) => handleChange('city', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'France' : 'France'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={formData.country}
+            onChangeText={(value) => handleChange('country', value)}
+          />
+          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.siret}
+            onChangeText={(value) => handleChange('siret', value)}
+          />
         </View>
 
         <TouchableOpacity
@@ -540,6 +609,14 @@ const styles = StyleSheet.create({
     color: '#FF1744',
     fontSize: 18,
     fontWeight: '700',
+  },
+  legalSectionTitle: {
+    marginTop: 20,
+  },
+  legalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginBottom: 12,
   },
 });
 

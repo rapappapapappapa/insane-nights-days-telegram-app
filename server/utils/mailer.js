@@ -28,17 +28,25 @@ function getProvider() {
 // ============================================================================
 // Envoi via Resend
 // ============================================================================
-async function sendViaResend({ to, subject, text, html }) {
+async function sendViaResend({ to, subject, text, html, attachments }) {
   const { Resend } = require('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
   const from = process.env.RESEND_FROM;
 
-  const { data, error } = await resend.emails.send({
+  const payload = {
     from,
     to: [to],
     subject,
     html: html || text,
-  });
+  };
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+    }));
+  }
+
+  const { data, error } = await resend.emails.send(payload);
 
   if (error) {
     const err = new Error(error.message || 'Resend API error');
@@ -52,7 +60,7 @@ async function sendViaResend({ to, subject, text, html }) {
 // ============================================================================
 // Envoi via SMTP (Nodemailer)
 // ============================================================================
-async function sendViaSmtp({ to, subject, text, html }) {
+async function sendViaSmtp({ to, subject, text, html, attachments }) {
   const port = Number(process.env.SMTP_PORT || 587);
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -65,20 +73,28 @@ async function sendViaSmtp({ to, subject, text, html }) {
   });
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
-  const info = await transporter.sendMail({
+  const mailOptions = {
     from,
     to,
     subject,
     text,
     html,
-  });
+  };
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+    }));
+  }
+
+  const info = await transporter.sendMail(mailOptions);
   return info;
 }
 
 // ============================================================================
 // Fonction principale sendMail
 // ============================================================================
-async function sendMail({ to, subject, text, html }) {
+async function sendMail({ to, subject, text, html, attachments }) {
   if (!to) throw new Error('Missing email recipient');
   if (!subject) throw new Error('Missing email subject');
 
@@ -92,12 +108,12 @@ async function sendMail({ to, subject, text, html }) {
 
   try {
     if (provider === 'resend') {
-      const result = await sendViaResend({ to, subject, text, html });
+      const result = await sendViaResend({ to, subject, text, html, attachments });
       console.log('[mailer] Email envoyé via Resend:', { to: to?.slice(0, 3) + '***', id: result?.id });
       return result;
     }
     if (provider === 'smtp') {
-      const result = await sendViaSmtp({ to, subject, text, html });
+      const result = await sendViaSmtp({ to, subject, text, html, attachments });
       console.log('[mailer] Email envoyé via SMTP:', { to: to?.slice(0, 3) + '***', messageId: result?.messageId });
       return result;
     }

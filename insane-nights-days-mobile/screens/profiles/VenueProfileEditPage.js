@@ -39,6 +39,12 @@ export default function VenueProfileEditPage() {
   const [profile, setProfile] = useState(null);
   const [venueName, setVenueName] = useState('');
   const [address, setAddress] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [legalRepresentative, setLegalRepresentative] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('');
+  const [siret, setSiret] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
 
@@ -55,6 +61,12 @@ export default function VenueProfileEditPage() {
         setProfile(res.profile);
         setVenueName(res.profile.venueName || '');
         setAddress(res.profile.address || '');
+        setCompanyName(res.profile.companyName || '');
+        setLegalRepresentative(res.profile.legalRepresentative || '');
+        setPostalCode(res.profile.postalCode || '');
+        setCity(res.profile.city || '');
+        setCountry(res.profile.country || '');
+        setSiret(res.profile.siret || '');
         setProfileImage(res.profile.profileImage);
         setBannerImage(res.profile.bannerImage);
       } else {
@@ -210,6 +222,34 @@ export default function VenueProfileEditPage() {
           placeholderTextColor="rgba(255,255,255,0.4)"
         />
 
+        <Text style={[styles.label, styles.legalSectionTitle]}>{fr ? 'Infos légales (pour les contrats)' : 'Legal info (for contracts)'}</Text>
+        {!(profile?.companyName || profile?.legalRepresentative || profile?.postalCode || profile?.city || profile?.country || profile?.siret) ? (
+          <>
+            <Text style={styles.legalHint}>{fr ? 'Complétez une seule fois. Ces champs ne pourront plus être modifiés après enregistrement.' : 'Fill once. These fields cannot be edited after saving.'}</Text>
+            <Text style={styles.label}>{fr ? 'Société' : 'Company'}</Text>
+            <TextInput style={styles.input} value={companyName} onChangeText={setCompanyName} placeholder={fr ? 'Raison sociale' : 'Company name'} placeholderTextColor="rgba(255,255,255,0.4)" />
+            <Text style={styles.label}>{fr ? 'Représentant légal' : 'Legal representative'}</Text>
+            <TextInput style={styles.input} value={legalRepresentative} onChangeText={setLegalRepresentative} placeholder={fr ? 'Nom du représentant' : 'Representative name'} placeholderTextColor="rgba(255,255,255,0.4)" />
+            <Text style={styles.label}>{fr ? 'Code postal' : 'Postal code'}</Text>
+            <TextInput style={styles.input} value={postalCode} onChangeText={setPostalCode} placeholder="75001" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+            <Text style={styles.label}>{fr ? 'Ville' : 'City'}</Text>
+            <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Paris" placeholderTextColor="rgba(255,255,255,0.4)" />
+            <Text style={styles.label}>{fr ? 'Pays' : 'Country'}</Text>
+            <TextInput style={styles.input} value={country} onChangeText={setCountry} placeholder="France" placeholderTextColor="rgba(255,255,255,0.4)" />
+            <Text style={styles.label}>SIRET</Text>
+            <TextInput style={styles.input} value={siret} onChangeText={setSiret} placeholder="123 456 789 00012" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+          </>
+        ) : (
+          <View style={styles.readOnlyLegalWrap}>
+            {companyName ? <Text style={styles.readOnlyLegalText}>{fr ? 'Société' : 'Company'}: {companyName}</Text> : null}
+            {legalRepresentative ? <Text style={styles.readOnlyLegalText}>{fr ? 'Représentant' : 'Representative'}: {legalRepresentative}</Text> : null}
+            {(postalCode || city) ? <Text style={styles.readOnlyLegalText}>{postalCode} {city}</Text> : null}
+            {country ? <Text style={styles.readOnlyLegalText}>{fr ? 'Pays' : 'Country'}: {country}</Text> : null}
+            {siret ? <Text style={styles.readOnlyLegalText}>SIRET: {siret}</Text> : null}
+            <Text style={styles.readOnlyLegalHint}>{fr ? 'Ces informations ne peuvent plus être modifiées.' : 'These details cannot be modified.'}</Text>
+          </View>
+        )}
+
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
           {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{fr ? 'Enregistrer' : 'Save'}</Text>}
         </TouchableOpacity>
@@ -252,6 +292,11 @@ const styles = StyleSheet.create({
   form: { paddingHorizontal: 20 },
   label: { color: '#fff', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },
+  legalSectionTitle: { marginTop: 20 },
+  legalHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 12 },
+  readOnlyLegalWrap: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, marginBottom: 16 },
+  readOnlyLegalText: { color: '#fff', fontSize: 14, marginBottom: 4 },
+  readOnlyLegalHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 8, fontStyle: 'italic' },
   saveBtn: { backgroundColor: '#FF1744', padding: 16, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

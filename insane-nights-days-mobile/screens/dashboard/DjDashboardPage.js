@@ -89,6 +89,14 @@ export default function DjDashboardPage() {
   // Matériel
   const [equipment, setEquipment] = useState('');
   
+  // Infos légales (contrats)
+  const [legalName, setLegalName] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [country, setCountry] = useState('');
+  const [siret, setSiret] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
+  
   // Tarifs retirés: prix fixé via contrat Booker ↔ DJ
   
   // Disponibilités
@@ -504,6 +512,13 @@ export default function DjDashboardPage() {
         setTiktokUrl(response.dj.tiktokUrl || '');
         // Matériel
         setEquipment(response.dj.equipment || '');
+        // Infos légales
+        setLegalName(response.dj.legalName || '');
+        setAddress(response.dj.address || '');
+        setPostalCode(response.dj.postalCode || '');
+        setCountry(response.dj.country || '');
+        setSiret(response.dj.siret || '');
+        setVatNumber(response.dj.vatNumber || '');
         // Disponibilités
         if (response.dj.availableDays) {
           try {
@@ -570,6 +585,15 @@ export default function DjDashboardPage() {
         availableDays: JSON.stringify(availableDays),
         availableStatus: availableStatus,
       };
+      const legalEditable = !(djProfile?.legalName || djProfile?.address || djProfile?.postalCode || djProfile?.country || djProfile?.siret || djProfile?.vatNumber);
+      if (legalEditable) {
+        additionalData.legalName = legalName?.trim() || null;
+        additionalData.address = address?.trim() || null;
+        additionalData.postalCode = postalCode?.trim() || null;
+        additionalData.country = country?.trim() || null;
+        additionalData.siret = siret?.trim() || null;
+        additionalData.vatNumber = vatNumber?.trim() || null;
+      }
 
       console.log('[handleSave] Données à envoyer:', {
         bio: additionalData.bio?.substring(0, 50),
@@ -1344,6 +1368,41 @@ export default function DjDashboardPage() {
                 placeholderTextColor="rgba(255,255,255,0.4)"
               />
           </View>
+
+            {(() => {
+              const legalEditable = !(djProfile?.legalName || djProfile?.address || djProfile?.postalCode || djProfile?.country || djProfile?.siret || djProfile?.vatNumber);
+              return (
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, styles.legalSectionTitle]}>{language === 'fr' ? 'Infos légales (pour les contrats)' : 'Legal info (for contracts)'}</Text>
+                  {legalEditable ? (
+                    <>
+                      <Text style={styles.legalHint}>{language === 'fr' ? 'Complétez une seule fois. Ces champs ne pourront plus être modifiés après enregistrement.' : 'Fill once. These fields cannot be edited after saving.'}</Text>
+                      <Text style={styles.label}>{language === 'fr' ? 'Nom légal' : 'Legal name'}</Text>
+                      <TextInput style={styles.input} value={legalName} onChangeText={setLegalName} placeholder={language === 'fr' ? 'Nom civil complet' : 'Full legal name'} placeholderTextColor="rgba(255,255,255,0.4)" />
+                      <Text style={styles.label}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
+                      <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'} placeholderTextColor="rgba(255,255,255,0.4)" />
+                      <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
+                      <TextInput style={styles.input} value={postalCode} onChangeText={setPostalCode} placeholder="75001" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+                      <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+                      <TextInput style={styles.input} value={country} onChangeText={setCountry} placeholder="France" placeholderTextColor="rgba(255,255,255,0.4)" />
+                      <Text style={styles.label}>SIRET</Text>
+                      <TextInput style={styles.input} value={siret} onChangeText={setSiret} placeholder="123 456 789 00012" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+                      <Text style={styles.label}>{language === 'fr' ? 'N° TVA' : 'VAT number'}</Text>
+                      <TextInput style={styles.input} value={vatNumber} onChangeText={setVatNumber} placeholder="FR12345678901" placeholderTextColor="rgba(255,255,255,0.4)" />
+                    </>
+                  ) : (
+                    <View style={styles.readOnlyLegalWrap}>
+                      {legalName ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'Nom légal' : 'Legal name'}: {legalName}</Text> : null}
+                      {address ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'Adresse' : 'Address'}: {address}</Text> : null}
+                      {(postalCode || country) ? <Text style={styles.readOnlyLegalText}>{postalCode} {country}</Text> : null}
+                      {siret ? <Text style={styles.readOnlyLegalText}>SIRET: {siret}</Text> : null}
+                      {vatNumber ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'N° TVA' : 'VAT'}: {vatNumber}</Text> : null}
+                      <Text style={styles.readOnlyLegalHint}>{language === 'fr' ? 'Ces informations ne peuvent plus être modifiées.' : 'These details cannot be modified.'}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
 
             {/* Zones de déplacement */}
             <View style={styles.inputGroup}>
@@ -3395,6 +3454,11 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
+  legalSectionTitle: { marginTop: 16 },
+  legalHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 12 },
+  readOnlyLegalWrap: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, marginBottom: 12 },
+  readOnlyLegalText: { color: '#fff', fontSize: 14, marginBottom: 4 },
+  readOnlyLegalHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 8, fontStyle: 'italic' },
   saveButton: {
     backgroundColor: Colors.primary,
     borderRadius: 12,

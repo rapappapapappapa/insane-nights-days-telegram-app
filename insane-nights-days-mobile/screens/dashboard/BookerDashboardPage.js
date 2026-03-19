@@ -70,6 +70,12 @@ export default function BookerDashboardPage() {
     prenom: '',
     phonePro: '',
     bookerType: 'INDEPENDENT',
+    companyName: '',
+    address: '',
+    postalCode: '',
+    city: '',
+    country: '',
+    siret: '',
   });
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
@@ -439,6 +445,12 @@ export default function BookerDashboardPage() {
           prenom: response.profile.prenom || '',
           phonePro: response.profile.phonePro || '',
           bookerType: response.profile.bookerType || 'INDEPENDENT',
+          companyName: response.profile.companyName || '',
+          address: response.profile.address || '',
+          postalCode: response.profile.postalCode || '',
+          city: response.profile.city || '',
+          country: response.profile.country || '',
+          siret: response.profile.siret || '',
         });
         setProfileImage(response.profile.profileImage || null);
       }
@@ -459,13 +471,24 @@ export default function BookerDashboardPage() {
     }
     setSavingProfile(true);
     try {
+      const legalFields = {};
+      const legalEditable = !(bookerProfile?.companyName || bookerProfile?.address || bookerProfile?.postalCode || bookerProfile?.city || bookerProfile?.country || bookerProfile?.siret);
+      if (legalEditable) {
+        legalFields.companyName = profileForm.companyName?.trim() || null;
+        legalFields.address = profileForm.address?.trim() || null;
+        legalFields.postalCode = profileForm.postalCode?.trim() || null;
+        legalFields.city = profileForm.city?.trim() || null;
+        legalFields.country = profileForm.country?.trim() || null;
+        legalFields.siret = profileForm.siret?.trim() || null;
+      }
       const response = await api.updateBookerProfile(
         user.token,
         profileForm.nom,
         profileForm.prenom,
         profileForm.phonePro,
         profileForm.bookerType,
-        profileForm.pseudo || null
+        profileForm.pseudo || null,
+        legalFields
       );
       if (response?.success) {
         showSuccess(language === 'fr' ? 'Profil mis à jour avec succès.' : 'Profile updated successfully.');
@@ -1346,6 +1369,45 @@ export default function BookerDashboardPage() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  {(() => {
+                    const legalEditable = !(bookerProfile?.companyName || bookerProfile?.address || bookerProfile?.postalCode || bookerProfile?.city || bookerProfile?.country || bookerProfile?.siret);
+                    return (
+                      <>
+                        <Text style={[styles.inputLabel, styles.legalSectionTitle]}>
+                          {language === 'fr' ? 'Infos légales (pour les contrats)' : 'Legal info (for contracts)'}
+                        </Text>
+                        {legalEditable ? (
+                          <>
+                            <Text style={styles.legalHint}>
+                              {language === 'fr' ? 'Complétez une seule fois. Ces champs ne pourront plus être modifiés après enregistrement.' : 'Fill once. These fields cannot be edited after saving.'}
+                            </Text>
+                            <Text style={styles.inputLabel}>{language === 'fr' ? 'Société' : 'Company'}</Text>
+                            <TextInput style={styles.input} value={profileForm.companyName} onChangeText={(v) => setProfileForm((p) => ({ ...p, companyName: v }))} placeholder={language === 'fr' ? 'Raison sociale' : 'Company name'} placeholderTextColor="rgba(255,255,255,0.4)" />
+                            <Text style={styles.inputLabel}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
+                            <TextInput style={styles.input} value={profileForm.address} onChangeText={(v) => setProfileForm((p) => ({ ...p, address: v }))} placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'} placeholderTextColor="rgba(255,255,255,0.4)" />
+                            <Text style={styles.inputLabel}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
+                            <TextInput style={styles.input} value={profileForm.postalCode} onChangeText={(v) => setProfileForm((p) => ({ ...p, postalCode: v }))} placeholder="75001" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+                            <Text style={styles.inputLabel}>{language === 'fr' ? 'Ville' : 'City'}</Text>
+                            <TextInput style={styles.input} value={profileForm.city} onChangeText={(v) => setProfileForm((p) => ({ ...p, city: v }))} placeholder="Paris" placeholderTextColor="rgba(255,255,255,0.4)" />
+                            <Text style={styles.inputLabel}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+                            <TextInput style={styles.input} value={profileForm.country} onChangeText={(v) => setProfileForm((p) => ({ ...p, country: v }))} placeholder="France" placeholderTextColor="rgba(255,255,255,0.4)" />
+                            <Text style={styles.inputLabel}>SIRET</Text>
+                            <TextInput style={styles.input} value={profileForm.siret} onChangeText={(v) => setProfileForm((p) => ({ ...p, siret: v }))} placeholder="123 456 789 00012" placeholderTextColor="rgba(255,255,255,0.4)" keyboardType="numeric" />
+                          </>
+                        ) : (
+                          <View style={styles.readOnlyLegalWrap}>
+                            {profileForm.companyName ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'Société' : 'Company'}: {profileForm.companyName}</Text> : null}
+                            {profileForm.address ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'Adresse' : 'Address'}: {profileForm.address}</Text> : null}
+                            {(profileForm.postalCode || profileForm.city) ? <Text style={styles.readOnlyLegalText}>{profileForm.postalCode} {profileForm.city}</Text> : null}
+                            {profileForm.country ? <Text style={styles.readOnlyLegalText}>{language === 'fr' ? 'Pays' : 'Country'}: {profileForm.country}</Text> : null}
+                            {profileForm.siret ? <Text style={styles.readOnlyLegalText}>SIRET: {profileForm.siret}</Text> : null}
+                            <Text style={styles.readOnlyLegalHint}>{language === 'fr' ? 'Ces informations ne peuvent plus être modifiées.' : 'These details cannot be modified.'}</Text>
+                          </View>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   <TouchableOpacity
                     style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
@@ -3061,6 +3123,31 @@ const styles = StyleSheet.create({
   bookerTypeButtonTextActive: {
     color: '#FF1744',
     fontWeight: '800',
+  },
+  legalSectionTitle: {
+    marginTop: 20,
+  },
+  legalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  readOnlyLegalWrap: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  readOnlyLegalText: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  readOnlyLegalHint: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   saveButton: {
     backgroundColor: '#FF1744',

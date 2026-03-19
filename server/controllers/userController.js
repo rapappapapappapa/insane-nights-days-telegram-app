@@ -55,6 +55,12 @@ const getUserProfiles = async (req, res) => {
         artistName: d.artistName,
         city: d.city,
         profileImage: d.profileImage,
+        legalName: d.legalName,
+        address: d.address,
+        postalCode: d.postalCode,
+        country: d.country,
+        siret: d.siret,
+        vatNumber: d.vatNumber,
       })),
       booker: user.bookers.map((b) => ({
         id: b.id,
@@ -64,6 +70,12 @@ const getUserProfiles = async (req, res) => {
         prenom: b.prenom,
         bookerType: b.bookerType,
         profileImage: b.profileImage,
+        companyName: b.companyName,
+        address: b.address,
+        postalCode: b.postalCode,
+        city: b.city,
+        country: b.country,
+        siret: b.siret,
       })),
       venue: user.venues.map((v) => ({
         id: v.id,
@@ -72,6 +84,12 @@ const getUserProfiles = async (req, res) => {
         address: v.address,
         profileImage: v.profileImage,
         bannerImage: v.bannerImage,
+        companyName: v.companyName,
+        legalRepresentative: v.legalRepresentative,
+        postalCode: v.postalCode,
+        city: v.city,
+        country: v.country,
+        siret: v.siret,
       })),
     };
 
@@ -603,6 +621,13 @@ const getCurrentDjProfile = async (req, res) => {
         instagramUrl: djProfile.instagramUrl,
         tiktokUrl: djProfile.tiktokUrl,
         equipment: djProfile.equipment,
+        // Infos légales (contrats)
+        legalName: djProfile.legalName,
+        address: djProfile.address,
+        postalCode: djProfile.postalCode,
+        country: djProfile.country,
+        siret: djProfile.siret,
+        vatNumber: djProfile.vatNumber,
         // Ratings
         averageRatingGlobal: djProfile.averageRatingGlobal,
         totalRatingsGlobal: djProfile.totalRatingsCommunity + djProfile.totalRatingsBooker + djProfile.totalRatingsVenue,
@@ -695,6 +720,20 @@ const updateDjProfile = async (req, res) => {
     
     // Matériel
     updateData.equipment = (req.body.equipment && typeof req.body.equipment === 'string' && req.body.equipment.trim()) ? req.body.equipment.trim() : null;
+
+    // Infos légales (contrats) : modifiables une seule fois, uniquement quand vides
+    const djLegalFields = ['legalName', 'address', 'postalCode', 'country', 'siret', 'vatNumber'];
+    const djLegalKeys = ['legalName', 'address', 'postalCode', 'country', 'siret', 'vatNumber'];
+    for (let i = 0; i < djLegalFields.length; i++) {
+      const field = djLegalFields[i];
+      const key = djLegalKeys[i];
+      const incoming = req.body[key];
+      const current = djProfile[field];
+      const isEmpty = current == null || String(current).trim() === '';
+      if (incoming !== undefined && isEmpty) {
+        updateData[field] = incoming != null && String(incoming).trim() ? String(incoming).trim() : null;
+      }
+    }
     
     dlog('[updateDjProfile] updateData final (TOUS les champs):', JSON.stringify(updateData, null, 2));
     
@@ -1120,6 +1159,12 @@ const getVenueProfile = async (req, res) => {
         address: venue.address,
         profileImage: venue.profileImage,
         bannerImage: venue.bannerImage,
+        companyName: venue.companyName,
+        legalRepresentative: venue.legalRepresentative,
+        postalCode: venue.postalCode,
+        city: venue.city,
+        country: venue.country,
+        siret: venue.siret,
       },
     });
   } catch (error) {
@@ -1133,7 +1178,7 @@ const getVenueProfile = async (req, res) => {
 const updateVenueProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { venueName, address } = req.body ?? {};
+    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret } = req.body ?? {};
     const venue = await prisma.userVenue.findFirst({
       where: { userId },
     });
@@ -1143,9 +1188,21 @@ const updateVenueProfile = async (req, res) => {
     const updateData = {};
     if (venueName !== undefined && String(venueName).trim()) updateData.venueName = String(venueName).trim();
     if (address !== undefined && String(address).trim()) updateData.address = String(address).trim();
+    // Infos légales : modifiables une seule fois, uniquement quand vides
+    const venueLegalFields = ['companyName', 'legalRepresentative', 'postalCode', 'city', 'country', 'siret'];
+    const venueLegalValues = { companyName, legalRepresentative, postalCode, city, country, siret };
+    for (const field of venueLegalFields) {
+      const incoming = venueLegalValues[field];
+      const current = venue[field];
+      const isEmpty = current == null || String(current).trim() === '';
+      if (incoming !== undefined && isEmpty) {
+        updateData[field] = incoming != null && String(incoming).trim() ? String(incoming).trim() : null;
+      }
+    }
+    const filtered = Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined));
     const updated = await prisma.userVenue.update({
       where: { id: venue.id },
-      data: updateData,
+      data: filtered,
     });
     return sendSuccess(res, {
       profile: {
@@ -1154,6 +1211,12 @@ const updateVenueProfile = async (req, res) => {
         address: updated.address,
         profileImage: updated.profileImage,
         bannerImage: updated.bannerImage,
+        companyName: updated.companyName,
+        legalRepresentative: updated.legalRepresentative,
+        postalCode: updated.postalCode,
+        city: updated.city,
+        country: updated.country,
+        siret: updated.siret,
       },
     });
   } catch (error) {

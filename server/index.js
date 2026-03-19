@@ -1273,15 +1273,23 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    // Créer le profil DJ (plusieurs profils possibles maintenant)
+    const djData = {
+      userId,
+      artistName: artistName.trim(),
+      city: city.trim(),
+      phone: phone.trim(),
+      birthDate: birthDate.trim(),
+    };
+    const { legalName, address, postalCode, country, siret, vatNumber } = req.body ?? {};
+    if (legalName != null) djData.legalName = String(legalName).trim() || null;
+    if (address != null) djData.address = String(address).trim() || null;
+    if (postalCode != null) djData.postalCode = String(postalCode).trim() || null;
+    if (country != null) djData.country = String(country).trim() || null;
+    if (siret != null) djData.siret = String(siret).trim() || null;
+    if (vatNumber != null) djData.vatNumber = String(vatNumber).trim() || null;
+
     const djProfile = await prisma.userDj.create({
-      data: {
-        userId,
-        artistName: artistName.trim(),
-        city: city.trim(),
-        phone: phone.trim(),
-        birthDate: birthDate.trim(),
-      },
+      data: djData,
     });
 
     // Mettre à jour le profil actif si aucun n'est actif
@@ -1316,7 +1324,7 @@ app.post('/api/profile/dj', authenticateToken, async (req, res) => {
 // Endpoint pour créer un profil Booker
 app.post('/api/profile/booker', authenticateToken, async (req, res) => {
   try {
-    const { nom, prenom, phonePro, bookerType, pseudo } = req.body ?? {};
+    const { nom, prenom, phonePro, bookerType, pseudo, companyName, address, postalCode, city, country, siret } = req.body ?? {};
     const userId = req.user.id;
 
     if (!nom || !prenom || !phonePro || !bookerType) {
@@ -1334,16 +1342,23 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    // Créer le profil Booker (plusieurs profils possibles maintenant)
+    const bookerData = {
+      userId,
+      nom: nom.trim(),
+      prenom: prenom.trim(),
+      phonePro: phonePro.trim(),
+      bookerType: bookerType.trim(),
+      pseudo: pseudo && String(pseudo).trim() ? String(pseudo).trim() : null,
+    };
+    if (companyName != null) bookerData.companyName = String(companyName).trim() || null;
+    if (address != null) bookerData.address = String(address).trim() || null;
+    if (postalCode != null) bookerData.postalCode = String(postalCode).trim() || null;
+    if (city != null) bookerData.city = String(city).trim() || null;
+    if (country != null) bookerData.country = String(country).trim() || null;
+    if (siret != null) bookerData.siret = String(siret).trim() || null;
+
     const bookerProfile = await prisma.userBooker.create({
-      data: {
-        userId,
-        nom: nom.trim(),
-        prenom: prenom.trim(),
-        phonePro: phonePro.trim(),
-        bookerType: bookerType.trim(),
-        pseudo: pseudo && String(pseudo).trim() ? String(pseudo).trim() : null,
-      },
+      data: bookerData,
     });
 
     // Mettre à jour le profil actif - forcer BOOKER après création
@@ -1384,7 +1399,7 @@ app.post('/api/profile/booker', authenticateToken, async (req, res) => {
 app.put('/api/booker/profile', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nom, prenom, phonePro, bookerType, pseudo } = req.body;
+    const { nom, prenom, phonePro, bookerType, pseudo, companyName, address, postalCode, city, country, siret } = req.body;
 
     // Validation
     if (!nom || !prenom || !phonePro || !bookerType) {
@@ -1394,7 +1409,6 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    // Récupérer le profil booker de l'utilisateur
     const bookerProfile = await prisma.userBooker.findFirst({
       where: { userId },
     });
@@ -1406,20 +1420,30 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
       });
     }
 
-    // Mettre à jour le profil (pseudo optionnel, affiché sur le feed)
     const updateData = {
       nom: nom.trim(),
       prenom: prenom.trim(),
       phonePro: phonePro.trim(),
       bookerType: bookerType.trim(),
     };
-    if (pseudo !== undefined) {
-      updateData.pseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+    if (pseudo !== undefined) updateData.pseudo = pseudo && String(pseudo).trim() ? String(pseudo).trim() : null;
+    // Infos légales : modifiables une seule fois, uniquement quand elles sont vides
+    const legalFields = ['companyName', 'address', 'postalCode', 'city', 'country', 'siret'];
+    const legalValues = { companyName, address, postalCode, city, country, siret };
+    for (const field of legalFields) {
+      const incoming = legalValues[field];
+      const current = bookerProfile[field];
+      const isEmpty = current == null || String(current).trim() === '';
+      if (incoming !== undefined && isEmpty) {
+        updateData[field] = incoming != null && String(incoming).trim() ? String(incoming).trim() : null;
+      }
     }
+
+    const filteredUpdate = Object.fromEntries(Object.entries(updateData).filter(([, v]) => v !== undefined));
 
     const updatedBooker = await prisma.userBooker.update({
       where: { id: bookerProfile.id },
-      data: updateData,
+      data: filteredUpdate,
     });
 
     res.json({
@@ -1433,6 +1457,12 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
         bookerType: updatedBooker.bookerType,
         pseudo: updatedBooker.pseudo,
         profileImage: updatedBooker.profileImage,
+        companyName: updatedBooker.companyName,
+        address: updatedBooker.address,
+        postalCode: updatedBooker.postalCode,
+        city: updatedBooker.city,
+        country: updatedBooker.country,
+        siret: updatedBooker.siret,
       },
     });
   } catch (error) {
@@ -1554,7 +1584,7 @@ app.post(
 // Endpoint pour créer un profil Venue (Lieu)
 app.post('/api/profile/venue', authenticateToken, async (req, res) => {
   try {
-    const { venueName, address } = req.body ?? {};
+    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret } = req.body ?? {};
     const userId = req.user.id;
 
     if (!venueName || !address) {
@@ -1572,13 +1602,20 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
-    // Créer le profil Venue (plusieurs profils possibles maintenant)
+    const venueData = {
+      userId,
+      venueName: venueName.trim(),
+      address: address.trim(),
+    };
+    if (companyName != null) venueData.companyName = String(companyName).trim() || null;
+    if (legalRepresentative != null) venueData.legalRepresentative = String(legalRepresentative).trim() || null;
+    if (postalCode != null) venueData.postalCode = String(postalCode).trim() || null;
+    if (city != null) venueData.city = String(city).trim() || null;
+    if (country != null) venueData.country = String(country).trim() || null;
+    if (siret != null) venueData.siret = String(siret).trim() || null;
+
     const venueProfile = await prisma.userVenue.create({
-      data: {
-        userId,
-        venueName: venueName.trim(),
-        address: address.trim(),
-      },
+      data: venueData,
     });
 
     // Mettre à jour le profil actif si aucun n'est actif

@@ -34,6 +34,11 @@ const {
   uploadToR2,
   deleteFromR2,
 } = require('./utils/mediaStorage');
+const { JWT_SECRET } = require('./utils/jwtConfig');
+const { parseTicketQuantity } = require('./utils/validation');
+
+/** Longueur max des messages de chat (anti-abus) */
+const MAX_CHAT_MESSAGE_LENGTH = 5000;
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -83,6 +88,18 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+
+// ✅ Sécurité: Rate limiting strict sur admin bootstrap/seed (5 req/heure par IP)
+const adminBootstrapLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Trop de tentatives. Réessayez plus tard.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/admin/bootstrap', adminBootstrapLimiter);
+app.use('/api/admin/seed-demo', adminBootstrapLimiter);
+
 // Note: Stripe webhooks ont besoin du body brut pour vérifier la signature.
 app.use(express.json({
   limit: '50mb',
@@ -1778,15 +1795,20 @@ app.get('/api/events/:eventId', async (req, res) => {
 
 app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
   try {
-    const { eventId, quantity = 1 } = req.body;
+    const { eventId, quantity: quantityRaw = 1 } = req.body;
     const userId = req.user.id;
 
-    if (!eventId || quantity < 1) {
+    if (!eventId) {
       return res.status(400).json({
         success: false,
-        message: 'eventId et quantity sont requis.',
+        message: 'eventId est requis.',
       });
     }
+    const qtyCheck = parseTicketQuantity(quantityRaw);
+    if (!qtyCheck.valid) {
+      return res.status(400).json({ success: false, message: qtyCheck.message });
+    }
+    const quantity = qtyCheck.quantity;
 
     // Vérifier que l'utilisateur a un profil Community actif
     const user = await prisma.user.findUnique({
@@ -2021,12 +2043,17 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
       return res.status(500).json({ success: false, message: 'STRIPE_PUBLISHABLE_KEY manquante côté serveur.' });
     }
 
-    const { eventId, quantity = 1 } = req.body ?? {};
+    const { eventId, quantity: quantityRaw = 1 } = req.body ?? {};
     const userId = req.user.id;
 
-    if (!eventId || quantity < 1) {
-      return res.status(400).json({ success: false, message: 'eventId et quantity sont requis.' });
+    if (!eventId) {
+      return res.status(400).json({ success: false, message: 'eventId est requis.' });
     }
+    const qtyCheck = parseTicketQuantity(quantityRaw);
+    if (!qtyCheck.valid) {
+      return res.status(400).json({ success: false, message: qtyCheck.message });
+    }
+    const quantity = qtyCheck.quantity;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -4244,6 +4271,13 @@ app.post('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) =>
         message: 'Le contenu du message est requis.',
       });
     }
+    const trimmed = content.trim();
+    if (trimmed.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Le message ne doit pas dépasser ${MAX_CHAT_MESSAGE_LENGTH} caractères.`,
+      });
+    }
 
     // Récupérer l'invitation
     const invitation = await prisma.eventDj.findUnique({
@@ -4282,7 +4316,7 @@ app.post('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) =>
         type: 'PRIVATE',
         eventDjId: eventDjId,
         senderId: userId,
-        content: content.trim(),
+        content: trimmed,
         read: false,
         deleted: false,
       },
@@ -4446,6 +4480,10 @@ app.post('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, asyn
     if (!content || !content.trim()) {
       return res.status(400).json({ success: false, message: 'Le contenu du message est requis.' });
     }
+    const trimmedVenue = content.trim();
+    if (trimmedVenue.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ success: false, message: `Le message ne doit pas dépasser ${MAX_CHAT_MESSAGE_LENGTH} caractères.` });
+    }
 
     const ev = await prisma.eventVenue.findUnique({
       where: { id: eventVenueId },
@@ -4464,7 +4502,7 @@ app.post('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, asyn
         type: 'PRIVATE',
         eventVenueId,
         senderId: userId,
-        content: content.trim(),
+        content: trimmedVenue,
         read: false,
         deleted: false,
       },
@@ -5068,6 +5106,13 @@ app.post('/api/chat/group/:eventId/messages', authenticateToken, async (req, res
         message: 'Le contenu du message est requis.',
       });
     }
+    const trimmedGroup = content.trim();
+    if (trimmedGroup.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Le message ne doit pas dépasser ${MAX_CHAT_MESSAGE_LENGTH} caractères.`,
+      });
+    }
 
     // Récupérer l'événement
     const event = await prisma.event.findUnique({
@@ -5110,7 +5155,7 @@ app.post('/api/chat/group/:eventId/messages', authenticateToken, async (req, res
         eventId: eventId,
         eventDjId: null, // Explicitement null pour les messages de groupe
         senderId: userId,
-        content: content.trim(),
+        content: trimmedGroup,
         read: false,
         deleted: false,
       },
@@ -8601,7 +8646,7 @@ app.get('/api/feed', async (req, res) => {
     const token = authHeader && authHeader.split(' ')[1];
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production');
+        const decoded = jwt.verify(token, JWT_SECRET);
         currentUserId = decoded.userId;
       } catch (e) {
         // Token invalide ou expiré, ignorer

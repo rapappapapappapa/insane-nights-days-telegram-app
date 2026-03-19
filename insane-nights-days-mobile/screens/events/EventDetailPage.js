@@ -100,6 +100,7 @@ export default function EventDetailPage() {
   const [friends, setFriends] = useState([]);
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [inviting, setInviting] = useState(false);
+  const [acceptedCgv, setAcceptedCgv] = useState(false);
 
   // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
   useEffect(() => {
@@ -146,6 +147,10 @@ export default function EventDetailPage() {
   const handleBuyTicket = async () => {
     if (!user?.isAuthenticated) {
       showError(language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.');
+      return;
+    }
+    if (!acceptedCgv) {
+      showError(language === 'fr' ? 'Vous devez accepter les CGV avant d\'acheter.' : 'You must accept the Terms of Sale before purchasing.');
       return;
     }
 
@@ -647,19 +652,41 @@ export default function EventDetailPage() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity
-                style={[styles.buyButton, buyingTicket && styles.buyButtonDisabled]}
-                onPress={handleBuyTicket}
-                disabled={buyingTicket || (user?.isAuthenticated && !hasActiveCommunityProfile())}
-              >
-                {buyingTicket ? (
-                  <ActivityIndicator color="#0b0b0e" />
-                ) : (
-                  <Text style={styles.buyButtonText}>
-                    {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
-                  </Text>
-                )}
-              </TouchableOpacity>
+              <>
+                <View style={styles.cgvRow}>
+                  <TouchableOpacity
+                    style={[styles.cgvCheckbox, acceptedCgv && styles.cgvCheckboxChecked]}
+                    onPress={() => setAcceptedCgv(!acceptedCgv)}
+                    activeOpacity={0.7}
+                  >
+                    {acceptedCgv && <Text style={styles.cgvCheckmark}>✓</Text>}
+                  </TouchableOpacity>
+                  <View style={styles.cgvTextWrap}>
+                    <Text style={styles.cgvText}>
+                      {language === 'fr' ? "J'accepte les " : 'I accept the '}
+                    </Text>
+                    <TouchableOpacity onPress={() => navigate('legal', { type: 'cgv' })}>
+                      <Text style={styles.cgvLink}>{language === 'fr' ? 'CGV' : 'Terms of Sale'}</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.cgvText}>
+                      {language === 'fr' ? ' pour cet achat.' : ' for this purchase.'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.buyButton, (buyingTicket || !acceptedCgv) && styles.buyButtonDisabled]}
+                  onPress={handleBuyTicket}
+                  disabled={buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
+                >
+                  {buyingTicket ? (
+                    <ActivityIndicator color="#0b0b0e" />
+                  ) : (
+                    <Text style={styles.buyButtonText}>
+                      {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
             )
           ) : isEventPast() ? (
             <View style={styles.pastEventSection}>
@@ -907,6 +934,46 @@ const styles = StyleSheet.create({
   },
   djChip: {
     paddingVertical: 2,
+  },
+  cgvRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+    marginTop: 4,
+  },
+  cgvCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,23,68,0.6)',
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cgvCheckboxChecked: {
+    backgroundColor: '#FF1744',
+    borderColor: '#FF1744',
+  },
+  cgvCheckmark: {
+    color: '#0b0b0e',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  cgvTextWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  cgvText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+  },
+  cgvLink: {
+    color: '#FF1744',
+    fontSize: 13,
+    fontWeight: '700',
   },
   buyButton: {
     backgroundColor: '#FF1744',

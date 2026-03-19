@@ -16,10 +16,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
   - Backend : `server/utils/contractEmail.js`, appelé depuis les endpoints accept contrat
 
 ### Modifié
+- **Sécurité** :
+  - JWT_SECRET requis en production (pas de fallback) — `utils/jwtConfig.js`
+  - Quantité tickets : validation entière + plafond 50 par achat — `parseTicketQuantity`
+  - Rate limit admin bootstrap/seed : 5 req/heure par IP
+  - Messages chat : limite 5000 caractères (anti-abus)
 - **Rebrand Insane → Nox dans les emails** : Sujets des emails (contrats, vérification, mot de passe oublié) et `RESEND_FROM` utilisent désormais « Nox »
 - **Affichage DJ** : Correction du bug « [object Object] » sur la ligne DJ (EventCard, EventDetailPage, EventsPage client) — support du format `djs` en objets `{ artistName }`
 
 ### Corrigé
+- **Sécurité** : JWT_SECRET obligatoire en prod, validation quantité tickets, rate limit admin, limite longueur messages chat (voir Modifié)
 - **Config Resend** : `env.example` et `.env` mis à jour pour `noreply@nox.world` (domaine vérifié)
 
 ---

@@ -4,9 +4,9 @@
 
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { JWT_SECRET } = require('../utils/jwtConfig');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production';
 
 /**
  * Middleware pour vérifier le token JWT dans les requêtes

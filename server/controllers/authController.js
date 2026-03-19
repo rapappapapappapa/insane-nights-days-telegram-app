@@ -9,8 +9,7 @@ const { validateRegistration, validateLogin, normalizeEmail, validatePassword, i
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../utils/jwtConfig');
 
 /**
  * Inscription d'un nouvel utilisateur

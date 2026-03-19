@@ -31,7 +31,7 @@ Insane Nights & Days est une plateforme mettant en relation la communauté, les 
 
 ## 3. Inscription et compte
 
-- Vous devez avoir au moins 13 ans pour créer un compte.
+- Vous devez avoir au moins 18 ans pour créer un compte.
 - Vous êtes responsable de la confidentialité de vos identifiants.
 - Vous vous engagez à fournir des informations exactes et à jour.
 
@@ -76,7 +76,7 @@ Insane Nights & Days is a platform connecting the community, DJs, organizers and
 
 ## 3. Registration and account
 
-- You must be at least 13 years old to create an account.
+- You must be at least 18 years old to create an account.
 - You are responsible for keeping your credentials confidential.
 - You agree to provide accurate and up-to-date information.
 
@@ -117,7 +117,7 @@ For any questions: [email to be completed]`,
 
 ## 1. Objet
 
-Les présentes CGV s'appliquent aux achats de tickets d'événements effectués via Insane Nights & Days.
+Les présentes CGV s'appliquent aux achats de tickets d'événements effectués via Insane Nights & Days. En cochant la case d'acceptation avant chaque achat, vous acceptez sans réserve ces CGV.
 
 ## 2. Prix et paiement
 
@@ -145,7 +145,7 @@ Les présentes CGV s'appliquent aux achats de tickets d'événements effectués 
 
 ## 1. Purpose
 
-These Terms of Sale apply to event ticket purchases made through Insane Nights & Days.
+These Terms of Sale apply to event ticket purchases made through Insane Nights & Days. By checking the acceptance box before each purchase, you accept these terms without reservation.
 
 ## 2. Price and payment
 

@@ -98,6 +98,23 @@ const validateLogin = (data) => {
   return { valid: true };
 };
 
+/** Quantité max de tickets par achat (sécurité / anti-abus) */
+const MAX_TICKET_QUANTITY = 50;
+
+/**
+ * Parse et valide la quantité de tickets (entier, 1 à MAX_TICKET_QUANTITY)
+ * @param {*} value - Valeur brute (string, number)
+ * @returns {{ valid: boolean, quantity?: number, message?: string }}
+ */
+const parseTicketQuantity = (value) => {
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 1) {
+    return { valid: false, message: 'La quantité doit être un entier supérieur ou égal à 1.' };
+  }
+  const quantity = Math.min(n, MAX_TICKET_QUANTITY);
+  return { valid: true, quantity };
+};
+
 /** Âge minimum requis (majeur) */
 const MIN_AGE = 18;
 
@@ -153,5 +170,7 @@ module.exports = {
   validateLogin,
   parseBirthDate,
   validateAge,
+  parseTicketQuantity,
   MIN_AGE,
+  MAX_TICKET_QUANTITY,
 };

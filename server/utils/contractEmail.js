@@ -6,7 +6,11 @@
 
 const { PrismaClient } = require('@prisma/client');
 const { sendMail, isConfigured } = require('./mailer');
-const { generateDjContractPdf, generateVenueContractPdf } = require('./contractPdf');
+const {
+  generateDjContractPdf,
+  generateVenueContractPdf,
+  resolveVenueProfileForVenueContract,
+} = require('./contractPdf');
 
 const prisma = new PrismaClient();
 
@@ -100,6 +104,8 @@ async function sendContractSignedEmailDj(eventDjId) {
         dj: djProfile,
         eventDj: ed,
         venue: ed.event?.venue,
+        organizerEmail: bookerUser?.email || null,
+        djEmail: djUser?.email || null,
       });
     } catch (pdfErr) {
       console.error('[contractEmail] Erreur génération PDF DJ:', pdfErr);
@@ -125,19 +131,23 @@ async function sendContractSignedEmailVenue(eventVenueId) {
   try {
     const ev = await prisma.eventVenue.findUnique({
       where: { id: eventVenueId },
-      include: { event: { include: { booker: true } }, venue: true },
+      include: { event: { include: { booker: true, venue: true } }, venue: true },
     });
     if (!ev || ev.contractStatus !== 'SIGNED') return;
+
+    const venueResolved = resolveVenueProfileForVenueContract(ev.event, ev.venue, ev);
 
     const [bookerUser, venueUser] = await Promise.all([
       ev.event?.booker?.userId
         ? prisma.user.findUnique({ where: { id: ev.event.booker.userId }, select: { email: true } })
         : null,
-      ev.venue?.userId
-        ? prisma.user.findUnique({ where: { id: ev.venue.userId }, select: { email: true } })
-        : null,
+      venueResolved?.userId
+        ? prisma.user.findUnique({ where: { id: venueResolved.userId }, select: { email: true } })
+        : ev.venue?.userId
+          ? prisma.user.findUnique({ where: { id: ev.venue.userId }, select: { email: true } })
+          : null,
     ]);
-    const venueName = ev.venue?.venueName || 'Lieu';
+    const venueName = venueResolved?.venueName || ev.venue?.venueName || 'Lieu';
 
     const payload = ev.contractPayload || {};
     const amount = ev.paymentAmount ?? payload.priceEur ?? payload.amount ?? null;
@@ -167,6 +177,8 @@ async function sendContractSignedEmailVenue(eventVenueId) {
         booker: ev.event?.booker,
         venue: ev.venue,
         eventVenue: ev,
+        organizerEmail: bookerUser?.email || null,
+        venueEmail: venueUser?.email || null,
       });
     } catch (pdfErr) {
       console.error('[contractEmail] Erreur génération PDF Venue:', pdfErr);

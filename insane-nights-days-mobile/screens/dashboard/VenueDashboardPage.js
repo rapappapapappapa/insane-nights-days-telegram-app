@@ -29,6 +29,14 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import RejectReasonModal from '../../components/RejectReasonModal';
+import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
+import DealTypePickerModal from '../../components/DealTypePickerModal';
+import {
+  draftFromPayload,
+  buildVenueContractPayload,
+  dealTypeLabel,
+  contractAcceptAckLabel,
+} from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
 
 function cleanText(s) {
@@ -89,14 +97,10 @@ export default function VenueDashboardPage() {
   const [contractData, setContractData] = useState(null);
   const [contractBooking, setContractBooking] = useState(null);
   const [contractEditorVisible, setContractEditorVisible] = useState(false);
-  const [contractDraft, setContractDraft] = useState({
-    priceEur: '',
-    depositPercent: '',
-    paymentTerms: '',
-    cancellation: '',
-    notes: '',
-  });
+  const [contractDraft, setContractDraft] = useState(() => draftFromPayload({}, 'venue'));
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
+  const [showDealTypeModal, setShowDealTypeModal] = useState(false);
+  const [contractAcceptAck, setContractAcceptAck] = useState(false);
 
   const loadVenue = async () => {
     if (!user?.token) return;
@@ -178,6 +182,10 @@ export default function VenueDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, user?.token]);
 
+  useEffect(() => {
+    setContractAcceptAck(false);
+  }, [selectedChatEventVenueId, contractData?.id, contractData?.status, contractData?.sentBy]);
+
   const openVenueChat = async (eventVenueId) => {
     setSelectedChatEventVenueId(eventVenueId);
     setChatModalVisible(true);
@@ -231,13 +239,7 @@ export default function VenueDashboardPage() {
         setContractData(res.contract || null);
         setContractBooking(res.booking || null);
         const p = res.contract?.payload || {};
-        setContractDraft({
-          priceEur: p?.priceEur != null ? String(p.priceEur) : '',
-          depositPercent: p?.depositPercent != null ? String(p.depositPercent) : '',
-          paymentTerms: p?.paymentTerms ? String(p.paymentTerms) : '',
-          cancellation: p?.cancellation ? String(p.cancellation) : '',
-          notes: p?.notes ? String(p.notes) : '',
-        });
+        setContractDraft(draftFromPayload(p, 'venue'));
       }
     } catch (e) {
       console.error('[VenueDashboard] loadVenueContract error:', e);
@@ -249,13 +251,7 @@ export default function VenueDashboardPage() {
   const saveContractDraft = async () => {
     if (!user?.token || !selectedChatEventVenueId) return;
     try {
-      const payload = {
-        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
-        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
-        paymentTerms: contractDraft.paymentTerms?.trim() || null,
-        cancellation: contractDraft.cancellation?.trim() || null,
-        notes: contractDraft.notes?.trim() || null,
-      };
+      const payload = buildVenueContractPayload(contractDraft);
       const res = await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
@@ -305,13 +301,7 @@ export default function VenueDashboardPage() {
   const counterContract = async () => {
     if (!user?.token || !selectedChatEventVenueId) return;
     try {
-      const payload = {
-        priceEur: contractDraft.priceEur ? Number(String(contractDraft.priceEur).replace(',', '.')) : null,
-        depositPercent: contractDraft.depositPercent ? Number(String(contractDraft.depositPercent).replace(',', '.')) : null,
-        paymentTerms: contractDraft.paymentTerms?.trim() || null,
-        cancellation: contractDraft.cancellation?.trim() || null,
-        notes: contractDraft.notes?.trim() || null,
-      };
+      const payload = buildVenueContractPayload(contractDraft);
       const res = await api.counterVenueContract(user.token, selectedChatEventVenueId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
@@ -1079,7 +1069,7 @@ export default function VenueDashboardPage() {
                     ) : (
                       <Text style={styles.contractStatus}>
                         {contractData?.status === 'SIGNED'
-                          ? (language === 'fr' ? 'Signé' : 'Signed')
+                          ? (language === 'fr' ? 'Accepté' : 'Accepted')
                           : contractData?.status === 'SENT'
                             ? (language === 'fr' ? 'Envoyé' : 'Sent')
                             : (language === 'fr' ? 'Brouillon' : 'Draft')}
@@ -1103,6 +1093,33 @@ export default function VenueDashboardPage() {
                       💳 {PAYMENT_TERMS_OPTIONS.find(o => o.value === contractData.payload.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || cleanText(contractData.payload.paymentTerms)}
                     </Text>
                   ) : null}
+                  {contractData?.payload?.dealType ? (
+                    <Text style={styles.contractSmall} numberOfLines={2}>
+                      📋 {dealTypeLabel(contractData.payload.dealType, language)}
+                    </Text>
+                  ) : null}
+                  {contractData?.payload?.eventEnd ? (
+                    <Text style={styles.contractSmall} numberOfLines={1}>
+                      🕐 {language === 'fr' ? 'Fin' : 'End'}: {cleanText(String(contractData.payload.eventEnd))}
+                    </Text>
+                  ) : null}
+                  {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
+                    <View style={styles.contractAckRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.contractAckCheckbox,
+                          contractAcceptAck && styles.contractAckCheckboxChecked,
+                        ]}
+                        onPress={() => setContractAcceptAck(!contractAcceptAck)}
+                        activeOpacity={0.7}
+                      >
+                        {contractAcceptAck ? (
+                          <Text style={styles.contractAckCheckmark}>✓</Text>
+                        ) : null}
+                      </TouchableOpacity>
+                      <Text style={styles.contractAckText}>{contractAcceptAckLabel(language)}</Text>
+                    </View>
+                  ) : null}
                   <View style={styles.contractActionsRow}>
                     {contractData?.status === 'SENT' ? (
                       contractData?.sentBy === 'BOOKER' ? (
@@ -1116,8 +1133,13 @@ export default function VenueDashboardPage() {
                             </Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[styles.contractButton, styles.contractButtonPrimary]}
+                            style={[
+                              styles.contractButton,
+                              styles.contractButtonPrimary,
+                              !contractAcceptAck && { opacity: 0.45 },
+                            ]}
                             onPress={acceptContract}
+                            disabled={!contractAcceptAck}
                           >
                             <Text style={styles.contractButtonTextDark}>
                               {language === 'fr' ? 'Accepter' : 'Accept'}
@@ -1131,7 +1153,7 @@ export default function VenueDashboardPage() {
                       )
                     ) : contractData?.status === 'SIGNED' ? (
                       <Text style={styles.contractHint}>
-                        {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
+                        {language === 'fr' ? '✅ Contrat accepté.' : '✅ Contract accepted.'}
                       </Text>
                     ) : (
                       <Text style={styles.contractHint}>
@@ -1246,54 +1268,15 @@ export default function VenueDashboardPage() {
                 <Text style={styles.contractModalTitle}>
                   {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
                 </Text>
-                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Prix (€)' : 'Price (€)'}</Text>
-                <TextInput
-                  style={styles.contractModalInput}
-                  value={contractDraft.priceEur}
-                  onChangeText={(v) => setContractDraft((p) => ({ ...p, priceEur: v }))}
-                  placeholder="500"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (%)' : 'Deposit (%)'}</Text>
-                <TextInput
-                  style={styles.contractModalInput}
-                  value={contractDraft.depositPercent}
-                  onChangeText={(v) => setContractDraft((p) => ({ ...p, depositPercent: v }))}
-                  placeholder="30"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités' : 'Payment terms'}</Text>
-                <TouchableOpacity
-                  style={[styles.contractModalInput, styles.contractModalDropdown]}
-                  onPress={() => setShowPaymentTermsModal(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.contractModalInputText, !contractDraft.paymentTerms && { color: 'rgba(255,255,255,0.4)' }]}>
-                    {contractDraft.paymentTerms
-                      ? (PAYMENT_TERMS_OPTIONS.find(o => o.value === contractDraft.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || contractDraft.paymentTerms)
-                      : (language === 'fr' ? 'Sélectionner' : 'Select')}
-                  </Text>
-                  <Text style={styles.contractModalChevron}>▼</Text>
-                </TouchableOpacity>
-                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
-                <TextInput
-                  style={[styles.contractModalInput, { height: 60 }]}
-                  value={contractDraft.cancellation}
-                  onChangeText={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
-                  placeholder={language === 'fr' ? 'Ex: J-7: 50% dû' : 'Ex: D-7: 50% due'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  multiline
-                />
-                <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes' : 'Notes'}</Text>
-                <TextInput
-                  style={[styles.contractModalInput, { height: 60 }]}
-                  value={contractDraft.notes}
-                  onChangeText={(v) => setContractDraft((p) => ({ ...p, notes: v }))}
-                  placeholder={language === 'fr' ? 'Ex: arrivée 20h' : 'Ex: arrival 8pm'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  multiline
+                <ContractDraftEditorFields
+                  mode="venue"
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                  setShowPaymentTermsModal={setShowPaymentTermsModal}
+                  setShowDealTypeModal={setShowDealTypeModal}
                 />
                 <View style={styles.contractModalActions}>
                   <TouchableOpacity
@@ -1321,11 +1304,8 @@ export default function VenueDashboardPage() {
           animationType="slide"
           onRequestClose={() => setShowPaymentTermsModal(false)}
         >
-          <TouchableOpacity
-            style={styles.paymentTermsOverlay}
-            activeOpacity={1}
-            onPress={() => setShowPaymentTermsModal(false)}
-          >
+          <View style={styles.paymentTermsOverlay}>
+            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowPaymentTermsModal(false)} />
             <View style={styles.paymentTermsModalContent}>
               <Text style={styles.contractModalTitle}>
                 {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
@@ -1333,20 +1313,33 @@ export default function VenueDashboardPage() {
               {PAYMENT_TERMS_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
-                  style={styles.paymentTermOption}
+                  style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
                   onPress={() => {
                     setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
                     setShowPaymentTermsModal(false);
                   }}
                 >
-                  <Text style={styles.paymentTermOptionText}>
+                  <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
                     {language === 'fr' ? opt.labelFr : opt.labelEn}
                   </Text>
+                  {contractDraft.paymentTerms === opt.value ? <Text style={styles.paymentTermsCheck}>✓</Text> : null}
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity style={styles.paymentTermsClose} onPress={() => setShowPaymentTermsModal(false)}>
+                <Text style={styles.contractButtonText}>{language === 'fr' ? 'Fermer' : 'Close'}</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </Modal>
+
+        <DealTypePickerModal
+          visible={showDealTypeModal}
+          onClose={() => setShowDealTypeModal(false)}
+          value={contractDraft.dealType}
+          onSelect={(v) => setContractDraft((p) => ({ ...p, dealType: v }))}
+          language={language}
+          styles={styles}
+        />
       </Modal>
       
       <RejectReasonModal
@@ -1712,6 +1705,39 @@ const styles = StyleSheet.create({
   contractSmall: { marginTop: 4, color: 'rgba(255,255,255,0.6)', fontSize: 11 },
   contractActionsRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
   contractHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '700' },
+  contractAckRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 10,
+    marginBottom: 4,
+    paddingRight: 4,
+  },
+  contractAckCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,23,68,0.55)',
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contractAckCheckboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  contractAckCheckmark: {
+    color: '#0b0b0e',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  contractAckText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
   contractButton: {
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -1841,4 +1867,17 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   paymentTermOptionText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  paymentTermsOption: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  paymentTermsOptionSelected: { backgroundColor: 'rgba(255,23,68,0.12)' },
+  paymentTermsOptionText: { color: '#fff', fontSize: 15, fontWeight: '600', flex: 1 },
+  paymentTermsOptionTextSelected: { color: '#FF1744' },
+  paymentTermsCheck: { color: '#FF1744', fontSize: 16, fontWeight: '800' },
+  paymentTermsClose: { marginTop: 12, padding: 12, alignItems: 'center' },
 });

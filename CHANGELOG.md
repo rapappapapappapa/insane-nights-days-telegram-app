@@ -4,6 +4,24 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 24-28 mars 2026 (mar. - ven.)
+
+### Ajouté
+- **Infos légales (contrats)** : Champs légaux sur les profils Organisateur (`UserBooker`), Lieu (`UserVenue`) et DJ (`UserDj`) — raison sociale, adresse, SIRET, représentant légal / nom civil selon le type, etc.
+  - Backend : migration Prisma, création et mise à jour des profils ; **édition autorisée une seule fois** tant que les champs légaux sont vides, puis lecture seule
+  - API : `getUserProfiles` expose ces champs ; `phonePro` inclus pour le mapping booker
+- **Inscription** : Section optionnelle « Infos légales (pour les contrats) » sur les formulaires Organisateur, Lieu et DJ
+- **Édition de profil** : Section « Infos légales » sur BookerDashboard, VenueProfileEditPage et DjDashboardPage ; **bannière** lorsque les champs sont encore vides pour inciter à les compléter
+
+### Corrigé
+- **VenueProfileEditPage** : La sauvegarde du profil lieu n’envoyait pas les champs légaux au backend — corrigé dans `handleSave` ; rechargement du profil après enregistrement
+
+### Modifié
+- **PDF des contrats** : Contenu et articles alignés sur les modèles `docs/contract-templates/` (prestation DJ et lieu/organisateur) — commission NOX 10 % sur cachet DJ, articles 1–11 / 1–12, typologie `dealType` pour le contrat lieu (`fixed_rent` par défaut si non renseigné) ; emails des parties injectés dans le PDF ; champs optionnels via `contractPayload` (`eventEnd`, `equipment`, `dealType`, parts, `noxFee`, etc.)
+- **UI contrats (mobile)** : `constants/contractPayload.js` + `ContractDraftEditorFields` / `DealTypePickerModal` — brouillon et contre-propositions enrichis (type d’accord lieu, fin de prestation, matériel, clause financière, partages %, minimum garanti, accord personnalisé, commission NOX optionnelle) ; Booker, Lieu et DJ envoient le JSON complet au backend pour alimenter le PDF
+
+---
+
 ## Semaine du 17-19 mars 2026 (mar. - jeu.)
 
 ### Ajouté

@@ -6765,6 +6765,64 @@ const loadEventDjWithAccess = async (eventDjId, userId) => {
   return { ed, isDj, isBooker };
 };
 
+/**
+ * Contrat DJ : ne peut être finalisé (SIGNED) que si le lieu choisi sur l’événement a accepté
+ * l’invitation et que le contrat organisateur–lieu est finalisé (accepté par les deux parties ; priorité au volet lieu).
+ */
+async function getVenueContractGateForDjEvent(eventId, venueId) {
+  if (!venueId) {
+    return {
+      hasVenueOnEvent: false,
+      venueInvitationStatus: null,
+      venueContractStatus: null,
+      canFinalizeDjContract: true,
+    };
+  }
+  const evRow = await prisma.eventVenue.findFirst({
+    where: { eventId, venueId },
+    select: { status: true, contractStatus: true },
+  });
+  if (!evRow) {
+    return {
+      hasVenueOnEvent: true,
+      venueInvitationStatus: null,
+      venueContractStatus: null,
+      canFinalizeDjContract: false,
+    };
+  }
+  const canFinalizeDjContract =
+    evRow.status === 'ACCEPTED' && evRow.contractStatus === 'SIGNED';
+  return {
+    hasVenueOnEvent: true,
+    venueInvitationStatus: evRow.status,
+    venueContractStatus: evRow.contractStatus,
+    canFinalizeDjContract,
+  };
+}
+
+async function assertVenueContractBeforeDjSign(eventId, venueId) {
+  const gate = await getVenueContractGateForDjEvent(eventId, venueId);
+  if (gate.canFinalizeDjContract) return { ok: true };
+  if (!venueId) return { ok: true };
+  if (!gate.venueInvitationStatus) {
+    return {
+      ok: false,
+      message:
+        'Finalise d’abord le volet lieu sur cet événement (invitation + contrat lieu) avant d’accepter le contrat DJ.',
+    };
+  }
+  if (gate.venueInvitationStatus !== 'ACCEPTED') {
+    return {
+      ok: false,
+      message: 'Le lieu doit avoir accepté l’invitation avant de finaliser le contrat DJ.',
+    };
+  }
+  return {
+    ok: false,
+    message: 'Le contrat avec le lieu doit être accepté par les deux parties avant le contrat DJ.',
+  };
+}
+
 /** Crée un message de notification contrat dans le chat (pour l'autre partie) */
 const createContractNotificationMessage = async (eventDjId, senderId, content) => {
   try {
@@ -6811,6 +6869,9 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
 
     const sentBy = ed.contractSentBy ?? (ed.contractStatus === 'SENT' ? 'BOOKER' : null);
 
+    const venueId = ed.event?.venueId ?? null;
+    const venueContractGate = await getVenueContractGateForDjEvent(ed.eventId, venueId);
+
     return res.json({
       success: true,
       contract: {
@@ -6824,6 +6885,7 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
         djAcceptedAt: ed.djAcceptedAt,
       },
       role: isBooker ? 'BOOKER' : 'DJ',
+      venueContractGate,
       booking: {
         eventDjId: ed.id,
         eventId: ed.eventId,
@@ -7029,6 +7091,16 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
     }
 
     const now = new Date();
+    const nextBookerAt = role === 'BOOKER' ? now : ed.bookerAcceptedAt;
+    const nextDjAt = role === 'DJ' ? now : ed.djAcceptedAt;
+    const willSign = !!nextBookerAt && !!nextDjAt;
+    if (willSign) {
+      const assert = await assertVenueContractBeforeDjSign(ed.eventId, ed.event?.venueId ?? null);
+      if (!assert.ok) {
+        return res.status(400).json({ success: false, message: assert.message });
+      }
+    }
+
     const data = {
       // Compat: si un ancien contrat SENT n'a pas sentBy, on le fixe à BOOKER
       contractSentBy: ed.contractSentBy ?? 'BOOKER',

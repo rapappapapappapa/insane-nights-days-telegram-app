@@ -22,6 +22,23 @@ const NOX_DJ_COMMISSION_RATE = 0.1;
 /** Taux par défaut commission lieu si non renseigné dans le payload */
 const NOX_VENUE_COMMISSION_RATE = 0.1;
 
+/** Clés contractPayload.cancellation → libellés PDF (FR) */
+const CANCELLATION_LABELS_FR = {
+  free_j30: 'Au moins 30 jours avant l’événement : annulation sans frais.',
+  free_j14: 'Au moins 14 jours avant : annulation sans frais.',
+  free_j7: 'Au moins 7 jours avant : annulation sans frais.',
+  fee50_between_j7_j14: 'Entre 7 et 14 jours avant : 50 % du montant dû.',
+  fee50_under_j7: 'Moins de 7 jours avant : 50 % du montant dû.',
+  fee100_under_j7: 'Moins de 7 jours avant : 100 % du montant dû.',
+  fee100_under_j3: 'Moins de 3 jours avant : 100 % du montant dû.',
+};
+
+function resolveCancellation(raw) {
+  if (raw == null || String(raw).trim() === '') return null;
+  const k = String(raw).trim();
+  return CANCELLATION_LABELS_FR[k] || k;
+}
+
 function formatDate(date) {
   if (!date) return '—';
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -113,17 +130,12 @@ async function generateDjContractPdf({
     const amount = amountNum(eventDj, payload);
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = paymentTermsLabel(payload.paymentTerms);
-    const cancellation = payload.cancellation?.trim() || null;
+    const cancellation = resolveCancellation(payload.cancellation);
     const notes = payload.notes?.trim() || null;
     const equipment = payload.equipment?.trim() || null;
     const eventEnd = payload.eventEnd?.trim() || null;
 
-    const feeNox =
-      payload.noxFee != null
-        ? roundMoney(payload.noxFee)
-        : amount != null
-          ? roundMoney(amount * NOX_DJ_COMMISSION_RATE)
-          : null;
+    const feeNox = amount != null ? roundMoney(Number(amount) * NOX_DJ_COMMISSION_RATE) : null;
     const feeTotal =
       amount != null && feeNox != null ? roundMoney(Number(amount) + feeNox) : null;
 
@@ -226,9 +238,7 @@ async function generateDjContractPdf({
     p(doc, 'Conditions d\'annulation :');
     p(doc, cancellation || '—');
     doc.moveDown(0.25);
-    p(doc, 'À défaut de conditions particulières :');
-    p(doc, '● Annulation < 7 jours → 50 % dû');
-    p(doc, '● Annulation < 48 h → 100 % dû');
+    p(doc, 'Force majeure : selon le droit commun et l’accord des parties.');
 
     titleLine(doc, 'Article 7 — Responsabilités', 11);
     p(doc, "L'Organisateur est responsable :");
@@ -332,7 +342,7 @@ async function generateVenueContractPdf({
     const dealType = venueDealType(payload);
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = paymentTermsLabel(payload.paymentTerms);
-    const cancellation = payload.cancellation?.trim() || null;
+    const cancellation = resolveCancellation(payload.cancellation);
     const notes = payload.notes?.trim() || null;
     const eventEnd = payload.eventEnd?.trim() || null;
     const equipmentVenue = payload.equipmentVenue?.trim() || payload.equipment_venue?.trim() || null;
@@ -349,13 +359,8 @@ async function generateVenueContractPdf({
 
     const venueProfile = resolveVenueProfileForVenueContract(event, venue, eventVenue);
 
-    let noxFee =
-      payload.noxFee != null || payload.nox_fee != null
-        ? roundMoney(payload.noxFee ?? payload.nox_fee)
-        : amount != null && dealType === 'fixed_rent'
-          ? roundMoney(amount * NOX_VENUE_COMMISSION_RATE)
-          : null;
-    let totalFee =
+    const noxFee = amount != null ? roundMoney(Number(amount) * NOX_VENUE_COMMISSION_RATE) : null;
+    const totalFee =
       amount != null && noxFee != null ? roundMoney(Number(amount) + noxFee) : noxFee != null ? noxFee : null;
 
     const venueAddr = formatAddr([venueProfile?.address, venueProfile?.postalCode, venueProfile?.city, venueProfile?.country]);
@@ -436,8 +441,6 @@ async function generateVenueContractPdf({
         p(doc, 'Le Lieu conserve l\'intégralité des recettes du bar.');
         p(doc, 'L\'Organisateur conserve les recettes de billetterie.');
       });
-      noxFee = payload.noxFee != null ? roundMoney(payload.noxFee) : noxFee;
-      totalFee = noxFee;
     } else if (dealType === 'revenue_split') {
       cas('► CAS 3 — Partage des recettes', () => {
         p(doc, 'Les recettes seront réparties comme suit :');
@@ -481,7 +484,7 @@ async function generateVenueContractPdf({
 
     titleLine(doc, 'Article 3 — Commission NOX', 11);
     p(doc, 'La mise en relation a été effectuée via la plateforme NOX.');
-    p(doc, 'Une commission de service peut être due à NOX.');
+    p(doc, 'Une commission de service de 10 % du montant principal convenu est due à NOX.');
     p(doc, `Montant commission : ${noxFee != null ? `${noxFee} €` : '—'}`);
     p(doc, `Total : ${totalFee != null ? `${totalFee} €` : '—'}`);
     p(doc, 'Le paiement de la commission peut être exigé lors de la validation du contrat.');
@@ -524,10 +527,7 @@ async function generateVenueContractPdf({
     p(doc, 'Conditions d\'annulation :');
     p(doc, cancellation || '—');
     doc.moveDown(0.25);
-    p(doc, 'À défaut :');
-    p(doc, '● Annulation < 7 jours → 50 % dû');
-    p(doc, '● Annulation < 48 h → 100 % dû');
-    p(doc, 'Force majeure possible.');
+    p(doc, 'Force majeure : selon le droit commun et l’accord des parties.');
 
     titleLine(doc, 'Article 8 — Horaires et nuisances', 11);
     p(doc, 'L\'Organisateur s\'engage à respecter :');

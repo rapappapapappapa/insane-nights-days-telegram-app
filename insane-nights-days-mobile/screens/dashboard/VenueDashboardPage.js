@@ -31,11 +31,13 @@ import { useNotifications } from '../../hooks/useNotifications';
 import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import DealTypePickerModal from '../../components/DealTypePickerModal';
+import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import {
   draftFromPayload,
   buildVenueContractPayload,
   dealTypeLabel,
   contractAcceptAckLabel,
+  cancellationPolicyLabel,
 } from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -99,6 +101,7 @@ export default function VenueDashboardPage() {
   const [contractEditorVisible, setContractEditorVisible] = useState(false);
   const [contractDraft, setContractDraft] = useState(() => draftFromPayload({}, 'venue'));
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
 
@@ -306,6 +309,7 @@ export default function VenueDashboardPage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
+        setShowCancellationModal(false);
         await loadVenueContract(selectedChatEventVenueId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
@@ -1103,6 +1107,11 @@ export default function VenueDashboardPage() {
                       🕐 {language === 'fr' ? 'Fin' : 'End'}: {cleanText(String(contractData.payload.eventEnd))}
                     </Text>
                   ) : null}
+                  {contractData?.payload?.cancellation ? (
+                    <Text style={styles.contractSmall} numberOfLines={4}>
+                      🧯 {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
+                    </Text>
+                  ) : null}
                   {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
                     <View style={styles.contractAckRow}>
                       <TouchableOpacity
@@ -1253,7 +1262,10 @@ export default function VenueDashboardPage() {
           visible={contractEditorVisible}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setContractEditorVisible(false)}
+          onRequestClose={() => {
+            setContractEditorVisible(false);
+            setShowCancellationModal(false);
+          }}
         >
           <KeyboardAvoidingView
             style={styles.contractModalOverlay}
@@ -1277,11 +1289,15 @@ export default function VenueDashboardPage() {
                   PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
                   setShowPaymentTermsModal={setShowPaymentTermsModal}
                   setShowDealTypeModal={setShowDealTypeModal}
+                  setShowCancellationModal={setShowCancellationModal}
                 />
                 <View style={styles.contractModalActions}>
                   <TouchableOpacity
                     style={[styles.contractButton, styles.contractButtonSecondary]}
-                    onPress={() => setContractEditorVisible(false)}
+                    onPress={() => {
+                      setContractEditorVisible(false);
+                      setShowCancellationModal(false);
+                    }}
                   >
                     <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                   </TouchableOpacity>
@@ -1337,6 +1353,15 @@ export default function VenueDashboardPage() {
           onClose={() => setShowDealTypeModal(false)}
           value={contractDraft.dealType}
           onSelect={(v) => setContractDraft((p) => ({ ...p, dealType: v }))}
+          language={language}
+          styles={styles}
+        />
+
+        <CancellationPolicyPickerModal
+          visible={showCancellationModal}
+          onClose={() => setShowCancellationModal(false)}
+          value={contractDraft.cancellation}
+          onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
           language={language}
           styles={styles}
         />

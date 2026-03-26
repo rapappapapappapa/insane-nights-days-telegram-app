@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { dealTypeLabel } from '../constants/contractPayload';
+import { dealTypeLabel, cancellationPolicyLabel } from '../constants/contractPayload';
 
 /**
  * Champs étendus du brouillon / contre-proposition (alignés PDF NOX).
@@ -15,6 +15,7 @@ export default function ContractDraftEditorFields({
   PAYMENT_TERMS_OPTIONS,
   setShowPaymentTermsModal,
   setShowDealTypeModal,
+  setShowCancellationModal,
 }) {
   const dt = draft.dealType || 'fixed_rent';
   const isVenue = mode === 'venue';
@@ -142,17 +143,11 @@ export default function ContractDraftEditorFields({
         </>
       )}
 
-      <Text style={styles.contractModalLabel}>
-        {language === 'fr' ? 'Commission NOX (€) — optionnel, sinon 10 % auto' : 'NOX fee (€) — optional, else 10%'}
+      <Text style={[styles.contractModalLabel, { opacity: 0.9 }]}>
+        {language === 'fr'
+          ? 'Commission NOX : 10 % du montant principal (calcul automatique dans le contrat).'
+          : 'NOX commission: 10% of the main amount (automatic in the contract).'}
       </Text>
-      <TextInput
-        style={styles.contractModalInput}
-        value={draft.noxFee}
-        onChangeText={(v) => setDraft((p) => ({ ...p, noxFee: v }))}
-        placeholder={language === 'fr' ? 'Vide = calcul automatique' : 'Empty = auto'}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        keyboardType="decimal-pad"
-      />
 
       {isVenue && dt === 'bar_only' ? (
         <Text style={[styles.contractModalLabel, { opacity: 0.85, marginBottom: 8 }]}>
@@ -242,15 +237,26 @@ export default function ContractDraftEditorFields({
         </>
       ) : null}
 
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Annulation' : 'Cancellation'}</Text>
-      <TextInput
-        style={[styles.contractModalInput, { height: 60 }]}
-        value={draft.cancellation}
-        onChangeText={(v) => setDraft((p) => ({ ...p, cancellation: v }))}
-        placeholder={language === 'fr' ? 'Ex: J-7: 50% dû' : 'Ex: D-7: 50% due'}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        multiline
-      />
+      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Conditions d’annulation' : 'Cancellation policy'}</Text>
+      <TouchableOpacity
+        style={[styles.contractModalInput, styles.contractModalDropdown]}
+        onPress={() => setShowCancellationModal(true)}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.contractModalInputText,
+            !draft.cancellation && { color: 'rgba(255,255,255,0.4)' },
+          ]}
+        >
+          {draft.cancellation
+            ? cancellationPolicyLabel(draft.cancellation, language)
+            : language === 'fr'
+              ? 'Sélectionner'
+              : 'Select'}
+        </Text>
+        <Text style={styles.contractModalChevron}>▼</Text>
+      </TouchableOpacity>
 
       <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes (optionnel)' : 'Notes (optional)'}</Text>
       <TextInput

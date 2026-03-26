@@ -11,6 +11,45 @@ export const DEAL_TYPE_OPTIONS = [
   { value: 'custom', labelFr: 'Accord personnalisé', labelEn: 'Custom agreement' },
 ];
 
+/** Clés stockées dans contractPayload.cancellation — libellés pour l’UI et le PDF */
+export const CANCELLATION_POLICY_OPTIONS = [
+  {
+    value: 'free_j30',
+    labelFr: 'Au moins 30 jours avant l’événement : annulation sans frais',
+    labelEn: '30+ days before the event: free cancellation',
+  },
+  {
+    value: 'free_j14',
+    labelFr: 'Au moins 14 jours avant : annulation sans frais',
+    labelEn: '14+ days before: free cancellation',
+  },
+  {
+    value: 'free_j7',
+    labelFr: 'Au moins 7 jours avant : annulation sans frais',
+    labelEn: '7+ days before: free cancellation',
+  },
+  {
+    value: 'fee50_between_j7_j14',
+    labelFr: 'Entre 7 et 14 jours avant : 50 % du montant dû',
+    labelEn: '7–14 days before: 50% of the fee due',
+  },
+  {
+    value: 'fee50_under_j7',
+    labelFr: 'Moins de 7 jours avant : 50 % du montant dû',
+    labelEn: 'Less than 7 days before: 50% of the fee due',
+  },
+  {
+    value: 'fee100_under_j7',
+    labelFr: 'Moins de 7 jours avant : 100 % du montant dû',
+    labelEn: 'Less than 7 days before: 100% of the fee due',
+  },
+  {
+    value: 'fee100_under_j3',
+    labelFr: 'Moins de 3 jours avant : 100 % du montant dû',
+    labelEn: 'Less than 3 days before: 100% of the fee due',
+  },
+];
+
 export const EMPTY_CONTRACT_DRAFT = {
   priceEur: '',
   depositPercent: '',
@@ -29,7 +68,6 @@ export const EMPTY_CONTRACT_DRAFT = {
   splitTerms: '',
   customTerms: '',
   financialClause: '',
-  noxFee: '',
   equipment: '',
 };
 
@@ -70,7 +108,6 @@ export function draftFromPayload(p = {}, mode) {
       splitTerms: p.splitTerms != null ? String(p.splitTerms) : p.split_terms != null ? String(p.split_terms) : '',
       customTerms: p.customTerms != null ? String(p.customTerms) : p.custom_terms != null ? String(p.custom_terms) : '',
       financialClause: p.financialClause != null ? String(p.financialClause) : '',
-      noxFee: p.noxFee != null ? String(p.noxFee) : p.nox_fee != null ? String(p.nox_fee) : '',
     };
   }
   return {
@@ -78,7 +115,6 @@ export function draftFromPayload(p = {}, mode) {
     ...base,
     eventEnd: p.eventEnd != null ? String(p.eventEnd) : '',
     equipment: p.equipment != null ? String(p.equipment) : '',
-    noxFee: p.noxFee != null ? String(p.noxFee) : p.nox_fee != null ? String(p.nox_fee) : '',
   };
 }
 
@@ -102,7 +138,6 @@ export function buildVenueContractPayload(draft) {
     splitTerms: draft.splitTerms?.trim() || null,
     customTerms: draft.customTerms?.trim() || null,
     financialClause: draft.financialClause?.trim() || null,
-    noxFee: parseOptionalNumber(draft.noxFee),
   };
 }
 
@@ -116,7 +151,6 @@ export function buildDjContractPayload(draft) {
     notes: draft.notes?.trim() || null,
     eventEnd: draft.eventEnd?.trim() || null,
     equipment: draft.equipment?.trim() || null,
-    noxFee: parseOptionalNumber(draft.noxFee),
   };
 }
 
@@ -124,6 +158,15 @@ export function dealTypeLabel(value, lang) {
   const o = DEAL_TYPE_OPTIONS.find((x) => x.value === value);
   if (!o) return value || '';
   return lang === 'fr' ? o.labelFr : o.labelEn;
+}
+
+/** Libellé annulation (clé prédéfinie ou texte ancien contrat). */
+export function cancellationPolicyLabel(value, lang) {
+  if (value == null || String(value).trim() === '') return '';
+  const k = String(value).trim();
+  const o = CANCELLATION_POLICY_OPTIONS.find((x) => x.value === k);
+  if (o) return lang === 'fr' ? o.labelFr : o.labelEn;
+  return k;
 }
 
 /** Engagement affiché avant le bouton « Accepter » (acceptation de bonne foi, distincte d’une signature manuscrite). */

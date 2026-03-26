@@ -32,9 +32,11 @@ import {
   buildDjContractPayload,
   dealTypeLabel,
   contractAcceptAckLabel,
+  cancellationPolicyLabel,
 } from '../../constants/contractPayload';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import DealTypePickerModal from '../../components/DealTypePickerModal';
+import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 
 function cleanText(s) {
   if (!s) return '';
@@ -133,6 +135,7 @@ export default function BookerDashboardPage() {
   const [venueContractGate, setVenueContractGate] = useState(null);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
 
   const PAYMENT_TERMS_OPTIONS = [
@@ -662,6 +665,7 @@ export default function BookerDashboardPage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         setContractEditorVisible(false);
+        setShowCancellationModal(false);
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -727,6 +731,7 @@ export default function BookerDashboardPage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
+        setShowCancellationModal(false);
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -1932,8 +1937,8 @@ export default function BookerDashboardPage() {
                   </Text>
                 ) : null}
                 {contractData?.payload?.cancellation ? (
-                  <Text style={styles.contractSmall} numberOfLines={2}>
-                    🧯 {cleanText(contractData.payload.cancellation)}
+                  <Text style={styles.contractSmall} numberOfLines={4}>
+                    🧯 {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
                   </Text>
                 ) : null}
 
@@ -2164,7 +2169,10 @@ export default function BookerDashboardPage() {
               visible={contractEditorVisible}
               transparent={true}
               animationType="fade"
-              onRequestClose={() => setContractEditorVisible(false)}
+              onRequestClose={() => {
+                setContractEditorVisible(false);
+                setShowCancellationModal(false);
+              }}
             >
               <KeyboardAvoidingView
                 style={styles.contractModalOverlay}
@@ -2190,12 +2198,16 @@ export default function BookerDashboardPage() {
                     PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
                     setShowPaymentTermsModal={setShowPaymentTermsModal}
                     setShowDealTypeModal={setShowDealTypeModal}
+                    setShowCancellationModal={setShowCancellationModal}
                   />
 
                   <View style={styles.contractModalActions}>
                     <TouchableOpacity
                       style={[styles.contractButton, styles.contractButtonSecondary]}
-                      onPress={() => setContractEditorVisible(false)}
+                      onPress={() => {
+                        setContractEditorVisible(false);
+                        setShowCancellationModal(false);
+                      }}
                     >
                       <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                     </TouchableOpacity>
@@ -2262,6 +2274,15 @@ export default function BookerDashboardPage() {
               onClose={() => setShowDealTypeModal(false)}
               value={contractDraft.dealType}
               onSelect={(v) => setContractDraft((p) => ({ ...p, dealType: v }))}
+              language={language}
+              styles={styles}
+            />
+
+            <CancellationPolicyPickerModal
+              visible={showCancellationModal}
+              onClose={() => setShowCancellationModal(false)}
+              value={contractDraft.cancellation}
+              onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
               language={language}
               styles={styles}
             />

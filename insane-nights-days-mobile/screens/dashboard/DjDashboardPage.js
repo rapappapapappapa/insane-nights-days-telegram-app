@@ -34,7 +34,13 @@ import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
 import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
-import { draftFromPayload, buildDjContractPayload, contractAcceptAckLabel } from '../../constants/contractPayload';
+import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
+import {
+  draftFromPayload,
+  buildDjContractPayload,
+  contractAcceptAckLabel,
+  cancellationPolicyLabel,
+} from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
 
 function cleanText(s) {
@@ -147,6 +153,7 @@ export default function DjDashboardPage() {
   const [venueContractGate, setVenueContractGate] = useState(null);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
+  const [showCancellationModal, setShowCancellationModal] = useState(false);
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -282,6 +289,7 @@ export default function DjDashboardPage() {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
         setShowPaymentTermsModal(false);
+        setShowCancellationModal(false);
         await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -2709,6 +2717,11 @@ export default function DjDashboardPage() {
                     🕐 {language === 'fr' ? 'Fin' : 'End'}: {cleanText(String(contractData.payload.eventEnd))}
                   </Text>
                 ) : null}
+                {contractData?.payload?.cancellation ? (
+                  <Text style={styles.contractSmall} numberOfLines={4}>
+                    🧯 {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
+                  </Text>
+                ) : null}
 
                 {djVenueGateBlocks ? (
                   <Text style={styles.contractHint}>
@@ -2932,6 +2945,7 @@ export default function DjDashboardPage() {
               onRequestClose={() => {
           setContractEditorVisible(false);
           setShowPaymentTermsModal(false);
+          setShowCancellationModal(false);
         }}
             >
               <KeyboardAvoidingView
@@ -2958,6 +2972,7 @@ export default function DjDashboardPage() {
                     PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
                     setShowPaymentTermsModal={setShowPaymentTermsModal}
                     setShowDealTypeModal={() => {}}
+                    setShowCancellationModal={setShowCancellationModal}
                   />
 
                   <View style={styles.contractModalActions}>
@@ -2966,6 +2981,7 @@ export default function DjDashboardPage() {
                       onPress={() => {
                         setContractEditorVisible(false);
                         setShowPaymentTermsModal(false);
+                        setShowCancellationModal(false);
                       }}
                     >
                       <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
@@ -3015,6 +3031,15 @@ export default function DjDashboardPage() {
                 </View>
               </View>
             </Modal>
+
+            <CancellationPolicyPickerModal
+              visible={showCancellationModal}
+              onClose={() => setShowCancellationModal(false)}
+              value={contractDraft.cancellation}
+              onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
+              language={language}
+              styles={styles}
+            />
 
           </KeyboardAvoidingView>
         </View>

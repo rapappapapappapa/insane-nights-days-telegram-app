@@ -10,7 +10,16 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
+// Expo SDK 54+ : l’API « default » ne fournit plus writeAsStringAsync (elle throw). Utiliser legacy.
+import * as FileSystem from 'expo-file-system/legacy';
+
+function normalizePdfBase64(raw) {
+  if (raw == null || typeof raw !== 'string') return '';
+  let s = raw.trim();
+  const dataUrl = /^data:application\/pdf;base64,(.+)$/i.exec(s);
+  if (dataUrl) s = dataUrl[1];
+  return s.replace(/\s/g, '');
+}
 
 /**
  * Aperçu PDF in-app + confirmation (envoi / acceptation / contre-proposition).
@@ -69,11 +78,17 @@ export default function ContractPdfPreviewModal({
           <View style={styles.headerBtnPlaceholder} />
         </View>
 
-        {loading ? (
+        {showSpinner ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#FF1744" />
             <Text style={styles.hint}>
-              {language === 'fr' ? 'Génération du PDF…' : 'Generating PDF…'}
+              {loading
+                ? language === 'fr'
+                  ? 'Génération du PDF…'
+                  : 'Generating PDF…'
+                : language === 'fr'
+                  ? 'Préparation de l’aperçu…'
+                  : 'Preparing preview…'}
             </Text>
           </View>
         ) : errorText ? (

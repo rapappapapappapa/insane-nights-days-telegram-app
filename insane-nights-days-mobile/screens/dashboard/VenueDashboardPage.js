@@ -1033,6 +1033,11 @@ export default function VenueDashboardPage() {
           setSelectedChatEventVenueId(null);
           setChatMessages([]);
           setNewMessageText('');
+          setContractEditorVisible(false);
+          setShowPaymentTermsModal(false);
+          setShowDealTypeModal(false);
+          setShowCancellationModal(false);
+          setShowEventEndModal(false);
           refreshUnreadCount?.();
         }}
         presentationStyle="overFullScreen"
@@ -1064,6 +1069,11 @@ export default function VenueDashboardPage() {
                       setSelectedChatEventVenueId(null);
                       setChatMessages([]);
                       setNewMessageText('');
+                      setContractEditorVisible(false);
+                      setShowPaymentTermsModal(false);
+                      setShowDealTypeModal(false);
+                      setShowCancellationModal(false);
+                      setShowEventEndModal(false);
                       refreshUnreadCount?.();
                     }}
                     style={styles.chatCloseButton}
@@ -1272,28 +1282,30 @@ export default function VenueDashboardPage() {
             </View>
           </KeyboardAvoidingView>
         </View>
+      </Modal>
 
-        {/* Modal contre-proposition contrat */}
-        <Modal
-          visible={contractEditorVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => {
-            setContractEditorVisible(false);
-            setShowCancellationModal(false);
-            setShowEventEndModal(false);
-          }}
+      {/* Modals contrat — hors du modal chat (évite modaux imbriqués sur iOS) */}
+      <Modal
+        visible={contractEditorVisible}
+        transparent={true}
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        onRequestClose={() => {
+          setContractEditorVisible(false);
+          setShowCancellationModal(false);
+          setShowEventEndModal(false);
+        }}
+      >
+        <KeyboardAvoidingView
+          style={styles.contractModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <KeyboardAvoidingView
-            style={styles.contractModalOverlay}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <View style={styles.contractModalCard}>
-              <ScrollView
-                contentContainerStyle={{ paddingBottom: 24 }}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-              >
+          <View style={styles.contractModalCard}>
+            <ScrollView
+              contentContainerStyle={{ paddingBottom: 24 }}
+              keyboardShouldPersistTaps="always"
+              keyboardDismissMode="on-drag"
+            >
                 <Text style={styles.contractModalTitle}>
                   {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
                 </Text>
@@ -1329,74 +1341,73 @@ export default function VenueDashboardPage() {
                     <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
                   </TouchableOpacity>
                 </View>
-              </ScrollView>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
-
-        {/* Modal sélection modalités */}
-        <Modal
-          visible={showPaymentTermsModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPaymentTermsModal(false)}
-        >
-          <View style={styles.paymentTermsOverlay}>
-            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowPaymentTermsModal(false)} />
-            <View style={styles.paymentTermsModalContent}>
-              <Text style={styles.contractModalTitle}>
-                {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
-              </Text>
-              {PAYMENT_TERMS_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
-                  onPress={() => {
-                    setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
-                    setShowPaymentTermsModal(false);
-                  }}
-                >
-                  <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
-                    {language === 'fr' ? opt.labelFr : opt.labelEn}
-                  </Text>
-                  {contractDraft.paymentTerms === opt.value ? <Text style={styles.paymentTermsCheck}>✓</Text> : null}
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={styles.paymentTermsClose} onPress={() => setShowPaymentTermsModal(false)}>
-                <Text style={styles.contractButtonText}>{language === 'fr' ? 'Fermer' : 'Close'}</Text>
-              </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
-        </Modal>
-
-        <DealTypePickerModal
-          visible={showDealTypeModal}
-          onClose={() => setShowDealTypeModal(false)}
-          value={contractDraft.dealType}
-          onSelect={(v) => setContractDraft((p) => ({ ...p, dealType: v }))}
-          language={language}
-          styles={styles}
-        />
-
-        <CancellationPolicyPickerModal
-          visible={showCancellationModal}
-          onClose={() => setShowCancellationModal(false)}
-          value={contractDraft.cancellation}
-          onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
-          language={language}
-          styles={styles}
-        />
-
-        <EventEndTimePickerModal
-          visible={showEventEndModal}
-          onClose={() => setShowEventEndModal(false)}
-          value={contractDraft.eventEnd}
-          onSelect={(v) => setContractDraft((p) => ({ ...p, eventEnd: v }))}
-          language={language}
-          styles={styles}
-          options={contractEventEndOptions}
-        />
+        </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={showPaymentTermsModal}
+        transparent
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        onRequestClose={() => setShowPaymentTermsModal(false)}
+      >
+        <View style={styles.paymentTermsOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowPaymentTermsModal(false)} />
+          <View style={styles.paymentTermsModalContent}>
+            <Text style={styles.contractModalTitle}>
+              {language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}
+            </Text>
+            {PAYMENT_TERMS_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.paymentTermsOption, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionSelected]}
+                onPress={() => {
+                  setContractDraft((p) => ({ ...p, paymentTerms: opt.value }));
+                  setShowPaymentTermsModal(false);
+                }}
+              >
+                <Text style={[styles.paymentTermsOptionText, contractDraft.paymentTerms === opt.value && styles.paymentTermsOptionTextSelected]}>
+                  {language === 'fr' ? opt.labelFr : opt.labelEn}
+                </Text>
+                {contractDraft.paymentTerms === opt.value ? <Text style={styles.paymentTermsCheck}>✓</Text> : null}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.paymentTermsClose} onPress={() => setShowPaymentTermsModal(false)}>
+              <Text style={styles.contractButtonText}>{language === 'fr' ? 'Fermer' : 'Close'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <DealTypePickerModal
+        visible={showDealTypeModal}
+        onClose={() => setShowDealTypeModal(false)}
+        value={contractDraft.dealType}
+        onSelect={(v) => setContractDraft((p) => ({ ...p, dealType: v }))}
+        language={language}
+        styles={styles}
+      />
+
+      <CancellationPolicyPickerModal
+        visible={showCancellationModal}
+        onClose={() => setShowCancellationModal(false)}
+        value={contractDraft.cancellation}
+        onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
+        language={language}
+        styles={styles}
+      />
+
+      <EventEndTimePickerModal
+        visible={showEventEndModal}
+        onClose={() => setShowEventEndModal(false)}
+        value={contractDraft.eventEnd}
+        onSelect={(v) => setContractDraft((p) => ({ ...p, eventEnd: v }))}
+        language={language}
+        styles={styles}
+        options={contractEventEndOptions}
+      />
       
       <RejectReasonModal
         visible={rejectModalVisible}

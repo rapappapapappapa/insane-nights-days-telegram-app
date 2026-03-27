@@ -4,7 +4,13 @@ import { CANCELLATION_POLICY_OPTIONS } from '../constants/contractPayload';
 
 export default function CancellationPolicyPickerModal({ visible, onClose, value, onSelect, language, styles }) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.paymentTermsOverlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
         <View style={styles.paymentTermsModalContent}>

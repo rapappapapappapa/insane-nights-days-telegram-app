@@ -8,7 +8,13 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 export default function EventEndTimePickerModal({ visible, onClose, value, onSelect, language, styles, options }) {
   const list = options && options.length > 0 ? options : [];
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.paymentTermsOverlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
         <View style={styles.paymentTermsModalContent}>

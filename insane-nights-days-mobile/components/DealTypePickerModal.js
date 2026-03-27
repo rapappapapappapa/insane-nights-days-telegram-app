@@ -5,7 +5,13 @@ import { DEAL_TYPE_OPTIONS } from '../constants/contractPayload';
 export default function DealTypePickerModal({ visible, onClose, value, onSelect, language, styles }) {
   const dt = value || 'fixed_rent';
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
       <View style={styles.paymentTermsOverlay}>
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
         <View style={styles.paymentTermsModalContent}>

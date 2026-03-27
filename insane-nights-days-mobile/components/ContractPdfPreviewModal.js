@@ -70,8 +70,16 @@ export default function ContractPdfPreviewModal({
           encoding: FileSystem.EncodingType.Base64,
         });
         if (cancelled) return;
-        const uri = path.startsWith('file://') ? path : `file://${path}`;
-        setFileUri(uri);
+        let webUri = path.startsWith('file://') ? path : `file://${path}`;
+        // Android : WebView bloque souvent file:// (ERR_ACCESS_DENIED) — URI content:// via FileProvider
+        if (Platform.OS === 'android') {
+          try {
+            webUri = await FileSystem.getContentUriAsync(webUri);
+          } catch (e) {
+            console.warn('[ContractPdfPreviewModal] getContentUriAsync', e);
+          }
+        }
+        setFileUri(webUri);
       } catch (e) {
         console.error('[ContractPdfPreviewModal]', e);
         if (!cancelled) setFileUri(null);
@@ -122,6 +130,11 @@ export default function ContractPdfPreviewModal({
             key={fileUri}
             source={{ uri: fileUri }}
             style={styles.web}
+            // Par défaut seuls http/https → sinon ERR_ACCESS_DENIED sur file:// / content:// / data:
+            originWhitelist={['*']}
+            allowFileAccess
+            allowUniversalAccessFromFileURLs
+            mixedContentMode="always"
             startInLoadingState
             renderLoading={() => (
               <View style={styles.center}>

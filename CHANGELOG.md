@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 24-28 mars 2026 (mar. - ven.)
+## Semaine du 24 au 27 mars 2026 (mar. - ven.)
 
 ### Ajouté
 - **Infos légales (contrats)** : Champs légaux sur les profils Organisateur (`UserBooker`), Lieu (`UserVenue`) et DJ (`UserDj`) — raison sociale, adresse, SIRET, représentant légal / nom civil selon le type, etc.
@@ -19,6 +19,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié
 - **PDF des contrats** : Contenu et articles alignés sur les modèles `docs/contract-templates/` (prestation DJ et lieu/organisateur) — commission NOX 10 % sur cachet DJ, articles 1–11 / 1–12, typologie `dealType` pour le contrat lieu (`fixed_rent` par défaut si non renseigné) ; emails des parties injectés dans le PDF ; champs optionnels via `contractPayload` (`eventEnd`, `equipment`, `dealType`, parts, `noxFee`, etc.)
 - **UI contrats (mobile)** : `constants/contractPayload.js` + `ContractDraftEditorFields` / `DealTypePickerModal` — brouillon et contre-propositions enrichis (type d’accord lieu, fin de prestation, matériel, clause financière, partages %, minimum garanti, accord personnalisé, commission NOX optionnelle) ; Booker, Lieu et DJ envoient le JSON complet au backend pour alimenter le PDF
+- **`.gitignore`** (racine) : exclusion de fichiers locaux non nécessaires au runtime (`RESEND_CONFIGURATION_PATRON.txt`, `Untitled-1`, `client/build/`, `docs/contract-templates/`)
+
+### Ajouté (24 mars 2026)
+- **Création d’événement — créneaux DJ** : Pour chaque DJ, plage horaire (début / fin en `HH:mm`) dans la fenêtre « heure de début + durée » de l’événement. Répartition automatique du temps quand plusieurs DJs, modifiable via pickers ; récap affiche nom + créneau.
+  - **Prisma** : `EventDj.slotStart`, `EventDj.slotEnd` (optionnels) ; migration `20260324130000_event_dj_slot_times`
+  - **API** : `POST /api/booker/events` accepte `djSlotAssignments` (même ordre que `djIds`) ; validation serveur des créneaux par rapport à `time` + `durationHours`
+  - **Mobile** : `BookerEventDashboardPage`, `EventFormContext` (`djSlotAssignments`, synchro avec `addDj` / `removeDj`)
+- **Navigation sélection DJ (création événement)** : Même logique que pour le lieu — passage de `returnTo: 'bookerEventDashboard'` jusqu’à `DjProfilePage` (`navigate(returnTo || 'bookerDashboard', …)`) pour revenir au formulaire sur l’étape DJs après choix du profil (`SelectDjPage`, `DjProfilePage`).
+
+### Corrigé (24 mars 2026)
+- **Validation créneaux DJ** : `slotFitsEventWindow` renvoyait un objet `{ ok }` alors que l’app testait `if (!slotFitsEventWindow(…))` — toujours truthy, donc aucune validation. Retour **booléen** ; validation immédiate au choix d’heure dans le picker.
+- **Aperçu PDF avant envoi du contrat** : Expo SDK 54 — `expo-file-system` sans `/legacy` fait **échouer** `writeAsStringAsync` → « PDF indisponible ». Import **`expo-file-system/legacy`** ; normalisation du base64 ; repli **data URL** si pas de `cacheDirectory` ; état **préparation** du fichier.
+- **Crash des dashboards (ErrorBoundary « Oups ! Une erreur est survenue »)** : `ContractPdfPreviewModal` utilisait **`showSpinner`** non défini (merge incomplet). Ajout de **`filePreparing`**, **`showSpinner = loading || filePreparing`** et **`canConfirm`** cohérent.
 
 ---
 

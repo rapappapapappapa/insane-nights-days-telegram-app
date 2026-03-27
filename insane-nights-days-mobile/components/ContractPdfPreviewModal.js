@@ -37,25 +37,46 @@ export default function ContractPdfPreviewModal({
   language,
 }) {
   const [fileUri, setFileUri] = useState(null);
+  const [filePreparing, setFilePreparing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!visible || !pdfBase64) {
         setFileUri(null);
+        setFilePreparing(false);
         return;
       }
+      const clean = normalizePdfBase64(pdfBase64);
+      if (!clean) {
+        if (!cancelled) {
+          setFileUri(null);
+          setFilePreparing(false);
+        }
+        return;
+      }
+      setFilePreparing(true);
       try {
-        const path = `${FileSystem.cacheDirectory}nox-contract-preview-${Date.now()}.pdf`;
-        await FileSystem.writeAsStringAsync(path, pdfBase64, {
+        const cacheDir = FileSystem.cacheDirectory;
+        if (!cacheDir) {
+          if (!cancelled) {
+            setFileUri(`data:application/pdf;base64,${clean}`);
+          }
+          return;
+        }
+        const basePath = cacheDir.endsWith('/') ? cacheDir : `${cacheDir}/`;
+        const path = `${basePath}nox-contract-preview-${Date.now()}.pdf`;
+        await FileSystem.writeAsStringAsync(path, clean, {
           encoding: FileSystem.EncodingType.Base64,
         });
         if (cancelled) return;
         const uri = path.startsWith('file://') ? path : `file://${path}`;
-        setFileUri(Platform.OS === 'android' ? uri : uri);
+        setFileUri(uri);
       } catch (e) {
         console.error('[ContractPdfPreviewModal]', e);
         if (!cancelled) setFileUri(null);
+      } finally {
+        if (!cancelled) setFilePreparing(false);
       }
     })();
     return () => {
@@ -63,7 +84,8 @@ export default function ContractPdfPreviewModal({
     };
   }, [visible, pdfBase64]);
 
-  const canConfirm = !loading && !errorText && !!fileUri;
+  const showSpinner = loading || filePreparing;
+  const canConfirm = !loading && !filePreparing && !errorText && !!fileUri;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>

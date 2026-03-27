@@ -14,7 +14,6 @@ import {
   Linking,
   KeyboardAvoidingView,
   Modal,
-  InteractionManager,
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -169,6 +168,16 @@ export default function DjDashboardPage() {
     pendingAction: null,
   });
   const reopenChatAfterContractRef = useRef(false);
+  const pendingOpenContractEditorRef = useRef(false);
+  const openContractEditorFallbackTimerRef = useRef(null);
+
+  const flushPendingContractEditor = () => {
+    pendingOpenContractEditorRef.current = false;
+    if (openContractEditorFallbackTimerRef.current) {
+      clearTimeout(openContractEditorFallbackTimerRef.current);
+      openContractEditorFallbackTimerRef.current = null;
+    }
+  };
 
   const closeContractEditorSession = () => {
     setContractEditorVisible(false);
@@ -184,8 +193,17 @@ export default function DjDashboardPage() {
   const openContractEditorFromChat = () => {
     if (Platform.OS === 'ios' && chatModalVisible) {
       reopenChatAfterContractRef.current = true;
+      pendingOpenContractEditorRef.current = true;
+      if (openContractEditorFallbackTimerRef.current) {
+        clearTimeout(openContractEditorFallbackTimerRef.current);
+      }
       setChatModalVisible(false);
-      InteractionManager.runAfterInteractions(() => setContractEditorVisible(true));
+      openContractEditorFallbackTimerRef.current = setTimeout(() => {
+        openContractEditorFallbackTimerRef.current = null;
+        if (!pendingOpenContractEditorRef.current) return;
+        pendingOpenContractEditorRef.current = false;
+        setContractEditorVisible(true);
+      }, 520);
     } else {
       setContractEditorVisible(true);
     }
@@ -2709,8 +2727,19 @@ export default function DjDashboardPage() {
         visible={chatModalVisible}
         transparent={true}
         animationType="slide"
+        presentationStyle="overFullScreen"
+        onDismiss={() => {
+          if (!pendingOpenContractEditorRef.current) return;
+          pendingOpenContractEditorRef.current = false;
+          if (openContractEditorFallbackTimerRef.current) {
+            clearTimeout(openContractEditorFallbackTimerRef.current);
+            openContractEditorFallbackTimerRef.current = null;
+          }
+          setContractEditorVisible(true);
+        }}
         onRequestClose={() => {
           reopenChatAfterContractRef.current = false;
+          flushPendingContractEditor();
           setChatModalVisible(false);
           setSelectedChatEventDjId(null);
           setSelectedChatEventId(null);
@@ -2724,7 +2753,6 @@ export default function DjDashboardPage() {
           // Rafraîchir le compteur après fermeture
           refreshUnreadCount();
         }}
-        presentationStyle="overFullScreen"
       >
         <View style={styles.chatModalContainer}>
           <KeyboardAvoidingView
@@ -2751,6 +2779,7 @@ export default function DjDashboardPage() {
               <TouchableOpacity
                 onPress={() => {
                   reopenChatAfterContractRef.current = false;
+                  flushPendingContractEditor();
                   setChatModalVisible(false);
                   setSelectedChatEventDjId(null);
                   setSelectedChatEventId(null);
@@ -3063,6 +3092,7 @@ export default function DjDashboardPage() {
         onRequestClose={closeContractEditorSession}
       >
         <KeyboardAvoidingView
+          enabled={Platform.OS !== 'ios'}
           style={styles.contractModalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >

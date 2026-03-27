@@ -95,8 +95,14 @@ export default function ContractPdfPreviewModal({
   const showSpinner = loading || filePreparing;
   const canConfirm = !loading && !filePreparing && !errorText && !!fileUri;
 
+  // iOS : éviter pageSheet + autres Modal overFullScreen (ordre des couches / touches cassées).
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle={Platform.OS === 'ios' ? 'overFullScreen' : 'fullScreen'}
+      onRequestClose={onClose}
+    >
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.headerBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>

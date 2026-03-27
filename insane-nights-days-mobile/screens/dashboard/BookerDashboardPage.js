@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  InteractionManager,
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -153,6 +152,17 @@ export default function BookerDashboardPage() {
   });
   /** iOS : évite deux Modal overFullScreen empilés (touches mortes sur l’éditeur). */
   const reopenChatAfterContractRef = useRef(false);
+  /** iOS : ouvrir l’éditeur seulement après fermeture du chat (onDismiss + repli timeout). */
+  const pendingOpenContractEditorRef = useRef(false);
+  const openContractEditorFallbackTimerRef = useRef(null);
+
+  const flushPendingContractEditor = () => {
+    pendingOpenContractEditorRef.current = false;
+    if (openContractEditorFallbackTimerRef.current) {
+      clearTimeout(openContractEditorFallbackTimerRef.current);
+      openContractEditorFallbackTimerRef.current = null;
+    }
+  };
 
   const closeContractEditorSession = () => {
     setContractEditorVisible(false);
@@ -169,8 +179,17 @@ export default function BookerDashboardPage() {
   const openContractEditorFromChat = () => {
     if (Platform.OS === 'ios' && chatModalVisible) {
       reopenChatAfterContractRef.current = true;
+      pendingOpenContractEditorRef.current = true;
+      if (openContractEditorFallbackTimerRef.current) {
+        clearTimeout(openContractEditorFallbackTimerRef.current);
+      }
       setChatModalVisible(false);
-      InteractionManager.runAfterInteractions(() => setContractEditorVisible(true));
+      openContractEditorFallbackTimerRef.current = setTimeout(() => {
+        openContractEditorFallbackTimerRef.current = null;
+        if (!pendingOpenContractEditorRef.current) return;
+        pendingOpenContractEditorRef.current = false;
+        setContractEditorVisible(true);
+      }, 520);
     } else {
       setContractEditorVisible(true);
     }
@@ -1932,8 +1951,18 @@ export default function BookerDashboardPage() {
         transparent={true}
         animationType="slide"
         presentationStyle="overFullScreen"
+        onDismiss={() => {
+          if (!pendingOpenContractEditorRef.current) return;
+          pendingOpenContractEditorRef.current = false;
+          if (openContractEditorFallbackTimerRef.current) {
+            clearTimeout(openContractEditorFallbackTimerRef.current);
+            openContractEditorFallbackTimerRef.current = null;
+          }
+          setContractEditorVisible(true);
+        }}
         onRequestClose={() => {
           reopenChatAfterContractRef.current = false;
+          flushPendingContractEditor();
           setChatModalVisible(false);
           setSelectedChatEventDjId(null);
           setSelectedChatEventVenueId(null);
@@ -1976,6 +2005,7 @@ export default function BookerDashboardPage() {
               <TouchableOpacity
                 onPress={() => {
                   reopenChatAfterContractRef.current = false;
+                  flushPendingContractEditor();
                   setChatModalVisible(false);
                   setSelectedChatEventDjId(null);
                   setSelectedChatEventVenueId(null);
@@ -2317,6 +2347,7 @@ export default function BookerDashboardPage() {
         onRequestClose={closeContractEditorSession}
       >
         <KeyboardAvoidingView
+          enabled={Platform.OS !== 'ios'}
           style={styles.contractModalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >

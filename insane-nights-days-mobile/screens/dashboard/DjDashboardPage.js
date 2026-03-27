@@ -38,6 +38,7 @@ import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
+import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
 import {
   draftFromPayload,
   buildDjContractPayload,
@@ -160,6 +161,13 @@ export default function DjDashboardPage() {
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
+  const [contractPdfPreview, setContractPdfPreview] = useState({
+    visible: false,
+    loading: false,
+    pdfBase64: null,
+    error: null,
+    pendingAction: null,
+  });
   const reopenChatAfterContractRef = useRef(false);
 
   const closeContractEditorSession = () => {
@@ -324,6 +332,58 @@ export default function DjDashboardPage() {
       console.error('[DjDashboard] counterContract error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
     }
+  };
+
+  const closeContractPdfPreview = () => {
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+  };
+
+  const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
+    if (!user?.token || !selectedChatEventDjId) return;
+    setContractPdfPreview({
+      visible: true,
+      loading: true,
+      pdfBase64: null,
+      error: null,
+      pendingAction,
+    });
+    try {
+      const res = await api.previewBookingContractPdf(user.token, selectedChatEventDjId, previewPayload);
+      if (res?.success && res.pdfBase64) {
+        setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
+      } else {
+        setContractPdfPreview((p) => ({
+          ...p,
+          loading: false,
+          error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+        }));
+      }
+    } catch (e) {
+      setContractPdfPreview((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
+      }));
+    }
+  };
+
+  const confirmContractPdfPreview = async () => {
+    const action = contractPdfPreview.pendingAction;
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+    if (action === 'accept') await acceptContract();
+    else if (action === 'counter') await counterContract();
   };
 
   // ✅ Ouvrir automatiquement la conversation depuis une notification (DJ)
@@ -2820,7 +2880,7 @@ export default function DjDashboardPage() {
                             styles.contractButtonPrimary,
                             (djVenueGateBlocks || !contractAcceptAck) && { opacity: 0.45 },
                           ]}
-                          onPress={acceptContract}
+                          onPress={() => openContractPdfPreview({ pendingAction: 'accept' })}
                           disabled={djVenueGateBlocks || !contractAcceptAck}
                         >
                           <Text style={styles.contractButtonTextDark}>
@@ -3041,7 +3101,12 @@ export default function DjDashboardPage() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.contractButton, styles.contractButtonPrimary]}
-                  onPress={counterContract}
+                  onPress={() =>
+                    openContractPdfPreview({
+                      previewPayload: buildDjContractPayload(contractDraft),
+                      pendingAction: 'counter',
+                    })
+                  }
                 >
                   <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
                 </TouchableOpacity>
@@ -3103,6 +3168,27 @@ export default function DjDashboardPage() {
         language={language}
         styles={styles}
         options={contractEventEndOptions}
+      />
+
+      <ContractPdfPreviewModal
+        visible={contractPdfPreview.visible}
+        onClose={closeContractPdfPreview}
+        onConfirm={confirmContractPdfPreview}
+        title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
+        cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
+        confirmLabel={
+          contractPdfPreview.pendingAction === 'accept'
+            ? language === 'fr'
+              ? "J'ai lu et j'accepte"
+              : 'I have read and accept'
+            : language === 'fr'
+              ? 'Confirmer la contre-proposition'
+              : 'Confirm counter-proposal'
+        }
+        pdfBase64={contractPdfPreview.pdfBase64}
+        loading={contractPdfPreview.loading}
+        errorText={contractPdfPreview.error}
+        language={language}
       />
 
       {/* Modal de sélection de photo pour profil/bannière */}

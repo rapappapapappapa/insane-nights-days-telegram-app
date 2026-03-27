@@ -1105,6 +1105,19 @@ const api = {
     );
   },
 
+  /** Prévisualisation PDF (réponse JSON { pdfBase64 }) — payload optionnel pour brouillon / contre-proposition */
+  previewBookingContractPdf: async (token, eventDjId, payload) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!eventDjId) throw new Error('eventDjId requis.');
+    const body = payload !== undefined ? JSON.stringify({ payload }) : JSON.stringify({});
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${eventDjId}/preview-pdf`,
+      { method: 'POST', body },
+      token,
+      60000
+    );
+  },
+
   // Ajouter un DJ à un événement existant (Booker)
   addVenueToEvent: async (token, eventId, venueId) => {
     if (!token) throw new Error('Token d\'authentification requis.');
@@ -1364,6 +1377,17 @@ const api = {
       `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/counter`,
       { method: 'POST', body: JSON.stringify({ payload: payload || {} }) },
       token
+    );
+  },
+
+  previewVenueContractPdf: async (token, eventVenueId, payload) => {
+    if (!token || !eventVenueId) throw new Error('Token et eventVenueId requis.');
+    const body = payload !== undefined ? JSON.stringify({ payload }) : JSON.stringify({});
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${eventVenueId}/preview-pdf`,
+      { method: 'POST', body },
+      token,
+      60000
     );
   },
 

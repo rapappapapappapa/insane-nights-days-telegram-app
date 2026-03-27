@@ -35,6 +35,7 @@ import ContractDraftEditorFields from '../../components/ContractDraftEditorField
 import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
+import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
 import {
   draftFromPayload,
   buildVenueContractPayload,
@@ -110,6 +111,13 @@ export default function VenueDashboardPage() {
   const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
+  const [contractPdfPreview, setContractPdfPreview] = useState({
+    visible: false,
+    loading: false,
+    pdfBase64: null,
+    error: null,
+    pendingAction: null,
+  });
   const reopenChatAfterContractRef = useRef(false);
 
   const closeContractEditorSession = () => {
@@ -290,7 +298,7 @@ export default function VenueDashboardPage() {
   };
 
   const saveContractDraft = async () => {
-    if (!user?.token || !selectedChatEventVenueId) return;
+    if (!user?.token || !selectedChatEventVenueId) return false;
     try {
       const payload = buildVenueContractPayload(contractDraft);
       const res = await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload);
@@ -298,12 +306,14 @@ export default function VenueDashboardPage() {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         closeContractEditorSession();
         await loadVenueContract(selectedChatEventVenueId);
-      } else {
-        showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+        return true;
       }
+      showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+      return false;
     } catch (e) {
       console.error('[VenueDashboard] saveContractDraft error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+      return false;
     }
   };
 
@@ -355,6 +365,58 @@ export default function VenueDashboardPage() {
       console.error('[VenueDashboard] counterContract error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
     }
+  };
+
+  const closeContractPdfPreview = () => {
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+  };
+
+  const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
+    if (!user?.token || !selectedChatEventVenueId) return;
+    setContractPdfPreview({
+      visible: true,
+      loading: true,
+      pdfBase64: null,
+      error: null,
+      pendingAction,
+    });
+    try {
+      const res = await api.previewVenueContractPdf(user.token, selectedChatEventVenueId, previewPayload);
+      if (res?.success && res.pdfBase64) {
+        setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
+      } else {
+        setContractPdfPreview((p) => ({
+          ...p,
+          loading: false,
+          error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+        }));
+      }
+    } catch (e) {
+      setContractPdfPreview((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
+      }));
+    }
+  };
+
+  const confirmContractPdfPreview = async () => {
+    const action = contractPdfPreview.pendingAction;
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+    if (action === 'accept') await acceptContract();
+    else if (action === 'counter') await counterContract();
   };
 
   const handleAcceptVenueInvitation = async (eventVenueId) => {
@@ -1203,7 +1265,7 @@ export default function VenueDashboardPage() {
                               styles.contractButtonPrimary,
                               !contractAcceptAck && { opacity: 0.45 },
                             ]}
-                            onPress={acceptContract}
+                            onPress={() => openContractPdfPreview({ pendingAction: 'accept' })}
                             disabled={!contractAcceptAck}
                           >
                             <Text style={styles.contractButtonTextDark}>
@@ -1359,7 +1421,12 @@ export default function VenueDashboardPage() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.contractButton, styles.contractButtonPrimary]}
-                    onPress={counterContract}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: buildVenueContractPayload(contractDraft),
+                        pendingAction: 'counter',
+                      })
+                    }
                   >
                     <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
                   </TouchableOpacity>
@@ -1431,7 +1498,28 @@ export default function VenueDashboardPage() {
         styles={styles}
         options={contractEventEndOptions}
       />
-      
+
+      <ContractPdfPreviewModal
+        visible={contractPdfPreview.visible}
+        onClose={closeContractPdfPreview}
+        onConfirm={confirmContractPdfPreview}
+        title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
+        cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
+        confirmLabel={
+          contractPdfPreview.pendingAction === 'accept'
+            ? language === 'fr'
+              ? "J'ai lu et j'accepte"
+              : 'I have read and accept'
+            : language === 'fr'
+              ? 'Confirmer la contre-proposition'
+              : 'Confirm counter-proposal'
+        }
+        pdfBase64={contractPdfPreview.pdfBase64}
+        loading={contractPdfPreview.loading}
+        errorText={contractPdfPreview.error}
+        language={language}
+      />
+
       <RejectReasonModal
         visible={rejectModalVisible}
         onClose={() => {

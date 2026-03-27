@@ -6903,6 +6903,34 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
   }
 });
 
+// Prévisualisation PDF (base64) — même accès que GET contrat ; payload optionnel (brouillon / contre-proposition)
+app.post('/api/contracts/event-djs/:eventDjId/preview-pdf', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventDjId } = req.params;
+    const { ed, isDj, isBooker, error } = await loadEventDjWithAccess(eventDjId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    const rawPayload = req.body?.payload;
+    let payloadForPdf = ed.contractPayload ?? {};
+    if (rawPayload != null && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+      if (ed.contractStatus === 'DRAFT' && isBooker) {
+        payloadForPdf = rawPayload;
+      } else if (ed.contractStatus === 'SENT' && (isBooker || isDj)) {
+        payloadForPdf = rawPayload;
+      }
+    }
+    const { buildDjContractPreviewPdf } = require('./utils/contractPreview');
+    const pdfBuffer = await buildDjContractPreviewPdf(prisma, ed, payloadForPdf);
+    return res.json({
+      success: true,
+      pdfBase64: pdfBuffer.toString('base64'),
+    });
+  } catch (e) {
+    console.error('Erreur preview PDF contrat DJ:', e);
+    res.status(500).json({ success: false, message: 'Erreur génération PDF' });
+  }
+});
+
 // Booker: save draft (modifiable tant que pas SENT/SIGNED)
 app.put('/api/contracts/event-djs/:eventDjId/draft', authenticateToken, async (req, res) => {
   try {
@@ -7205,6 +7233,38 @@ app.get('/api/contracts/event-venues/:eventVenueId', authenticateToken, async (r
   } catch (e) {
     console.error('Erreur get contract venue:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-venues/:eventVenueId/preview-pdf', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventVenueId } = req.params;
+    const { isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    const full = await prisma.eventVenue.findUnique({
+      where: { id: eventVenueId },
+      include: { event: { include: { booker: true, venue: true } }, venue: true },
+    });
+    if (!full) return res.status(404).json({ success: false, message: 'Introuvable.' });
+    const rawPayload = req.body?.payload;
+    let payloadForPdf = full.contractPayload ?? {};
+    if (rawPayload != null && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+      if (full.contractStatus === 'DRAFT' && isBooker) {
+        payloadForPdf = rawPayload;
+      } else if (full.contractStatus === 'SENT' && (isBooker || isVenue)) {
+        payloadForPdf = rawPayload;
+      }
+    }
+    const { buildVenueContractPreviewPdf } = require('./utils/contractPreview');
+    const pdfBuffer = await buildVenueContractPreviewPdf(prisma, full, payloadForPdf);
+    return res.json({
+      success: true,
+      pdfBase64: pdfBuffer.toString('base64'),
+    });
+  } catch (e) {
+    console.error('Erreur preview PDF contrat lieu:', e);
+    res.status(500).json({ success: false, message: 'Erreur génération PDF' });
   }
 });
 
@@ -7746,7 +7806,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         title: title.trim(),
         date: eventDate,
         time: time.trim(),
-        durationHours:
+          durationHours:
           durationHours != null && durationHours !== ''
             ? (() => {
                 const n = parseFloat(String(durationHours).replace(',', '.'));

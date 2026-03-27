@@ -42,6 +42,7 @@ import ContractDraftEditorFields from '../../components/ContractDraftEditorField
 import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
+import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
 
 function cleanText(s) {
   if (!s) return '';
@@ -143,6 +144,13 @@ export default function BookerDashboardPage() {
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
+  const [contractPdfPreview, setContractPdfPreview] = useState({
+    visible: false,
+    loading: false,
+    pdfBase64: null,
+    error: null,
+    pendingAction: null,
+  });
   /** iOS : évite deux Modal overFullScreen empilés (touches mortes sur l’éditeur). */
   const reopenChatAfterContractRef = useRef(false);
 
@@ -684,9 +692,9 @@ export default function BookerDashboardPage() {
   };
 
   const saveContractDraft = async () => {
-    if (!user?.token) return;
+    if (!user?.token) return false;
     const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
-    if (!id) return;
+    if (!id) return false;
     try {
       const payload = isVenueChat ? buildVenueContractPayload(contractDraft) : buildDjContractPayload(contractDraft);
       const res = isVenueChat
@@ -697,12 +705,14 @@ export default function BookerDashboardPage() {
         closeContractEditorSession();
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
-      } else {
-        showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+        return true;
       }
+      showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
+      return false;
     } catch (e) {
       console.error('[BookerDashboard] saveContractDraft error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+      return false;
     }
   };
 
@@ -768,6 +778,67 @@ export default function BookerDashboardPage() {
     } catch (e) {
       console.error('[BookerDashboard] counterContract error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const closeContractPdfPreview = () => {
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+  };
+
+  const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
+    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    if (!user?.token || !id) return;
+    setContractPdfPreview({
+      visible: true,
+      loading: true,
+      pdfBase64: null,
+      error: null,
+      pendingAction,
+    });
+    try {
+      const res = isVenueChat
+        ? await api.previewVenueContractPdf(user.token, id, previewPayload)
+        : await api.previewBookingContractPdf(user.token, id, previewPayload);
+      if (res?.success && res.pdfBase64) {
+        setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
+      } else {
+        setContractPdfPreview((p) => ({
+          ...p,
+          loading: false,
+          error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+        }));
+      }
+    } catch (e) {
+      setContractPdfPreview((p) => ({
+        ...p,
+        loading: false,
+        error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
+      }));
+    }
+  };
+
+  const confirmContractPdfPreview = async () => {
+    const action = contractPdfPreview.pendingAction;
+    setContractPdfPreview({
+      visible: false,
+      loading: false,
+      pdfBase64: null,
+      error: null,
+      pendingAction: null,
+    });
+    if (action === 'send') {
+      const ok = await saveContractDraft();
+      if (ok) await sendContract();
+    } else if (action === 'accept') {
+      await acceptContract();
+    } else if (action === 'counter') {
+      await counterContract();
     }
   };
 
@@ -2044,7 +2115,14 @@ export default function BookerDashboardPage() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.contractButton, styles.contractButtonPrimary]}
-                        onPress={sendContract}
+                        onPress={() =>
+                          openContractPdfPreview({
+                            previewPayload: isVenueChat
+                              ? buildVenueContractPayload(contractDraft)
+                              : buildDjContractPayload(contractDraft),
+                            pendingAction: 'send',
+                          })
+                        }
                       >
                         <Text style={styles.contractButtonTextDark}>
                           {isVenueChat
@@ -2070,7 +2148,7 @@ export default function BookerDashboardPage() {
                             styles.contractButtonPrimary,
                             (djVenueGateBlocks || !contractAcceptAck) && { opacity: 0.45 },
                           ]}
-                          onPress={acceptContract}
+                          onPress={() => openContractPdfPreview({ pendingAction: 'accept' })}
                           disabled={djVenueGateBlocks || !contractAcceptAck}
                         >
                           <Text style={styles.contractButtonTextDark}>
@@ -2277,7 +2355,17 @@ export default function BookerDashboardPage() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.contractButton, styles.contractButtonPrimary]}
-                  onPress={contractData?.status === 'DRAFT' ? saveContractDraft : counterContract}
+                  onPress={
+                    contractData?.status === 'DRAFT'
+                      ? saveContractDraft
+                      : () =>
+                          openContractPdfPreview({
+                            previewPayload: isVenueChat
+                              ? buildVenueContractPayload(contractDraft)
+                              : buildDjContractPayload(contractDraft),
+                            pendingAction: 'counter',
+                          })
+                  }
                 >
                   <Text style={styles.contractButtonTextDark}>
                     {contractData?.status === 'DRAFT'
@@ -2359,6 +2447,31 @@ export default function BookerDashboardPage() {
         language={language}
         styles={styles}
         options={contractEventEndOptions}
+      />
+
+      <ContractPdfPreviewModal
+        visible={contractPdfPreview.visible}
+        onClose={closeContractPdfPreview}
+        onConfirm={confirmContractPdfPreview}
+        title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
+        cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
+        confirmLabel={
+          contractPdfPreview.pendingAction === 'accept'
+            ? language === 'fr'
+              ? "J'ai lu et j'accepte"
+              : 'I have read and accept'
+            : contractPdfPreview.pendingAction === 'counter'
+              ? language === 'fr'
+                ? 'Confirmer la contre-proposition'
+                : 'Confirm counter-proposal'
+              : language === 'fr'
+                ? "Confirmer l'envoi"
+                : 'Confirm send'
+        }
+        pdfBase64={contractPdfPreview.pdfBase64}
+        loading={contractPdfPreview.loading}
+        errorText={contractPdfPreview.error}
+        language={language}
       />
 
       {/* ✅ Modal édition événement */}

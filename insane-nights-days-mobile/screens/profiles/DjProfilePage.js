@@ -349,7 +349,7 @@ export default function DjProfilePage() {
               onPress={() => {
                 // Retourner au dashboard avec la sélection
                 const slotIndexToPass = (slotIndex !== null && slotIndex !== undefined) ? slotIndex : undefined;
-                navigate('bookerDashboard', {
+                navigate(returnTo || 'bookerDashboard', {
                   selectedDjId: dj.userId,
                   selectedDjName: dj.artistName,
                   action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',

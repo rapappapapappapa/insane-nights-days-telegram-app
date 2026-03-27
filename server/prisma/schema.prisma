@@ -372,6 +372,9 @@ model EventDj {
   bookerAcceptedAt DateTime?
   djAcceptedAt     DateTime?
   rejectionReason  String?
+  /// Créneau de passage du DJ (heure locale « HH:mm »), dans la fenêtre date + durée événement
+  slotStart        String?
+  slotEnd          String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   event            Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)

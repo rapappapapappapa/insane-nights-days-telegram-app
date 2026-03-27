@@ -20,6 +20,59 @@ import { useEventForm } from '../../contexts/EventFormContext';
 import { api } from '../../api/config';
 import { useToast } from '../../hooks/useToast';
 
+const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
+
+function parseHM(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mi = parseInt(m[2], 10);
+  if (h > 23 || mi > 59 || h < 0 || mi < 0) return null;
+  return h * 60 + mi;
+}
+
+function formatHM(mins) {
+  const m = Math.round(mins);
+  const h24 = Math.floor(m / 60) % 24;
+  const mi = m % 60;
+  return `${String(h24).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+}
+
+function applyEqualDjSlotTimes(slots, timeStr, durationH) {
+  const evS = parseHM(timeStr);
+  if (evS == null || durationH == null || Number.isNaN(durationH) || durationH <= 0) {
+    return slots;
+  }
+  const evE = evS + durationH * 60;
+  const idxs = slots.map((s, i) => (s.djId ? i : null)).filter((i) => i !== null);
+  const n = idxs.length;
+  if (n === 0) return slots;
+  const chunk = (evE - evS) / n;
+  const next = slots.map((s) => ({ ...s }));
+  idxs.forEach((slotIdx, j) => {
+    next[slotIdx].slotStart = formatHM(evS + chunk * j);
+    next[slotIdx].slotEnd = formatHM(evS + chunk * (j + 1));
+  });
+  return next;
+}
+
+function slotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationH) {
+  const evS = parseHM(eventTimeStr);
+  if (evS == null || durationH == null || Number.isNaN(durationH) || durationH <= 0) {
+    return { ok: true };
+  }
+  const evE = evS + durationH * 60;
+  let s = parseHM(slotStart);
+  let e = parseHM(slotEnd);
+  if (s == null || e == null) return { ok: false };
+  while (e < s) e += 24 * 60;
+  if (s < evS) s += 24 * 60;
+  if (e < s) e += 24 * 60;
+  if (s >= evS && e <= evE && e > s) return { ok: true };
+  return { ok: false };
+}
+
 export default function BookerEventDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
@@ -36,8 +89,10 @@ export default function BookerEventDashboardPage() {
   // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif/Paiement)
   const [currentStep, setCurrentStep] = useState(1);
   
-  // Slots DJ pour la création d'événement
-  const [djSlots, setDjSlots] = useState([null]);
+  // Slots DJ pour la création d'événement (créneau horaire par ligne)
+  const [djSlots, setDjSlots] = useState([emptyDjSlot()]);
+  const [slotTimePicker, setSlotTimePicker] = useState(null);
+  const [tempSlotTime, setTempSlotTime] = useState(() => new Date());
   
   // Date & heure avec sélecteurs stylés
   const [tempDate, setTempDate] = useState(eventDateTime || new Date());
@@ -126,9 +181,15 @@ export default function BookerEventDashboardPage() {
   useEffect(() => {
     if (currentStep === 3 && !hasInitializedSlots.current) {
       if (formData.djIds.length > 0) {
-        setDjSlots([...formData.djIds, null]);
-      } else if (djSlots.length === 0) {
-        setDjSlots([null]);
+        const assigns = formData.djSlotAssignments || [];
+        setDjSlots([
+          ...formData.djIds.map((id, i) => ({
+            djId: id,
+            slotStart: assigns[i]?.slotStart || '',
+            slotEnd: assigns[i]?.slotEnd || '',
+          })),
+          emptyDjSlot(),
+        ]);
       }
       hasInitializedSlots.current = true;
     } else if (currentStep !== 3) {
@@ -156,48 +217,71 @@ export default function BookerEventDashboardPage() {
       slotIndex: currentSlotIndex,
     };
     
+    const syncSlotsToForm = (slotsAfter /* applyEqual déjà fait */) => {
+      const filled = slotsAfter.filter((s) => s.djId);
+      setFormData((prevForm) => ({
+        ...prevForm,
+        djIds: filled.map((s) => s.djId),
+        djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+      }));
+    };
+
     // Sélection de DJ
     if (currentDjId && currentAction === 'add') {
+      const dur = parseFloat(formData.durationHours);
+      const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
       if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
-        setDjSlots(prev => {
+        setDjSlots((prev) => {
           const newSlots = [...prev];
           while (newSlots.length <= currentSlotIndex) {
-            newSlots.push(null);
+            newSlots.push(emptyDjSlot());
           }
-          newSlots[currentSlotIndex] = currentDjId;
-          const newDjIds = newSlots.filter(id => id !== null);
-          setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
-          return newSlots;
+          const cur = newSlots[currentSlotIndex] || emptyDjSlot();
+          newSlots[currentSlotIndex] = { ...cur, djId: currentDjId };
+          const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
+          syncSlotsToForm(timed);
+          return timed;
         });
         if (currentStep !== 3) {
           setCurrentStep(3);
         }
       } else if (currentStep >= 3) {
-        setDjSlots(prev => {
+        setDjSlots((prev) => {
           const newSlots = [...prev];
-          const emptyIndex = newSlots.findIndex(id => id === null);
+          const emptyIndex = newSlots.findIndex((s) => !s.djId);
           if (emptyIndex !== -1) {
-            newSlots[emptyIndex] = currentDjId;
+            newSlots[emptyIndex] = { ...newSlots[emptyIndex], djId: currentDjId };
           } else {
-            newSlots.push(currentDjId);
+            newSlots.push({ ...emptyDjSlot(), djId: currentDjId });
           }
-          const newDjIds = newSlots.filter(id => id !== null);
-          setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
-          return newSlots;
+          const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
+          syncSlotsToForm(timed);
+          return timed;
         });
         setCurrentStep(3);
       } else {
         addDj(currentDjId);
+        const evS = parseHM(formData.time);
+        if (evS != null && durOk != null) {
+          setFormData((prev) => ({
+            ...prev,
+            djSlotAssignments: [
+              { slotStart: formatHM(evS), slotEnd: formatHM(evS + durOk * 60) },
+            ],
+          }));
+        }
         setCurrentStep(4);
       }
     } else if (currentDjId && currentAction === 'remove') {
+      const dur = parseFloat(formData.durationHours);
+      const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
       if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
-        setDjSlots(prev => {
+        setDjSlots((prev) => {
           const newSlots = [...prev];
-          newSlots[currentSlotIndex] = null;
-          const newDjIds = newSlots.filter(id => id !== null);
-          setFormData(prevForm => ({ ...prevForm, djIds: newDjIds }));
-          return newSlots;
+          newSlots[currentSlotIndex] = emptyDjSlot();
+          const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
+          syncSlotsToForm(timed);
+          return timed;
         });
         setCurrentStep(3);
       } else {
@@ -212,7 +296,7 @@ export default function BookerEventDashboardPage() {
     } else if (currentVenueId && currentAction === 'remove') {
       setVenue('');
     }
-  }, [currentDjId, currentVenueId, currentAction, currentSlotIndex]);
+  }, [currentDjId, currentVenueId, currentAction, currentSlotIndex, formData.time, formData.durationHours]);
 
   const fetchAvailableDjs = async () => {
     if (!user?.token || loadingDjs) return;
@@ -251,12 +335,87 @@ export default function BookerEventDashboardPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const updateSlotTimeFromPicker = React.useCallback(
+    (slotIndex, field, date) => {
+      const h = date.getHours().toString().padStart(2, '0');
+      const mi = date.getMinutes().toString().padStart(2, '0');
+      const hhmm = `${h}:${mi}`;
+      setDjSlots((prev) => {
+        const next = prev.map((s, i) => {
+          if (i !== slotIndex) return s;
+          if (field === 'start') return { ...s, slotStart: hhmm };
+          return { ...s, slotEnd: hhmm };
+        });
+        const filled = next.filter((s) => s.djId);
+        setFormData((p) => ({
+          ...p,
+          djIds: filled.map((s) => s.djId),
+          djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+        }));
+        return next;
+      });
+    },
+    [setFormData]
+  );
+
+  const openSlotTimeField = (slotIndex, field) => {
+    const slot = djSlots[slotIndex];
+    if (!slot?.djId) return;
+    const str = field === 'start' ? slot.slotStart : slot.slotEnd;
+    const base = eventDateTime || new Date();
+    const d = new Date(base);
+    if (str && parseHM(str) != null) {
+      const mins = parseHM(str);
+      d.setHours(Math.floor(mins / 60) % 24);
+      d.setMinutes(mins % 60);
+      d.setSeconds(0);
+      d.setMilliseconds(0);
+    }
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: d,
+        mode: 'time',
+        is24Hour: true,
+        onChange: (_, selectedTime) => {
+          if (selectedTime) {
+            updateSlotTimeFromPicker(slotIndex, field, selectedTime);
+          }
+        },
+      });
+      return;
+    }
+    setTempSlotTime(d);
+    setSlotTimePicker({ index: slotIndex, field });
+  };
+
   const handleCreateEvent = async () => {
     if (creating) return;
 
     if (!formData.title || !formData.date || !formData.time || !formData.venueId || formData.djIds.length === 0) {
       showError(language === 'fr' ? 'Veuillez remplir tous les champs requis (titre, date, heure, lieu, DJ).' : 'Please fill in all required fields (title, date, time, venue, DJ).');
       return;
+    }
+
+    const durCheck = parseFloat(formData.durationHours);
+    const assign = formData.djSlotAssignments || [];
+    for (let i = 0; i < formData.djIds.length; i++) {
+      const a = assign[i] || {};
+      if (!a.slotStart || !a.slotEnd) {
+        showError(
+          language === 'fr'
+            ? 'Renseigne un créneau (début et fin) pour chaque DJ.'
+            : 'Set a time slot (start and end) for each DJ.'
+        );
+        return;
+      }
+      if (!slotFitsEventWindow(a.slotStart, a.slotEnd, formData.time.trim(), durCheck)) {
+        showError(
+          language === 'fr'
+            ? `Le créneau de ${a.slotStart} à ${a.slotEnd} dépasse l'horaire ou la durée de l'événement.`
+            : `The slot ${a.slotStart}–${a.slotEnd} is outside the event time window.`
+        );
+        return;
+      }
     }
 
     try {
@@ -305,6 +464,7 @@ export default function BookerEventDashboardPage() {
         time: formData.time.trim(),
         venueId: formData.venueId,
         djIds: formData.djIds,
+        djSlotAssignments: formData.djSlotAssignments || [],
         price: formData.price ? parseFloat(formData.price) : 0,
         durationHours: formData.durationHours ? parseFloat(formData.durationHours) : null,
         capacity: formData.capacity ? parseInt(formData.capacity) : 100,
@@ -352,7 +512,6 @@ export default function BookerEventDashboardPage() {
   };
 
   const selectedVenue = venues.find((v) => v.id === formData.venueId);
-  const selectedDjs = availableDjs.filter((dj) => formData.djIds.includes(dj.userId));
 
   return (
     <KeyboardAvoidingView
@@ -584,28 +743,41 @@ export default function BookerEventDashboardPage() {
               )}
 
               <Text style={styles.stepDescription}>
-                {language === 'fr' 
-                  ? 'Ajoutez des slots et sélectionnez un DJ pour chaque slot.'
-                  : 'Add slots and select a DJ for each slot.'}
+                {language === 'fr'
+                  ? 'Pour chaque créneau : choisis un DJ, puis ajuste les heures dans la fenêtre (début → début + durée).'
+                  : 'For each slot: pick a DJ, then adjust times within the event window (start → start + duration).'}
               </Text>
 
               {/* Liste des slots DJ */}
-              {djSlots.map((djId, index) => {
-                const selectedDj = djId ? availableDjs.find(dj => dj.userId === djId) : null;
+              {djSlots.map((slotRow, index) => {
+                const selectedDj = slotRow.djId
+                  ? availableDjs.find((dj) => dj.userId === slotRow.djId)
+                  : null;
                 return (
                   <View key={index} style={styles.djSlotContainer}>
                     <View style={styles.djSlotHeader}>
                       <Text style={styles.djSlotLabel}>
-                        {language === 'fr' ? `Slot ${index + 1}` : `Slot ${index + 1}`}
+                        {language === 'fr' ? `Créneau ${index + 1}` : `Slot ${index + 1}`}
                       </Text>
                       {djSlots.length > 1 && (
                         <TouchableOpacity
                           style={styles.removeSlotButton}
                           onPress={() => {
-                            const newSlots = djSlots.filter((_, i) => i !== index);
-                            setDjSlots(newSlots);
-                            const newDjIds = newSlots.filter(id => id !== null);
-                            setFormData(prev => ({ ...prev, djIds: newDjIds }));
+                            const dur = parseFloat(formData.durationHours);
+                            const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
+                            let newSlots = djSlots.filter((_, i) => i !== index);
+                            if (newSlots.length === 0) newSlots = [emptyDjSlot()];
+                            const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
+                            setDjSlots(timed);
+                            const filled = timed.filter((s) => s.djId);
+                            setFormData((prev) => ({
+                              ...prev,
+                              djIds: filled.map((s) => s.djId),
+                              djSlotAssignments: filled.map((s) => ({
+                                slotStart: s.slotStart,
+                                slotEnd: s.slotEnd,
+                              })),
+                            }));
                           }}
                         >
                           <Text style={styles.removeSlotButtonText}>✕</Text>
@@ -615,22 +787,55 @@ export default function BookerEventDashboardPage() {
                     <TouchableOpacity
                       style={styles.selectButton}
                       onPress={() => {
-                        const currentSlotDjId = djSlots[index];
-                        const otherSelectedDjIds = formData.djIds.filter(id => id !== currentSlotDjId);
+                        const currentSlotDjId = slotRow.djId;
+                        const otherSelectedDjIds = formData.djIds.filter(
+                          (id) => id !== currentSlotDjId
+                        );
                         navigate('selectDj', {
                           selectedDjIds: otherSelectedDjIds,
                           slotIndex: index,
                           isSlotMode: true,
+                          returnTo: 'bookerEventDashboard',
                         });
                       }}
                     >
                       <Text style={[styles.selectButtonText, !selectedDj && styles.placeholderText]}>
                         {selectedDj
                           ? `${selectedDj.artistName} • ${language === 'fr' ? 'prix à convenir' : 'price to agree'}`
-                          : language === 'fr' ? 'Sélectionner un DJ' : 'Select a DJ'}
+                          : language === 'fr'
+                            ? 'Sélectionner un DJ'
+                            : 'Select a DJ'}
                       </Text>
                       <Text style={styles.chevron}>▼</Text>
                     </TouchableOpacity>
+                    {selectedDj ? (
+                      <View style={styles.djSlotTimesRow}>
+                        <TouchableOpacity
+                          style={styles.djSlotTimeButton}
+                          onPress={() => openSlotTimeField(index, 'start')}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.djSlotTimeLabel}>
+                            {language === 'fr' ? 'Début' : 'Start'}
+                          </Text>
+                          <Text style={styles.djSlotTimeValue}>
+                            {slotRow.slotStart || '—'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.djSlotTimeButton}
+                          onPress={() => openSlotTimeField(index, 'end')}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.djSlotTimeLabel}>
+                            {language === 'fr' ? 'Fin' : 'End'}
+                          </Text>
+                          <Text style={styles.djSlotTimeValue}>
+                            {slotRow.slotEnd || '—'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -639,18 +844,19 @@ export default function BookerEventDashboardPage() {
               <TouchableOpacity
                 style={styles.addSlotButton}
                 onPress={() => {
-                  setDjSlots([...djSlots, null]);
+                  setDjSlots([...djSlots, emptyDjSlot()]);
                 }}
               >
                 <Text style={styles.addSlotButtonText}>
-                  + {language === 'fr' ? 'Ajouter un slot DJ' : 'Add DJ slot'}
+                  + {language === 'fr' ? 'Ajouter un créneau DJ' : 'Add DJ slot'}
                 </Text>
               </TouchableOpacity>
 
-              {djSlots.filter(id => id !== null).length > 0 && (
+              {djSlots.filter((s) => s.djId).length > 0 && (
                 <View style={styles.selectedInfo}>
                   <Text style={styles.selectedInfoText}>
-                    ✓ {language === 'fr' ? 'DJ(s) sélectionné(s)' : 'DJ(s) selected'}: {djSlots.filter(id => id !== null).length}
+                    ✓ {language === 'fr' ? 'DJ(s) sélectionné(s)' : 'DJ(s) selected'}:{' '}
+                    {djSlots.filter((s) => s.djId).length}
                   </Text>
                 </View>
               )}
@@ -665,15 +871,25 @@ export default function BookerEventDashboardPage() {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.nextButton, djSlots.filter(id => id !== null).length === 0 && styles.nextButtonDisabled]}
+                  style={[
+                    styles.nextButton,
+                    djSlots.filter((s) => s.djId).length === 0 && styles.nextButtonDisabled,
+                  ]}
                   onPress={() => {
-                    const selectedDjIds = djSlots.filter(id => id !== null);
-                    if (selectedDjIds.length > 0) {
-                      setFormData(prev => ({ ...prev, djIds: selectedDjIds }));
+                    const filled = djSlots.filter((s) => s.djId);
+                    if (filled.length > 0) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        djIds: filled.map((s) => s.djId),
+                        djSlotAssignments: filled.map((s) => ({
+                          slotStart: s.slotStart,
+                          slotEnd: s.slotEnd,
+                        })),
+                      }));
                       setCurrentStep(4);
                     }
                   }}
-                  disabled={djSlots.filter(id => id !== null).length === 0}
+                  disabled={djSlots.filter((s) => s.djId).length === 0}
                 >
                   <Text style={styles.nextButtonText}>
                     {language === 'fr' ? 'Suivant →' : 'Next →'}
@@ -840,16 +1056,23 @@ export default function BookerEventDashboardPage() {
                   </View>
                 )}
 
-                {selectedDjs.length > 0 && (
+                {formData.djIds.length > 0 && (
                   <View style={styles.summarySection}>
                     <Text style={styles.summaryLabel}>
-                      {language === 'fr' ? 'DJs sélectionnés' : 'Selected DJs'}
+                      {language === 'fr' ? 'DJs et créneaux' : 'DJs and time slots'}
                     </Text>
-                    {selectedDjs.map((dj) => (
-                      <Text key={dj.userId} style={styles.summaryValue}>
-                        • {dj.artistName}
-                      </Text>
-                    ))}
+                    {formData.djIds.map((id, i) => {
+                      const dj = availableDjs.find((d) => d.userId === id);
+                      const a = formData.djSlotAssignments?.[i];
+                      return (
+                        <Text key={id} style={styles.summaryValue}>
+                          • {dj?.artistName || id}
+                          {a?.slotStart && a?.slotEnd
+                            ? `  (${a.slotStart} – ${a.slotEnd})`
+                            : ''}
+                        </Text>
+                      );
+                    })}
                   </View>
                 )}
 
@@ -1063,6 +1286,80 @@ export default function BookerEventDashboardPage() {
                     const minutes = tempTime.getMinutes().toString().padStart(2, '0');
                     handleChange('time', `${hours}:${minutes}`);
                     setShowTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.datePickerConfirmButtonText}>
+                    {language === 'fr' ? 'Valider' : 'Confirm'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
+
+      {/* Modal créneau DJ (iOS) */}
+      {Platform.OS === 'ios' && slotTimePicker && (
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setSlotTimePicker(null)}
+        >
+          <TouchableOpacity
+            style={styles.datePickerModalOverlay}
+            activeOpacity={1}
+            onPress={() => setSlotTimePicker(null)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={styles.datePickerModalContent}
+            >
+              <View style={styles.datePickerHeader}>
+                <Text style={styles.datePickerTitle}>
+                  {slotTimePicker.field === 'start'
+                    ? language === 'fr'
+                      ? 'Heure de début du créneau'
+                      : 'Slot start time'
+                    : language === 'fr'
+                      ? 'Heure de fin du créneau'
+                      : 'Slot end time'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.datePickerCloseButton}
+                  onPress={() => setSlotTimePicker(null)}
+                >
+                  <Text style={styles.datePickerCloseButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.datePickerContainer}>
+                <DateTimePicker
+                  value={tempSlotTime}
+                  mode="time"
+                  is24Hour={true}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant="light"
+                  onChange={(_, t) => {
+                    if (t) setTempSlotTime(t);
+                  }}
+                  style={styles.datePicker}
+                />
+              </View>
+              <View style={styles.datePickerFooter}>
+                <TouchableOpacity
+                  style={styles.datePickerCancelButton}
+                  onPress={() => setSlotTimePicker(null)}
+                >
+                  <Text style={styles.datePickerCancelButtonText}>
+                    {language === 'fr' ? 'Annuler' : 'Cancel'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.datePickerConfirmButton}
+                  onPress={() => {
+                    updateSlotTimeFromPicker(slotTimePicker.index, slotTimePicker.field, tempSlotTime);
+                    setSlotTimePicker(null);
                   }}
                 >
                   <Text style={styles.datePickerConfirmButtonText}>
@@ -1310,6 +1607,32 @@ const styles = StyleSheet.create({
     color: '#F44336',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  djSlotTimesRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  djSlotTimeButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.25)',
+  },
+  djSlotTimeLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  djSlotTimeValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   addSlotButton: {
     backgroundColor: 'rgba(255,23,68,0.2)',

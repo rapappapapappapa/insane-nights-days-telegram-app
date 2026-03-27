@@ -9,6 +9,8 @@ export function EventFormProvider({ children }) {
     time: '',
     venueId: '',
     djIds: [],
+    /// Même ordre que djIds : { slotStart, slotEnd } en « HH:mm »
+    djSlotAssignments: [],
     price: '',
     durationHours: '4',
     capacity: '',
@@ -26,16 +28,25 @@ export function EventFormProvider({ children }) {
       }
       return {
         ...prev,
-        djIds: [...prev.djIds, djId]
+        djIds: [...prev.djIds, djId],
+        djSlotAssignments: [
+          ...(prev.djSlotAssignments || []),
+          { slotStart: '', slotEnd: '' },
+        ],
       };
     });
   }, []);
 
   const removeDj = useCallback((djId) => {
-    setFormData(prev => ({
-      ...prev,
-      djIds: prev.djIds.filter(id => id !== djId)
-    }));
+    setFormData(prev => {
+      const idx = prev.djIds.indexOf(djId);
+      if (idx === -1) return prev;
+      return {
+        ...prev,
+        djIds: prev.djIds.filter((id) => id !== djId),
+        djSlotAssignments: (prev.djSlotAssignments || []).filter((_, i) => i !== idx),
+      };
+    });
   }, []);
 
   const setVenue = useCallback((venueId) => {
@@ -52,6 +63,7 @@ export function EventFormProvider({ children }) {
       time: '',
       venueId: '',
       djIds: [],
+      djSlotAssignments: [],
       price: '',
       durationHours: '4',
       capacity: '',

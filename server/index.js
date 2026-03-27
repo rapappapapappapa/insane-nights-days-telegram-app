@@ -37,6 +37,33 @@ const {
 const { JWT_SECRET } = require('./utils/jwtConfig');
 const { parseTicketQuantity } = require('./utils/validation');
 
+/** Parse "HH:mm" → minutes depuis minuit (0–1439). */
+function parseHmClock(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mi = parseInt(m[2], 10);
+  if (h > 23 || mi > 59 || h < 0 || mi < 0) return null;
+  return h * 60 + mi;
+}
+
+/** Vérifie qu'un créneau [slotStart, slotEnd] est dans [heure événement, +durée] (gestion après minuit). */
+function djSlotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationHoursNum) {
+  const evS = parseHmClock(eventTimeStr);
+  if (evS == null) return { ok: false, message: 'Heure événement invalide.' };
+  if (!Number.isFinite(durationHoursNum) || durationHoursNum <= 0) return { ok: true };
+  const evE = evS + durationHoursNum * 60;
+  let s = parseHmClock(slotStart);
+  let e = parseHmClock(slotEnd);
+  if (s == null || e == null) return { ok: false, message: 'Créneau DJ invalide (utilisez HH:mm).' };
+  while (e < s) e += 24 * 60;
+  if (s < evS) s += 24 * 60;
+  if (e < s) e += 24 * 60;
+  if (s >= evS && e <= evE && e > s) return { ok: true };
+  return { ok: false, message: 'Un créneau DJ dépasse l\'horaire ou la durée de l\'événement.' };
+}
+
 /** Longueur max des messages de chat (anti-abus) */
 const MAX_CHAT_MESSAGE_LENGTH = 5000;
 
@@ -7628,7 +7655,20 @@ app.post(
 app.post('/api/booker/events', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { title, date, time, venueId, djIds, price, capacity, genre, description, image, durationHours } = req.body;
+    const {
+      title,
+      date,
+      time,
+      venueId,
+      djIds,
+      djSlotAssignments,
+      price,
+      capacity,
+      genre,
+      description,
+      image,
+      durationHours,
+    } = req.body;
 
     // Validation des champs requis
     if (!title || !date || !time || !venueId || !djIds || !Array.isArray(djIds) || djIds.length === 0) {
@@ -7685,6 +7725,47 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         success: false,
         message: 'Un ou plusieurs DJs ne sont pas disponibles ou n\'existent pas.',
       });
+    }
+
+    const durationParsed =
+      durationHours != null && durationHours !== ''
+        ? parseFloat(String(durationHours).replace(',', '.'))
+        : null;
+    const durationForSlots =
+      Number.isFinite(durationParsed) && durationParsed > 0 ? durationParsed : null;
+
+    if (djSlotAssignments != null) {
+      if (!Array.isArray(djSlotAssignments)) {
+        return res.status(400).json({
+          success: false,
+          message: 'djSlotAssignments doit être un tableau.',
+        });
+      }
+      if (djSlotAssignments.length > djIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'djSlotAssignments ne peut pas dépasser le nombre de DJs.',
+        });
+      }
+      for (let i = 0; i < djSlotAssignments.length; i++) {
+        const a = djSlotAssignments[i];
+        if (a == null || typeof a !== 'object') continue;
+        const ss = a.slotStart != null ? String(a.slotStart).trim() : '';
+        const se = a.slotEnd != null ? String(a.slotEnd).trim() : '';
+        if (!ss && !se) continue;
+        if (!ss || !se) {
+          return res.status(400).json({
+            success: false,
+            message: 'Chaque créneau DJ doit avoir slotStart et slotEnd (format HH:mm).',
+          });
+        }
+        if (durationForSlots != null) {
+          const fit = djSlotFitsEventWindow(ss, se, String(time).trim(), durationForSlots);
+          if (!fit.ok) {
+            return res.status(400).json({ success: false, message: fit.message });
+          }
+        }
+      }
     }
 
     // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
@@ -7823,10 +7904,18 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         bookerId: booker.id,
         status: 'UPCOMING',
         eventDjs: {
-          create: djIds.map((djId) => ({
-            djId: djId,
-            status: 'PENDING', // Les invitations commencent en PENDING
-          })),
+          create: djIds.map((djId, idx) => {
+            const a = Array.isArray(djSlotAssignments) ? djSlotAssignments[idx] : null;
+            const ss = a?.slotStart != null ? String(a.slotStart).trim() : '';
+            const se = a?.slotEnd != null ? String(a.slotEnd).trim() : '';
+            const hasSlot = ss && se;
+            return {
+              djId,
+              status: 'PENDING', // Les invitations commencent en PENDING
+              slotStart: hasSlot ? ss : null,
+              slotEnd: hasSlot ? se : null,
+            };
+          }),
         },
         eventVenues: {
           create: {

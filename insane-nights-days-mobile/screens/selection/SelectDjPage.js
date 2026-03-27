@@ -20,7 +20,13 @@ export default function SelectDjPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const { selectedDjIds = [], eventId = null, slotIndex = null, isSlotMode = false } = routeParams || {}; // IDs déjà sélectionnés + event cible éventuel + mode slot
+  const {
+    selectedDjIds = [],
+    eventId = null,
+    slotIndex = null,
+    isSlotMode = false,
+    returnTo,
+  } = routeParams || {}; // returnTo : écran après sélection (ex. bookerEventDashboard)
   
   const [djs, setDjs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +70,7 @@ export default function SelectDjPage() {
       djName: dj.artistName,
       selectionMode: true, // Mode sélection
       selectedDjIds: selectedDjIds, // Passer les IDs déjà sélectionnés
-      returnTo: 'selectDj', // Retourner ici après sélection
+      returnTo: returnTo || 'bookerDashboard', // Même logique que lieu (VenueProfilePage)
       eventId: eventId || undefined, // Propager l'eventId si présent
       slotIndex: slotIndex, // Passer l'index du slot si en mode slot
       isSlotMode: isSlotMode, // Indiquer qu'on est en mode slot

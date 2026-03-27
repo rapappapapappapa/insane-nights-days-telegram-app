@@ -11,6 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  InteractionManager,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -141,6 +143,30 @@ export default function BookerDashboardPage() {
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
+  /** iOS : évite deux Modal overFullScreen empilés (touches mortes sur l’éditeur). */
+  const reopenChatAfterContractRef = useRef(false);
+
+  const closeContractEditorSession = () => {
+    setContractEditorVisible(false);
+    setShowPaymentTermsModal(false);
+    setShowDealTypeModal(false);
+    setShowCancellationModal(false);
+    setShowEventEndModal(false);
+    if (reopenChatAfterContractRef.current) {
+      reopenChatAfterContractRef.current = false;
+      setChatModalVisible(true);
+    }
+  };
+
+  const openContractEditorFromChat = () => {
+    if (Platform.OS === 'ios' && chatModalVisible) {
+      reopenChatAfterContractRef.current = true;
+      setChatModalVisible(false);
+      InteractionManager.runAfterInteractions(() => setContractEditorVisible(true));
+    } else {
+      setContractEditorVisible(true);
+    }
+  };
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -668,9 +694,7 @@ export default function BookerDashboardPage() {
         : await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
-        setContractEditorVisible(false);
-        setShowCancellationModal(false);
-        setShowEventEndModal(false);
+        closeContractEditorSession();
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -735,9 +759,7 @@ export default function BookerDashboardPage() {
         : await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
-        setContractEditorVisible(false);
-        setShowCancellationModal(false);
-        setShowEventEndModal(false);
+        closeContractEditorSession();
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -1840,6 +1862,7 @@ export default function BookerDashboardPage() {
         animationType="slide"
         presentationStyle="overFullScreen"
         onRequestClose={() => {
+          reopenChatAfterContractRef.current = false;
           setChatModalVisible(false);
           setSelectedChatEventDjId(null);
           setSelectedChatEventVenueId(null);
@@ -1881,6 +1904,7 @@ export default function BookerDashboardPage() {
             <View style={styles.chatHeader}>
               <TouchableOpacity
                 onPress={() => {
+                  reopenChatAfterContractRef.current = false;
                   setChatModalVisible(false);
                   setSelectedChatEventDjId(null);
                   setSelectedChatEventVenueId(null);
@@ -1913,6 +1937,18 @@ export default function BookerDashboardPage() {
 
             {/* ✅ Contrat (chat privé DJ ou Lieu) */}
             {!isGroupChat && (selectedChatEventDjId || selectedChatEventVenueId) ? (
+              <Pressable
+                onPress={() => {
+                  if (contractLoading || !contractData) return;
+                  if (contractData.status === 'DRAFT') openContractEditorFromChat();
+                  else if (
+                    contractData.status === 'SENT' &&
+                    (isVenueChat ? contractData.sentBy === 'VENUE' : contractData.sentBy === 'DJ')
+                  ) {
+                    openContractEditorFromChat();
+                  }
+                }}
+              >
               <View style={styles.contractCard}>
                 <View style={styles.contractTopRow}>
                   <Text style={styles.contractTitle}>
@@ -2000,7 +2036,7 @@ export default function BookerDashboardPage() {
                     <>
                       <TouchableOpacity
                         style={[styles.contractButton, styles.contractButtonSecondary]}
-                        onPress={() => setContractEditorVisible(true)}
+                        onPress={openContractEditorFromChat}
                       >
                         <Text style={styles.contractButtonText}>
                           {language === 'fr' ? 'Modifier' : 'Edit'}
@@ -2022,7 +2058,7 @@ export default function BookerDashboardPage() {
                       <>
                         <TouchableOpacity
                           style={[styles.contractButton, styles.contractButtonSecondary]}
-                          onPress={() => setContractEditorVisible(true)}
+                          onPress={openContractEditorFromChat}
                         >
                           <Text style={styles.contractButtonText}>
                             {language === 'fr' ? 'Contre-proposer' : 'Counter'}
@@ -2056,6 +2092,7 @@ export default function BookerDashboardPage() {
                   )}
                 </View>
               </View>
+              </Pressable>
             ) : null}
 
             {/* Messages */}
@@ -2199,11 +2236,7 @@ export default function BookerDashboardPage() {
         transparent={true}
         animationType="fade"
         presentationStyle="overFullScreen"
-        onRequestClose={() => {
-          setContractEditorVisible(false);
-          setShowCancellationModal(false);
-          setShowEventEndModal(false);
-        }}
+        onRequestClose={closeContractEditorSession}
       >
         <KeyboardAvoidingView
           style={styles.contractModalOverlay}
@@ -2238,11 +2271,7 @@ export default function BookerDashboardPage() {
               <View style={styles.contractModalActions}>
                 <TouchableOpacity
                   style={[styles.contractButton, styles.contractButtonSecondary]}
-                  onPress={() => {
-                    setContractEditorVisible(false);
-                    setShowCancellationModal(false);
-                    setShowEventEndModal(false);
-                  }}
+                  onPress={closeContractEditorSession}
                 >
                   <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                 </TouchableOpacity>

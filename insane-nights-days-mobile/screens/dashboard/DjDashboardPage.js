@@ -14,6 +14,8 @@ import {
   Linking,
   KeyboardAvoidingView,
   Modal,
+  InteractionManager,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
@@ -158,6 +160,28 @@ export default function DjDashboardPage() {
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
+  const reopenChatAfterContractRef = useRef(false);
+
+  const closeContractEditorSession = () => {
+    setContractEditorVisible(false);
+    setShowPaymentTermsModal(false);
+    setShowCancellationModal(false);
+    setShowEventEndModal(false);
+    if (reopenChatAfterContractRef.current) {
+      reopenChatAfterContractRef.current = false;
+      setChatModalVisible(true);
+    }
+  };
+
+  const openContractEditorFromChat = () => {
+    if (Platform.OS === 'ios' && chatModalVisible) {
+      reopenChatAfterContractRef.current = true;
+      setChatModalVisible(false);
+      InteractionManager.runAfterInteractions(() => setContractEditorVisible(true));
+    } else {
+      setContractEditorVisible(true);
+    }
+  };
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -291,10 +315,7 @@ export default function DjDashboardPage() {
       const res = await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
-        setContractEditorVisible(false);
-        setShowPaymentTermsModal(false);
-        setShowCancellationModal(false);
-        setShowEventEndModal(false);
+        closeContractEditorSession();
         await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -2629,6 +2650,7 @@ export default function DjDashboardPage() {
         transparent={true}
         animationType="slide"
         onRequestClose={() => {
+          reopenChatAfterContractRef.current = false;
           setChatModalVisible(false);
           setSelectedChatEventDjId(null);
           setSelectedChatEventId(null);
@@ -2668,6 +2690,7 @@ export default function DjDashboardPage() {
             <View style={styles.chatHeader}>
               <TouchableOpacity
                 onPress={() => {
+                  reopenChatAfterContractRef.current = false;
                   setChatModalVisible(false);
                   setSelectedChatEventDjId(null);
                   setSelectedChatEventId(null);
@@ -2697,6 +2720,14 @@ export default function DjDashboardPage() {
 
             {/* ✅ Contrat (uniquement chat privé) */}
             {!isGroupChat && selectedChatEventDjId ? (
+              <Pressable
+                onPress={() => {
+                  if (contractLoading || !contractData) return;
+                  if (contractData.status === 'SENT' && contractData.sentBy === 'BOOKER') {
+                    openContractEditorFromChat();
+                  }
+                }}
+              >
               <View style={styles.contractCard}>
                 <View style={styles.contractTopRow}>
                   <Text style={styles.contractTitle}>
@@ -2777,7 +2808,7 @@ export default function DjDashboardPage() {
                       <>
                         <TouchableOpacity
                           style={[styles.contractButton, styles.contractButtonSecondary]}
-                          onPress={() => setContractEditorVisible(true)}
+                          onPress={openContractEditorFromChat}
                         >
                           <Text style={styles.contractButtonText}>
                             {language === 'fr' ? 'Contre-proposer' : 'Counter'}
@@ -2817,6 +2848,7 @@ export default function DjDashboardPage() {
                   )}
                 </View>
               </View>
+              </Pressable>
             ) : null}
 
             {/* Messages */}
@@ -2968,12 +3000,7 @@ export default function DjDashboardPage() {
         transparent={true}
         animationType="fade"
         presentationStyle="overFullScreen"
-        onRequestClose={() => {
-          setContractEditorVisible(false);
-          setShowPaymentTermsModal(false);
-          setShowCancellationModal(false);
-          setShowEventEndModal(false);
-        }}
+        onRequestClose={closeContractEditorSession}
       >
         <KeyboardAvoidingView
           style={styles.contractModalOverlay}
@@ -3008,12 +3035,7 @@ export default function DjDashboardPage() {
               <View style={styles.contractModalActions}>
                 <TouchableOpacity
                   style={[styles.contractButton, styles.contractButtonSecondary]}
-                  onPress={() => {
-                    setContractEditorVisible(false);
-                    setShowPaymentTermsModal(false);
-                    setShowCancellationModal(false);
-                    setShowEventEndModal(false);
-                  }}
+                  onPress={closeContractEditorSession}
                 >
                   <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                 </TouchableOpacity>

@@ -221,8 +221,8 @@ async function generateDjContractPdf({
 
     titleLine(doc, 'Article 4 — Paiement', 11);
     p(doc, "L'Organisateur s'engage à régler :");
-    p(doc, '● la commission NOX via la plateforme');
-    p(doc, "● le cachet de l'Artiste directement à l'Artiste");
+    p(doc, '- la commission NOX via la plateforme');
+    p(doc, "- le cachet de l'Artiste directement à l'Artiste");
     doc.moveDown(0.35);
     p(doc, 'Le non-paiement de la commission peut entraîner l\'annulation du booking.');
 
@@ -242,15 +242,15 @@ async function generateDjContractPdf({
 
     titleLine(doc, 'Article 7 — Responsabilités', 11);
     p(doc, "L'Organisateur est responsable :");
-    p(doc, '● autorisations');
-    p(doc, '● sécurité');
-    p(doc, '● assurance');
-    p(doc, '● matériel');
+    p(doc, '- autorisations');
+    p(doc, '- sécurité');
+    p(doc, '- assurance');
+    p(doc, '- matériel');
     doc.moveDown(0.25);
     p(doc, "L'Artiste est responsable :");
-    p(doc, '● prestation');
-    p(doc, '● comportement');
-    p(doc, '● facturation');
+    p(doc, '- prestation');
+    p(doc, '- comportement');
+    p(doc, '- facturation');
 
     titleLine(doc, 'Article 8 — Matériel', 11);
     p(doc, 'Matériel fourni par l\'Organisateur :');
@@ -261,11 +261,11 @@ async function generateDjContractPdf({
     p(doc, 'NOX agit uniquement comme plateforme de mise en relation.');
     p(doc, "NOX n'est pas partie au contrat.");
     p(doc, "NOX n'est pas responsable :");
-    p(doc, "● du paiement du cachet");
-    p(doc, '● de la prestation');
-    p(doc, '● des incidents');
-    p(doc, '● des annulations');
-    p(doc, '● des dommages');
+    p(doc, "- du paiement du cachet");
+    p(doc, '- de la prestation');
+    p(doc, '- des incidents');
+    p(doc, '- des annulations');
+    p(doc, '- des dommages');
 
     titleLine(doc, 'Article 10 — Non contournement', 11);
     p(doc, 'Les parties reconnaissent avoir été mises en relation via NOX.');
@@ -426,7 +426,7 @@ async function generateVenueContractPdf({
     };
 
     if (dealType === 'fixed_rent') {
-      cas('► CAS 1 — Location fixe', () => {
+      cas('> CAS 1 — Location fixe', () => {
         p(doc, 'Le Lieu est mis à disposition moyennant la somme de :');
         p(doc, `${amount != null ? `${roundMoney(amount)} €` : '—'}`);
         p(doc, 'Modalités :');
@@ -436,13 +436,13 @@ async function generateVenueContractPdf({
         p(doc, 'Le paiement est effectué par l\'Organisateur au Lieu.');
       });
     } else if (dealType === 'bar_only') {
-      cas('► CAS 2 — Le lieu garde le bar', () => {
+      cas('> CAS 2 — Le lieu garde le bar', () => {
         p(doc, 'Le Lieu met à disposition ses installations sans frais de location.');
         p(doc, 'Le Lieu conserve l\'intégralité des recettes du bar.');
         p(doc, 'L\'Organisateur conserve les recettes de billetterie.');
       });
     } else if (dealType === 'revenue_split') {
-      cas('► CAS 3 — Partage des recettes', () => {
+      cas('> CAS 3 — Partage des recettes', () => {
         p(doc, 'Les recettes seront réparties comme suit :');
         p(doc, 'Bar :');
         p(doc, `Organisateur : ${splitBarOrg != null ? `${splitBarOrg} %` : '—'}`);
@@ -453,7 +453,7 @@ async function generateVenueContractPdf({
         p(doc, 'Le règlement s\'effectuera après l\'événement.');
       });
     } else if (dealType === 'rent_plus_split') {
-      cas('► CAS 4 — Location + partage', () => {
+      cas('> CAS 4 — Location + partage', () => {
         p(doc, 'Le Lieu est loué pour :');
         p(doc, `${amount != null ? `${roundMoney(amount)} €` : '—'}`);
         p(doc, 'Les recettes seront réparties :');
@@ -465,19 +465,19 @@ async function generateVenueContractPdf({
         p(doc, `Lieu : ${splitTicketVenue != null ? `${splitTicketVenue} %` : '—'}`);
       });
     } else if (dealType === 'minimum_guarantee') {
-      cas('► CAS 5 — Minimum garanti', () => {
+      cas('> CAS 5 — Minimum garanti', () => {
         p(doc, 'L\'Organisateur garantit un minimum de :');
         p(doc, `${minimumGuarantee != null ? `${roundMoney(minimumGuarantee)} €` : '—'}`);
         p(doc, 'Si les recettes dépassent ce montant, un partage pourra être appliqué :');
         p(doc, splitTerms);
       });
     } else if (dealType === 'custom') {
-      cas('► CAS 6 — Accord personnalisé', () => {
+      cas('> CAS 6 — Accord personnalisé', () => {
         p(doc, 'Les parties conviennent des modalités suivantes :');
         p(doc, customTerms || '—');
       });
     } else {
-      cas(`► Accord (${dealType})`, () => {
+      cas(`> Accord (${dealType})`, () => {
         p(doc, customTerms || paymentTerms || '—');
       });
     }
@@ -493,28 +493,28 @@ async function generateVenueContractPdf({
 
     titleLine(doc, 'Article 4 — Obligations du Lieu', 11);
     p(doc, 'Le Lieu s\'engage à :');
-    p(doc, '● fournir les installations');
-    p(doc, '● être en conformité');
-    p(doc, '● disposer des autorisations');
-    p(doc, '● être assuré');
+    p(doc, '- fournir les installations');
+    p(doc, '- être en conformité');
+    p(doc, '- disposer des autorisations');
+    p(doc, '- être assuré');
     doc.moveDown(0.25);
     p(doc, 'Le Lieu reste responsable :');
-    p(doc, '● du bâtiment');
-    p(doc, '● de la sécurité structurelle');
-    p(doc, '● des autorisations administratives');
+    p(doc, '- du bâtiment');
+    p(doc, '- de la sécurité structurelle');
+    p(doc, '- des autorisations administratives');
 
     titleLine(doc, 'Article 5 — Obligations de l\'Organisateur', 11);
     p(doc, 'L\'Organisateur s\'engage à :');
-    p(doc, '● respecter la réglementation');
-    p(doc, '● respecter la capacité');
-    p(doc, '● respecter les horaires');
-    p(doc, '● assurer l\'événement si nécessaire');
+    p(doc, '- respecter la réglementation');
+    p(doc, '- respecter la capacité');
+    p(doc, '- respecter les horaires');
+    p(doc, '- assurer l\'événement si nécessaire');
     doc.moveDown(0.25);
     p(doc, 'L\'Organisateur est responsable :');
-    p(doc, '● du public');
-    p(doc, '● des artistes');
-    p(doc, '● du matériel extérieur');
-    p(doc, '● des dommages causés');
+    p(doc, '- du public');
+    p(doc, '- des artistes');
+    p(doc, '- du matériel extérieur');
+    p(doc, '- des dommages causés');
 
     titleLine(doc, 'Article 6 — Matériel', 11);
     p(doc, 'Matériel fourni par le Lieu :');
@@ -531,31 +531,31 @@ async function generateVenueContractPdf({
 
     titleLine(doc, 'Article 8 — Horaires et nuisances', 11);
     p(doc, 'L\'Organisateur s\'engage à respecter :');
-    p(doc, '● horaires');
-    p(doc, '● volume sonore');
-    p(doc, '● règlement intérieur');
+    p(doc, '- horaires');
+    p(doc, '- volume sonore');
+    p(doc, '- règlement intérieur');
     doc.moveDown(0.25);
     p(doc, 'Le Lieu peut interrompre l\'événement en cas de non-respect.');
 
     titleLine(doc, 'Article 9 — Responsabilité', 11);
     p(doc, 'Chaque partie est responsable de ses actes.');
     p(doc, 'Le Lieu n\'est pas responsable :');
-    p(doc, '● des artistes');
-    p(doc, '● du public');
-    p(doc, '● du matériel extérieur');
+    p(doc, '- des artistes');
+    p(doc, '- du public');
+    p(doc, '- du matériel extérieur');
     doc.moveDown(0.25);
     p(doc, 'L\'Organisateur n\'est pas responsable :');
-    p(doc, '● des défauts du bâtiment');
-    p(doc, '● des autorisations du Lieu');
+    p(doc, '- des défauts du bâtiment');
+    p(doc, '- des autorisations du Lieu');
 
     titleLine(doc, 'Article 10 — NOX', 11);
     p(doc, 'La mise en relation a été effectuée via NOX.');
     p(doc, "NOX n'est pas responsable :");
-    p(doc, '● du paiement');
-    p(doc, '● de l\'événement');
-    p(doc, '● des incidents');
-    p(doc, '● des annulations');
-    p(doc, '● des dommages');
+    p(doc, '- du paiement');
+    p(doc, '- de l\'événement');
+    p(doc, '- des incidents');
+    p(doc, '- des annulations');
+    p(doc, '- des dommages');
 
     titleLine(doc, 'Article 11 — Non contournement', 11);
     p(doc, 'Les parties reconnaissent avoir été mises en relation via NOX.');

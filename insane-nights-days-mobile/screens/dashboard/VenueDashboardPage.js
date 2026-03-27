@@ -13,6 +13,8 @@ import {
   Modal,
   KeyboardAvoidingView,
   TextInput,
+  InteractionManager,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
@@ -108,6 +110,29 @@ export default function VenueDashboardPage() {
   const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
+  const reopenChatAfterContractRef = useRef(false);
+
+  const closeContractEditorSession = () => {
+    setContractEditorVisible(false);
+    setShowPaymentTermsModal(false);
+    setShowDealTypeModal(false);
+    setShowCancellationModal(false);
+    setShowEventEndModal(false);
+    if (reopenChatAfterContractRef.current) {
+      reopenChatAfterContractRef.current = false;
+      setChatModalVisible(true);
+    }
+  };
+
+  const openContractEditorFromChat = () => {
+    if (Platform.OS === 'ios' && chatModalVisible) {
+      reopenChatAfterContractRef.current = true;
+      setChatModalVisible(false);
+      InteractionManager.runAfterInteractions(() => setContractEditorVisible(true));
+    } else {
+      setContractEditorVisible(true);
+    }
+  };
 
   const contractEventEndOptions = useMemo(
     () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
@@ -271,9 +296,7 @@ export default function VenueDashboardPage() {
       const res = await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
-        setContractEditorVisible(false);
-        setShowCancellationModal(false);
-        setShowEventEndModal(false);
+        closeContractEditorSession();
         await loadVenueContract(selectedChatEventVenueId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
@@ -323,9 +346,7 @@ export default function VenueDashboardPage() {
       const res = await api.counterVenueContract(user.token, selectedChatEventVenueId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
-        setContractEditorVisible(false);
-        setShowCancellationModal(false);
-        setShowEventEndModal(false);
+        closeContractEditorSession();
         await loadVenueContract(selectedChatEventVenueId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
@@ -1029,6 +1050,7 @@ export default function VenueDashboardPage() {
         transparent={true}
         animationType="slide"
         onRequestClose={() => {
+          reopenChatAfterContractRef.current = false;
           setChatModalVisible(false);
           setSelectedChatEventVenueId(null);
           setChatMessages([]);
@@ -1089,6 +1111,14 @@ export default function VenueDashboardPage() {
 
               {/* Contrat Organisateur ↔ Lieu */}
               {selectedChatEventVenueId ? (
+                <Pressable
+                  onPress={() => {
+                    if (contractLoading || !contractData) return;
+                    if (contractData.status === 'SENT' && contractData.sentBy === 'BOOKER') {
+                      openContractEditorFromChat();
+                    }
+                  }}
+                >
                 <View style={styles.contractCard}>
                   <View style={styles.contractTopRow}>
                     <Text style={styles.contractTitle}>
@@ -1161,7 +1191,7 @@ export default function VenueDashboardPage() {
                         <>
                           <TouchableOpacity
                             style={[styles.contractButton, styles.contractButtonSecondary]}
-                            onPress={() => setContractEditorVisible(true)}
+                            onPress={openContractEditorFromChat}
                           >
                             <Text style={styles.contractButtonText}>
                               {language === 'fr' ? 'Contre-proposer' : 'Counter'}
@@ -1197,6 +1227,7 @@ export default function VenueDashboardPage() {
                     )}
                   </View>
                 </View>
+                </Pressable>
               ) : null}
 
               {/* Messages */}
@@ -1290,11 +1321,7 @@ export default function VenueDashboardPage() {
         transparent={true}
         animationType="fade"
         presentationStyle="overFullScreen"
-        onRequestClose={() => {
-          setContractEditorVisible(false);
-          setShowCancellationModal(false);
-          setShowEventEndModal(false);
-        }}
+        onRequestClose={closeContractEditorSession}
       >
         <KeyboardAvoidingView
           style={styles.contractModalOverlay}
@@ -1326,11 +1353,7 @@ export default function VenueDashboardPage() {
                 <View style={styles.contractModalActions}>
                   <TouchableOpacity
                     style={[styles.contractButton, styles.contractButtonSecondary]}
-                    onPress={() => {
-                      setContractEditorVisible(false);
-                      setShowCancellationModal(false);
-                      setShowEventEndModal(false);
-                    }}
+                    onPress={closeContractEditorSession}
                   >
                     <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
                   </TouchableOpacity>

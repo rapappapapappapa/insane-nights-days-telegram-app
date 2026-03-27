@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -35,11 +35,14 @@ import { useNotifications } from '../../hooks/useNotifications';
 import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
+import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 import {
   draftFromPayload,
   buildDjContractPayload,
   contractAcceptAckLabel,
   cancellationPolicyLabel,
+  buildEventEndTimeOptions,
+  formatEventWindowHint,
 } from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -154,6 +157,7 @@ export default function DjDashboardPage() {
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showEventEndModal, setShowEventEndModal] = useState(false);
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -290,6 +294,7 @@ export default function DjDashboardPage() {
         setContractEditorVisible(false);
         setShowPaymentTermsModal(false);
         setShowCancellationModal(false);
+        setShowEventEndModal(false);
         await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -2397,6 +2402,15 @@ export default function DjDashboardPage() {
     venueContractGate?.hasVenueOnEvent === true &&
     venueContractGate?.canFinalizeDjContract === false;
 
+  const contractEventEndOptions = useMemo(
+    () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
+    [contractBooking?.eventTime, contractBooking?.durationHours]
+  );
+  const contractEventWindowHint = useMemo(
+    () => formatEventWindowHint(contractBooking?.eventTime, contractBooking?.durationHours, language),
+    [contractBooking?.eventTime, contractBooking?.durationHours, language]
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -2946,6 +2960,7 @@ export default function DjDashboardPage() {
           setContractEditorVisible(false);
           setShowPaymentTermsModal(false);
           setShowCancellationModal(false);
+          setShowEventEndModal(false);
         }}
             >
               <KeyboardAvoidingView
@@ -2973,6 +2988,9 @@ export default function DjDashboardPage() {
                     setShowPaymentTermsModal={setShowPaymentTermsModal}
                     setShowDealTypeModal={() => {}}
                     setShowCancellationModal={setShowCancellationModal}
+                    eventEndOptions={contractEventEndOptions}
+                    eventWindowHint={contractEventWindowHint}
+                    setShowEventEndModal={setShowEventEndModal}
                   />
 
                   <View style={styles.contractModalActions}>
@@ -2982,6 +3000,7 @@ export default function DjDashboardPage() {
                         setContractEditorVisible(false);
                         setShowPaymentTermsModal(false);
                         setShowCancellationModal(false);
+                        setShowEventEndModal(false);
                       }}
                     >
                       <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
@@ -3039,6 +3058,16 @@ export default function DjDashboardPage() {
               onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
               language={language}
               styles={styles}
+            />
+
+            <EventEndTimePickerModal
+              visible={showEventEndModal}
+              onClose={() => setShowEventEndModal(false)}
+              value={contractDraft.eventEnd}
+              onSelect={(v) => setContractDraft((p) => ({ ...p, eventEnd: v }))}
+              language={language}
+              styles={styles}
+              options={contractEventEndOptions}
             />
 
           </KeyboardAvoidingView>

@@ -6892,6 +6892,7 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
         eventTitle: ed.event?.title,
         eventDate: ed.event?.date,
         eventTime: ed.event?.time,
+        durationHours: ed.event?.durationHours ?? null,
         venueName: ed.event?.venue?.venueName ?? null,
         venueAddress: ed.event?.venue?.address ?? null,
       },
@@ -7192,8 +7193,12 @@ app.get('/api/contracts/event-venues/:eventVenueId', authenticateToken, async (r
         payload: ev.contractPayload,
       },
       booking: {
+        eventVenueId: ev.id,
+        eventId: ev.eventId,
         eventTitle: ev.event?.title,
         eventDate: ev.event?.date,
+        eventTime: ev.event?.time ?? null,
+        durationHours: ev.event?.durationHours ?? null,
         venueName: ev.venue?.venueName,
       },
     });
@@ -7426,7 +7431,7 @@ app.put('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { eventId } = req.params;
-    const { title, description, image, genre, location, time } = req.body ?? {};
+    const { title, description, image, genre, location, time, durationHours } = req.body ?? {};
 
     // Vérifier que le booker existe
     const booker = await prisma.userBooker.findFirst({ where: { userId } });
@@ -7450,6 +7455,14 @@ app.put('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
     if (typeof genre === 'string') data.genre = genre.trim() || event.genre;
     if (typeof location === 'string') data.location = location.trim() || event.location;
     if (typeof time === 'string') data.time = time.trim() || event.time;
+    if (durationHours !== undefined) {
+      if (durationHours === null || durationHours === '') {
+        data.durationHours = null;
+      } else {
+        const n = parseFloat(String(durationHours).replace(',', '.'));
+        if (Number.isFinite(n) && n > 0) data.durationHours = n;
+      }
+    }
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ success: false, message: 'Aucun champ à modifier.' });
@@ -7733,6 +7746,13 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         title: title.trim(),
         date: eventDate,
         time: time.trim(),
+        durationHours:
+          durationHours != null && durationHours !== ''
+            ? (() => {
+                const n = parseFloat(String(durationHours).replace(',', '.'));
+                return Number.isFinite(n) && n > 0 ? n : null;
+              })()
+            : null,
         location: venue.address,
         price: calculatedPrice,
         capacity: capacity ? parseInt(capacity) : 100,

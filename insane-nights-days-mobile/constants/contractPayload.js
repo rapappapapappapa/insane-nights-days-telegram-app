@@ -169,6 +169,62 @@ export function cancellationPolicyLabel(value, lang) {
   return k;
 }
 
+function parseTimeToMinutes(str) {
+  if (str == null || String(str).trim() === '') return null;
+  const t = String(str).trim();
+  const m = t.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function formatMinutesToClock(totalMinutes) {
+  const m = ((Math.floor(totalMinutes) % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/**
+ * Créneaux d’heure de fin entre le début de soirée et la fin (durée événement), pas 30 min.
+ */
+export function buildEventEndTimeOptions(eventTime, durationHours, stepMinutes = 30) {
+  const start = parseTimeToMinutes(eventTime);
+  const dur = Number(durationHours);
+  if (start == null || !Number.isFinite(dur) || dur <= 0) return [];
+  const endMin = start + dur * 60;
+  const out = [];
+  const step = Math.max(5, stepMinutes);
+  for (let t = start + step; t <= endMin; t += step) {
+    const label = formatMinutesToClock(t);
+    out.push({ value: label, label });
+  }
+  const lastLabel = formatMinutesToClock(endMin);
+  if (out.length === 0 || out[out.length - 1].value !== lastLabel) {
+    if (!out.some((o) => o.value === lastLabel)) {
+      out.push({ value: lastLabel, label: lastLabel });
+    }
+  }
+  return out;
+}
+
+/** Résumé début → fin (durée) pour l’éditeur de contrat. */
+export function formatEventWindowHint(eventTime, durationHours, lang) {
+  if (!eventTime || durationHours == null || !Number.isFinite(Number(durationHours))) return '';
+  const dur = Number(durationHours);
+  if (dur <= 0) return '';
+  const start = parseTimeToMinutes(eventTime);
+  if (start == null) return '';
+  const endMin = start + dur * 60;
+  const end = formatMinutesToClock(endMin);
+  const startFmt = formatMinutesToClock(start);
+  return lang === 'fr'
+    ? `Soirée : ${startFmt} → ${end} (${dur} h)`
+    : `Event: ${startFmt} → ${end} (${dur} h)`;
+}
+
 /** Engagement affiché avant le bouton « Accepter » (acceptation de bonne foi, distincte d’une signature manuscrite). */
 export function contractAcceptAckLabel(lang) {
   return lang === 'fr'

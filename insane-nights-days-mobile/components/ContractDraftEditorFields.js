@@ -16,9 +16,14 @@ export default function ContractDraftEditorFields({
   setShowPaymentTermsModal,
   setShowDealTypeModal,
   setShowCancellationModal,
+  eventEndOptions = [],
+  eventWindowHint = '',
+  setShowEventEndModal,
 }) {
   const dt = draft.dealType || 'fixed_rent';
   const isVenue = mode === 'venue';
+
+  const hasPresetEndTimes = eventEndOptions.length > 0;
 
   const priceLabel =
     isVenue && dt === 'bar_only'
@@ -91,13 +96,49 @@ export default function ContractDraftEditorFields({
       </TouchableOpacity>
 
       <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Fin de prestation / fin événement (horaire)' : 'Event end time'}</Text>
-      <TextInput
-        style={styles.contractModalInput}
-        value={draft.eventEnd}
-        onChangeText={(v) => setDraft((p) => ({ ...p, eventEnd: v }))}
-        placeholder={language === 'fr' ? 'ex: 06:00' : 'e.g. 6am'}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-      />
+      {eventWindowHint ? (
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)', marginBottom: 8, lineHeight: 15 }}>
+          {eventWindowHint}
+        </Text>
+      ) : null}
+      {hasPresetEndTimes ? (
+        <>
+          <TouchableOpacity
+            style={[styles.contractModalInput, styles.contractModalDropdown]}
+            onPress={() => setShowEventEndModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.contractModalInputText,
+                !draft.eventEnd && { color: 'rgba(255,255,255,0.4)' },
+              ]}
+            >
+              {draft.eventEnd
+                ? language === 'fr'
+                  ? `Fin à ${draft.eventEnd}`
+                  : `End at ${draft.eventEnd}`
+                : language === 'fr'
+                  ? 'Choisir une heure'
+                  : 'Pick a time'}
+            </Text>
+            <Text style={styles.contractModalChevron}>▼</Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 6, lineHeight: 14 }}>
+            {language === 'fr'
+              ? 'Créneaux basés sur l’heure de début et la durée de l’événement.'
+              : 'Slots are based on the event start time and duration.'}
+          </Text>
+        </>
+      ) : (
+        <TextInput
+          style={styles.contractModalInput}
+          value={draft.eventEnd}
+          onChangeText={(v) => setDraft((p) => ({ ...p, eventEnd: v }))}
+          placeholder={language === 'fr' ? 'ex: 06:00' : 'e.g. 6am'}
+          placeholderTextColor="rgba(255,255,255,0.4)"
+        />
+      )}
 
       {isVenue ? (
         <>

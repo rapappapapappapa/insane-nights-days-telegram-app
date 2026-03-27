@@ -294,6 +294,8 @@ model Event {
   title         String
   date          DateTime
   time          String
+  /// Durée prévue de l’événement (heures), pour contrats / créneaux fin de prestation
+  durationHours Float?
   location      String
   price         Float
   capacity      Int

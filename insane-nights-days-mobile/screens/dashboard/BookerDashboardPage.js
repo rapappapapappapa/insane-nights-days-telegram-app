@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -33,10 +33,13 @@ import {
   dealTypeLabel,
   contractAcceptAckLabel,
   cancellationPolicyLabel,
+  buildEventEndTimeOptions,
+  formatEventWindowHint,
 } from '../../constants/contractPayload';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
+import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 
 function cleanText(s) {
   if (!s) return '';
@@ -136,6 +139,7 @@ export default function BookerDashboardPage() {
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
 
   const PAYMENT_TERMS_OPTIONS = [
@@ -666,6 +670,7 @@ export default function BookerDashboardPage() {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         setContractEditorVisible(false);
         setShowCancellationModal(false);
+        setShowEventEndModal(false);
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -732,6 +737,7 @@ export default function BookerDashboardPage() {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
         setShowCancellationModal(false);
+        setShowEventEndModal(false);
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
         else await loadContract(selectedChatEventDjId);
       } else {
@@ -1173,6 +1179,15 @@ export default function BookerDashboardPage() {
   const selectedDjs = availableDjs.filter((dj) => formData.djIds.includes(dj.userId));
 
   // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
+
+  const contractEventEndOptions = useMemo(
+    () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
+    [contractBooking?.eventTime, contractBooking?.durationHours]
+  );
+  const contractEventWindowHint = useMemo(
+    () => formatEventWindowHint(contractBooking?.eventTime, contractBooking?.durationHours, language),
+    [contractBooking?.eventTime, contractBooking?.durationHours, language]
+  );
 
   const djVenueGateBlocks =
     !isVenueChat &&
@@ -2172,6 +2187,7 @@ export default function BookerDashboardPage() {
               onRequestClose={() => {
                 setContractEditorVisible(false);
                 setShowCancellationModal(false);
+                setShowEventEndModal(false);
               }}
             >
               <KeyboardAvoidingView
@@ -2199,6 +2215,9 @@ export default function BookerDashboardPage() {
                     setShowPaymentTermsModal={setShowPaymentTermsModal}
                     setShowDealTypeModal={setShowDealTypeModal}
                     setShowCancellationModal={setShowCancellationModal}
+                    eventEndOptions={contractEventEndOptions}
+                    eventWindowHint={contractEventWindowHint}
+                    setShowEventEndModal={setShowEventEndModal}
                   />
 
                   <View style={styles.contractModalActions}>
@@ -2207,6 +2226,7 @@ export default function BookerDashboardPage() {
                       onPress={() => {
                         setContractEditorVisible(false);
                         setShowCancellationModal(false);
+                        setShowEventEndModal(false);
                       }}
                     >
                       <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
@@ -2285,6 +2305,16 @@ export default function BookerDashboardPage() {
               onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
               language={language}
               styles={styles}
+            />
+
+            <EventEndTimePickerModal
+              visible={showEventEndModal}
+              onClose={() => setShowEventEndModal(false)}
+              value={contractDraft.eventEnd}
+              onSelect={(v) => setContractDraft((p) => ({ ...p, eventEnd: v }))}
+              language={language}
+              styles={styles}
+              options={contractEventEndOptions}
             />
           </KeyboardAvoidingView>
         </View>

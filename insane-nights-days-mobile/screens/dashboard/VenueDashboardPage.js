@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -32,12 +32,15 @@ import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
+import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 import {
   draftFromPayload,
   buildVenueContractPayload,
   dealTypeLabel,
   contractAcceptAckLabel,
   cancellationPolicyLabel,
+  buildEventEndTimeOptions,
+  formatEventWindowHint,
 } from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -102,8 +105,18 @@ export default function VenueDashboardPage() {
   const [contractDraft, setContractDraft] = useState(() => draftFromPayload({}, 'venue'));
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
+
+  const contractEventEndOptions = useMemo(
+    () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
+    [contractBooking?.eventTime, contractBooking?.durationHours]
+  );
+  const contractEventWindowHint = useMemo(
+    () => formatEventWindowHint(contractBooking?.eventTime, contractBooking?.durationHours, language),
+    [contractBooking?.eventTime, contractBooking?.durationHours, language]
+  );
 
   const loadVenue = async () => {
     if (!user?.token) return;
@@ -259,6 +272,8 @@ export default function VenueDashboardPage() {
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         setContractEditorVisible(false);
+        setShowCancellationModal(false);
+        setShowEventEndModal(false);
         await loadVenueContract(selectedChatEventVenueId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible de sauvegarder.' : 'Unable to save.'));
@@ -310,6 +325,7 @@ export default function VenueDashboardPage() {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         setContractEditorVisible(false);
         setShowCancellationModal(false);
+        setShowEventEndModal(false);
         await loadVenueContract(selectedChatEventVenueId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
@@ -1265,6 +1281,7 @@ export default function VenueDashboardPage() {
           onRequestClose={() => {
             setContractEditorVisible(false);
             setShowCancellationModal(false);
+            setShowEventEndModal(false);
           }}
         >
           <KeyboardAvoidingView
@@ -1290,6 +1307,9 @@ export default function VenueDashboardPage() {
                   setShowPaymentTermsModal={setShowPaymentTermsModal}
                   setShowDealTypeModal={setShowDealTypeModal}
                   setShowCancellationModal={setShowCancellationModal}
+                  eventEndOptions={contractEventEndOptions}
+                  eventWindowHint={contractEventWindowHint}
+                  setShowEventEndModal={setShowEventEndModal}
                 />
                 <View style={styles.contractModalActions}>
                   <TouchableOpacity
@@ -1297,6 +1317,7 @@ export default function VenueDashboardPage() {
                     onPress={() => {
                       setContractEditorVisible(false);
                       setShowCancellationModal(false);
+                      setShowEventEndModal(false);
                     }}
                   >
                     <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
@@ -1364,6 +1385,16 @@ export default function VenueDashboardPage() {
           onSelect={(v) => setContractDraft((p) => ({ ...p, cancellation: v }))}
           language={language}
           styles={styles}
+        />
+
+        <EventEndTimePickerModal
+          visible={showEventEndModal}
+          onClose={() => setShowEventEndModal(false)}
+          value={contractDraft.eventEnd}
+          onSelect={(v) => setContractDraft((p) => ({ ...p, eventEnd: v }))}
+          language={language}
+          styles={styles}
+          options={contractEventEndOptions}
         />
       </Modal>
       

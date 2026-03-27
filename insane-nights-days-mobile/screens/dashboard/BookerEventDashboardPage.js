@@ -57,20 +57,21 @@ function applyEqualDjSlotTimes(slots, timeStr, durationH) {
   return next;
 }
 
+/** Retourne true si [slotStart, slotEnd] est inclus dans [heure début événement, début + durée] (gestion après minuit). */
 function slotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationH) {
   const evS = parseHM(eventTimeStr);
-  if (evS == null || durationH == null || Number.isNaN(durationH) || durationH <= 0) {
-    return { ok: true };
+  if (evS == null) return false;
+  if (durationH == null || Number.isNaN(durationH) || durationH <= 0) {
+    return true;
   }
   const evE = evS + durationH * 60;
   let s = parseHM(slotStart);
   let e = parseHM(slotEnd);
-  if (s == null || e == null) return { ok: false };
+  if (s == null || e == null) return false;
   while (e < s) e += 24 * 60;
   if (s < evS) s += 24 * 60;
   if (e < s) e += 24 * 60;
-  if (s >= evS && e <= evE && e > s) return { ok: true };
-  return { ok: false };
+  return s >= evS && e <= evE && e > s;
 }
 
 export default function BookerEventDashboardPage() {
@@ -340,7 +341,26 @@ export default function BookerEventDashboardPage() {
       const h = date.getHours().toString().padStart(2, '0');
       const mi = date.getMinutes().toString().padStart(2, '0');
       const hhmm = `${h}:${mi}`;
+      const timeTrim = (formData.time || '').trim();
+      const dur = parseFloat(formData.durationHours);
+
       setDjSlots((prev) => {
+        const slot = prev[slotIndex];
+        if (!slot) return prev;
+        const nextStart = field === 'start' ? hhmm : slot.slotStart;
+        const nextEnd = field === 'end' ? hhmm : slot.slotEnd;
+        if (nextStart && nextEnd) {
+          if (!slotFitsEventWindow(nextStart, nextEnd, timeTrim, dur)) {
+            setTimeout(() => {
+              showError(
+                language === 'fr'
+                  ? 'Cette heure sort du créneau de l’événement (début + durée).'
+                  : 'This time is outside the event window (start + duration).'
+              );
+            }, 0);
+            return prev;
+          }
+        }
         const next = prev.map((s, i) => {
           if (i !== slotIndex) return s;
           if (field === 'start') return { ...s, slotStart: hhmm };
@@ -355,7 +375,7 @@ export default function BookerEventDashboardPage() {
         return next;
       });
     },
-    [setFormData]
+    [setFormData, formData.time, formData.durationHours, showError, language]
   );
 
   const openSlotTimeField = (slotIndex, field) => {

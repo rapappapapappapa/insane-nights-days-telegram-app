@@ -1396,6 +1396,19 @@ export default function DjDashboardPage() {
     { id: 'avis', label: language === 'fr' ? 'Avis & notes' : 'Reviews & Notes', icon: '⭐' },
   ];
 
+  const djVenueGateBlocks =
+    venueContractGate?.hasVenueOnEvent === true &&
+    venueContractGate?.canFinalizeDjContract === false;
+
+  const contractEventEndOptions = useMemo(
+    () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
+    [contractBooking?.eventTime, contractBooking?.durationHours]
+  );
+  const contractEventWindowHint = useMemo(
+    () => formatEventWindowHint(contractBooking?.eventTime, contractBooking?.durationHours, language),
+    [contractBooking?.eventTime, contractBooking?.durationHours, language]
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -2552,19 +2565,6 @@ export default function DjDashboardPage() {
         );
     }
   };
-
-  const djVenueGateBlocks =
-    venueContractGate?.hasVenueOnEvent === true &&
-    venueContractGate?.canFinalizeDjContract === false;
-
-  const contractEventEndOptions = useMemo(
-    () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
-    [contractBooking?.eventTime, contractBooking?.durationHours]
-  );
-  const contractEventWindowHint = useMemo(
-    () => formatEventWindowHint(contractBooking?.eventTime, contractBooking?.durationHours, language),
-    [contractBooking?.eventTime, contractBooking?.durationHours, language]
-  );
 
   return (
     <View style={styles.container}>

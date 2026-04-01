@@ -4,6 +4,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 31 mars au 4 avril 2026 (mar. - ven.)
+
+### Corrigé
+- **Modale édition / contre-proposition contrat (iOS)** : Touches inactives sur les champs, listes (modalités, type d’accord, etc.) et boutons — dû notamment à **plusieurs `Modal` empilés** (éditeur + PDF ou éditeur + pickers) et à un **`ScrollView` sans hauteur bornée** dans un overlay centré.
+  - **Éditeur** : sur iOS, contenu dans des `View` (sans `KeyboardAvoidingView` sur l’overlay), carte à **hauteur fixe** (~88 % de l’écran), `ScrollView` en `flex: 1`, `nestedScrollEnabled` / `removeClippedSubviews={false}` selon les cas.
+  - **Aperçu PDF** : fermeture de l’éditeur avant d’ouvrir le PDF ; **réouverture de l’éditeur** si l’utilisateur annule l’aperçu (délai sur iOS).
+  - **Listes (paiement, deal, annulation, fin d’événement)** : sur iOS, **masquage temporaire de l’éditeur** le temps du sous-modal, puis réaffichage à la fermeture — évite deux modales plein écran simultanées.
+  - Fichiers : `BookerDashboardPage.js`, `DjDashboardPage.js`, `VenueDashboardPage.js`.
+- **`ContractPdfPreviewModal`** : alignement avec Expo SDK 54 (`expo-file-system/legacy`), états de chargement cohérents ; **Android** : affichage PDF via document HTML + iframe `data:application/pdf;base64` lorsque l’affichage direct fichier/WebView échoue.
+
+---
+
 ## Semaine du 24 au 27 mars 2026 (mar. - ven.)
 
 ### Ajouté

@@ -140,6 +140,10 @@ export default function DjDashboardPage() {
   // Bookings
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [processingInvitation, setProcessingInvitation] = useState(null);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectModalInvitationId, setRejectModalInvitationId] = useState(null);
+  const [rejectModalAction, setRejectModalAction] = useState('reject'); // 'reject' | 'cancel'
 
   // Chat
   const [chatModalVisible, setChatModalVisible] = useState(false);
@@ -316,8 +320,6 @@ export default function DjDashboardPage() {
       setLoadingRatings(false);
     }
   };
-
-  const [processingInvitation, setProcessingInvitation] = useState(null);
 
   // Fonctions de chat
   const openChat = async (eventDjId) => {
@@ -588,10 +590,6 @@ export default function DjDashboardPage() {
       setProcessingInvitation(null);
     }
   };
-
-  const [rejectModalVisible, setRejectModalVisible] = useState(false);
-  const [rejectModalInvitationId, setRejectModalInvitationId] = useState(null);
-  const [rejectModalAction, setRejectModalAction] = useState('reject'); // 'reject' | 'cancel'
 
   const handleRejectInvitation = (invitationId) => {
     if (!user?.token || processingInvitation) return;

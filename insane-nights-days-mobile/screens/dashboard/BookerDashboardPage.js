@@ -871,6 +871,9 @@ export default function BookerDashboardPage() {
       } else {
         setContractEditorVisible(true);
       }
+    } else if (reopenChatAfterContractRef.current) {
+      reopenChatAfterContractRef.current = false;
+      setChatModalVisible(true);
     }
   };
 
@@ -879,32 +882,46 @@ export default function BookerDashboardPage() {
     if (!user?.token || !id) return;
     contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
     setContractEditorVisible(false);
-    setContractPdfPreview({
-      visible: true,
-      loading: true,
-      pdfBase64: null,
-      error: null,
-      pendingAction,
-    });
-    try {
-      const res = isVenueChat
-        ? await api.previewVenueContractPdf(user.token, id, previewPayload)
-        : await api.previewBookingContractPdf(user.token, id, previewPayload);
-      if (res?.success && res.pdfBase64) {
-        setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
-      } else {
+
+    const runPreview = async () => {
+      setContractPdfPreview({
+        visible: true,
+        loading: true,
+        pdfBase64: null,
+        error: null,
+        pendingAction,
+      });
+      try {
+        const res = isVenueChat
+          ? await api.previewVenueContractPdf(user.token, id, previewPayload)
+          : await api.previewBookingContractPdf(user.token, id, previewPayload);
+        if (res?.success && res.pdfBase64) {
+          setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
+        } else {
+          setContractPdfPreview((p) => ({
+            ...p,
+            loading: false,
+            error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+          }));
+        }
+      } catch (e) {
         setContractPdfPreview((p) => ({
           ...p,
           loading: false,
-          error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+          error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
         }));
       }
-    } catch (e) {
-      setContractPdfPreview((p) => ({
-        ...p,
-        loading: false,
-        error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
-      }));
+    };
+
+    /** iOS : chat + PDF en deux Modal overFullScreen = touches mortes / couche fantôme — fermer le chat d’abord. */
+    if (Platform.OS === 'ios' && chatModalVisible) {
+      reopenChatAfterContractRef.current = true;
+      setChatModalVisible(false);
+      setTimeout(() => {
+        runPreview();
+      }, 480);
+    } else {
+      await runPreview();
     }
   };
 
@@ -918,13 +935,21 @@ export default function BookerDashboardPage() {
       error: null,
       pendingAction: null,
     });
-    if (action === 'send') {
-      const ok = await saveContractDraft();
-      if (ok) await sendContract();
-    } else if (action === 'accept') {
-      await acceptContract();
-    } else if (action === 'counter') {
-      await counterContract();
+    try {
+      if (action === 'send') {
+        const ok = await saveContractDraft();
+        if (ok) await sendContract();
+      } else if (action === 'accept') {
+        await acceptContract();
+      } else if (action === 'counter') {
+        await counterContract();
+        return;
+      }
+    } finally {
+      if (reopenChatAfterContractRef.current) {
+        reopenChatAfterContractRef.current = false;
+        setChatModalVisible(true);
+      }
     }
   };
 
@@ -2324,7 +2349,14 @@ export default function BookerDashboardPage() {
                             styles.contractButtonPrimary,
                             (djVenueGateBlocks || !contractAcceptAck) && { opacity: 0.45 },
                           ]}
-                          onPress={() => openContractPdfPreview({ pendingAction: 'accept' })}
+                          onPress={() =>
+                            openContractPdfPreview({
+                              previewPayload: isVenueChat
+                                ? buildVenueContractPayload(contractDraft)
+                                : buildDjContractPayload(contractDraft),
+                              pendingAction: 'accept',
+                            })
+                          }
                           disabled={djVenueGateBlocks || !contractAcceptAck}
                         >
                           <Text style={styles.contractButtonTextDark}>

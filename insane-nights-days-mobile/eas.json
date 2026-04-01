@@ -13,6 +13,7 @@
     },
     "production": {
       "channel": "production",
+      "distribution": "store",
       "ios": {},
       "android": {
         "buildType": "app-bundle"

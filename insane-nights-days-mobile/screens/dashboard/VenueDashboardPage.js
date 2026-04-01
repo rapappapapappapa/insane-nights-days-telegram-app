@@ -451,6 +451,9 @@ export default function VenueDashboardPage() {
       } else {
         setContractEditorVisible(true);
       }
+    } else if (reopenChatAfterContractRef.current) {
+      reopenChatAfterContractRef.current = false;
+      setChatModalVisible(true);
     }
   };
 
@@ -458,30 +461,43 @@ export default function VenueDashboardPage() {
     if (!user?.token || !selectedChatEventVenueId) return;
     contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
     setContractEditorVisible(false);
-    setContractPdfPreview({
-      visible: true,
-      loading: true,
-      pdfBase64: null,
-      error: null,
-      pendingAction,
-    });
-    try {
-      const res = await api.previewVenueContractPdf(user.token, selectedChatEventVenueId, previewPayload);
-      if (res?.success && res.pdfBase64) {
-        setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
-      } else {
+
+    const runPreview = async () => {
+      setContractPdfPreview({
+        visible: true,
+        loading: true,
+        pdfBase64: null,
+        error: null,
+        pendingAction,
+      });
+      try {
+        const res = await api.previewVenueContractPdf(user.token, selectedChatEventVenueId, previewPayload);
+        if (res?.success && res.pdfBase64) {
+          setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
+        } else {
+          setContractPdfPreview((p) => ({
+            ...p,
+            loading: false,
+            error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+          }));
+        }
+      } catch (e) {
         setContractPdfPreview((p) => ({
           ...p,
           loading: false,
-          error: res?.message || (language === 'fr' ? 'Impossible de générer le PDF.' : 'Could not generate PDF.'),
+          error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
         }));
       }
-    } catch (e) {
-      setContractPdfPreview((p) => ({
-        ...p,
-        loading: false,
-        error: e.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'),
-      }));
+    };
+
+    if (Platform.OS === 'ios' && chatModalVisible) {
+      reopenChatAfterContractRef.current = true;
+      setChatModalVisible(false);
+      setTimeout(() => {
+        runPreview();
+      }, 480);
+    } else {
+      await runPreview();
     }
   };
 
@@ -495,8 +511,18 @@ export default function VenueDashboardPage() {
       error: null,
       pendingAction: null,
     });
-    if (action === 'accept') await acceptContract();
-    else if (action === 'counter') await counterContract();
+    try {
+      if (action === 'accept') await acceptContract();
+      else if (action === 'counter') {
+        await counterContract();
+        return;
+      }
+    } finally {
+      if (reopenChatAfterContractRef.current) {
+        reopenChatAfterContractRef.current = false;
+        setChatModalVisible(true);
+      }
+    }
   };
 
   const handleAcceptVenueInvitation = async (eventVenueId) => {
@@ -1392,7 +1418,12 @@ export default function VenueDashboardPage() {
                               styles.contractButtonPrimary,
                               !contractAcceptAck && { opacity: 0.45 },
                             ]}
-                            onPress={() => openContractPdfPreview({ pendingAction: 'accept' })}
+                            onPress={() =>
+                              openContractPdfPreview({
+                                previewPayload: buildVenueContractPayload(contractDraft),
+                                pendingAction: 'accept',
+                              })
+                            }
                             disabled={!contractAcceptAck}
                           >
                             <Text style={styles.contractButtonTextDark}>

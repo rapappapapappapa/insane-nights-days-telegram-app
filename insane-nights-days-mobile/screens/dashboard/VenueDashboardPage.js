@@ -1324,6 +1324,22 @@ export default function VenueDashboardPage() {
                     </Text>
                   ) : null}
                   {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
+                    <TouchableOpacity
+                      style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
+                      onPress={() =>
+                        openContractPdfPreview({
+                          previewPayload: buildVenueContractPayload(contractDraft),
+                          pendingAction: 'preview',
+                        })
+                      }
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.contractButtonText}>
+                        {language === 'fr' ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
                     <View style={styles.contractAckRow}>
                       <TouchableOpacity
                         style={[
@@ -1658,6 +1674,10 @@ export default function VenueDashboardPage() {
         visible={contractPdfPreview.visible}
         onClose={closeContractPdfPreview}
         onConfirm={confirmContractPdfPreview}
+        previewOnly={contractPdfPreview.pendingAction === 'preview'}
+        doneReadingLabel={
+          language === 'fr' ? 'Fermer après lecture' : 'Close after reading'
+        }
         title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
         cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
         confirmLabel={
@@ -2037,6 +2057,7 @@ const styles = StyleSheet.create({
   contractLineStrong: { color: '#fff', fontWeight: '900' },
   contractSmall: { marginTop: 4, color: 'rgba(255,255,255,0.6)', fontSize: 11 },
   contractActionsRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 },
+  contractPdfPreviewBtn: { alignSelf: 'stretch', marginTop: 8, marginBottom: 2 },
   contractHint: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '700' },
   contractAckRow: {
     flexDirection: 'row',

@@ -2930,6 +2930,23 @@ export default function DjDashboardPage() {
                 ) : null}
 
                 {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: buildDjContractPayload(contractDraft),
+                        pendingAction: 'preview',
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.contractButtonText}>
+                      {language === 'fr' ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
                   <View style={styles.contractAckRow}>
                     <TouchableOpacity
                       style={[
@@ -3323,6 +3340,10 @@ export default function DjDashboardPage() {
         visible={contractPdfPreview.visible}
         onClose={closeContractPdfPreview}
         onConfirm={confirmContractPdfPreview}
+        previewOnly={contractPdfPreview.pendingAction === 'preview'}
+        doneReadingLabel={
+          language === 'fr' ? 'Fermer après lecture' : 'Close after reading'
+        }
         title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
         cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
         confirmLabel={
@@ -4587,6 +4608,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 10,
+  },
+  contractPdfPreviewBtn: {
+    alignSelf: 'stretch',
+    marginTop: 8,
+    marginBottom: 2,
   },
   contractHint: {
     color: Colors.textSecondary,

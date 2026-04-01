@@ -225,9 +225,16 @@ export function formatEventWindowHint(eventTime, durationHours, lang) {
     : `Event: ${startFmt} → ${end} (${dur} h)`;
 }
 
-/** Engagement affiché avant le bouton « Accepter » (acceptation de bonne foi, distincte d’une signature manuscrite). */
+/** Engagement affiché après lecture du PDF, avant « Accepter » (bonne foi, distinct d’une signature manuscrite). */
 export function contractAcceptAckLabel(lang) {
   return lang === 'fr'
-    ? "Je confirme avoir lu le contrat et l'accepter de bonne foi."
-    : 'I confirm that I have read this contract and accept it in good faith.';
+    ? "J’ai consulté le PDF ci-dessus : je confirme avoir lu ce contrat et l’accepter de bonne foi."
+    : 'I have reviewed the PDF above: I confirm I have read this contract and accept it in good faith.';
+}
+
+/** Organisateur — brouillon : confirmation de lecture avant envoi au DJ / au lieu. */
+export function contractReadBeforeSendLabel(lang) {
+  return lang === 'fr'
+    ? "J’ai consulté le PDF : je confirme avoir lu ce contrat tel qu’il sera envoyé."
+    : 'I have reviewed the PDF: I confirm I have read this contract as it will be sent.';
 }

@@ -34,6 +34,7 @@ import {
   buildDjContractPayload,
   dealTypeLabel,
   contractAcceptAckLabel,
+  contractReadBeforeSendLabel,
   cancellationPolicyLabel,
   buildEventEndTimeOptions,
   formatEventWindowHint,
@@ -142,6 +143,8 @@ export default function BookerDashboardPage() {
   const [contractDraft, setContractDraft] = useState(() => draftFromPayload({}, 'dj'));
   const [venueContractGate, setVenueContractGate] = useState(null);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
+  /** Brouillon : lecture du PDF avant envoi au DJ / lieu. */
+  const [contractDraftReadAck, setContractDraftReadAck] = useState(false);
   const [showPaymentTermsModal, setShowPaymentTermsModal] = useState(false);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
@@ -947,6 +950,7 @@ export default function BookerDashboardPage() {
 
   useEffect(() => {
     setContractAcceptAck(false);
+    setContractDraftReadAck(false);
   }, [
     selectedChatEventDjId,
     selectedChatEventVenueId,
@@ -2178,6 +2182,63 @@ export default function BookerDashboardPage() {
                   </Text>
                 ) : null}
 
+                {contractData?.status === 'DRAFT' ? (
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: isVenueChat
+                          ? buildVenueContractPayload(contractDraft)
+                          : buildDjContractPayload(contractDraft),
+                        pendingAction: 'preview',
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.contractButtonText}>
+                      {language === 'fr' ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {contractData?.status === 'DRAFT' ? (
+                  <View style={styles.contractAckRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.contractAckCheckbox,
+                        contractDraftReadAck && styles.contractAckCheckboxChecked,
+                      ]}
+                      onPress={() => setContractDraftReadAck(!contractDraftReadAck)}
+                      activeOpacity={0.7}
+                    >
+                      {contractDraftReadAck ? (
+                        <Text style={styles.contractAckCheckmark}>✓</Text>
+                      ) : null}
+                    </TouchableOpacity>
+                    <Text style={styles.contractAckText}>{contractReadBeforeSendLabel(language)}</Text>
+                  </View>
+                ) : null}
+
+                {contractData?.status === 'SENT' &&
+                (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: isVenueChat
+                          ? buildVenueContractPayload(contractDraft)
+                          : buildDjContractPayload(contractDraft),
+                        pendingAction: 'preview',
+                      })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.contractButtonText}>
+                      {language === 'fr' ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
                 {contractData?.status === 'SENT' &&
                 (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
                   <View style={styles.contractAckRow}>
@@ -2209,7 +2270,11 @@ export default function BookerDashboardPage() {
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.contractButton, styles.contractButtonPrimary]}
+                        style={[
+                          styles.contractButton,
+                          styles.contractButtonPrimary,
+                          !contractDraftReadAck && { opacity: 0.45 },
+                        ]}
                         onPress={() =>
                           openContractPdfPreview({
                             previewPayload: isVenueChat
@@ -2218,6 +2283,7 @@ export default function BookerDashboardPage() {
                             pendingAction: 'send',
                           })
                         }
+                        disabled={!contractDraftReadAck}
                       >
                         <Text style={styles.contractButtonTextDark}>
                           {isVenueChat
@@ -2625,6 +2691,10 @@ export default function BookerDashboardPage() {
         visible={contractPdfPreview.visible}
         onClose={closeContractPdfPreview}
         onConfirm={confirmContractPdfPreview}
+        previewOnly={contractPdfPreview.pendingAction === 'preview'}
+        doneReadingLabel={
+          language === 'fr' ? 'Fermer après lecture' : 'Close after reading'
+        }
         title={language === 'fr' ? 'Aperçu du contrat (PDF)' : 'Contract preview (PDF)'}
         cancelLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
         confirmLabel={
@@ -2889,6 +2959,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 10,
+  },
+  contractPdfPreviewBtn: {
+    alignSelf: 'stretch',
+    marginTop: 8,
+    marginBottom: 2,
   },
   contractHint: {
     color: 'rgba(255,255,255,0.75)',

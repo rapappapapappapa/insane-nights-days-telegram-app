@@ -56,6 +56,9 @@ export default function ContractPdfPreviewModal({
   loading,
   errorText,
   language,
+  /** Lecture seule : pas de confirmation d’action (envoi / acceptation), seulement fermeture après lecture. */
+  previewOnly = false,
+  doneReadingLabel,
 }) {
   /** null | { type: 'uri', uri } | { type: 'html', html, baseUrl } */
   const [webSource, setWebSource] = useState(null);
@@ -190,13 +193,22 @@ export default function ContractPdfPreviewModal({
         )}
 
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.confirmBtn, !canConfirm && styles.confirmBtnDisabled]}
-            onPress={onConfirm}
-            disabled={!canConfirm}
-          >
-            <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
-          </TouchableOpacity>
+          {previewOnly ? (
+            <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
+              <Text style={styles.confirmBtnText}>
+                {doneReadingLabel ||
+                  (language === 'fr' ? 'Fermer après lecture' : 'Close after reading')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.confirmBtn, !canConfirm && styles.confirmBtnDisabled]}
+              onPress={onConfirm}
+              disabled={!canConfirm}
+            >
+              <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     </Modal>

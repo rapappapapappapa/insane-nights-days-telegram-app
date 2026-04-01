@@ -1386,7 +1386,14 @@ export default function BookerDashboardPage() {
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}</Text>
+          <Text
+            style={styles.title}
+            numberOfLines={2}
+            adjustsFontSizeToFit={Platform.OS === 'ios'}
+            minimumFontScale={0.85}
+          >
+            {language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
+          </Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.messagesButton}
@@ -1761,16 +1768,20 @@ export default function BookerDashboardPage() {
                         };
                         return (
                           <View key={dj.userId} style={styles.djItem}>
-                            <Text style={styles.djName}>{dj.artistName}</Text>
-                            <View style={styles.djItemActions}>
-                              {dj.eventDjId && (
+                            <View style={styles.djItemTop}>
+                              <Text style={styles.djName} numberOfLines={2}>
+                                {dj.artistName || '—'}
+                              </Text>
+                              {dj.eventDjId ? (
                                 <TouchableOpacity
                                   style={styles.chatButtonSmall}
                                   onPress={() => openChat(dj.eventDjId)}
                                 >
                                   <Text style={styles.chatButtonSmallText}>💬</Text>
                                 </TouchableOpacity>
-                              )}
+                              ) : null}
+                            </View>
+                            <View style={styles.djItemActions}>
                               <View style={[styles.djStatusBadge, { backgroundColor: statusColors[status] + '20' }]}>
                                 <Text style={[styles.djStatusText, { color: statusColors[status] }]}>
                                   {statusLabels[status]}
@@ -1781,7 +1792,6 @@ export default function BookerDashboardPage() {
                                   {payLabels[payStatus] || payStatus}
                                 </Text>
                               </View>
-
                               {status === 'ACCEPTED' && dj.eventDjId && payStatus !== 'PAID' ? (
                                 <TouchableOpacity
                                   style={styles.chatButtonSmall}
@@ -2877,10 +2887,12 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    minWidth: 0,
     color: '#fff',
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '900',
     textAlign: 'center',
+    paddingHorizontal: 6,
   },
   messagesButton: {
     position: 'relative',
@@ -3753,16 +3765,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   djItem: {
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  djItemTop: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-    paddingVertical: 4,
+    gap: 10,
+    marginBottom: 8,
   },
   djName: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 15,
+    fontWeight: '700',
     flex: 1,
+    minWidth: 0,
   },
   djStatusBadge: {
     paddingHorizontal: 8,
@@ -3959,6 +3980,7 @@ const styles = StyleSheet.create({
   },
   djItemActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
   },

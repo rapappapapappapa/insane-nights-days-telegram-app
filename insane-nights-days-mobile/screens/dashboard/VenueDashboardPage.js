@@ -887,11 +887,18 @@ export default function VenueDashboardPage() {
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={2}>
+            {language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}
+          </Text>
           <View style={{ width: 44 }} />
         </View>
 
-      <View style={styles.tabs}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsContent}
+      >
         {[
           { id: 'infos', label: language === 'fr' ? 'Infos' : 'Info' },
           { id: 'medias', label: language === 'fr' ? 'Médias' : 'Media' },
@@ -903,10 +910,15 @@ export default function VenueDashboardPage() {
             style={[styles.tabItem, activeTab === tab.id && styles.tabItemActive]}
             onPress={() => setActiveTab(tab.id)}
           >
-            <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>{tab.label}</Text>
+            <Text
+              style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 120 }}>
         {activeTab === 'infos' && (
@@ -1070,7 +1082,9 @@ export default function VenueDashboardPage() {
                     return (
                       <View key={booking.id} style={[styles.bookingCard, showAcceptReject && { borderColor: 'rgba(255,165,0,0.4)' }]}>
                         <View style={styles.bookingHeader}>
-                          <Text style={styles.bookingTitle}>{booking.eventTitle}</Text>
+                          <Text style={styles.bookingTitle} numberOfLines={2}>
+                            {booking.eventTitle}
+                          </Text>
                           <View style={[styles.bookingStatus, { backgroundColor: (statusColors[booking.eventStatus] || Colors.primary) + '20' }]}>
                             <Text style={[styles.bookingStatusText, { color: statusColors[booking.eventStatus] || Colors.primary }]}>
                               {showAcceptReject ? (language === 'fr' ? 'En attente' : 'Pending') : (statusLabels[booking.eventStatus] || booking.eventStatus)}
@@ -1127,9 +1141,9 @@ export default function VenueDashboardPage() {
                             </TouchableOpacity>
                           </View>
                         ) : (
-                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                          <View style={styles.bookingActionsRow}>
                             <TouchableOpacity
-                              style={[styles.chatButton, { flex: 1 }]}
+                              style={[styles.chatButton, styles.bookingActionPrimary, { flex: 1 }]}
                               onPress={() => openVenueChat(booking.eventVenueId)}
                             >
                               <Text style={styles.chatButtonText}>
@@ -1137,14 +1151,14 @@ export default function VenueDashboardPage() {
                               </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.chatButton, { flex: 1, backgroundColor: '#EF4444' }]}
+                              style={[styles.bookingActionDestructive, { flex: 1 }]}
                               onPress={() => handleCancelVenueBooking(booking.eventVenueId)}
                               disabled={processingInvitation === booking.eventVenueId}
                             >
                               {processingInvitation === booking.eventVenueId ? (
-                                <ActivityIndicator size="small" color="#fff" />
+                                <ActivityIndicator size="small" color="#FF5252" />
                               ) : (
-                                <Text style={styles.chatButtonText}>
+                                <Text style={styles.bookingActionDestructiveText}>
                                   ✕ {language === 'fr' ? 'Annuler' : 'Cancel'}
                                 </Text>
                               )}
@@ -1734,10 +1748,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
+    minWidth: 0,
     color: '#fff',
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
     textAlign: 'center',
+    paddingHorizontal: 4,
   },
   backButton: {
     padding: 8,
@@ -1759,30 +1775,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabs: {
-    flexDirection: 'row',
+  tabsScroll: {
     marginHorizontal: 20,
     marginBottom: 12,
+    maxHeight: 52,
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 2,
+    paddingHorizontal: 2,
   },
   tabItem: {
-    flex: 1,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabItemActive: {
-    backgroundColor: 'rgba(255,23,68,0.12)',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255,23,68,0.18)',
+    borderRadius: 8,
   },
   tabText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
+    fontSize: 13,
   },
   tabTextActive: {
-    color: Colors.primary,
+    color: '#fff',
   },
   content: {
     paddingHorizontal: 20,
@@ -2002,7 +2026,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.25)',
   },
   bookingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  bookingTitle: { color: '#fff', fontSize: 16, fontWeight: '800', flex: 1 },
+  bookingTitle: { color: '#fff', fontSize: 16, fontWeight: '800', flex: 1, minWidth: 0, paddingRight: 8 },
   bookingStatus: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   bookingStatusText: { fontSize: 12, fontWeight: '700' },
   bookingInfo: { marginBottom: 6 },
@@ -2015,6 +2039,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
   },
+  bookingActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12, alignItems: 'stretch' },
+  bookingActionPrimary: { justifyContent: 'center' },
+  bookingActionDestructive: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgba(255,82,82,0.9)',
+  },
+  bookingActionDestructiveText: { color: '#FF8A80', fontWeight: '800', fontSize: 14 },
   chatButtonText: { color: '#0b0b0e', fontWeight: '800', fontSize: 14 },
   // Chat modal
   chatModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },

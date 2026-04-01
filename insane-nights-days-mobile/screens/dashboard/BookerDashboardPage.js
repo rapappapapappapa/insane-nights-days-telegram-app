@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -49,6 +50,8 @@ function cleanText(s) {
 }
 
 export default function BookerDashboardPage() {
+  const { height: contractModalWindowH } = useWindowDimensions();
+  const contractEditorModalCardHeight = Math.round(contractModalWindowH * 0.88);
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -155,6 +158,11 @@ export default function BookerDashboardPage() {
   /** iOS : ouvrir l’éditeur seulement après fermeture du chat (onDismiss + repli timeout). */
   const pendingOpenContractEditorRef = useRef(false);
   const openContractEditorFallbackTimerRef = useRef(null);
+  /** Évite deux Modal visibles (éditeur + PDF) sur iOS ; réouverture si annulation PDF. */
+  const contractEditorWasVisibleForPdfRef = useRef(false);
+  /** Évite éditeur + modal de liste (paiement, etc.) en même temps sur iOS. */
+  const contractEditorWasHiddenForChildModalRef = useRef(false);
+  const iosPickerOpeningRef = useRef(false);
 
   const flushPendingContractEditor = () => {
     pendingOpenContractEditorRef.current = false;
@@ -165,6 +173,8 @@ export default function BookerDashboardPage() {
   };
 
   const closeContractEditorSession = () => {
+    contractEditorWasHiddenForChildModalRef.current = false;
+    iosPickerOpeningRef.current = false;
     setContractEditorVisible(false);
     setShowPaymentTermsModal(false);
     setShowDealTypeModal(false);
@@ -194,6 +204,49 @@ export default function BookerDashboardPage() {
       setContractEditorVisible(true);
     }
   };
+
+  const liftContractEditorForIosPicker = (openPicker) => {
+    if (Platform.OS === 'ios' && contractEditorVisible) {
+      contractEditorWasHiddenForChildModalRef.current = true;
+      iosPickerOpeningRef.current = true;
+      setContractEditorVisible(false);
+      setTimeout(() => {
+        openPicker();
+        iosPickerOpeningRef.current = false;
+      }, 320);
+    } else {
+      openPicker();
+    }
+  };
+
+  const setShowPaymentTermsModalForContract = (v) => {
+    if (!v) return setShowPaymentTermsModal(false);
+    liftContractEditorForIosPicker(() => setShowPaymentTermsModal(true));
+  };
+  const setShowDealTypeModalForContract = (v) => {
+    if (!v) return setShowDealTypeModal(false);
+    liftContractEditorForIosPicker(() => setShowDealTypeModal(true));
+  };
+  const setShowCancellationModalForContract = (v) => {
+    if (!v) return setShowCancellationModal(false);
+    liftContractEditorForIosPicker(() => setShowCancellationModal(true));
+  };
+  const setShowEventEndModalForContract = (v) => {
+    if (!v) return setShowEventEndModal(false);
+    liftContractEditorForIosPicker(() => setShowEventEndModal(true));
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    if (iosPickerOpeningRef.current) return;
+    const anyOpen =
+      showPaymentTermsModal || showDealTypeModal || showCancellationModal || showEventEndModal;
+    if (anyOpen) return;
+    if (!contractEditorWasHiddenForChildModalRef.current) return;
+    contractEditorWasHiddenForChildModalRef.current = false;
+    const tid = setTimeout(() => setContractEditorVisible(true), 80);
+    return () => clearTimeout(tid);
+  }, [showPaymentTermsModal, showDealTypeModal, showCancellationModal, showEventEndModal]);
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -801,6 +854,8 @@ export default function BookerDashboardPage() {
   };
 
   const closeContractPdfPreview = () => {
+    const reopenEditor = contractEditorWasVisibleForPdfRef.current;
+    contractEditorWasVisibleForPdfRef.current = false;
     setContractPdfPreview({
       visible: false,
       loading: false,
@@ -808,11 +863,20 @@ export default function BookerDashboardPage() {
       error: null,
       pendingAction: null,
     });
+    if (reopenEditor) {
+      if (Platform.OS === 'ios') {
+        setTimeout(() => setContractEditorVisible(true), 350);
+      } else {
+        setContractEditorVisible(true);
+      }
+    }
   };
 
   const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
     const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
     if (!user?.token || !id) return;
+    contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
+    setContractEditorVisible(false);
     setContractPdfPreview({
       visible: true,
       loading: true,
@@ -843,6 +907,7 @@ export default function BookerDashboardPage() {
   };
 
   const confirmContractPdfPreview = async () => {
+    contractEditorWasVisibleForPdfRef.current = false;
     const action = contractPdfPreview.pendingAction;
     setContractPdfPreview({
       visible: false,
@@ -2346,68 +2411,144 @@ export default function BookerDashboardPage() {
         presentationStyle="overFullScreen"
         onRequestClose={closeContractEditorSession}
       >
-        <KeyboardAvoidingView
-          enabled={Platform.OS !== 'ios'}
-          style={styles.contractModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.contractModalCard}>
-            <ScrollView
-              contentContainerStyle={{ paddingBottom: 24 }}
-              keyboardShouldPersistTaps="always"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
+        {Platform.OS === 'ios' ? (
+          <View style={styles.contractModalOverlay}>
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+              collapsable={false}
             >
-              <Text style={styles.contractModalTitle}>
-                {language === 'fr' ? 'Contrat (brouillon)' : 'Contract (draft)'}
-              </Text>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+                removeClippedSubviews={false}
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contrat (brouillon)' : 'Contract (draft)'}
+                </Text>
 
-              <ContractDraftEditorFields
-                mode={isVenueChat ? 'venue' : 'dj'}
-                draft={contractDraft}
-                setDraft={setContractDraft}
-                language={language}
-                styles={styles}
-                PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
-                setShowPaymentTermsModal={setShowPaymentTermsModal}
-                setShowDealTypeModal={setShowDealTypeModal}
-                setShowCancellationModal={setShowCancellationModal}
+                <ContractDraftEditorFields
+                  mode={isVenueChat ? 'venue' : 'dj'}
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
+                setShowDealTypeModal={setShowDealTypeModalForContract}
+                setShowCancellationModal={setShowCancellationModalForContract}
                 eventEndOptions={contractEventEndOptions}
                 eventWindowHint={contractEventWindowHint}
-                setShowEventEndModal={setShowEventEndModal}
+                setShowEventEndModal={setShowEventEndModalForContract}
               />
 
-              <View style={styles.contractModalActions}>
-                <TouchableOpacity
-                  style={[styles.contractButton, styles.contractButtonSecondary]}
-                  onPress={closeContractEditorSession}
-                >
-                  <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.contractButton, styles.contractButtonPrimary]}
-                  onPress={
-                    contractData?.status === 'DRAFT'
-                      ? saveContractDraft
-                      : () =>
-                          openContractPdfPreview({
-                            previewPayload: isVenueChat
-                              ? buildVenueContractPayload(contractDraft)
-                              : buildDjContractPayload(contractDraft),
-                            pendingAction: 'counter',
-                          })
-                  }
-                >
-                  <Text style={styles.contractButtonTextDark}>
-                    {contractData?.status === 'DRAFT'
-                      ? (language === 'fr' ? 'Sauvegarder' : 'Save')
-                      : (language === 'fr' ? 'Envoyer' : 'Send')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={closeContractEditorSession}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={
+                      contractData?.status === 'DRAFT'
+                        ? saveContractDraft
+                        : () =>
+                            openContractPdfPreview({
+                              previewPayload: isVenueChat
+                                ? buildVenueContractPayload(contractDraft)
+                                : buildDjContractPayload(contractDraft),
+                              pendingAction: 'counter',
+                            })
+                    }
+                  >
+                    <Text style={styles.contractButtonTextDark}>
+                      {contractData?.status === 'DRAFT'
+                        ? (language === 'fr' ? 'Sauvegarder' : 'Save')
+                        : (language === 'fr' ? 'Envoyer' : 'Send')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView
+            enabled
+            style={styles.contractModalOverlay}
+            behavior="height"
+          >
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+            >
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contrat (brouillon)' : 'Contract (draft)'}
+                </Text>
+
+                <ContractDraftEditorFields
+                  mode={isVenueChat ? 'venue' : 'dj'}
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
+                setShowDealTypeModal={setShowDealTypeModalForContract}
+                setShowCancellationModal={setShowCancellationModalForContract}
+                eventEndOptions={contractEventEndOptions}
+                eventWindowHint={contractEventWindowHint}
+                setShowEventEndModal={setShowEventEndModalForContract}
+              />
+
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={closeContractEditorSession}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={
+                      contractData?.status === 'DRAFT'
+                        ? saveContractDraft
+                        : () =>
+                            openContractPdfPreview({
+                              previewPayload: isVenueChat
+                                ? buildVenueContractPayload(contractDraft)
+                                : buildDjContractPayload(contractDraft),
+                              pendingAction: 'counter',
+                            })
+                    }
+                  >
+                    <Text style={styles.contractButtonTextDark}>
+                      {contractData?.status === 'DRAFT'
+                        ? (language === 'fr' ? 'Sauvegarder' : 'Save')
+                        : (language === 'fr' ? 'Envoyer' : 'Send')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        )}
       </Modal>
 
       <Modal

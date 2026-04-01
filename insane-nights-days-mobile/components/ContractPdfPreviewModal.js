@@ -22,6 +22,27 @@ function normalizePdfBase64(raw) {
 }
 
 /**
+ * Android : le WebView n’intègre pas d’afficheur PDF natif — charger un PDF via file:// / content://
+ * donne souvent un écran blanc. Un document HTML avec iframe data: permet l’affichage (PDF petits/moyens).
+ */
+function buildPdfPreviewHtmlEmbeddedBase64(base64) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #1a1a1f; }
+    iframe { width: 100%; height: 100%; border: 0; display: block; }
+  </style>
+</head>
+<body>
+  <iframe src="data:application/pdf;base64,${base64}" title="contract-pdf" />
+</body>
+</html>`;
+}
+
+/**
  * Aperçu PDF in-app + confirmation (envoi / acceptation / contre-proposition).
  */
 export default function ContractPdfPreviewModal({
@@ -36,31 +57,48 @@ export default function ContractPdfPreviewModal({
   errorText,
   language,
 }) {
-  const [fileUri, setFileUri] = useState(null);
+  /** null | { type: 'uri', uri } | { type: 'html', html, baseUrl } */
+  const [webSource, setWebSource] = useState(null);
   const [filePreparing, setFilePreparing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!visible || !pdfBase64) {
-        setFileUri(null);
+        setWebSource(null);
         setFilePreparing(false);
         return;
       }
       const clean = normalizePdfBase64(pdfBase64);
       if (!clean) {
         if (!cancelled) {
-          setFileUri(null);
+          setWebSource(null);
           setFilePreparing(false);
         }
         return;
       }
       setFilePreparing(true);
       try {
+        // Android : affichage PDF via HTML + iframe (le WebView ne rend pas les PDF en URL seule).
+        if (Platform.OS === 'android') {
+          if (!cancelled) {
+            setWebSource({
+              type: 'html',
+              html: buildPdfPreviewHtmlEmbeddedBase64(clean),
+              baseUrl: 'https://localhost',
+            });
+          }
+          return;
+        }
+
         const cacheDir = FileSystem.cacheDirectory;
         if (!cacheDir) {
           if (!cancelled) {
-            setFileUri(`data:application/pdf;base64,${clean}`);
+            setWebSource({
+              type: 'html',
+              html: buildPdfPreviewHtmlEmbeddedBase64(clean),
+              baseUrl: 'https://localhost',
+            });
           }
           return;
         }
@@ -70,19 +108,11 @@ export default function ContractPdfPreviewModal({
           encoding: FileSystem.EncodingType.Base64,
         });
         if (cancelled) return;
-        let webUri = path.startsWith('file://') ? path : `file://${path}`;
-        // Android : WebView bloque souvent file:// (ERR_ACCESS_DENIED) — URI content:// via FileProvider
-        if (Platform.OS === 'android') {
-          try {
-            webUri = await FileSystem.getContentUriAsync(webUri);
-          } catch (e) {
-            console.warn('[ContractPdfPreviewModal] getContentUriAsync', e);
-          }
-        }
-        setFileUri(webUri);
+        const webUri = path.startsWith('file://') ? path : `file://${path}`;
+        setWebSource({ type: 'uri', uri: webUri });
       } catch (e) {
         console.error('[ContractPdfPreviewModal]', e);
-        if (!cancelled) setFileUri(null);
+        if (!cancelled) setWebSource(null);
       } finally {
         if (!cancelled) setFilePreparing(false);
       }
@@ -93,7 +123,7 @@ export default function ContractPdfPreviewModal({
   }, [visible, pdfBase64]);
 
   const showSpinner = loading || filePreparing;
-  const canConfirm = !loading && !filePreparing && !errorText && !!fileUri;
+  const canConfirm = !loading && !filePreparing && !errorText && !!webSource;
 
   // iOS : éviter pageSheet + autres Modal overFullScreen (ordre des couches / touches cassées).
   return (
@@ -131,16 +161,21 @@ export default function ContractPdfPreviewModal({
           <View style={styles.center}>
             <Text style={styles.error}>{errorText}</Text>
           </View>
-        ) : fileUri ? (
+        ) : webSource ? (
           <WebView
-            key={fileUri}
-            source={{ uri: fileUri }}
+            key={webSource.type === 'uri' ? webSource.uri : 'html-pdf'}
+            source={
+              webSource.type === 'html'
+                ? { html: webSource.html, baseUrl: webSource.baseUrl || 'https://localhost' }
+                : { uri: webSource.uri }
+            }
             style={styles.web}
-            // Par défaut seuls http/https → sinon ERR_ACCESS_DENIED sur file:// / content:// / data:
             originWhitelist={['*']}
             allowFileAccess
             allowUniversalAccessFromFileURLs
             mixedContentMode="always"
+            javaScriptEnabled
+            domStorageEnabled
             startInLoadingState
             renderLoading={() => (
               <View style={styles.center}>

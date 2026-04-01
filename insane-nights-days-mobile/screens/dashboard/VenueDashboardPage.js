@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   TextInput,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
@@ -62,6 +63,8 @@ const PAYMENT_TERMS_OPTIONS = [
 ];
 
 export default function VenueDashboardPage() {
+  const { height: contractModalWindowH } = useWindowDimensions();
+  const contractEditorModalCardHeight = Math.round(contractModalWindowH * 0.88);
   const { language } = useLanguage();
   const { goBack, navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
@@ -120,6 +123,9 @@ export default function VenueDashboardPage() {
   const reopenChatAfterContractRef = useRef(false);
   const pendingOpenContractEditorRef = useRef(false);
   const openContractEditorFallbackTimerRef = useRef(null);
+  const contractEditorWasVisibleForPdfRef = useRef(false);
+  const contractEditorWasHiddenForChildModalRef = useRef(false);
+  const iosPickerOpeningRef = useRef(false);
 
   const flushPendingContractEditor = () => {
     pendingOpenContractEditorRef.current = false;
@@ -130,6 +136,8 @@ export default function VenueDashboardPage() {
   };
 
   const closeContractEditorSession = () => {
+    contractEditorWasHiddenForChildModalRef.current = false;
+    iosPickerOpeningRef.current = false;
     setContractEditorVisible(false);
     setShowPaymentTermsModal(false);
     setShowDealTypeModal(false);
@@ -159,6 +167,49 @@ export default function VenueDashboardPage() {
       setContractEditorVisible(true);
     }
   };
+
+  const liftContractEditorForIosPicker = (openPicker) => {
+    if (Platform.OS === 'ios' && contractEditorVisible) {
+      contractEditorWasHiddenForChildModalRef.current = true;
+      iosPickerOpeningRef.current = true;
+      setContractEditorVisible(false);
+      setTimeout(() => {
+        openPicker();
+        iosPickerOpeningRef.current = false;
+      }, 320);
+    } else {
+      openPicker();
+    }
+  };
+
+  const setShowPaymentTermsModalForContract = (v) => {
+    if (!v) return setShowPaymentTermsModal(false);
+    liftContractEditorForIosPicker(() => setShowPaymentTermsModal(true));
+  };
+  const setShowDealTypeModalForContract = (v) => {
+    if (!v) return setShowDealTypeModal(false);
+    liftContractEditorForIosPicker(() => setShowDealTypeModal(true));
+  };
+  const setShowCancellationModalForContract = (v) => {
+    if (!v) return setShowCancellationModal(false);
+    liftContractEditorForIosPicker(() => setShowCancellationModal(true));
+  };
+  const setShowEventEndModalForContract = (v) => {
+    if (!v) return setShowEventEndModal(false);
+    liftContractEditorForIosPicker(() => setShowEventEndModal(true));
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    if (iosPickerOpeningRef.current) return;
+    const anyOpen =
+      showPaymentTermsModal || showDealTypeModal || showCancellationModal || showEventEndModal;
+    if (anyOpen) return;
+    if (!contractEditorWasHiddenForChildModalRef.current) return;
+    contractEditorWasHiddenForChildModalRef.current = false;
+    const tid = setTimeout(() => setContractEditorVisible(true), 80);
+    return () => clearTimeout(tid);
+  }, [showPaymentTermsModal, showDealTypeModal, showCancellationModal, showEventEndModal]);
 
   const contractEventEndOptions = useMemo(
     () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
@@ -386,6 +437,8 @@ export default function VenueDashboardPage() {
   };
 
   const closeContractPdfPreview = () => {
+    const reopenEditor = contractEditorWasVisibleForPdfRef.current;
+    contractEditorWasVisibleForPdfRef.current = false;
     setContractPdfPreview({
       visible: false,
       loading: false,
@@ -393,10 +446,19 @@ export default function VenueDashboardPage() {
       error: null,
       pendingAction: null,
     });
+    if (reopenEditor) {
+      if (Platform.OS === 'ios') {
+        setTimeout(() => setContractEditorVisible(true), 350);
+      } else {
+        setContractEditorVisible(true);
+      }
+    }
   };
 
   const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
     if (!user?.token || !selectedChatEventVenueId) return;
+    contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
+    setContractEditorVisible(false);
     setContractPdfPreview({
       visible: true,
       loading: true,
@@ -425,6 +487,7 @@ export default function VenueDashboardPage() {
   };
 
   const confirmContractPdfPreview = async () => {
+    contractEditorWasVisibleForPdfRef.current = false;
     const action = contractPdfPreview.pendingAction;
     setContractPdfPreview({
       visible: false,
@@ -1415,17 +1478,24 @@ export default function VenueDashboardPage() {
         presentationStyle="overFullScreen"
         onRequestClose={closeContractEditorSession}
       >
-        <KeyboardAvoidingView
-          enabled={Platform.OS !== 'ios'}
-          style={styles.contractModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.contractModalCard}>
-            <ScrollView
-              contentContainerStyle={{ paddingBottom: 24 }}
-              keyboardShouldPersistTaps="always"
-              keyboardDismissMode="on-drag"
+        {Platform.OS === 'ios' ? (
+          <View style={styles.contractModalOverlay}>
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+              collapsable={false}
             >
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+                removeClippedSubviews={false}
+              >
                 <Text style={styles.contractModalTitle}>
                   {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
                 </Text>
@@ -1436,12 +1506,12 @@ export default function VenueDashboardPage() {
                   language={language}
                   styles={styles}
                   PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
-                  setShowPaymentTermsModal={setShowPaymentTermsModal}
-                  setShowDealTypeModal={setShowDealTypeModal}
-                  setShowCancellationModal={setShowCancellationModal}
+                  setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
+                  setShowDealTypeModal={setShowDealTypeModalForContract}
+                  setShowCancellationModal={setShowCancellationModalForContract}
                   eventEndOptions={contractEventEndOptions}
                   eventWindowHint={contractEventWindowHint}
-                  setShowEventEndModal={setShowEventEndModal}
+                  setShowEventEndModal={setShowEventEndModalForContract}
                 />
                 <View style={styles.contractModalActions}>
                   <TouchableOpacity
@@ -1462,9 +1532,63 @@ export default function VenueDashboardPage() {
                     <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
                   </TouchableOpacity>
                 </View>
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView enabled style={styles.contractModalOverlay} behavior="height">
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+            >
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
+                </Text>
+                <ContractDraftEditorFields
+                  mode="venue"
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                  setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
+                  setShowDealTypeModal={setShowDealTypeModalForContract}
+                  setShowCancellationModal={setShowCancellationModalForContract}
+                  eventEndOptions={contractEventEndOptions}
+                  eventWindowHint={contractEventWindowHint}
+                  setShowEventEndModal={setShowEventEndModalForContract}
+                />
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={closeContractEditorSession}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: buildVenueContractPayload(contractDraft),
+                        pendingAction: 'counter',
+                      })
+                    }
+                  >
+                    <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        )}
       </Modal>
 
       <Modal

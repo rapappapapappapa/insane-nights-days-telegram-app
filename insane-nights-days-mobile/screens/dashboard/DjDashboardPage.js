@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
@@ -57,6 +58,8 @@ const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 280;
 
 export default function DjDashboardPage() {
+  const { height: contractModalWindowH } = useWindowDimensions();
+  const contractEditorModalCardHeight = Math.round(contractModalWindowH * 0.88);
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -170,6 +173,9 @@ export default function DjDashboardPage() {
   const reopenChatAfterContractRef = useRef(false);
   const pendingOpenContractEditorRef = useRef(false);
   const openContractEditorFallbackTimerRef = useRef(null);
+  const contractEditorWasVisibleForPdfRef = useRef(false);
+  const contractEditorWasHiddenForChildModalRef = useRef(false);
+  const iosPickerOpeningRef = useRef(false);
 
   const flushPendingContractEditor = () => {
     pendingOpenContractEditorRef.current = false;
@@ -180,6 +186,8 @@ export default function DjDashboardPage() {
   };
 
   const closeContractEditorSession = () => {
+    contractEditorWasHiddenForChildModalRef.current = false;
+    iosPickerOpeningRef.current = false;
     setContractEditorVisible(false);
     setShowPaymentTermsModal(false);
     setShowCancellationModal(false);
@@ -208,6 +216,44 @@ export default function DjDashboardPage() {
       setContractEditorVisible(true);
     }
   };
+
+  const liftContractEditorForIosPicker = (openPicker) => {
+    if (Platform.OS === 'ios' && contractEditorVisible) {
+      contractEditorWasHiddenForChildModalRef.current = true;
+      iosPickerOpeningRef.current = true;
+      setContractEditorVisible(false);
+      setTimeout(() => {
+        openPicker();
+        iosPickerOpeningRef.current = false;
+      }, 320);
+    } else {
+      openPicker();
+    }
+  };
+
+  const setShowPaymentTermsModalForContract = (v) => {
+    if (!v) return setShowPaymentTermsModal(false);
+    liftContractEditorForIosPicker(() => setShowPaymentTermsModal(true));
+  };
+  const setShowCancellationModalForContract = (v) => {
+    if (!v) return setShowCancellationModal(false);
+    liftContractEditorForIosPicker(() => setShowCancellationModal(true));
+  };
+  const setShowEventEndModalForContract = (v) => {
+    if (!v) return setShowEventEndModal(false);
+    liftContractEditorForIosPicker(() => setShowEventEndModal(true));
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    if (iosPickerOpeningRef.current) return;
+    const anyOpen = showPaymentTermsModal || showCancellationModal || showEventEndModal;
+    if (anyOpen) return;
+    if (!contractEditorWasHiddenForChildModalRef.current) return;
+    contractEditorWasHiddenForChildModalRef.current = false;
+    const tid = setTimeout(() => setContractEditorVisible(true), 80);
+    return () => clearTimeout(tid);
+  }, [showPaymentTermsModal, showCancellationModal, showEventEndModal]);
 
   const PAYMENT_TERMS_OPTIONS = [
     { value: 'jour_booking', labelFr: 'Jour booking', labelEn: 'Booking day' },
@@ -353,6 +399,8 @@ export default function DjDashboardPage() {
   };
 
   const closeContractPdfPreview = () => {
+    const reopenEditor = contractEditorWasVisibleForPdfRef.current;
+    contractEditorWasVisibleForPdfRef.current = false;
     setContractPdfPreview({
       visible: false,
       loading: false,
@@ -360,10 +408,19 @@ export default function DjDashboardPage() {
       error: null,
       pendingAction: null,
     });
+    if (reopenEditor) {
+      if (Platform.OS === 'ios') {
+        setTimeout(() => setContractEditorVisible(true), 350);
+      } else {
+        setContractEditorVisible(true);
+      }
+    }
   };
 
   const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
     if (!user?.token || !selectedChatEventDjId) return;
+    contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
+    setContractEditorVisible(false);
     setContractPdfPreview({
       visible: true,
       loading: true,
@@ -392,6 +449,7 @@ export default function DjDashboardPage() {
   };
 
   const confirmContractPdfPreview = async () => {
+    contractEditorWasVisibleForPdfRef.current = false;
     const action = contractPdfPreview.pendingAction;
     setContractPdfPreview({
       visible: false,
@@ -3091,59 +3149,122 @@ export default function DjDashboardPage() {
         presentationStyle="overFullScreen"
         onRequestClose={closeContractEditorSession}
       >
-        <KeyboardAvoidingView
-          enabled={Platform.OS !== 'ios'}
-          style={styles.contractModalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.contractModalCard}>
-            <ScrollView
-              contentContainerStyle={{ paddingBottom: 24 }}
-              keyboardShouldPersistTaps="always"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
+        {Platform.OS === 'ios' ? (
+          <View style={styles.contractModalOverlay}>
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+              collapsable={false}
             >
-              <Text style={styles.contractModalTitle}>
-                {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
-              </Text>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+                removeClippedSubviews={false}
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
+                </Text>
 
-              <ContractDraftEditorFields
-                mode="dj"
-                draft={contractDraft}
-                setDraft={setContractDraft}
-                language={language}
-                styles={styles}
-                PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
-                setShowPaymentTermsModal={setShowPaymentTermsModal}
+                <ContractDraftEditorFields
+                  mode="dj"
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
                 setShowDealTypeModal={() => {}}
-                setShowCancellationModal={setShowCancellationModal}
+                setShowCancellationModal={setShowCancellationModalForContract}
                 eventEndOptions={contractEventEndOptions}
                 eventWindowHint={contractEventWindowHint}
-                setShowEventEndModal={setShowEventEndModal}
+                setShowEventEndModal={setShowEventEndModalForContract}
               />
 
-              <View style={styles.contractModalActions}>
-                <TouchableOpacity
-                  style={[styles.contractButton, styles.contractButtonSecondary]}
-                  onPress={closeContractEditorSession}
-                >
-                  <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.contractButton, styles.contractButtonPrimary]}
-                  onPress={() =>
-                    openContractPdfPreview({
-                      previewPayload: buildDjContractPayload(contractDraft),
-                      pendingAction: 'counter',
-                    })
-                  }
-                >
-                  <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={closeContractEditorSession}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: buildDjContractPayload(contractDraft),
+                        pendingAction: 'counter',
+                      })
+                    }
+                  >
+                    <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView enabled style={styles.contractModalOverlay} behavior="height">
+            <View
+              style={[
+                styles.contractModalCard,
+                { height: contractEditorModalCardHeight, maxWidth: 520, alignSelf: 'center' },
+              ]}
+            >
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 24 }}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.contractModalTitle}>
+                  {language === 'fr' ? 'Contre-proposition' : 'Counter-proposal'}
+                </Text>
+
+                <ContractDraftEditorFields
+                  mode="dj"
+                  draft={contractDraft}
+                  setDraft={setContractDraft}
+                  language={language}
+                  styles={styles}
+                  PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+                setShowPaymentTermsModal={setShowPaymentTermsModalForContract}
+                setShowDealTypeModal={() => {}}
+                setShowCancellationModal={setShowCancellationModalForContract}
+                eventEndOptions={contractEventEndOptions}
+                eventWindowHint={contractEventWindowHint}
+                setShowEventEndModal={setShowEventEndModalForContract}
+              />
+
+                <View style={styles.contractModalActions}>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonSecondary]}
+                    onPress={closeContractEditorSession}
+                  >
+                    <Text style={styles.contractButtonText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.contractButton, styles.contractButtonPrimary]}
+                    onPress={() =>
+                      openContractPdfPreview({
+                        previewPayload: buildDjContractPayload(contractDraft),
+                        pendingAction: 'counter',
+                      })
+                    }
+                  >
+                    <Text style={styles.contractButtonTextDark}>{language === 'fr' ? 'Envoyer' : 'Send'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        )}
       </Modal>
 
       <Modal

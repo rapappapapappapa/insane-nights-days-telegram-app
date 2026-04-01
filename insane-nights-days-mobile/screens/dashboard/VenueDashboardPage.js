@@ -13,7 +13,6 @@ import {
   Modal,
   KeyboardAvoidingView,
   TextInput,
-  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -1280,7 +1279,10 @@ export default function VenueDashboardPage() {
 
               {/* Contrat Organisateur ↔ Lieu */}
               {selectedChatEventVenueId ? (
-                <Pressable
+                <View style={styles.contractCard}>
+                <TouchableOpacity
+                  activeOpacity={0.92}
+                  disabled={contractLoading || !contractData}
                   onPress={() => {
                     if (contractLoading || !contractData) return;
                     if (contractData.status === 'SENT' && contractData.sentBy === 'BOOKER') {
@@ -1288,7 +1290,7 @@ export default function VenueDashboardPage() {
                     }
                   }}
                 >
-                <View style={styles.contractCard}>
+                  <View>
                   <View style={styles.contractTopRow}>
                     <Text style={styles.contractTitle}>
                       🧾 {language === 'fr' ? 'Contrat lieu' : 'Venue contract'}
@@ -1337,6 +1339,8 @@ export default function VenueDashboardPage() {
                       🧯 {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
                     </Text>
                   ) : null}
+                  </View>
+                </TouchableOpacity>
                   {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
                     <TouchableOpacity
                       style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
@@ -1412,7 +1416,6 @@ export default function VenueDashboardPage() {
                     )}
                   </View>
                 </View>
-                </Pressable>
               ) : null}
 
               {/* Messages */}

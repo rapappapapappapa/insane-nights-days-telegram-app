@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -2117,7 +2116,11 @@ export default function BookerDashboardPage() {
 
             {/* ✅ Contrat (chat privé DJ ou Lieu) */}
             {!isGroupChat && (selectedChatEventDjId || selectedChatEventVenueId) ? (
-              <Pressable
+              <View style={styles.contractCard}>
+              {/* iOS : pas de Pressable parent sur les boutons — évite les touches « fantômes » (animation sans action) */}
+              <TouchableOpacity
+                activeOpacity={0.92}
+                disabled={contractLoading || !contractData}
                 onPress={() => {
                   if (contractLoading || !contractData) return;
                   if (contractData.status === 'DRAFT') openContractEditorFromChat();
@@ -2129,7 +2132,7 @@ export default function BookerDashboardPage() {
                   }
                 }}
               >
-              <View style={styles.contractCard}>
+                <View>
                 <View style={styles.contractTopRow}>
                   <Text style={styles.contractTitle}>
                     🧾 {isVenueChat
@@ -2191,6 +2194,8 @@ export default function BookerDashboardPage() {
                       : 'The venue contract must be accepted before the DJ contract can be finalized.'}
                   </Text>
                 ) : null}
+                </View>
+              </TouchableOpacity>
 
                 {contractData?.status === 'DRAFT' ? (
                   <TouchableOpacity
@@ -2341,7 +2346,6 @@ export default function BookerDashboardPage() {
                   )}
                 </View>
               </View>
-              </Pressable>
             ) : null}
 
             {/* Messages */}

@@ -13,6 +13,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
   - **Listes (paiement, deal, annulation, fin d’événement)** : sur iOS, **masquage temporaire de l’éditeur** le temps du sous-modal, puis réaffichage à la fermeture — évite deux modales plein écran simultanées.
   - Fichiers : `BookerDashboardPage.js`, `DjDashboardPage.js`, `VenueDashboardPage.js`.
 - **`ContractPdfPreviewModal`** : alignement avec Expo SDK 54 (`expo-file-system/legacy`), états de chargement cohérents ; **Android** : affichage PDF via document HTML + iframe `data:application/pdf;base64` lorsque l’affichage direct fichier/WebView échoue.
+- **Dashboard DJ** : crash / erreur React (« hooks ») — les `useMemo` (`contractEventEndOptions`, `contractEventWindowHint`) étaient après un `if (loading) return`, donc **pas appelés** au premier rendu puis appelés ensuite. Déplacés **au-dessus** du retour « chargement » ; les `useState` (`processingInvitation`, modales de refus) déjà regroupés **avant** tout `useEffect`.
+- **Chat — carte contrat (iOS)** : un **`Pressable` englobait toute la carte** (résumé + boutons « Voir le PDF », « Envoyer », etc.), ce qui pouvait faire **jouer l’animation de pression sans exécuter** le `onPress` des boutons. Désormais : **`TouchableOpacity` uniquement sur le bloc résumé** (titre, détails, mentions) pour ouvrir l’éditeur ; les **actions sont en dehors**, au même niveau dans la carte (`BookerDashboardPage`, `DjDashboardPage`, `VenueDashboardPage`).
+
+### Modifié
+- **Flux contrat (mobile)** : bouton **« Voir le contrat (PDF) »** avant la **case à cocher** (lecture confirmée) ; mode **`previewOnly`** dans `ContractPdfPreviewModal` (fermeture après lecture) ; brouillon organisateur avec libellé dédié et **Envoyer** désactivé tant que la case n’est pas cochée ; libellés d’acceptation alignés sur la lecture du PDF (`contractPayload.js`).
+- **UI — Organisateur / Lieu** : en-têtes (titres sans coupures absurdes, `minWidth` / taille), **ligne DJ** sur les cartes événement (nom + chat sur une ligne, **badges** sur une deuxième ligne avec `flexWrap`), **onglets** du dashboard lieu en **`ScrollView` horizontal** (plus de `flex: 1` sur chaque onglet), cartes **réservations** (titre sur plusieurs lignes si besoin, distinction **Chat** plein / **Annuler** en contour).
 
 ---
 

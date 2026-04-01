@@ -14,7 +14,6 @@ import {
   Linking,
   KeyboardAvoidingView,
   Modal,
-  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -2865,7 +2864,10 @@ export default function DjDashboardPage() {
 
             {/* ✅ Contrat (uniquement chat privé) */}
             {!isGroupChat && selectedChatEventDjId ? (
-              <Pressable
+              <View style={styles.contractCard}>
+              <TouchableOpacity
+                activeOpacity={0.92}
+                disabled={contractLoading || !contractData}
                 onPress={() => {
                   if (contractLoading || !contractData) return;
                   if (contractData.status === 'SENT' && contractData.sentBy === 'BOOKER') {
@@ -2873,7 +2875,7 @@ export default function DjDashboardPage() {
                   }
                 }}
               >
-              <View style={styles.contractCard}>
+                <View>
                 <View style={styles.contractTopRow}>
                   <Text style={styles.contractTitle}>
                     🧾 {language === 'fr' ? 'Contrat de booking' : 'Booking contract'}
@@ -2928,6 +2930,8 @@ export default function DjDashboardPage() {
                       : 'The venue contract must be accepted before you can finalize your contract.'}
                   </Text>
                 ) : null}
+                </View>
+              </TouchableOpacity>
 
                 {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
                   <TouchableOpacity
@@ -3010,7 +3014,6 @@ export default function DjDashboardPage() {
                   )}
                 </View>
               </View>
-              </Pressable>
             ) : null}
 
             {/* Messages */}

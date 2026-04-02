@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.insanenightsdays.mobile",
+      "buildNumber": "2",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sélectionner des images et vidéos.",
         "NSPhotoLibraryAddUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sauvegarder des images.",

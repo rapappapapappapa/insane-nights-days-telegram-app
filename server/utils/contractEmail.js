@@ -1,6 +1,6 @@
 /**
- * Envoi des contrats signés par email aux parties (Organisateur ↔ DJ, Organisateur ↔ Lieu)
- * Appelé après qu'un contrat soit passé en statut SIGNED.
+ * Envoi des contrats acceptés par email aux parties (Organisateur ↔ DJ, Organisateur ↔ Lieu)
+ * Appelé après qu'un contrat soit passé en statut SIGNED (acceptation sur NOX).
  * Génère un PDF formaté et l'attache à l'email.
  */
 
@@ -38,8 +38,8 @@ h1{color:#FF1744;font-size:20px}
 .label{font-weight:600;color:#666}
 </style></head>
 <body>
-  <h1>${isFr ? 'Contrat signé' : 'Contract signed'}</h1>
-  <p>${isFr ? 'Votre contrat a été signé par les deux parties.' : 'Your contract has been signed by both parties.'}</p>
+  <h1>${isFr ? 'Contrat accepté' : 'Contract accepted'}</h1>
+  <p>${isFr ? 'Le contrat a été accepté par les deux parties sur NOX.' : 'The contract has been accepted by both parties on NOX.'}</p>
   <div class="detail"><span class="label">${isFr ? 'Événement' : 'Event'}:</span> ${eventTitle || '-'}</div>
   <div class="detail"><span class="label">${isFr ? 'Date' : 'Date'}:</span> ${eventDate || '-'} ${eventTime ? `à ${eventTime}` : ''}</div>
   ${type === 'dj' ? `<div class="detail"><span class="label">${isFr ? 'DJ' : 'DJ'}:</span> ${partyName || '-'}</div>` : ''}
@@ -47,13 +47,13 @@ h1{color:#FF1744;font-size:20px}
   <div class="detail"><span class="label">${isFr ? 'Montant' : 'Amount'}:</span> ${amount != null ? `${amount} ${(currency || 'EUR').toUpperCase()}` : '-'}</div>
   ${depositPercent != null ? `<div class="detail"><span class="label">${isFr ? 'Acompte' : 'Deposit'}:</span> ${depositPercent} %</div>` : ''}
   <div class="detail"><span class="label">${isFr ? 'Modalités de paiement' : 'Payment terms'}:</span> ${termsLabel}</div>
-  <p style="margin-top:24px;font-size:12px;color:#999">${isFr ? 'Le contrat signé en PDF est joint à cet email.' : 'The signed contract PDF is attached to this email.'}</p>
+  <p style="margin-top:24px;font-size:12px;color:#999">${isFr ? 'La version PDF du contrat est jointe à cet email.' : 'The contract PDF is attached to this email.'}</p>
 </body>
 </html>`;
 }
 
 /**
- * Envoie le contrat signé (EventDj) par email à l'organisateur et au DJ, avec PDF joint
+ * Envoie le contrat accepté (EventDj) par email à l'organisateur et au DJ, avec PDF joint
  */
 async function sendContractSignedEmailDj(eventDjId) {
   if (!isConfigured()) return;
@@ -111,7 +111,7 @@ async function sendContractSignedEmailDj(eventDjId) {
       console.error('[contractEmail] Erreur génération PDF DJ:', pdfErr);
     }
 
-    const subject = `[Nox] Contrat signé - ${ed.event?.title || 'Événement'} - ${artistName}`;
+    const subject = `[Nox] Contrat accepté - ${ed.event?.title || 'Événement'} - ${artistName}`;
     const emails = [...new Set([bookerUser?.email, djUser?.email].filter(Boolean))];
     const attachments = pdfBuffer ? [{ filename: `Contrat_DJ_${ed.event?.title || 'evenement'}_${artistName}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_'), content: pdfBuffer }] : [];
 
@@ -124,7 +124,7 @@ async function sendContractSignedEmailDj(eventDjId) {
 }
 
 /**
- * Envoie le contrat signé (EventVenue) par email à l'organisateur et au lieu, avec PDF joint
+ * Envoie le contrat accepté (EventVenue) par email à l'organisateur et au lieu, avec PDF joint
  */
 async function sendContractSignedEmailVenue(eventVenueId) {
   if (!isConfigured()) return;
@@ -184,7 +184,7 @@ async function sendContractSignedEmailVenue(eventVenueId) {
       console.error('[contractEmail] Erreur génération PDF Venue:', pdfErr);
     }
 
-    const subject = `[Nox] Contrat signé - ${ev.event?.title || 'Événement'} - ${venueName}`;
+    const subject = `[Nox] Contrat accepté - ${ev.event?.title || 'Événement'} - ${venueName}`;
     const emails = [...new Set([bookerUser?.email, venueUser?.email].filter(Boolean))];
     const attachments = pdfBuffer ? [{ filename: `Contrat_Lieu_${ev.event?.title || 'evenement'}_${venueName}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_'), content: pdfBuffer }] : [];
 

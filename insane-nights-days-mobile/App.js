@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
+import * as Updates from 'expo-updates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useLanguage } from './contexts/LanguageContext';
@@ -265,6 +266,29 @@ const styles = StyleSheet.create({
   },
 });
 
+/** Vérifie EAS Update au lancement (équivalent au flux « Vérifier » du drawer) et recharge si une MAJ est dispo. */
+function EASUpdateOnLaunch() {
+  useEffect(() => {
+    if (__DEV__) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!Updates.isEnabled) return;
+        const check = await Updates.checkForUpdateAsync();
+        if (cancelled || !check.isAvailable) return;
+        await Updates.fetchUpdateAsync();
+        if (!cancelled) await Updates.reloadAsync();
+      } catch (e) {
+        console.warn('[EASUpdate] vérif au lancement', e?.message || e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return null;
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -274,6 +298,7 @@ export default function App() {
             <NavigationProvider>
               <EventFormProvider>
                 <ConfirmProvider>
+                  <EASUpdateOnLaunch />
                   <AppContent />
                 </ConfirmProvider>
               </EventFormProvider>

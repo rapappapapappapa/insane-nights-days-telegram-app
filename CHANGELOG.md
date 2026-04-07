@@ -4,6 +4,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 7 au 11 avril 2026 (lun. - ven.)
+
+### Ajouté
+- **EAS Update (OTA)** : vérification au **lancement** de l’app en build production (`EASUpdateOnLaunch` dans `App.js`) — si une mise à jour est disponible : `fetchUpdateAsync` puis `reloadAsync` (même logique que le bouton « Vérifier » du tiroir). Inactif en mode développement (`__DEV__`).
+
+### Modifié
+- **Emails contrat** (`server/utils/contractEmail.js`) : libellés **« contrat accepté »** (objet, titre HTML, corps, pied de page) à la place de « contrat signé », alignés sur l’acceptation dans l’app NOX ; versions FR / EN.
+- **Build iOS** : synchronisation du **`expo.ios.buildNumber`** dans `app.json` avec EAS (`autoIncrement` après builds / soumissions).
+
+---
+
 ## Semaine du 31 mars au 4 avril 2026 (mar. - ven.)
 
 ### Corrigé

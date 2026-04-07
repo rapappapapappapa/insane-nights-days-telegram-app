@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,7 +10,11 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -19,6 +23,33 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEventForm } from '../../contexts/EventFormContext';
 import { api } from '../../api/config';
 import { useToast } from '../../hooks/useToast';
+
+const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v1';
+const DRAFT_VERSION = 1;
+
+function stepRequirementsHint(step, lang) {
+  const fr = lang === 'fr';
+  switch (step) {
+    case 1:
+      return fr ? 'Obligatoire : date, heure de début, durée (h).' : 'Required: date, start time, duration (h).';
+    case 2:
+      return fr ? 'Obligatoire : choisir un lieu pour l’événement.' : 'Required: choose a venue.';
+    case 3:
+      return fr
+        ? 'Obligatoire : au moins un DJ ; créneau début–fin par DJ, dans la plage de l’événement.'
+        : 'Required: at least one DJ; start–end slot per DJ within the event window.';
+    case 4:
+      return fr
+        ? 'Obligatoire : titre et prix billetterie. Image de couverture et autres champs : optionnels.'
+        : 'Required: title and ticket price. Cover image and other fields: optional.';
+    case 5:
+      return fr
+        ? 'Vérifie le récapitulatif puis confirme. Les montants lieu ci-dessous sont indicatifs ; les contrats fixent les prix fermes.'
+        : 'Review the summary then confirm. Venue amounts shown are indicative; contracts set final prices.';
+    default:
+      return '';
+  }
+}
 
 const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
 
@@ -79,15 +110,29 @@ export default function BookerEventDashboardPage() {
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
   const { showError, showSuccess } = useToast();
-  const { formData, setFormData, eventDateTime, setEventDateTime, resetForm, addDj, removeDj, setVenue } = useEventForm();
+  const {
+    formData,
+    setFormData,
+    eventDateTime,
+    setEventDateTime,
+    resetForm,
+    addDj,
+    removeDj,
+    setVenue,
+    coverImageUri,
+    setCoverImageUri,
+  } = useEventForm();
 
   const [availableDjs, setAvailableDjs] = useState([]);
   const [venues, setVenues] = useState([]);
   const [loadingDjs, setLoadingDjs] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
   const [creating, setCreating] = useState(false);
-  
-  // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif/Paiement)
+  /** Bloque la sauvegarde auto du brouillon tant que l’alerte « Reprendre ? » n’est pas tranchée. */
+  const [draftGate, setDraftGate] = useState(true);
+  const [postCreateModal, setPostCreateModal] = useState(null);
+
+  // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
   const [currentStep, setCurrentStep] = useState(1);
   
   // Slots DJ pour la création d'événement (créneau horaire par ligne)
@@ -336,6 +381,152 @@ export default function BookerEventDashboardPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const applyEventDraft = useCallback((d) => {
+    if (!d?.formData) return;
+    setFormData(d.formData);
+    const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
+    if (!isNaN(ed.getTime())) {
+      setEventDateTime(ed);
+      setTempDate(ed);
+      setTempTime(ed);
+    }
+    setCurrentStep(Math.min(5, Math.max(1, d.currentStep || 1)));
+    if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
+    else setCoverImageUri(null);
+    if (Array.isArray(d.djSlots) && d.djSlots.length > 0) {
+      setDjSlots(d.djSlots);
+      hasInitializedSlots.current = true;
+    } else if (d.formData?.djIds?.length) {
+      const assigns = d.formData.djSlotAssignments || [];
+      setDjSlots([
+        ...d.formData.djIds.map((id, i) => ({
+          djId: id,
+          slotStart: assigns[i]?.slotStart || '',
+          slotEnd: assigns[i]?.slotEnd || '',
+        })),
+        emptyDjSlot(),
+      ]);
+      hasInitializedSlots.current = true;
+    }
+  }, [setFormData, setEventDateTime, setCoverImageUri]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(EVENT_CREATION_DRAFT_KEY);
+        if (cancelled) return;
+        if (!raw) {
+          setDraftGate(false);
+          return;
+        }
+        const d = JSON.parse(raw);
+        if (!d || d.version !== DRAFT_VERSION || !d.formData) {
+          setDraftGate(false);
+          return;
+        }
+        Alert.alert(
+          language === 'fr' ? 'Brouillon' : 'Draft',
+          language === 'fr'
+            ? 'Une création d’événement était en cours. Que veux-tu faire ?'
+            : 'An event draft was in progress. What would you like to do?',
+          [
+            {
+              text: language === 'fr' ? 'Plus tard' : 'Later',
+              style: 'cancel',
+              onPress: () => setDraftGate(false),
+            },
+            {
+              text: language === 'fr' ? 'Effacer' : 'Discard',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+                } catch (e) {
+                  /* ignore */
+                }
+                setDraftGate(false);
+              },
+            },
+            {
+              text: language === 'fr' ? 'Reprendre' : 'Resume',
+              onPress: () => {
+                applyEventDraft(d);
+                setDraftGate(false);
+              },
+            },
+          ]
+        );
+      } catch (e) {
+        console.warn('[EventDraft] load', e);
+        setDraftGate(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Une seule invite brouillon à l’entrée sur l’écran (applyEventDraft stable).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistDraft = useCallback(async () => {
+    try {
+      const empty =
+        !formData?.title?.trim() &&
+        !formData?.date &&
+        !formData?.venueId &&
+        (!formData?.djIds || formData.djIds.length === 0) &&
+        currentStep <= 1;
+      if (empty) {
+        await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+        return;
+      }
+      const payload = {
+        version: DRAFT_VERSION,
+        formData,
+        eventDateTime:
+          eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
+            ? eventDateTime.toISOString()
+            : new Date().toISOString(),
+        currentStep,
+        djSlots,
+        coverImageUri: coverImageUri || null,
+      };
+      await AsyncStorage.setItem(EVENT_CREATION_DRAFT_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('[EventDraft] persist', e);
+    }
+  }, [formData, eventDateTime, currentStep, djSlots, coverImageUri]);
+
+  useEffect(() => {
+    if (draftGate) return;
+    const t = setTimeout(persistDraft, 700);
+    return () => clearTimeout(t);
+  }, [draftGate, persistDraft]);
+
+  const pickCoverImage = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        showError(
+          language === 'fr' ? 'Accès à la galerie refusé.' : 'Photo library access denied.'
+        );
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+        allowsEditing: true,
+        aspect: [16, 9],
+      });
+      if (!res.canceled && res.assets?.[0]?.uri) {
+        setCoverImageUri(res.assets[0].uri);
+      }
+    } catch (e) {
+      showError(String(e?.message || e));
+    }
+  };
+
   const updateSlotTimeFromPicker = React.useCallback(
     (slotIndex, field, date) => {
       const h = date.getHours().toString().padStart(2, '0');
@@ -516,13 +707,29 @@ export default function BookerEventDashboardPage() {
         return;
       }
 
-      showSuccess(language === 'fr'
-        ? 'L\'événement a été créé avec succès.'
-        : 'The event has been created successfully.');
-      setTimeout(() => {
-        resetForm();
-        goBack();
-      }, 2000);
+      const createdTitle = formData.title.trim();
+      const localCover = coverImageUri;
+      const newEventId = response.event?.id;
+
+      try {
+        await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+      } catch (e) {
+        /* ignore */
+      }
+
+      if (localCover && newEventId && user?.token) {
+        try {
+          await api.uploadEventImage(user.token, newEventId, localCover);
+        } catch (upErr) {
+          console.warn('[BookerEvent] upload cover after create', upErr);
+        }
+      }
+
+      resetForm();
+      setCurrentStep(1);
+      setDjSlots([emptyDjSlot()]);
+      hasInitializedSlots.current = false;
+      setPostCreateModal({ eventId: newEventId || null, title: createdTitle });
     } catch (error) {
       console.error('Erreur création événement:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.'));
@@ -587,10 +794,12 @@ export default function BookerEventDashboardPage() {
           <View style={[styles.step, currentStep >= 5 && styles.stepActive]}>
             <Text style={[styles.stepNumber, currentStep >= 5 && styles.stepNumberActive]}>5</Text>
             <Text style={[styles.stepLabel, currentStep >= 5 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'Paiement' : 'Payment'}
+              {language === 'fr' ? 'Récap' : 'Review'}
             </Text>
           </View>
         </View>
+
+        <Text style={styles.stepRequiredHint}>{stepRequirementsHint(currentStep, language)}</Text>
 
         <View style={styles.form}>
           {/* ÉTAPE 1: Date et Durée */}
@@ -1000,6 +1209,31 @@ export default function BookerEventDashboardPage() {
                 />
               </View>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Image de couverture (optionnel)' : 'Cover image (optional)'}
+                </Text>
+                {coverImageUri ? (
+                  <View style={styles.coverPreviewRow}>
+                    <Image source={{ uri: coverImageUri }} style={styles.coverPreview} />
+                    <TouchableOpacity
+                      style={[styles.coverRemoveBtn, { marginLeft: 12 }]}
+                      onPress={() => setCoverImageUri(null)}
+                    >
+                      <Text style={styles.coverRemoveBtnText}>
+                        {language === 'fr' ? 'Retirer' : 'Remove'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.selectButton} onPress={pickCoverImage}>
+                    <Text style={styles.selectButtonText}>
+                      {language === 'fr' ? 'Choisir une image' : 'Choose image'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <View style={styles.stepButtons}>
                 <TouchableOpacity
                   style={styles.backButtonStep}
@@ -1026,11 +1260,16 @@ export default function BookerEventDashboardPage() {
             </>
           )}
 
-          {/* ÉTAPE 5: Récapitulatif et Paiement */}
+          {/* ÉTAPE 5: Récapitulatif (aucun paiement en ligne à cette étape) */}
           {currentStep === 5 && (
             <>
               <Text style={styles.sectionTitle}>
-                {language === 'fr' ? 'Étape 5 : Récapitulatif et Paiement' : 'Step 5: Summary and Payment'}
+                {language === 'fr' ? 'Étape 5 : Récapitulatif' : 'Step 5: Summary'}
+              </Text>
+              <Text style={styles.stepDescription}>
+                {language === 'fr'
+                  ? 'Aucun paiement Stripe n’est demandé ici : tu confirmes la création de l’événement ; les montants définitifs passent par les contrats (chat).'
+                  : 'No Stripe payment here: you confirm event creation; final amounts are set via contracts (chat).'}
               </Text>
 
               <View style={styles.summaryCard}>
@@ -1098,7 +1337,12 @@ export default function BookerEventDashboardPage() {
 
                 <View style={styles.costBreakdown}>
                   <Text style={styles.costTitle}>
-                    {language === 'fr' ? 'Détail des coûts' : 'Cost Breakdown'}
+                    {language === 'fr' ? 'Détail des coûts (indicatif)' : 'Cost breakdown (indicative)'}
+                  </Text>
+                  <Text style={styles.costDisclaimer}>
+                    {language === 'fr'
+                      ? 'Les montants affichés pour le lieu sont une estimation (notamment à partir de la note) — ce n’est pas un devis contractuel. Le cachet DJ et les conditions réelles sont fixés dans les contrats NOX.'
+                      : 'Venue amounts shown are an estimate (including from ratings)—not a binding quote. DJ fees and final terms are set in NOX contracts.'}
                   </Text>
 
                   {selectedVenue && (
@@ -1391,6 +1635,56 @@ export default function BookerEventDashboardPage() {
           </TouchableOpacity>
         </Modal>
       )}
+
+      <Modal
+        visible={!!postCreateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPostCreateModal(null)}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalCard}>
+            <Text style={styles.successModalTitle}>
+              {language === 'fr' ? 'Événement créé' : 'Event created'}
+            </Text>
+            <Text style={styles.successModalSubtitle}>
+              {postCreateModal?.title
+                ? `« ${postCreateModal.title} »`
+                : language === 'fr'
+                  ? 'Ton événement est en ligne côté organisateur.'
+                  : 'Your event is set up on the organizer side.'}
+            </Text>
+            <Text style={styles.successModalHint}>
+              {language === 'fr'
+                ? 'Prochaines étapes : utilise les chats privés (DJ, lieu) et le chat de groupe pour les invitations et les contrats NOX. Les billets utilisent le prix saisi à l’étape Détails.'
+                : 'Next: use private chats (DJs, venue) and the group chat for invitations and NOX contracts. Tickets use the price from the Details step.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.successModalPrimary}
+              onPress={() => {
+                const id = postCreateModal?.eventId;
+                setPostCreateModal(null);
+                navigate('bookerDashboard', { openBookings: true, highlightEventId: id });
+              }}
+            >
+              <Text style={styles.successModalPrimaryText}>
+                {language === 'fr' ? 'Voir mes événements' : 'View my events'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.successModalSecondary}
+              onPress={() => {
+                setPostCreateModal(null);
+                goBack();
+              }}
+            >
+              <Text style={styles.successModalSecondaryText}>
+                {language === 'fr' ? 'Fermer' : 'Close'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -1569,6 +1863,90 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     marginBottom: 20,
+  },
+  stepRequiredHint: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  costDisclaimer: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  coverPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coverPreview: {
+    width: 120,
+    height: 68,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  coverRemoveBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  coverRemoveBtnText: {
+    color: '#FF8A80',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  successModalCard: {
+    backgroundColor: '#1a1a22',
+    borderRadius: 16,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+  },
+  successModalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  successModalSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  successModalHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  successModalPrimary: {
+    backgroundColor: '#FF1744',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  successModalPrimaryText: {
+    color: '#0b0b0e',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  successModalSecondary: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  successModalSecondaryText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 15,
+    fontWeight: '600',
   },
   selectedInfo: {
     backgroundColor: 'rgba(76,175,80,0.2)',

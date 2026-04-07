@@ -71,13 +71,19 @@ export default function BookerDashboardPage() {
   const [loadingEvents, setLoadingEvents] = useState(false);
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
   const shouldOpenBookings =
-    !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId || !!routeParams?.openChatEventVenueId;
+    !!routeParams?.openBookings ||
+    !!routeParams?.openChatEventDjId ||
+    !!routeParams?.openChatEventId ||
+    !!routeParams?.openChatEventVenueId ||
+    !!routeParams?.highlightEventId;
   const shouldOpenProfil = routeParams?.openSection === 'profil';
   
   // ✅ MODIFICATION: Ajouter une section "Profil" avec activeSection (profil, events)
   const [activeSection, setActiveSection] = useState(
-    shouldOpenProfil ? 'profil' : (shouldOpenBookings ? 'events' : 'profil')
+    shouldOpenProfil ? 'profil' : shouldOpenBookings ? 'events' : 'profil'
   );
+  /** Mise en évidence courte d’un événement (ex. après création). */
+  const [pulseEventId, setPulseEventId] = useState(null);
   
   // ✅ AJOUT: États pour la gestion du profil booker
   const [bookerProfile, setBookerProfile] = useState(null);
@@ -687,6 +693,23 @@ export default function BookerDashboardPage() {
     }
   };
 
+  useEffect(() => {
+    const hid = routeParams?.highlightEventId;
+    if (!hid || !user?.token) return;
+    setActiveSection('events');
+    setPulseEventId(hid);
+    (async () => {
+      try {
+        const response = await api.getBookerEvents(user.token);
+        if (response?.success) setMyEvents(response.events || []);
+      } catch (e) {
+        console.error('[BookerDashboard] refresh after highlight', e);
+      }
+    })();
+    const t = setTimeout(() => setPulseEventId(null), 12000);
+    return () => clearTimeout(t);
+  }, [routeParams?.highlightEventId, user?.token]);
+
   const markBookingAsPaid = async (eventDjId) => {
     if (!user?.token || !eventDjId) return;
     setMarkingPaymentEventDjId(eventDjId);
@@ -993,7 +1016,7 @@ export default function BookerDashboardPage() {
     const eventId = routeParams?.openChatEventId;
 
     if (shouldOpenBookings) {
-      setShowMyEvents(true);
+      setActiveSection('events');
     }
 
     if (type === 'PRIVATE' && eventDjId) {
@@ -1370,7 +1393,7 @@ export default function BookerDashboardPage() {
       setTimeout(() => {
         resetForm();
         fetchMyEvents();
-        setShowMyEvents(true);
+        setActiveSection('events');
       }, 2000);
     } catch (error) {
       console.error('Erreur création événement:', error);
@@ -1422,7 +1445,7 @@ export default function BookerDashboardPage() {
             <TouchableOpacity
               style={styles.messagesButton}
               onPress={() => {
-                setShowMyEvents(true);
+                setActiveSection('events');
                 refreshUnreadCount();
               }}
             >
@@ -1682,7 +1705,10 @@ export default function BookerDashboardPage() {
               </Text>
             ) : (
               myEvents.map((event) => (
-                <View key={event.id} style={styles.eventCard}>
+                <View
+                  key={event.id}
+                  style={[styles.eventCard, pulseEventId === event.id && styles.eventCardHighlighted]}
+                >
                   <Text style={styles.eventTitle}>{event.title}</Text>
                   <Text style={styles.eventInfo}>
                     📅 {new Date(event.date).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
@@ -3779,6 +3805,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.3)',
+  },
+  eventCardHighlighted: {
+    borderColor: '#FF1744',
+    borderWidth: 2,
+    backgroundColor: 'rgba(255,23,68,0.12)',
   },
   eventTitle: {
     color: '#fff',

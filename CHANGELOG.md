@@ -12,6 +12,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié
 - **Emails contrat** (`server/utils/contractEmail.js`) : libellés **« contrat accepté »** (objet, titre HTML, corps, pied de page) à la place de « contrat signé », alignés sur l’acceptation dans l’app NOX ; versions FR / EN.
 - **Build iOS** : synchronisation du **`expo.ios.buildNumber`** dans `app.json` avec EAS (`autoIncrement` après builds / soumissions).
+- **Création d’événement (organisateur)** : (`BookerEventDashboardPage`, `EventFormContext`, `BookerDashboardPage`)
+  - Libellés **étape 5** : plus de « Paiement » — **récapitulatif** avec précision *aucun Stripe à cette étape* ; fil d’étapes « Récap ».
+  - **Avertissement** sur le bloc « coûts » : montants **indicatifs** (lieu estimé, DJ via contrats).
+  - **Brouillon** AsyncStorage (`@nox_booker_event_creation_draft_v1`) : reprise / effacement / « plus tard » au premier chargement ; sauvegarde différée tant que le formulaire n’est pas vide.
+  - **Image de couverture** (optionnelle, étape Détails) : choix galerie → **upload après** `POST /api/booker/events` (`uploadEventImage`).
+  - **Modal succès** : rappel des prochaines étapes (chats, contrats) ; CTA **Voir mes événements** avec `highlightEventId` sur le dashboard ; correction **`setShowMyEvents`** inexistant → **`setActiveSection('events')`**.
+  - **Rappel des champs requis** sous l’indicateur d’étapes (par étape).
 
 ---
 

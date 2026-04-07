@@ -3,6 +3,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 const EventFormContext = createContext();
 
 export function EventFormProvider({ children }) {
+  /** URI locale (expo-image-picker) pour la couverture ; upload après création de l’événement. */
+  const [coverImageUri, setCoverImageUri] = useState(null);
+
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -57,6 +60,7 @@ export function EventFormProvider({ children }) {
   }, []);
 
   const resetForm = useCallback(() => {
+    setCoverImageUri(null);
     setFormData({
       title: '',
       date: '',
@@ -80,6 +84,8 @@ export function EventFormProvider({ children }) {
         setFormData,
         eventDateTime,
         setEventDateTime,
+        coverImageUri,
+        setCoverImageUri,
         addDj,
         removeDj,
         setVenue,

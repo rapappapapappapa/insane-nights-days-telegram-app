@@ -1773,6 +1773,28 @@ export default function BookerDashboardPage() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  {Array.isArray(event.ticketHolders) && event.ticketHolders.length > 0 && (
+                    <View style={styles.ticketHoldersBlock}>
+                      <Text style={styles.eventInfoLabel}>
+                        {language === 'fr' ? '🎫 Participants (billets)' : '🎫 Ticket holders'}{' '}
+                        ({event.ticketHolders.length})
+                      </Text>
+                      {event.ticketHolders.map((h) => (
+                        <Text
+                          key={h.ticketId}
+                          style={[styles.ticketHolderLine, h.entered && styles.ticketHolderEntered]}
+                          numberOfLines={1}
+                        >
+                          {h.entered ? '✓ ' : '· '}
+                          {h.displayName}
+                          {h.ticketStatus && h.ticketStatus !== 'valid' && h.ticketStatus !== 'used'
+                            ? ` (${h.ticketStatus})`
+                            : ''}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                   
                   <View style={styles.djsList}>
                     <Text style={styles.eventInfoLabel}>
@@ -3827,6 +3849,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
     fontWeight: '600',
+  },
+  ticketHoldersBlock: {
+    marginTop: 4,
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  ticketHolderLine: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    marginTop: 4,
+    paddingLeft: 2,
+  },
+  ticketHolderEntered: {
+    color: '#7bed9f',
   },
   djsList: {
     marginBottom: 8,

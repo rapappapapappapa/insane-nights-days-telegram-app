@@ -8,6 +8,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Ajouté
 - **EAS Update (OTA)** : vérification au **lancement** de l’app en build production (`EASUpdateOnLaunch` dans `App.js`) — si une mise à jour est disponible : `fetchUpdateAsync` puis `reloadAsync` (même logique que le bouton « Vérifier » du tiroir). Inactif en mode développement (`__DEV__`).
+- **Liste des participants (billets) pour l’organisateur** : `GET /api/booker/events` enrichi avec **`ticketHolders`** (nom affichable depuis le profil Communauté / username, statut, indicateur d’entrée). Sur **`BookerDashboardPage`**, bloc **« Participants (billets) »** sous Staff / Scanner pour faciliter le contrôle à l’entrée.
 
 ### Modifié
 - **Emails contrat** (`server/utils/contractEmail.js`) : libellés **« contrat accepté »** (objet, titre HTML, corps, pied de page) à la place de « contrat signé », alignés sur l’acceptation dans l’app NOX ; versions FR / EN.

@@ -6240,6 +6240,42 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           },
         });
 
+        const eventTickets = await prisma.ticket.findMany({
+          where: { eventId: event.id },
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            scannedAt: true,
+            user: {
+              select: {
+                username: true,
+                communities: {
+                  select: { pseudo: true, prenom: true, nom: true },
+                  take: 1,
+                },
+              },
+            },
+          },
+          orderBy: { purchaseDate: 'asc' },
+        });
+        const ticketHolders = eventTickets.map((t) => {
+          const c = t.user?.communities?.[0];
+          let displayName = c?.pseudo || '';
+          if (!displayName) {
+            const full = [c?.prenom, c?.nom].filter(Boolean).join(' ').trim();
+            displayName = full || '';
+          }
+          if (!displayName) displayName = t.user?.username || 'Participant';
+          const entered = t.status === 'used' || !!t.scannedAt;
+          return {
+            ticketId: t.id,
+            displayName,
+            ticketStatus: t.status,
+            entered,
+          };
+        });
+
         const activeEventVenues = (event.eventVenues || []).filter((ev) => ev.status === 'ACCEPTED' || ev.status === 'PENDING');
         const eventVenue = activeEventVenues[0] || event.eventVenues?.[0];
         const activeEventDjs = (event.eventDjs || []).filter((ed) => ed.status === 'ACCEPTED' || ed.status === 'PENDING');
@@ -6293,6 +6329,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           })),
           publishedOnFeed: event.publishedOnFeed ?? false,
           canPublishToFeed,
+          ticketHolders,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
         };

@@ -21,6 +21,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
   - **Modal succès** : rappel des prochaines étapes (chats, contrats) ; CTA **Voir mes événements** avec `highlightEventId` sur le dashboard ; correction **`setShowMyEvents`** inexistant → **`setActiveSection('events')`**.
   - **Rappel des champs requis** sous l’indicateur d’étapes (par étape).
 
+### Corrigé
+- **Aperçu PDF contrat (Android)** : écran gris dans le WebView — l’iframe `data:application/pdf` n’est pas rendue par Chrome WebView. **`ContractPdfPreviewModal`** : sur Android, rendu des pages en **canvas via PDF.js** (scripts jsdelivr + worker) à la place de l’iframe.
+
 ---
 
 ## Semaine du 31 mars au 4 avril 2026 (mar. - ven.)

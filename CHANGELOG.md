@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 7 au 11 avril 2026 (lun. - ven.)
+## Semaine du 7 au 10 avril 2026 (lun. - ven.)
 
 ### Ajouté
 - **EAS Update (OTA)** : vérification au **lancement** de l’app en build production (`EASUpdateOnLaunch` dans `App.js`) — si une mise à jour est disponible : `fetchUpdateAsync` puis `reloadAsync` (même logique que le bouton « Vérifier » du tiroir). Inactif en mode développement (`__DEV__`).

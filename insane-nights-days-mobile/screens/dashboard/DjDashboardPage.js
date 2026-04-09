@@ -1489,8 +1489,6 @@ export default function DjDashboardPage() {
                 style={styles.input}
                 value={pseudo}
                 onChangeText={setPseudo}
-                placeholder="Kayzen"
-                placeholderTextColor="rgba(255,255,255,0.4)"
               />
                 </View>
             

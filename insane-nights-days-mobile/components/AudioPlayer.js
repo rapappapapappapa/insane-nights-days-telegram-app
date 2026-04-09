@@ -164,9 +164,9 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
             minimumValue={0}
             maximumValue={duration || 1}
             onSlidingComplete={seek}
-            minimumTrackTintColor=Colors.primary
+            minimumTrackTintColor={Colors.primary}
             maximumTrackTintColor="rgba(255,255,255,0.3)"
-            thumbTintColor=Colors.primary
+            thumbTintColor={Colors.primary}
             disabled={!isPlayerValid || !player || !isValidSource || duration === 0}
           />
           <View style={styles.timeContainer}>

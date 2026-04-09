@@ -5,7 +5,8 @@ const NavigationContext = createContext();
 export function NavigationProvider({ children }) {
   const [currentPage, setCurrentPage] = useState('home');
   const [routeParams, setRouteParams] = useState(undefined);
-  const historyRef = useRef(['home']);
+  /** Pile vide au départ : le bouton retour matériel Android ne « recule » pas sur une fausse entrée. */
+  const historyRef = useRef([]);
 
   const navigate = useCallback((page, params) => {
     // Ajouter la page actuelle à l'historique avant de naviguer
@@ -33,8 +34,19 @@ export function NavigationProvider({ children }) {
     }
   }, []);
 
+  /** Retour matériel Android : true si un écran précédent a été restauré ; false → laisser le système (ex. quitter l'app). */
+  const tryHardwareBack = useCallback(() => {
+    if (historyRef.current.length > 0) {
+      const previousPage = historyRef.current.pop();
+      setCurrentPage(previousPage);
+      setRouteParams(undefined);
+      return true;
+    }
+    return false;
+  }, []);
+
   return (
-    <NavigationContext.Provider value={{ currentPage, routeParams, navigate, goBack }}>
+    <NavigationContext.Provider value={{ currentPage, routeParams, navigate, goBack, tryHardwareBack }}>
       {children}
     </NavigationContext.Provider>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Image, View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SkeletonLoader from './SkeletonLoader';
+import Colors from '../constants/colors';
 
 /**
  * Composant Image avec retry automatique et gestion d'erreurs améliorée
@@ -89,7 +90,7 @@ export default function ImageWithRetry({
             onPress={handleManualRetry}
             activeOpacity={0.7}
           >
-            <Ionicons name="refresh" size={16} color="#FF1744" />
+            <Ionicons name="refresh" size={16} color={Colors.primary} />
           </TouchableOpacity>
         )}
       </View>

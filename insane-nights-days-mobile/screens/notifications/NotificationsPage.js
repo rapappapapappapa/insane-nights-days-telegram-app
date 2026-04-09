@@ -215,7 +215,7 @@ export default function NotificationsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   topBar: {
     paddingHorizontal: 16,
     paddingBottom: 10,

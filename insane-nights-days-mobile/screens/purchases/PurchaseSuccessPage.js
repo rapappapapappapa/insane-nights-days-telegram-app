@@ -92,7 +92,7 @@ export default function PurchaseSuccessPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
@@ -150,13 +150,13 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginTop: 10,
-    backgroundColor: Colors?.primary ?? '#FF1744',
+    backgroundColor: Colors?.primary ?? Colors.primary,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '900',
   },

@@ -14,6 +14,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -83,7 +84,7 @@ export default function StaffEventsPage() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color="#FF1744" />
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>{fr ? 'Événements staff' : 'Staff events'}</Text>
         <View style={styles.headerRight} />
@@ -95,10 +96,10 @@ export default function StaffEventsPage() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF1744" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+          <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : events.length === 0 ? (
           <Text style={styles.emptyText}>
             {fr ? 'Aucun événement. Un organisateur doit t\'ajouter comme staff.' : 'No events. A booker must add you as staff.'}
@@ -128,7 +129,7 @@ export default function StaffEventsPage() {
                   style={styles.scanBtn}
                   onPress={() => navigate('scanTicket', { eventId: event.id, eventTitle: event.title })}
                 >
-                  <Ionicons name="qr-code" size={20} color="#0b0b0e" />
+                  <Ionicons name="qr-code" size={20} color={Colors.background} />
                   <Text style={styles.scanBtnText}>{fr ? 'Scanner billets' : 'Scan tickets'}</Text>
                 </TouchableOpacity>
               </View>
@@ -143,7 +144,7 @@ export default function StaffEventsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 8 },
   title: { flex: 1, color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
@@ -189,9 +190,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  scanBtnText: { color: '#0b0b0e', fontSize: 14, fontWeight: '700' },
+  scanBtnText: { color: Colors.background, fontSize: 14, fontWeight: '700' },
 });

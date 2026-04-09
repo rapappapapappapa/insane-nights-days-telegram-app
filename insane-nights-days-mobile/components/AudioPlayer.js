@@ -6,6 +6,7 @@ import {
   Text,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useAudioPlayer } from 'expo-audio';
@@ -116,7 +117,7 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="small" color="#FF1744" />
+        <ActivityIndicator size="small" color={Colors.primary} />
         <Text style={styles.loadingText}>
           {language === 'fr' ? 'Chargement...' : 'Loading...'}
         </Text>
@@ -163,9 +164,9 @@ export default function AudioPlayer({ audioUrl, title, onClose }) {
             minimumValue={0}
             maximumValue={duration || 1}
             onSlidingComplete={seek}
-            minimumTrackTintColor="#FF1744"
+            minimumTrackTintColor=Colors.primary
             maximumTrackTintColor="rgba(255,255,255,0.3)"
-            thumbTintColor="#FF1744"
+            thumbTintColor=Colors.primary
             disabled={!isPlayerValid || !player || !isValidSource || duration === 0}
           />
           <View style={styles.timeContainer}>
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     textAlign: 'center',
   },

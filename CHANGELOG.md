@@ -24,6 +24,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé
 - **Aperçu PDF contrat (Android)** : écran gris dans le WebView — l’iframe `data:application/pdf` n’est pas rendue par Chrome WebView. **`ContractPdfPreviewModal`** : sur Android, rendu des pages en **canvas via PDF.js** (scripts jsdelivr + worker) à la place de l’iframe.
 
+### Modifié (UI/UX — lot 1)
+- **Jetons de couleur** : `constants/colors` utilisé davantage (**`App`**, tiroir, **`BookerDashboardPage`**, **`EmptyState`**, **`ContractPdfPreviewModal`**).
+- **Android — bouton Retour** : `NavigationContext` : historique initial vide + **`tryHardwareBack`** ; dans **`App`**, `BackHandler` appelle **`tryHardwareBack`** (sinon comportement système, ex. quitter l’app). **`Drawer`** : Retour ferme le menu en priorité.
+- **Menu latéral** : libellés **FR/EN** selon la langue, **icônes Ionicons** à la place des emojis pour les entrées, liens légaux et boutons OTA / déconnexion ; **`accessibilityRole` / `accessibilityLabel`** sur les entrées principales ; bouton flottant menu et fermeture avec libellés accessibles bilingues.
+- **Aperçu PDF** : bouton **« Ouvrir / partager le PDF (autre appli) »** via **`expo-sharing`** (repli si WebView / réseau défaillants).
+- **Dépendance** : **`expo-sharing`**.
+
+### Modifié (UI/UX — lot 2)
+- **Palette** : Migration **`#FF1744` / `#0b0b0e`** → **`Colors.*`** sur l’essentiel de l’app mobile (écrans profils, événements, auth inscription, welcome, composants `EventCard`, `Logo`, `ErrorBoundary`, lecteurs média, etc.) ; seule **`constants/colors.js`** conserve les hex sources.
+- **Accessibilité** : **`HomePage`** / **`FeedPage`** (actualiser, notifications, poster, réessayer, onglets « Pour tous / Abonnements ») ; **`LoginPage`** (modes connexion / inscription, mot de passe oublié, afficher le mot de passe, boutons principaux) ; **`AccountTypePage`** (retour, cartes type de compte).
+
 ---
 
 ## Semaine du 31 mars au 4 avril 2026 (mar. - ven.)

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Image, StyleSheet, View, Text, Platform } from 'react-native';
+import Colors from '../constants/colors';
 
 /**
  * ✅ Composant Logo NOX réutilisable
@@ -50,12 +51,12 @@ const styles = StyleSheet.create({
   },
   // ✅ AJOUT: Style pour le fallback (carré rouge avec "N")
   fallback: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fallbackText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '900',
   },
 });

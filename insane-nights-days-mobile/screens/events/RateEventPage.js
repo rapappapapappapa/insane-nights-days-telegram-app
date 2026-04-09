@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -325,7 +326,7 @@ export default function RateEventPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     paddingTop: 50,
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   rateButtonArrow: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '700',
   },

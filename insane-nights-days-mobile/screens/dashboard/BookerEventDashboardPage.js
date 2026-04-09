@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -1396,7 +1397,7 @@ export default function BookerEventDashboardPage() {
                   disabled={creating || !formData.title || !formData.price}
                 >
                   {creating ? (
-                    <ActivityIndicator color="#0b0b0e" />
+                    <ActivityIndicator color={Colors.background} />
                   ) : (
                     <Text style={styles.createButtonText}>
                       {language === 'fr' ? 'Confirmer et créer l\'événement' : 'Confirm and create event'}
@@ -1692,7 +1693,7 @@ export default function BookerEventDashboardPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -1708,7 +1709,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1752,7 +1753,7 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   stepNumberActive: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     color: '#fff',
   },
   stepLabel: {
@@ -1762,7 +1763,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   stepLabelActive: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontWeight: '700',
   },
   stepLine: {
@@ -1772,7 +1773,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   stepLineActive: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   form: {
     gap: 20,
@@ -1828,7 +1829,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
   },
   nextButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1838,7 +1839,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   nextButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -1928,14 +1929,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   successModalPrimary: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 10,
   },
   successModalPrimaryText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -2040,7 +2041,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   addSlotButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -2125,13 +2126,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   costTotalValue: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: 'bold',
   },
   createButton: {
     flex: 2,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -2140,7 +2141,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   createButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -2205,7 +2206,7 @@ const styles = StyleSheet.create({
   },
   datePickerConfirmButton: {
     flex: 1,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

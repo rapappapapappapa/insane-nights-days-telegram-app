@@ -6,6 +6,7 @@ import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import Colors from '../../constants/colors';
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -228,7 +229,7 @@ export default function AdminPage() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{language === 'fr' ? 'Compte' : 'Account'}</Text>
         {loading ? (
-          <ActivityIndicator color="#FF1744" />
+          <ActivityIndicator color={Colors.primary} />
         ) : (
           <>
             <Text style={styles.line}>ID: {me?.id || user?.id}</Text>
@@ -393,9 +394,9 @@ export default function AdminPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0b0b0e', padding: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background, padding: 16 },
   header: { color: '#fff', fontSize: 26, fontWeight: '900', marginBottom: 12 },
   title: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 6 },
   subtle: { color: 'rgba(255,255,255,0.65)' },
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
   },
-  btnText: { color: '#0b0b0e', fontWeight: '900' },
+  btnText: { color: Colors.background, fontWeight: '900' },
   input: {
     marginTop: 10,
     marginBottom: 8,
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
   postRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
   itemTitle: { color: '#fff', fontWeight: '800' },
   itemSub: { color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  badge: { color: '#FF1744', fontWeight: '900' },
+  badge: { color: Colors.primary, fontWeight: '900' },
   itemActions: { flexDirection: 'row', gap: 8 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   filterChip: {

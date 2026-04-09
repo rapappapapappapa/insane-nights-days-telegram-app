@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -107,7 +108,7 @@ export default function BookerProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   avatarPlaceholder: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -346,17 +347,17 @@ const styles = StyleSheet.create({
   followButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 24,
   },
   followButtonActive: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   followButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

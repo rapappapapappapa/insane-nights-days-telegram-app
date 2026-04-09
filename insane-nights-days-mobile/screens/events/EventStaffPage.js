@@ -14,6 +14,7 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -115,7 +116,7 @@ export default function EventStaffPage() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color="#FF1744" />
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{fr ? 'Staff' : 'Staff'}</Text>
         <View style={styles.headerRight} />
@@ -124,11 +125,11 @@ export default function EventStaffPage() {
 
       <View style={styles.actions}>
         <TouchableOpacity style={styles.scanBtn} onPress={() => navigate('scanTicket', { eventId, eventTitle })}>
-          <Ionicons name="qr-code" size={22} color="#0b0b0e" />
+          <Ionicons name="qr-code" size={22} color={Colors.background} />
           <Text style={styles.scanBtnText}>{fr ? 'Scanner billets' : 'Scan tickets'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
-          <Ionicons name="person-add" size={20} color="#FF1744" />
+          <Ionicons name="person-add" size={20} color={Colors.primary} />
           <Text style={styles.addBtnText}>{fr ? 'Ajouter staff' : 'Add staff'}</Text>
         </TouchableOpacity>
       </View>
@@ -136,10 +137,10 @@ export default function EventStaffPage() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF1744" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+          <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : staff.length === 0 ? (
           <Text style={styles.emptyText}>{fr ? 'Aucun staff. Ajoute des amis pour qu\'ils puissent scanner les billets.' : 'No staff. Add friends so they can scan tickets.'}</Text>
         ) : (
@@ -153,7 +154,7 @@ export default function EventStaffPage() {
                 onPress={() => handleRemoveStaff(s.communityId)}
                 disabled={removingStaff === s.communityId}
               >
-                {removingStaff === s.communityId ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="close" size={20} color="#FF1744" />}
+                {removingStaff === s.communityId ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="close" size={20} color={Colors.primary} />}
               </TouchableOpacity>
             </View>
           ))
@@ -177,7 +178,7 @@ export default function EventStaffPage() {
                 >
                   <Image source={{ uri: normalizeMediaUrl(f.profileImage) || 'https://via.placeholder.com/40' }} style={styles.avatarSmall} />
                   <Text style={styles.friendPseudo}>{f.pseudo}</Text>
-                  {addingStaff === f.communityId ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="add" size={22} color="#FF1744" />}
+                  {addingStaff === f.communityId ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="add" size={22} color={Colors.primary} />}
                 </TouchableOpacity>
               ))
             )}
@@ -194,24 +195,24 @@ export default function EventStaffPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 8 },
   title: { flex: 1, color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
   headerRight: { width: 40 },
   eventTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, paddingHorizontal: 20, marginBottom: 16 },
   actions: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 20 },
-  scanBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FF1744', paddingVertical: 14, borderRadius: 12 },
-  scanBtnText: { color: '#0b0b0e', fontSize: 16, fontWeight: '700' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: '#FF1744' },
-  addBtnText: { color: '#FF1744', fontSize: 16, fontWeight: '700' },
+  scanBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12 },
+  scanBtnText: { color: Colors.background, fontSize: 16, fontWeight: '700' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: Colors.primary },
+  addBtnText: { color: Colors.primary, fontSize: 16, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 40 },
   loader: { marginTop: 40 },
   staffRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 14 },
   pseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  roleBadge: { backgroundColor: 'rgba(255,23,68,0.2)', color: '#FF1744', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 12 },
+  roleBadge: { backgroundColor: 'rgba(255,23,68,0.2)', color: Colors.primary, fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 12 },
   removeBtn: { padding: 8 },
   btnDisabled: { opacity: 0.5 },
   emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, paddingHorizontal: 20 },
@@ -223,5 +224,5 @@ const styles = StyleSheet.create({
   avatarSmall: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
   friendPseudo: { flex: 1, color: '#fff', fontSize: 16 },
   modalClose: { marginTop: 16, paddingVertical: 12, alignItems: 'center' },
-  modalCloseText: { color: '#FF1744', fontSize: 16, fontWeight: '600' },
+  modalCloseText: { color: Colors.primary, fontSize: 16, fontWeight: '600' },
 });

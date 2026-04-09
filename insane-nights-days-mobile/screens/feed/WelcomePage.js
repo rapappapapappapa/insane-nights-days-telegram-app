@@ -15,6 +15,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -503,7 +504,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('events')}
                 >
-                  <Ionicons name="musical-notes" size={36} color="#FF1744" />
+                  <Ionicons name="musical-notes" size={36} color={Colors.primary} />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Événements' : 'Events'}
                   </Text>
@@ -515,7 +516,7 @@ export default function WelcomePage() {
                     style={styles.actionButton}
                     onPress={() => navigate('tickets')}
                   >
-                    <MaterialIcons name="confirmation-number" size={36} color="#FF1744" />
+                    <MaterialIcons name="confirmation-number" size={36} color={Colors.primary} />
                     <Text style={styles.actionText}>
                       {language === 'fr' ? 'Mes Tickets' : 'My Tickets'}
                     </Text>
@@ -528,7 +529,7 @@ export default function WelcomePage() {
                     style={styles.actionButton}
                     onPress={() => navigate('djDashboard')}
                   >
-                    <Ionicons name="headset" size={36} color="#FF1744" />
+                    <Ionicons name="headset" size={36} color={Colors.primary} />
                     <Text style={styles.actionText}>
                       {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
                     </Text>
@@ -541,7 +542,7 @@ export default function WelcomePage() {
                     style={styles.actionButton}
                     onPress={() => navigate('venueDashboard')}
                   >
-                    <Ionicons name="business" size={36} color="#FF1744" />
+                    <Ionicons name="business" size={36} color={Colors.primary} />
                     <Text style={styles.actionText}>
                       {language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}
                     </Text>
@@ -553,7 +554,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('venueList')}
                 >
-                  <Ionicons name="location" size={36} color="#FF1744" />
+                  <Ionicons name="location" size={36} color={Colors.primary} />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Profils de lieux' : 'Venue profiles'}
                   </Text>
@@ -566,7 +567,7 @@ export default function WelcomePage() {
                       style={styles.actionButton}
                       onPress={() => navigate('bookerDashboard')}
                     >
-                      <MaterialIcons name="event" size={36} color="#FF1744" />
+                      <MaterialIcons name="event" size={36} color={Colors.primary} />
                       <Text style={styles.actionText}>
                         {language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
                       </Text>
@@ -576,7 +577,7 @@ export default function WelcomePage() {
                       style={styles.actionButton}
                       onPress={() => navigate('venueList')}
                     >
-                      <MaterialIcons name="location-city" size={36} color="#FF1744" />
+                      <MaterialIcons name="location-city" size={36} color={Colors.primary} />
                       <Text style={styles.actionText}>
                         {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
                       </Text>
@@ -588,7 +589,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('djList')}
                 >
-                  <Ionicons name="people" size={36} color="#FF1744" />
+                  <Ionicons name="people" size={36} color={Colors.primary} />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
                   </Text>
@@ -598,7 +599,7 @@ export default function WelcomePage() {
                   style={styles.actionButton}
                   onPress={() => navigate('profile')}
                 >
-                  <Ionicons name="person" size={36} color="#FF1744" />
+                  <Ionicons name="person" size={36} color={Colors.primary} />
                   <Text style={styles.actionText}>
                     {language === 'fr' ? 'Mon Profil' : 'My Profile'}
                   </Text>
@@ -609,7 +610,7 @@ export default function WelcomePage() {
                     style={styles.actionButton}
                     onPress={() => navigate('switchProfile')}
                   >
-                    <Ionicons name="swap-horizontal" size={36} color="#FF1744" />
+                    <Ionicons name="swap-horizontal" size={36} color={Colors.primary} />
                     <Text style={styles.actionText}>
                       {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
                     </Text>
@@ -624,7 +625,7 @@ export default function WelcomePage() {
                   navigate('home');
                 }}
               >
-                <Ionicons name="log-out-outline" size={20} color="#FF1744" style={{ marginRight: 8 }} />
+                <Ionicons name="log-out-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.logoutButtonText}>
                   {language === 'fr' ? 'Déconnexion' : 'Logout'}
                 </Text>
@@ -663,7 +664,7 @@ export default function WelcomePage() {
                   style={styles.notificationsButton}
                   onPress={openChatNotifications}
                 >
-                  <Ionicons name="notifications" size={24} color="#FF1744" />
+                  <Ionicons name="notifications" size={24} color={Colors.primary} />
                   <NotificationBadge count={chatUnreadCount} />
                 </TouchableOpacity>
               )}
@@ -673,7 +674,7 @@ export default function WelcomePage() {
                   style={styles.notificationsButton}
                   onPress={openFeedNotifications}
                 >
-                  <Ionicons name="notifications" size={24} color="#FF1744" />
+                  <Ionicons name="notifications" size={24} color={Colors.primary} />
                   <NotificationBadge count={feedNotificationsCount} />
                 </TouchableOpacity>
               )}
@@ -682,7 +683,7 @@ export default function WelcomePage() {
                   style={styles.createPostButton}
                   onPress={() => navigate('createFeedPost')}
                 >
-                  <Ionicons name="add-circle" size={24} color="#FF1744" />
+                  <Ionicons name="add-circle" size={24} color={Colors.primary} />
                   <Text style={styles.createPostText}>
                     {language === 'fr' ? 'Poster' : 'Post'}
                   </Text>
@@ -718,7 +719,7 @@ export default function WelcomePage() {
           {/* Liste du feed */}
           {loadingFeed ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF1744" />
+              <ActivityIndicator size="large" color={Colors.primary} />
               <Text style={styles.loadingText}>
                 {language === 'fr' ? 'Chargement du feed...' : 'Loading feed...'}
               </Text>
@@ -734,8 +735,8 @@ export default function WelcomePage() {
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={() => fetchFeed(true)}
-                  tintColor="#FF1744"
-                  colors={['#FF1744']}
+                  tintColor={Colors.primary}
+                  colors={[Colors.primary]}
                 />
               }
             >
@@ -879,8 +880,8 @@ export default function WelcomePage() {
                             <Ionicons 
                               name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                               size={18} 
-                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
-                              style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
+                              color={likedPosts[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"}
+                              style={likedPosts[item.id] ? { color: Colors.primary } : undefined}
                             />
                             {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                               <Text style={[
@@ -898,7 +899,7 @@ export default function WelcomePage() {
                             <Ionicons 
                               name={expandedComments[item.id] ? "chatbubble" : "chatbubble-outline"} 
                               size={18} 
-                              color={expandedComments[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                              color={expandedComments[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"} 
                             />
                             {(postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)) > 0 && (
                               <Text style={[
@@ -967,7 +968,7 @@ export default function WelcomePage() {
                                   style={styles.commentSendButton}
                                   onPress={() => handleCreateComment(item.id)}
                                 >
-                                  <Ionicons name="send" size={18} color="#FF1744" />
+                                  <Ionicons name="send" size={18} color={Colors.primary} />
                                 </TouchableOpacity>
                               </View>
                             )}
@@ -983,7 +984,7 @@ export default function WelcomePage() {
                         onPress={() => navigate('eventDetail', { eventId: item.id })}
                       >
                         <View style={styles.eventHeader}>
-                          <Ionicons name="musical-notes" size={24} color="#FF1744" />
+                          <Ionicons name="musical-notes" size={24} color={Colors.primary} />
                           <Text style={styles.eventBadge}>
                             {language === 'fr' ? 'Événement' : 'Event'}
                           </Text>
@@ -1047,7 +1048,7 @@ export default function WelcomePage() {
                 <Ionicons
                   name={showMenu ? "chevron-down" : "chevron-up"}
                   size={24}
-                  color="#FF1744"
+                  color={Colors.primary}
                 />
                 <Text style={styles.menuToggleButtonText}>
                   {showMenu
@@ -1160,7 +1161,7 @@ export default function WelcomePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   contentOverlay: {
     flex: 1,
@@ -1204,7 +1205,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   usernameText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '600',
   },
@@ -1215,7 +1216,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: MENU_HEIGHT,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 2,
@@ -1278,7 +1279,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   logoutButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1289,7 +1290,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     zIndex: 3,
   },
   feedHeader: {
@@ -1335,7 +1336,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.3)',
   },
   createPostText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
@@ -1344,7 +1345,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   feedTab: {
     flex: 1,
@@ -1367,7 +1368,7 @@ const styles = StyleSheet.create({
     left: '25%',
     right: '25%',
     height: 3,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 2,
   },
   feedScroll: {
@@ -1388,7 +1389,7 @@ const styles = StyleSheet.create({
   },
   // ✅ POST: Styles pour les posts du feed
   postCard: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -1431,7 +1432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarDj: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   avatarBooker: {
     backgroundColor: '#4CAF50',
@@ -1548,7 +1549,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   postActionTextLiked: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   commentsSection: {
     marginLeft: 52,
@@ -1567,7 +1568,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   commentAuthor: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 4,
@@ -1626,7 +1627,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventBadge: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1681,7 +1682,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   menuToggleButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
   },

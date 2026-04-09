@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -8,10 +8,13 @@ import {
   StyleSheet,
   Platform,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import * as Sharing from 'expo-sharing';
 // Expo SDK 54+ : l’API « default » ne fournit plus writeAsStringAsync (elle throw). Utiliser legacy.
 import * as FileSystem from 'expo-file-system/legacy';
+import Colors from '../constants/colors';
 
 function normalizePdfBase64(raw) {
   if (raw == null || typeof raw !== 'string') return '';
@@ -143,6 +146,52 @@ export default function ContractPdfPreviewModal({
   /** null | { type: 'uri', uri } | { type: 'html', html, baseUrl } */
   const [webSource, setWebSource] = useState(null);
   const [filePreparing, setFilePreparing] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+
+  const sharePdfExternally = useCallback(async () => {
+    if (!pdfBase64) return;
+    const clean = normalizePdfBase64(pdfBase64);
+    if (!clean) return;
+    const cacheDir = FileSystem.cacheDirectory;
+    if (!cacheDir) {
+      Alert.alert(
+        language === 'fr' ? 'Partage impossible' : 'Cannot share',
+        language === 'fr' ? 'Espace cache indisponible.' : 'Cache unavailable.'
+      );
+      return;
+    }
+    setShareBusy(true);
+    try {
+      const basePath = cacheDir.endsWith('/') ? cacheDir : `${cacheDir}/`;
+      const path = `${basePath}nox-contract-share-${Date.now()}.pdf`;
+      await FileSystem.writeAsStringAsync(path, clean, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const uri = path.startsWith('file://') ? path : `file://${path}`;
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          language === 'fr' ? 'Partage impossible' : 'Cannot share',
+          language === 'fr'
+            ? 'Le partage n’est pas disponible sur cet appareil.'
+            : 'Sharing is not available on this device.'
+        );
+        return;
+      }
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: language === 'fr' ? 'Ouvrir le PDF' : 'Open PDF',
+        UTI: 'com.adobe.pdf',
+      });
+    } catch (e) {
+      console.warn('[ContractPdfPreviewModal] share', e);
+      Alert.alert(
+        language === 'fr' ? 'Erreur' : 'Error',
+        language === 'fr' ? 'Impossible d’ouvrir ou de partager le PDF.' : 'Could not share the PDF.'
+      );
+    } finally {
+      setShareBusy(false);
+    }
+  }, [pdfBase64, language]);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,6 +254,10 @@ export default function ContractPdfPreviewModal({
     };
   }, [visible, pdfBase64]);
 
+  useEffect(() => {
+    if (!visible) setShareBusy(false);
+  }, [visible]);
+
   const showSpinner = loading || filePreparing;
   const canConfirm = !loading && !filePreparing && !errorText && !!webSource;
 
@@ -218,7 +271,13 @@ export default function ContractPdfPreviewModal({
     >
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.headerBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.headerBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={cancelLabel}
+          >
             <Text style={styles.headerBtnText}>{cancelLabel}</Text>
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={2}>
@@ -229,7 +288,7 @@ export default function ContractPdfPreviewModal({
 
         {showSpinner ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#FF1744" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.hint}>
               {loading
                 ? language === 'fr'
@@ -262,7 +321,7 @@ export default function ContractPdfPreviewModal({
             startInLoadingState
             renderLoading={() => (
               <View style={styles.center}>
-                <ActivityIndicator color="#FF1744" />
+                <ActivityIndicator color={Colors.primary} />
               </View>
             )}
           />
@@ -273,8 +332,39 @@ export default function ContractPdfPreviewModal({
         )}
 
         <View style={styles.footer}>
+          {pdfBase64 && !loading ? (
+            <TouchableOpacity
+              style={[styles.secondaryBtn, (shareBusy || showSpinner) && styles.confirmBtnDisabled]}
+              onPress={sharePdfExternally}
+              disabled={shareBusy || showSpinner}
+              accessibilityRole="button"
+              accessibilityLabel={
+                language === 'fr'
+                  ? 'Ouvrir ou partager le PDF avec une autre application'
+                  : 'Open or share the PDF in another app'
+              }
+            >
+              {shareBusy ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <Text style={styles.secondaryBtnText}>
+                  {language === 'fr'
+                    ? 'Ouvrir / partager le PDF (autre appli)'
+                    : 'Open / share PDF (other app)'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
           {previewOnly ? (
-            <TouchableOpacity style={styles.confirmBtn} onPress={onClose}>
+            <TouchableOpacity
+              style={[styles.confirmBtn, styles.footerPrimaryBtn]}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={
+                doneReadingLabel ||
+                (language === 'fr' ? 'Fermer après lecture' : 'Close after reading')
+              }
+            >
               <Text style={styles.confirmBtnText}>
                 {doneReadingLabel ||
                   (language === 'fr' ? 'Fermer après lecture' : 'Close after reading')}
@@ -282,9 +372,11 @@ export default function ContractPdfPreviewModal({
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={[styles.confirmBtn, !canConfirm && styles.confirmBtnDisabled]}
+              style={[styles.confirmBtn, styles.footerPrimaryBtn, !canConfirm && styles.confirmBtnDisabled]}
               onPress={onConfirm}
               disabled={!canConfirm}
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}
             >
               <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
             </TouchableOpacity>
@@ -296,7 +388,7 @@ export default function ContractPdfPreviewModal({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0b0b0e' },
+  safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,8 +401,8 @@ const styles = StyleSheet.create({
   headerBtn: { minWidth: 72 },
   headerBtnPlaceholder: { minWidth: 72 },
   headerBtnText: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
-  title: { flex: 1, color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center', paddingHorizontal: 4 },
-  web: { flex: 1, backgroundColor: '#1a1a1f' },
+  title: { flex: 1, color: Colors.text, fontSize: 15, fontWeight: '700', textAlign: 'center', paddingHorizontal: 4 },
+  web: { flex: 1, backgroundColor: Colors.backgroundCard },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   hint: { color: 'rgba(255,255,255,0.55)', marginTop: 12, fontSize: 14 },
   error: { color: '#ff8a80', textAlign: 'center', fontSize: 14 },
@@ -319,10 +411,29 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 28 : 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
+    gap: 10,
   },
+  secondaryBtn: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  secondaryBtnText: {
+    color: Colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  footerPrimaryBtn: { marginTop: 0 },
   confirmBtn: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

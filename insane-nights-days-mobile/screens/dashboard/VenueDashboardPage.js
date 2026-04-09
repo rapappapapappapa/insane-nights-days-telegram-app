@@ -1770,7 +1770,7 @@ export default function VenueDashboardPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     paddingTop: 50,
@@ -1882,7 +1882,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '700',
   },
   mediaHeader: {
@@ -1923,7 +1923,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#444',
   },
   addFileButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '700',
   },
   photoGrid: {
@@ -2040,7 +2040,7 @@ const styles = StyleSheet.create({
   },
   loaderScreen: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -2086,12 +2086,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,82,82,0.9)',
   },
   bookingActionDestructiveText: { color: '#FF8A80', fontWeight: '800', fontSize: 14 },
-  chatButtonText: { color: '#0b0b0e', fontWeight: '800', fontSize: 14 },
+  chatButtonText: { color: Colors.background, fontWeight: '800', fontSize: 14 },
   // Chat modal
   chatModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' },
   chatModalContent: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     marginTop: Platform.OS === 'ios' ? 50 : 0,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -2152,7 +2152,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   contractAckCheckmark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -2178,7 +2178,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.18)',
   },
   contractButtonText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  contractButtonTextDark: { color: '#0b0b0e', fontSize: 12, fontWeight: '900' },
+  contractButtonTextDark: { color: Colors.background, fontSize: 12, fontWeight: '900' },
   chatLoadingContainer: { padding: 40, alignItems: 'center' },
   chatMessagesContainer: { padding: 16, paddingBottom: 20 },
   chatEmptyState: { padding: 30, alignItems: 'center' },
@@ -2237,7 +2237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chatSendButtonDisabled: { opacity: 0.5 },
-  chatSendButtonText: { color: '#0b0b0e', fontSize: 18, fontWeight: '800' },
+  chatSendButtonText: { color: Colors.background, fontSize: 18, fontWeight: '800' },
   contractModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.65)',
@@ -2252,7 +2252,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.25)',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   contractModalTitle: { color: '#fff', fontSize: 16, fontWeight: '900', marginBottom: 10 },
   contractModalLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '700', marginTop: 10, marginBottom: 6 },
@@ -2277,7 +2277,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   paymentTermsModalContent: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
@@ -2302,7 +2302,7 @@ const styles = StyleSheet.create({
   },
   paymentTermsOptionSelected: { backgroundColor: 'rgba(255,23,68,0.12)' },
   paymentTermsOptionText: { color: '#fff', fontSize: 15, fontWeight: '600', flex: 1 },
-  paymentTermsOptionTextSelected: { color: '#FF1744' },
-  paymentTermsCheck: { color: '#FF1744', fontSize: 16, fontWeight: '800' },
+  paymentTermsOptionTextSelected: { color: Colors.primary },
+  paymentTermsCheck: { color: Colors.primary, fontSize: 16, fontWeight: '800' },
   paymentTermsClose: { marginTop: 12, padding: 12, alignItems: 'center' },
 });

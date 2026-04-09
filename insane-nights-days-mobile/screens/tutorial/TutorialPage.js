@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -109,7 +110,7 @@ export default function TutorialPage() {
 
         <View style={styles.stepContainer}>
           <View style={styles.iconContainer}>
-            <Ionicons name={tutorialSteps[currentStep].icon} size={80} color="#FF1744" />
+            <Ionicons name={tutorialSteps[currentStep].icon} size={80} color={Colors.primary} />
           </View>
           
           <Text style={styles.stepTitle}>{tutorialSteps[currentStep].title}</Text>
@@ -164,7 +165,7 @@ export default function TutorialPage() {
                 : language === 'fr' ? 'Suivant' : 'Next'}
             </Text>
             {currentStep < tutorialSteps.length - 1 && (
-              <Ionicons name="chevron-forward" size={24} color="#0b0b0e" />
+              <Ionicons name="chevron-forward" size={24} color={Colors.background} />
             )}
           </TouchableOpacity>
         </View>
@@ -176,7 +177,7 @@ export default function TutorialPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   contentOverlay: {
     flex: 1,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   },
   indicatorActive: {
     width: 24,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   navButtonPrimary: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   navButtonText: {
     color: '#fff',
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   navButtonTextPrimary: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },

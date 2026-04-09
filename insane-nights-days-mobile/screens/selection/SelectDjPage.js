@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -96,7 +97,7 @@ export default function SelectDjPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -225,7 +226,7 @@ export default function SelectDjPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     paddingTop: 50,
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
   },
   ratingButtonActive: {
     backgroundColor: 'rgba(255,23,68,0.15)',
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   ratingButtonText: {
     color: '#fff',
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ratingButtonTextActive: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   djCardSelected: {
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     backgroundColor: 'rgba(255,23,68,0.1)',
   },
   djCardHeader: {
@@ -361,13 +362,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   djAvatarText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 24,
     fontWeight: '800',
   },
@@ -388,12 +389,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedBadgeText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '700',
   },

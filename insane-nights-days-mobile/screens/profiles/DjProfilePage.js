@@ -11,6 +11,7 @@ import {
   Linking,
   Modal,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -240,7 +241,7 @@ export default function DjProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -774,7 +775,7 @@ export default function DjProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -852,7 +853,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quickStatValue: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -874,7 +875,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     overflow: 'hidden',
     marginBottom: 12,
   },
@@ -896,16 +897,16 @@ const styles = StyleSheet.create({
   bookButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
   bookButtonSelected: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   bookButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -921,23 +922,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 24,
   },
   followButtonActive: {
     backgroundColor: 'rgba(255,23,68,0.2)',
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   followButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   followButtonTextActive: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   card: {
     marginHorizontal: 20,
@@ -949,7 +950,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   sectionTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 12,
@@ -1031,7 +1032,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   soundcloudButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1064,12 +1065,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   playIcon: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     marginLeft: 2,
   },
@@ -1088,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   duration: {
     color: 'rgba(255,255,255,0.6)',
@@ -1149,7 +1150,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mediaSubtitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '900',
     marginTop: 16,
@@ -1337,7 +1338,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   reviewerName: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1380,7 +1381,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   calendarArrow: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '700',
   },
@@ -1393,7 +1394,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   eventDate: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
@@ -1460,7 +1461,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

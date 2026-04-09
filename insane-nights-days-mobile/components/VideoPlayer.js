@@ -8,6 +8,7 @@ import {
   Text,
   Dimensions,
 } from 'react-native';
+import Colors from '../constants/colors';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -92,7 +93,7 @@ export default function VideoPlayer({ videoUrl, thumbnailUrl, title, visible, on
           
           {loading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF1744" />
+              <ActivityIndicator size="large" color={Colors.primary} />
             </View>
           )}
 

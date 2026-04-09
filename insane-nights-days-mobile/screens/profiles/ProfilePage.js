@@ -22,6 +22,7 @@ import {
   Modal,
   Share,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -453,7 +454,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                     disabled={changingPassword}
                   >
                     {changingPassword ? (
-                      <ActivityIndicator color="#0b0b0e" />
+                      <ActivityIndicator color={Colors.background} />
                     ) : (
                       <Text style={styles.saveText}>Enregistrer</Text>
                     )}
@@ -501,7 +502,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                 disabled={exportingData}
               >
                 {exportingData ? (
-                  <ActivityIndicator size="small" color="#0b0b0e" />
+                  <ActivityIndicator size="small" color={Colors.background} />
                 ) : (
                   <Text style={styles.rgpdButtonText}>Exporter mes données</Text>
                 )}
@@ -587,7 +588,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
               </TouchableOpacity>
             </View>
             {loadingProfiles ? (
-              <ActivityIndicator color="#FF1744" style={{ marginVertical: 20 }} />
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
             ) : profiles ? (
               <View>
                 <Text style={styles.profileActiveLabel}>
@@ -616,7 +617,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
                           )}
                           {switchingProfile && profiles.activeProfileType !== 'COMMUNITY' && (
-                            <ActivityIndicator size="small" color="#FF1744" />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -650,7 +651,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
                           )}
                           {switchingProfile && profiles.activeProfileType !== 'DJ' && (
-                            <ActivityIndicator size="small" color="#FF1744" />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -686,7 +687,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
                           )}
                           {switchingProfile && profiles.activeProfileType !== 'BOOKER' && (
-                            <ActivityIndicator size="small" color="#FF1744" />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -720,7 +721,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
                           )}
                           {switchingProfile && profiles.activeProfileType !== 'VENUE' && (
-                            <ActivityIndicator size="small" color="#FF1744" />
+                            <ActivityIndicator size="small" color={Colors.primary} />
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -788,7 +789,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     flexDirection: 'row',
@@ -797,14 +798,14 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   backButtonTop: {
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -814,10 +815,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 122, 26, 0.2)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   switchProfileButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -836,7 +837,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -848,7 +849,7 @@ const styles = StyleSheet.create({
     borderRadius: 55,
   },
   avatarText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 54,
     fontWeight: '900',
   },
@@ -889,7 +890,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   alertButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -921,12 +922,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.5)',
   },
   addProfileButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
   editButton: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -951,7 +952,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   infoValueHighlight: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   success: {
     color: '#10b981',
@@ -965,9 +966,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 12,
     color: '#ffffff',
     fontSize: 16,
@@ -1006,7 +1007,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   smallPrimaryButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '800',
   },
   editActions: {
@@ -1033,10 +1034,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   saveText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1063,11 +1064,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     marginHorizontal: 6,
   },
   statValue: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 6,
@@ -1086,7 +1087,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   noteTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
@@ -1097,7 +1098,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   profileActiveLabel: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 16,
@@ -1123,7 +1124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileItemActive: {
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     backgroundColor: 'rgba(255,23,68,0.1)',
   },
   profileItemText: {
@@ -1132,7 +1133,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   profileItemActiveBadge: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1152,7 +1153,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   profileEditButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -1172,14 +1173,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   createProfileBtn: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 12,
   },
   createProfileBtnText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -1250,7 +1251,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.4)',
     borderRadius: 12,

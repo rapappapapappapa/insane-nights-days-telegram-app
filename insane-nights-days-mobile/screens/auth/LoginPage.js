@@ -21,6 +21,7 @@ import BackgroundVideo from '../../components/BackgroundVideo';
 import Logo from '../../components/Logo';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import Colors from '../../constants/colors';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
@@ -169,6 +170,9 @@ export default function LoginPage() {
                 style={[styles.modePill, mode === 'login' && styles.modePillActive]}
                 onPress={() => setMode('login')}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Mode connexion' : 'Login mode'}
+                accessibilityState={{ selected: mode === 'login' }}
               >
                 <Text style={[styles.modePillText, mode === 'login' && styles.modePillTextActive]}>
                   {language === 'fr' ? 'Connexion' : 'Login'}
@@ -178,6 +182,9 @@ export default function LoginPage() {
                 style={[styles.modePill, mode === 'register' && styles.modePillActive]}
                 onPress={() => setMode('register')}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Mode inscription' : 'Sign up mode'}
+                accessibilityState={{ selected: mode === 'register' }}
               >
                 <Text style={[styles.modePillText, mode === 'register' && styles.modePillTextActive]}>
                   {language === 'fr' ? 'Inscription' : 'Sign up'}
@@ -222,7 +229,16 @@ export default function LoginPage() {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity style={styles.passwordToggle} onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity
+                style={styles.passwordToggle}
+                onPress={() => setShowPassword(!showPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword
+                    ? (language === 'fr' ? 'Masquer le mot de passe' : 'Hide password')
+                    : (language === 'fr' ? 'Afficher le mot de passe' : 'Show password')
+                }
+              >
                 <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="rgba(255,255,255,0.7)" />
               </TouchableOpacity>
             </View>
@@ -255,7 +271,7 @@ export default function LoginPage() {
                     onPress={() => setCertifiedMajor(!certifiedMajor)}
                     activeOpacity={0.7}
                   >
-                    {certifiedMajor && <Ionicons name="checkmark" size={14} color="#0b0b0e" />}
+                    {certifiedMajor && <Ionicons name="checkmark" size={14} color={Colors.background} />}
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.cguTextWrap} onPress={() => setCertifiedMajor(!certifiedMajor)} activeOpacity={0.7}>
                     <Text style={styles.cguText}>
@@ -269,7 +285,7 @@ export default function LoginPage() {
                     onPress={() => setAcceptedCgu(!acceptedCgu)}
                     activeOpacity={0.7}
                   >
-                    {acceptedCgu && <Ionicons name="checkmark" size={14} color="#0b0b0e" />}
+                    {acceptedCgu && <Ionicons name="checkmark" size={14} color={Colors.background} />}
                   </TouchableOpacity>
                   <View style={styles.cguTextWrap}>
                     <Text style={styles.cguText}>
@@ -292,9 +308,11 @@ export default function LoginPage() {
                   style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                   onPress={handleRegister}
                   disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Créer mon compte' : 'Create account'}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#0b0b0e" />
+                    <ActivityIndicator color={Colors.background} />
                   ) : (
                     <Text style={styles.primaryButtonText}>
                       {language === 'fr' ? 'Créer mon compte' : 'Create account'}
@@ -306,6 +324,8 @@ export default function LoginPage() {
               <>
                 <TouchableOpacity
                   style={styles.forgotLink}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Mot de passe oublié' : 'Forgot password'}
                   onPress={() => {
                     setResetEmail(email || '');
                     setResetCode('');
@@ -324,8 +344,10 @@ export default function LoginPage() {
                   style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                   onPress={handleLogin}
                   disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Se connecter' : 'Log in'}
                 >
-                  {loading ? <ActivityIndicator color="#0b0b0e" /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
+                  {loading ? <ActivityIndicator color={Colors.background} /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
                 </TouchableOpacity>
               </>
             )}
@@ -493,7 +515,7 @@ export default function LoginPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -590,7 +612,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginTop: 18,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
@@ -599,7 +621,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   primaryButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -643,8 +665,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   cguTextWrap: {
     flex: 1,
@@ -657,7 +679,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   cguLink: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '700',
     textDecorationLine: 'underline',
@@ -697,7 +719,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalInput: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.35)',
     borderRadius: 12,
@@ -713,7 +735,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   modalPrimaryButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '900',
     fontSize: 15,
   },

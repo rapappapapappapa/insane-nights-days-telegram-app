@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -444,7 +445,7 @@ export default function RegisterDjPage() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#0b0b0e" />
+            <ActivityIndicator color={Colors.background} />
           ) : (
             <Text style={styles.submitButtonText}>
               {language === 'fr' ? 'Créer mon compte DJ' : 'Create my DJ account'}
@@ -467,7 +468,7 @@ export default function RegisterDjPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
@@ -480,7 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   submitButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '800',
   },

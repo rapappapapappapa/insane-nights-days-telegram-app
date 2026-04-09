@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -77,7 +78,7 @@ export default function CommunityProfilePage() {
         <TouchableOpacity style={[styles.backBtn, { top: insets.top + 10 }]} onPress={goBack}>
           <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
-        <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+        <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       </View>
     );
   }
@@ -136,7 +137,7 @@ export default function CommunityProfilePage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   backBtn: { position: 'absolute', left: 16, zIndex: 10, padding: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8 },
   backBtnText: { color: '#fff', fontSize: 16 },
   scroll: { flex: 1 },
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   banner: { width: '100%', height: 140, backgroundColor: 'rgba(255,255,255,0.05)' },
   bannerPlaceholder: { width: '100%', height: 140, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
   avatarWrap: { alignItems: 'center', marginTop: -50, marginBottom: 12 },
-  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: '#0b0b0e' },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: Colors.background },
   avatarPlaceholder: {
     width: 100,
     height: 100,
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#0b0b0e',
+    borderColor: Colors.background,
   },
   avatarInitial: { color: '#fff', fontSize: 40, fontWeight: '700' },
   pseudo: { color: '#fff', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 24 },

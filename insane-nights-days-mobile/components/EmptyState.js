@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLanguage } from '../contexts/LanguageContext';
+import Colors from '../constants/colors';
 
 /**
  * Composant pour afficher un état vide avec un message et une action optionnelle
@@ -12,15 +12,18 @@ export default function EmptyState({
   actionLabel, 
   onAction 
 }) {
-  const { language } = useLanguage();
-  
   return (
     <View style={styles.container}>
       <Text style={styles.emoji}>{emoji}</Text>
       {title && <Text style={styles.title}>{title}</Text>}
       {message && <Text style={styles.message}>{message}</Text>}
       {actionLabel && onAction && (
-        <TouchableOpacity style={styles.actionButton} onPress={onAction}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onAction}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+        >
           <Text style={styles.actionText}>{actionLabel}</Text>
         </TouchableOpacity>
       )}
@@ -40,7 +43,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 8,
@@ -54,14 +57,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   actionButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 8,
   },
   actionText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },

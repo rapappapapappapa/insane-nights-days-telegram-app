@@ -7,8 +7,12 @@ import {
   TouchableOpacity,
   PanResponder,
   Text,
+  Platform,
+  BackHandler,
 } from 'react-native';
 import DrawerContent from './DrawerContent';
+import Colors, { withOpacity } from '../constants/colors';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -27,6 +31,7 @@ export default function Drawer({
   showFloatingButton = true,
   floatingButtonLabel = 'MENU',
 }) {
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   // ✅ Mode non contrôlé si isOpen n'est pas fourni
   const [internalOpen, setInternalOpen] = useState(false);
@@ -84,6 +89,16 @@ export default function Drawer({
         if (finished) setShouldRender(false);
       });
     }
+  }, [open]);
+
+  // Android : priorité au fermeture du tiroir avant le retour « page » (handler enregistré quand le menu est ouvert).
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !open) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      requestClose();
+      return true;
+    });
+    return () => sub.remove();
   }, [open]);
 
   const panResponder = useMemo(
@@ -178,6 +193,8 @@ export default function Drawer({
           style={[styles.floatingButton, { bottom: 22 + (insets?.bottom ?? 0) }]}
           onPress={requestOpen}
           activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Ouvrir le menu' : 'Open menu'}
         >
           <Text style={styles.floatingButtonIcon}>≡</Text>
           <Text style={styles.floatingButtonLabel}>{floatingButtonLabel}</Text>
@@ -218,6 +235,8 @@ export default function Drawer({
               style={styles.closeButton}
               onPress={requestClose}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Fermer le menu' : 'Close menu'}
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
@@ -248,7 +267,7 @@ const styles = StyleSheet.create({
     width: FLOATING_BTN_SIZE,
     height: FLOATING_BTN_SIZE,
     borderRadius: FLOATING_BTN_SIZE / 2,
-    backgroundColor: 'rgba(255, 23, 68, 0.95)',
+    backgroundColor: withOpacity(Colors.primary, 0.95),
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center',
@@ -261,7 +280,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   floatingButtonIcon: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 22,
     fontWeight: '900',
     marginTop: -2,
@@ -289,9 +308,9 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: '#0f0f14',
+    backgroundColor: Colors.backgroundElevated,
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255,23,68,0.18)',
+    borderRightColor: Colors.border,
     zIndex: 10000,
     shadowColor: '#000',
     shadowOffset: {
@@ -318,7 +337,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   closeButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '900',
   },

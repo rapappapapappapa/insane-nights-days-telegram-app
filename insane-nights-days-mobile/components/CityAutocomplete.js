@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../constants/colors';
 
 const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholderTextColor }) => {
   const [suggestions, setSuggestions] = useState([]);
@@ -94,7 +95,7 @@ const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholder
       />
       {loading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#FF1744" />
+          <ActivityIndicator size="small" color={Colors.primary} />
         </View>
       )}
       {showSuggestions && suggestions.length > 0 && (

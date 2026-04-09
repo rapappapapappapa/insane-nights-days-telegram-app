@@ -14,6 +14,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -112,7 +113,7 @@ export default function BookerFriendsPage() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color="#FF1744" />
+          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>{fr ? 'Mes amis' : 'My friends'}</Text>
         <View style={styles.headerRight} />
@@ -133,17 +134,17 @@ export default function BookerFriendsPage() {
           returnKeyType="search"
         />
         <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} disabled={searching}>
-          {searching ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="search" size={22} color="#FF1744" />}
+          {searching ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="search" size={22} color={Colors.primary} />}
         </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF1744" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+          <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : (
           <>
             {hasSearched && (
@@ -167,7 +168,7 @@ export default function BookerFriendsPage() {
                             disabled={sendingRequest === r.id}
                           >
                             {sendingRequest === r.id ? (
-                              <ActivityIndicator size="small" color="#0b0b0e" />
+                              <ActivityIndicator size="small" color={Colors.background} />
                             ) : (
                               <Text style={styles.addBtnText}>+</Text>
                             )}
@@ -201,7 +202,7 @@ export default function BookerFriendsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   backBtn: { padding: 8 },
   title: { flex: 1, color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
@@ -222,13 +223,13 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 40 },
   loader: { marginTop: 40 },
   section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionTitle: { color: '#FF1744', fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  sectionTitle: { color: Colors.primary, fontSize: 16, fontWeight: '700', marginBottom: 12 },
   friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 14 },
   pseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  addBtn: { backgroundColor: '#FF1744', width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  addBtn: { backgroundColor: Colors.primary, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   addBtnDisabled: { opacity: 0.6 },
-  addBtnText: { color: '#0b0b0e', fontSize: 20, fontWeight: '800' },
+  addBtnText: { color: Colors.background, fontSize: 20, fontWeight: '800' },
   badge: { color: '#10b981', fontSize: 13, fontWeight: '600' },
   emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
 });

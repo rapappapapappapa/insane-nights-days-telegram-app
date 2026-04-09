@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -184,7 +185,7 @@ export default function EventsPage() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchEvents(true)}
-            tintColor="#FF1744"
+            tintColor={Colors.primary}
           />
         }
       >
@@ -251,11 +252,11 @@ export default function EventsPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   backButtonTop: {
     alignSelf: 'flex-start',
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     fontSize: 18,
     marginRight: 12,
-    color: '#FF1744',
+    color: Colors.primary,
   },
   searchInput: {
     flex: 1,
@@ -336,8 +337,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterButtonActive: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterText: {
     color: '#fff',
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterTextActive: {
-    color: '#0b0b0e',
+    color: Colors.background,
   },
   eventCard: {
     backgroundColor: '#1a1a1f',
@@ -368,13 +369,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
   priceText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -460,7 +461,7 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -469,14 +470,14 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   detailsButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   detailsButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },

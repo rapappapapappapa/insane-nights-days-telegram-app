@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -452,7 +453,7 @@ export default function EventDetailPage() {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#FF1744" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Chargement de l'événement...</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => navigate('events')}>
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
@@ -592,7 +593,7 @@ export default function EventDetailPage() {
                 {language === 'fr' ? 'Crée un groupe et invite tes amis à cet événement.' : 'Create a group and invite friends to this event.'}
               </Text>
               {loadingGroups ? (
-                <ActivityIndicator size="small" color="#FF1744" style={{ marginVertical: 12 }} />
+                <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 12 }} />
               ) : eventGroups.length > 0 ? (
                 <>
                   {eventGroups.map((g) => (
@@ -622,7 +623,7 @@ export default function EventDetailPage() {
                 disabled={creatingGroup}
               >
                 {creatingGroup ? (
-                  <ActivityIndicator color="#0b0b0e" size="small" />
+                  <ActivityIndicator color={Colors.background} size="small" />
                 ) : (
                   <Text style={styles.friendsButtonText}>
                     {eventGroups.length > 0
@@ -679,7 +680,7 @@ export default function EventDetailPage() {
                   disabled={buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
                 >
                   {buyingTicket ? (
-                    <ActivityIndicator color="#0b0b0e" />
+                    <ActivityIndicator color={Colors.background} />
                   ) : (
                     <Text style={styles.buyButtonText}>
                       {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
@@ -760,7 +761,7 @@ export default function EventDetailPage() {
                 disabled={inviting || selectedFriends.length === 0}
               >
                 {inviting ? (
-                  <ActivityIndicator color="#0b0b0e" size="small" />
+                  <ActivityIndicator color={Colors.background} size="small" />
                 ) : (
                   <Text style={styles.modalInviteText}>
                     {language === 'fr' ? `Inviter (${selectedFriends.length})` : `Invite (${selectedFriends.length})`}
@@ -786,13 +787,13 @@ export default function EventDetailPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -819,13 +820,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
@@ -858,13 +859,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 24,
   },
   priceText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -920,7 +921,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   linkText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
     textDecorationLine: 'underline',
@@ -952,11 +953,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cgvCheckboxChecked: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   cgvCheckmark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -971,12 +972,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   cgvLink: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '700',
   },
   buyButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
@@ -985,7 +986,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buyButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -1006,7 +1007,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rateButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -1019,13 +1020,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   dateEditorLabel: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   dateEditorInput: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 8,
@@ -1035,13 +1036,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dateEditorButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
   },
   dateEditorButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -1060,13 +1061,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   profileButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   profileButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -1079,7 +1080,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.25)',
   },
   friendsSectionTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 4,
@@ -1092,7 +1093,7 @@ const styles = StyleSheet.create({
   friendsButton: {
     backgroundColor: 'rgba(255,23,68,0.3)',
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
@@ -1130,7 +1131,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   inviteMoreBtnText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -1202,7 +1203,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   friendItemCheck: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -1226,14 +1227,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
   },
   modalInviteBtnDisabled: {
     opacity: 0.5,
   },
   modalInviteText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 15,
     fontWeight: '800',
   },

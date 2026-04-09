@@ -166,13 +166,13 @@ export default function PurchasesPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   backButtonTop: {
     alignSelf: 'flex-start',
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   primaryCtaText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '900',
   },
   list: {

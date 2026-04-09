@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -221,7 +222,7 @@ export default function SwitchProfilePage() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#FF1744" size="large" style={styles.loader} />
+          <ActivityIndicator color={Colors.primary} size="large" style={styles.loader} />
         ) : (
           <View style={styles.profilesContainer}>
             {profileTypes.map((profileType) => {
@@ -297,7 +298,7 @@ export default function SwitchProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   activeProfileText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginTop: 8,
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   profileCardActive: {
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     backgroundColor: 'rgba(255,23,68,0.1)',
   },
   profileCardDisabled: {
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   profileName: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 6,
@@ -393,18 +394,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   activeBadge: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   activeBadgeText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '700',
   },
   switchText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

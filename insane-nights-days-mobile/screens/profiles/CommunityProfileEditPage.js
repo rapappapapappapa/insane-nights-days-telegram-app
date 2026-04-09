@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -150,7 +151,7 @@ export default function CommunityProfileEditPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>{language === 'fr' ? 'Chargement...' : 'Loading...'}</Text>
         </View>
       </View>
@@ -280,7 +281,7 @@ export default function CommunityProfileEditPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#888', marginTop: 12 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -316,11 +317,11 @@ const styles = StyleSheet.create({
   input: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, color: '#fff', marginBottom: 16 },
   genreChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,23,68,0.3)' },
-  chipActive: { backgroundColor: 'rgba(255,23,68,0.3)', borderColor: '#FF1744' },
+  chipActive: { backgroundColor: 'rgba(255,23,68,0.3)', borderColor: Colors.primary },
   chipText: { color: '#fff', fontSize: 13 },
-  chipTextActive: { color: '#FF1744', fontWeight: '600' },
+  chipTextActive: { color: Colors.primary, fontWeight: '600' },
   friendsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,23,68,0.4)', marginBottom: 16 },
-  friendsBtnText: { color: '#FF1744', fontSize: 15, fontWeight: '600' },
-  saveBtn: { backgroundColor: '#FF1744', padding: 16, borderRadius: 12, alignItems: 'center' },
+  friendsBtnText: { color: Colors.primary, fontSize: 15, fontWeight: '600' },
+  saveBtn: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

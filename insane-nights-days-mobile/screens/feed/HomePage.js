@@ -27,6 +27,7 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import NotificationBadge from '../../components/NotificationBadge';
 import EmptyState from '../../components/EmptyState';
+import Colors from '../../constants/colors';
 // Drawer global géré dans App.js
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -406,6 +407,8 @@ export default function HomePage() {
             style={styles.logoContainer}
             onPress={() => fetchFeed(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Actualiser le fil' : 'Refresh feed'}
           >
             <Logo size={110} />
           </TouchableOpacity>
@@ -413,6 +416,8 @@ export default function HomePage() {
           <TouchableOpacity
             style={styles.languageButton}
             onPress={() => setShowLanguageModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Choisir la langue' : 'Choose language'}
           >
             <Text style={styles.languageButtonText}>
               {language === 'fr' ? 'FR' : 'EN'} ▼
@@ -440,6 +445,8 @@ export default function HomePage() {
                 style={styles.feedLogoButton}
                 onPress={() => fetchFeed(true)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Actualiser le fil' : 'Refresh feed'}
               >
                 <Logo size={48} />
               </TouchableOpacity>
@@ -456,8 +463,10 @@ export default function HomePage() {
                 <TouchableOpacity
                   style={styles.notificationsButton}
                   onPress={openFeedNotifications}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Notifications du fil' : 'Feed notifications'}
                 >
-                  <Ionicons name="notifications" size={28} color="#FF1744" />
+                  <Ionicons name="notifications" size={28} color={Colors.primary} />
                   <NotificationBadge count={feedNotificationsCount} />
                 </TouchableOpacity>
               )}
@@ -465,8 +474,10 @@ export default function HomePage() {
                 <TouchableOpacity
                   style={styles.createPostButton}
                   onPress={() => navigate('createFeedPost')}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Créer une publication' : 'Create post'}
                 >
-                  <Ionicons name="add-circle" size={28} color="#FF1744" />
+                  <Ionicons name="add-circle" size={28} color={Colors.primary} />
                   <Text style={styles.createPostText}>
                     {language === 'fr' ? 'Poster' : 'Post'}
                   </Text>
@@ -478,7 +489,7 @@ export default function HomePage() {
           {/* Liste du feed */}
           {loadingFeed ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF1744" />
+              <ActivityIndicator size="large" color={Colors.primary} />
               <Text style={styles.loadingText}>
                 {language === 'fr' ? 'Chargement du feed...' : 'Loading feed...'}
               </Text>
@@ -491,8 +502,10 @@ export default function HomePage() {
                 style={styles.retryButton}
                 onPress={() => fetchFeed()}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Réessayer le chargement' : 'Retry loading'}
               >
-                <Ionicons name="refresh" size={20} color="#FF1744" style={{ marginRight: 8 }} />
+                <Ionicons name="refresh" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.retryButtonText}>
                   {language === 'fr' ? 'Réessayer' : 'Retry'}
                 </Text>
@@ -509,8 +522,8 @@ export default function HomePage() {
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={() => fetchFeed(true)}
-                  tintColor="#FF1744"
-                  colors={['#FF1744']}
+                  tintColor={Colors.primary}
+                  colors={[Colors.primary]}
                 />
               }
             >
@@ -655,8 +668,8 @@ export default function HomePage() {
                             <Ionicons 
                               name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                               size={18} 
-                              color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
-                              style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
+                              color={likedPosts[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"}
+                              style={likedPosts[item.id] ? { color: Colors.primary } : undefined}
                             />
                             {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                               <Text style={[
@@ -674,7 +687,7 @@ export default function HomePage() {
                             <Ionicons 
                               name={expandedComments[item.id] ? "chatbubble" : "chatbubble-outline"} 
                               size={18} 
-                              color={expandedComments[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                              color={expandedComments[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"} 
                             />
                             {(postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)) > 0 && (
                               <Text style={[
@@ -727,7 +740,7 @@ export default function HomePage() {
                                   style={styles.commentSendButton}
                                   onPress={() => handleCreateComment(item.id)}
                                 >
-                                  <Ionicons name="send" size={18} color="#FF1744" />
+                                  <Ionicons name="send" size={18} color={Colors.primary} />
                                 </TouchableOpacity>
                               </View>
                             )}
@@ -750,7 +763,7 @@ export default function HomePage() {
                         }}
                       >
                         <View style={styles.eventHeader}>
-                          <Ionicons name="musical-notes" size={24} color="#FF1744" />
+                          <Ionicons name="musical-notes" size={24} color={Colors.primary} />
                           <Text style={styles.eventBadge}>
                             {language === 'fr' ? 'Événement' : 'Event'}
                           </Text>
@@ -947,7 +960,7 @@ export default function HomePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   headerLeftSpacer: {
     width: 44,
@@ -989,7 +1002,7 @@ const styles = StyleSheet.create({
     minHeight: 44, // ✅ AJOUT: Hauteur minimale pour les boutons iOS
   },
   tutorialButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1019,7 +1032,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     zIndex: 3,
   },
   feedSafeArea: {
@@ -1092,7 +1105,7 @@ const styles = StyleSheet.create({
     minHeight: 44, // ✅ AJOUT: Hauteur minimale pour les boutons iOS
   },
   createPostText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
@@ -1137,13 +1150,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 23, 68, 0.4)',
   },
   retryButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   // ✅ POST: Styles pour les posts du feed
   postCard: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -1186,7 +1199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarDj: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   avatarBooker: {
     backgroundColor: '#4CAF50',
@@ -1303,7 +1316,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   postActionTextLiked: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   commentsSection: {
     marginLeft: 52,
@@ -1322,7 +1335,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   commentAuthor: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 4,
@@ -1381,7 +1394,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventBadge: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1444,10 +1457,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   modalOptionSelected: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   modalOptionText: {
     color: '#fff',
@@ -1455,7 +1468,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   modalOptionTextSelected: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '700',
   },
   // ✅ AJOUT: Styles pour les modals

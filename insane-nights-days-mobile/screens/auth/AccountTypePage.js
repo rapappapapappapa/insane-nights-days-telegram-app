@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import Colors from '../../constants/colors';
 
 const accountTypes = [
   {
@@ -64,7 +65,12 @@ export default function AccountTypePage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigate('home')}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigate('home')}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+        >
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>
       </View>
@@ -86,6 +92,10 @@ export default function AccountTypePage() {
               style={styles.accountCard}
               onPress={() => handleAccountTypeSelect(type.id)}
               activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${language === 'fr' ? type.titleFr : type.titleEn}. ${
+                language === 'fr' ? type.descriptionFr : type.descriptionEn
+              }`}
             >
               <Text style={styles.cardEmoji}>{type.emoji}</Text>
               <Text style={styles.cardTitle}>
@@ -105,7 +115,7 @@ export default function AccountTypePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
@@ -118,7 +128,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

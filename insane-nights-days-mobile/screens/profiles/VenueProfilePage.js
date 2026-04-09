@@ -9,6 +9,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -68,7 +69,7 @@ export default function VenueProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -237,7 +238,7 @@ export default function VenueProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -277,12 +278,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 4,
-    borderColor: '#0b0b0e',
+    borderColor: Colors.background,
   },
   venueIconText: {
     fontSize: 48,
@@ -303,24 +304,24 @@ const styles = StyleSheet.create({
   selectButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 32,
     minWidth: 200,
   },
   selectButtonSelected: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   selectButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
     textTransform: 'uppercase',
   },
   selectButtonTextSelected: {
-    color: '#0b0b0e',
+    color: Colors.background,
   },
   backButton: {
     position: 'absolute',
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 20,
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playIcon: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 32,
     fontWeight: '800',
   },

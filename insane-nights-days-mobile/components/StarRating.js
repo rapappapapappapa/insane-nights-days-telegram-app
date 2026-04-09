@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Colors from '../constants/colors';
 
 export default function StarRating({ rating, maxRating = 5, size = 20, onPress, editable = false, showStars = false, showValue = true }) {
   // Si showStars est false, afficher juste "X/5"
@@ -114,8 +115,8 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   ratingButtonActive: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   ratingButtonText: {
     color: '#fff',

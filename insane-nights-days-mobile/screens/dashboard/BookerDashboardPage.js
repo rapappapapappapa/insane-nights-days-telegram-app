@@ -43,6 +43,7 @@ import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
+import Colors from '../../constants/colors';
 
 function cleanText(s) {
   if (!s) return '';
@@ -1492,7 +1493,7 @@ export default function BookerDashboardPage() {
               style={styles.viewPublicProfileButton}
               onPress={() => navigate('bookerProfile', { bookerId: bookerProfile.id })}
             >
-              <Ionicons name="eye-outline" size={20} color="#FF1744" />
+              <Ionicons name="eye-outline" size={20} color={Colors.primary} />
               <Text style={styles.viewPublicProfileButtonText}>
                 {language === 'fr' ? 'Voir mon profil public' : 'View my public profile'}
               </Text>
@@ -1502,7 +1503,7 @@ export default function BookerDashboardPage() {
             style={styles.eventDashboardButton}
             onPress={() => navigate('bookerEventDashboard', {})}
           >
-            <Ionicons name="calendar" size={24} color="#0b0b0e" />
+            <Ionicons name="calendar" size={24} color={Colors.background} />
             <Text style={styles.eventDashboardButtonText}>
               {language === 'fr' ? 'Dashboard Événement' : 'Event Dashboard'}
             </Text>
@@ -1520,7 +1521,7 @@ export default function BookerDashboardPage() {
           // ✅ AJOUT: Section "Profil"
           <View style={styles.profileSection}>
             {loadingProfile ? (
-              <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+              <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
             ) : (
               <>
                 <Text style={styles.sectionTitle}>
@@ -1680,7 +1681,7 @@ export default function BookerDashboardPage() {
                     disabled={savingProfile}
                   >
                     {savingProfile ? (
-                      <ActivityIndicator size="small" color="#0b0b0e" />
+                      <ActivityIndicator size="small" color={Colors.background} />
                     ) : (
                       <Text style={styles.saveButtonText}>
                         {language === 'fr' ? 'Enregistrer' : 'Save'}
@@ -2213,7 +2214,7 @@ export default function BookerDashboardPage() {
                       : (language === 'fr' ? 'Contrat de booking' : 'Booking contract')}
                   </Text>
                   {contractLoading ? (
-                    <ActivityIndicator size="small" color="#FF1744" />
+                    <ActivityIndicator size="small" color={Colors.primary} />
                   ) : (
                     <Text style={styles.contractStatus}>
                       {contractData?.status === 'SIGNED'
@@ -2431,7 +2432,7 @@ export default function BookerDashboardPage() {
             {/* Messages */}
             {loadingChatMessages ? (
               <View style={styles.chatLoadingContainer}>
-                <ActivityIndicator size="large" color="#FF1744" />
+                <ActivityIndicator size="large" color={Colors.primary} />
               </View>
             ) : (
               <View style={styles.chatMessagesContainer}>
@@ -2923,7 +2924,7 @@ export default function BookerDashboardPage() {
                   disabled={editEventSaving || editEventUploading}
                 >
                   {editEventSaving ? (
-                    <ActivityIndicator size="small" color="#0b0b0e" />
+                    <ActivityIndicator size="small" color={Colors.background} />
                   ) : (
                     <Text style={styles.editEventSaveText}>{language === 'fr' ? 'Enregistrer' : 'Save'}</Text>
                   )}
@@ -2948,7 +2949,7 @@ export default function BookerDashboardPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -2965,7 +2966,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -3025,7 +3026,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   contractStatus: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -3084,11 +3085,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contractAckCheckboxChecked: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   contractAckCheckmark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -3108,7 +3109,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contractButtonPrimary: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   contractButtonSecondary: {
     borderWidth: 1,
@@ -3121,7 +3122,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   contractButtonTextDark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -3139,7 +3140,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.3)',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   contractModalTitle: {
     color: '#fff',
@@ -3186,7 +3187,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   paymentTermsModalContent: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
@@ -3215,11 +3216,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   paymentTermsOptionTextSelected: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontWeight: '800',
   },
   paymentTermsCheck: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -3246,7 +3247,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   sectionTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 10,
@@ -3256,7 +3257,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -3301,7 +3302,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   createButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -3311,7 +3312,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   createButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -3342,8 +3343,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stepNumberActive: {
-    backgroundColor: '#FF1744',
-    color: '#0b0b0e',
+    backgroundColor: Colors.primary,
+    color: Colors.background,
   },
   stepLabel: {
     color: 'rgba(255,255,255,0.5)',
@@ -3351,7 +3352,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepLabelActive: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   stepLine: {
     flex: 1,
@@ -3361,7 +3362,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   stepLineActive: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   stepDescription: {
     color: 'rgba(255,255,255,0.7)',
@@ -3372,13 +3373,13 @@ const styles = StyleSheet.create({
   selectedInfo: {
     backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
   },
   selectedInfoText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -3392,19 +3393,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255,23,68,0.2)',
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
   },
   backButtonStepText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
   },
   nextButton: {
     flex: 1,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -3413,7 +3414,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   nextButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -3428,7 +3429,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
     borderTopWidth: 2,
-    borderTopColor: '#FF1744',
+    borderTopColor: Colors.primary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -3439,7 +3440,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,23,68,0.3)',
   },
   modalTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -3453,7 +3454,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCloseButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 24,
     fontWeight: '300',
   },
@@ -3468,13 +3469,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.2)',
   },
   modalOptionSelected: {
     backgroundColor: 'rgba(255,23,68,0.2)',
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   modalOptionText: {
     color: '#ffffff',
@@ -3482,11 +3483,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modalOptionTextSelected: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontWeight: '700',
   },
   modalOptionCheck: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -3531,7 +3532,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     borderTopWidth: 2,
-    borderTopColor: '#FF1744',
+    borderTopColor: Colors.primary,
   },
   datePickerHeader: {
     flexDirection: 'row',
@@ -3542,7 +3543,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   datePickerTitle: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -3551,7 +3552,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3595,7 +3596,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3621,7 +3622,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   tabButtonContent: {
     flexDirection: 'row',
@@ -3664,14 +3665,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: '35%',
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#0b0b0e',
+    borderColor: Colors.background,
   },
   profileForm: {
     gap: 16,
@@ -3708,7 +3709,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookerTypeButtonActive: {
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     backgroundColor: 'rgba(255,23,68,0.2)',
   },
   bookerTypeButtonText: {
@@ -3717,7 +3718,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bookerTypeButtonTextActive: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontWeight: '800',
   },
   legalBanner: {
@@ -3759,7 +3760,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   saveButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -3769,7 +3770,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -3787,7 +3788,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -3796,7 +3797,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   viewPublicProfileButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -3804,7 +3805,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -3813,7 +3814,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   eventDashboardButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -3829,7 +3830,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.3)',
   },
   eventCardHighlighted: {
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderWidth: 2,
     backgroundColor: 'rgba(255,23,68,0.12)',
   },
@@ -3955,7 +3956,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,23,68,0.5)',
   },
   costTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
@@ -3987,12 +3988,12 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,23,68,0.5)',
   },
   costTotalLabel: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: 'bold',
   },
   costTotalValue: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -4138,7 +4139,7 @@ const styles = StyleSheet.create({
   },
   chatModalContent: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     marginTop: Platform.OS === 'ios' ? 50 : 0,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -4219,7 +4220,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   chatMessageAvatarPlaceholder: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4239,7 +4240,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   chatMessageBubbleOwn: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
   },
   chatMessageBubbleOther: {
@@ -4281,7 +4282,7 @@ const styles = StyleSheet.create({
   },
   chatInput: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'android' ? 12 : 10,
@@ -4297,7 +4298,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -4402,13 +4403,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   editEventSave: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   editEventSaveDisabled: {
     opacity: 0.7,
   },
   editEventSaveText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontWeight: '900',
   },
   // Styles pour les slots DJ
@@ -4440,7 +4441,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   removeSlotButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -4451,13 +4452,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,23,68,0.1)',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
   addSlotButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

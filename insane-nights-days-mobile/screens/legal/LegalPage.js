@@ -7,6 +7,7 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -424,7 +425,7 @@ export default function LegalPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   h2: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
     marginTop: 20,

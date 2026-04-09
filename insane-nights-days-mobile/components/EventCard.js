@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import Colors from '../constants/colors';
 
 const EventCard = React.memo(({ event, onPress }) => {
   const getAvailabilityColor = (sold, capacity) => {
@@ -165,13 +166,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
   priceText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -267,13 +268,13 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   detailsButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
   detailsButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '800',
   },

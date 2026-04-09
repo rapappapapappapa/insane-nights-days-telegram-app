@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -149,7 +150,7 @@ export default function VenueProfileEditPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>{fr ? 'Chargement...' : 'Loading...'}</Text>
         </View>
       </View>
@@ -279,7 +280,7 @@ export default function VenueProfileEditPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: '#888', marginTop: 12 },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -324,6 +325,6 @@ const styles = StyleSheet.create({
   readOnlyLegalWrap: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 14, marginBottom: 16 },
   readOnlyLegalText: { color: '#fff', fontSize: 14, marginBottom: 4 },
   readOnlyLegalHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 8, fontStyle: 'italic' },
-  saveBtn: { backgroundColor: '#FF1744', padding: 16, borderRadius: 12, alignItems: 'center' },
+  saveBtn: { backgroundColor: Colors.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

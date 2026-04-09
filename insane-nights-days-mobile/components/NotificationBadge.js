@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Colors from '../constants/colors';
 
 /**
  * Composant Badge pour afficher un compteur de notifications
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#0b0b0e',
+    borderColor: Colors.background,
     zIndex: 10,
   },
   badgeText: {

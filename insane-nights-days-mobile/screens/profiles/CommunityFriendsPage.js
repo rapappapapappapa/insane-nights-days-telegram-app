@@ -15,6 +15,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -309,10 +310,10 @@ export default function CommunityFriendsPage() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF1744" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FF1744" style={styles.loader} />
+          <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : activeTab === 'friends' ? (
           friends.length === 0 ? (
             <Text style={styles.emptyText}>{fr ? 'Aucun ami pour le moment.' : 'No friends yet.'}</Text>
@@ -338,7 +339,7 @@ export default function CommunityFriendsPage() {
                   onPress={() => handleRemoveFriend(f.id)}
                   disabled={removingFriend === f.id}
                 >
-                  {removingFriend === f.id ? <ActivityIndicator size="small" color="#FF1744" /> : <Ionicons name="person-remove" size={20} color="#FF1744" />}
+                  {removingFriend === f.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="person-remove" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
               </View>
             ))
@@ -491,18 +492,18 @@ export default function CommunityFriendsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0b0e' },
+  container: { flex: 1, backgroundColor: Colors.background },
   backBtn: { position: 'absolute', left: 16, zIndex: 10, padding: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8 },
   backBtnText: { color: '#fff', fontSize: 16 },
   header: { alignItems: 'center', paddingBottom: 16 },
   title: { color: '#fff', fontSize: 22, fontWeight: '800' },
   subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 4 },
   addFriendSection: { paddingHorizontal: 20, marginBottom: 16, paddingVertical: 12, backgroundColor: 'rgba(255,23,68,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,23,68,0.25)' },
-  addFriendTitle: { color: '#FF1744', fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  addFriendTitle: { color: Colors.primary, fontSize: 16, fontWeight: '800', marginBottom: 4 },
   addFriendHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 10 },
   searchRow: { flexDirection: 'row', gap: 8 },
   searchInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 16 },
-  searchBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#FF1744', alignItems: 'center', justifyContent: 'center' },
+  searchBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   searchBtnDisabled: { opacity: 0.5 },
   searchingText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, paddingHorizontal: 20, marginBottom: 8 },
   emptySearchBox: { padding: 24, marginHorizontal: 20, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, alignItems: 'center', gap: 8 },
@@ -515,10 +516,10 @@ const styles = StyleSheet.create({
   resultPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
   tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 12, gap: 8 },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)', gap: 6 },
-  tabActive: { backgroundColor: 'rgba(255,23,68,0.3)', borderWidth: 1, borderColor: '#FF1744' },
+  tabActive: { backgroundColor: 'rgba(255,23,68,0.3)', borderWidth: 1, borderColor: Colors.primary },
   tabText: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
-  tabTextActive: { color: '#FF1744', fontWeight: '700' },
-  badge: { backgroundColor: '#FF1744', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  tabTextActive: { color: Colors.primary, fontWeight: '700' },
+  badge: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 40 },
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
   avatarSmall: { width: 44, height: 44, borderRadius: 22 },
   avatarPlaceholder: { backgroundColor: 'rgba(255,23,68,0.3)', alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FF1744', alignItems: 'center', justifyContent: 'center' },
+  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   addBtnDisabled: { opacity: 0.6 },
   addBtnText: { color: '#fff', fontSize: 20, fontWeight: '700' },
   removeBtn: { padding: 8 },
@@ -555,5 +556,5 @@ const styles = StyleSheet.create({
   eventInviteDeclineBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   eventInviteDeclineBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   eventInviteLink: { alignSelf: 'flex-start', paddingVertical: 4 },
-  eventInviteLinkText: { color: '#FF1744', fontSize: 14, fontWeight: '600' },
+  eventInviteLinkText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
 });

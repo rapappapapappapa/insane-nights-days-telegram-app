@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import Colors from '../constants/colors';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useToast } from '../hooks/useToast';
 import StarRating from './StarRating';
@@ -100,7 +101,7 @@ export default function RatingModal({ visible, onClose, onSubmit, title, loading
               disabled={rating === 0 || loading}
             >
               {loading ? (
-                <ActivityIndicator color="#0b0b0e" />
+                <ActivityIndicator color={Colors.background} />
               ) : (
                 <Text style={styles.submitButtonText}>
                   {language === 'fr' ? 'Envoyer' : 'Submit'}
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 16,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   commentInput: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.3)',
     borderRadius: 12,
@@ -197,19 +198,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   submitButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },

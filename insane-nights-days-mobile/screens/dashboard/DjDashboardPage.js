@@ -4675,7 +4675,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   contractAckCheckmark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -4708,7 +4708,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   contractButtonTextDark: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -4776,7 +4776,7 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   paymentTermsModalContent: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,

@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import logger from '../utils/logger';
+import Colors from '../constants/colors';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -60,7 +61,7 @@ class ErrorBoundary extends React.Component {
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <Ionicons name="alert-circle" size={64} color="#FF1744" />
+            <Ionicons name="alert-circle" size={64} color={Colors.primary} />
             <Text style={styles.title}>
               {this.props.title || 'Oups ! Une erreur est survenue'}
             </Text>
@@ -112,7 +113,7 @@ class ErrorBoundary extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -144,12 +145,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   errorText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontFamily: 'monospace',
   },
   button: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -160,15 +161,15 @@ const styles = StyleSheet.create({
   buttonSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   buttonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },
   buttonTextSecondary: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -1,115 +1,143 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
+import Colors from '../constants/colors';
 import * as Updates from 'expo-updates';
 
-const menuItems = [
+/** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
+const MENU_DEF = [
   {
     id: 'home',
-    emoji: '📰',
-    title: 'Feed',
-    description: 'Retour au fil d\'actualité',
+    icon: 'newspaper-outline',
+    titleFr: 'Fil d’actualité',
+    titleEn: 'Feed',
+    descFr: 'Retour au fil d’actualité',
+    descEn: 'Back to the news feed',
   },
   {
     id: 'login',
-    emoji: '🔐',
-    title: 'Connexion',
-    description: 'Se connecter ou s\'inscrire',
+    icon: 'log-in-outline',
+    titleFr: 'Connexion',
+    titleEn: 'Sign in',
+    descFr: 'Se connecter ou s’inscrire',
+    descEn: 'Log in or register',
     onlyWhenLoggedOut: true,
   },
   {
     id: 'events',
-    emoji: '🎵',
-    title: 'Événements',
-    description: 'Découvrir les événements',
+    icon: 'calendar-outline',
+    titleFr: 'Événements',
+    titleEn: 'Events',
+    descFr: 'Découvrir les événements',
+    descEn: 'Discover events',
   },
   {
     id: 'djList',
-    emoji: '🎧',
-    title: 'Liste des DJs',
-    description: 'Découvrir les DJs',
+    icon: 'musical-notes-outline',
+    titleFr: 'Liste des DJs',
+    titleEn: 'DJ list',
+    descFr: 'Découvrir les DJs',
+    descEn: 'Discover DJs',
   },
   {
-    // ✅ Route réelle: djRatings (Classement)
     id: 'djRatings',
-    emoji: '🏅',
-    title: 'Classement DJs',
-    description: 'Consulter le top artistes',
+    icon: 'trophy-outline',
+    titleFr: 'Classement DJs',
+    titleEn: 'DJ ranking',
+    descFr: 'Consulter le top artistes',
+    descEn: 'Top artists',
   },
   {
     id: 'notifications',
-    emoji: '🔔',
-    title: 'Notifications',
-    description: 'Likes & commentaires',
+    icon: 'notifications-outline',
+    titleFr: 'Notifications',
+    titleEn: 'Notifications',
+    descFr: 'J’aime et commentaires',
+    descEn: 'Likes & comments',
     onlyWhenLoggedIn: true,
   },
   {
     id: 'tickets',
-    emoji: '🎟️',
-    title: 'Mes Tickets',
-    description: 'Gérer mes tickets',
-    // On n'achète des tickets qu'en profil Communauté
+    icon: 'ticket-outline',
+    titleFr: 'Mes billets',
+    titleEn: 'My tickets',
+    descFr: 'Gérer mes billets',
+    descEn: 'Manage my tickets',
     onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
     id: 'purchases',
-    emoji: '🧾',
-    title: 'Mes Achats',
-    description: 'Historique des paiements',
+    icon: 'receipt-outline',
+    titleFr: 'Mes achats',
+    titleEn: 'My purchases',
+    descFr: 'Historique des paiements',
+    descEn: 'Payment history',
     onlyWhenLoggedIn: true,
-    // Achats = tickets => uniquement Communauté
     onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
     id: 'profile',
-    emoji: '👤',
-    title: 'Mes Profils',
-    description: 'Modifier tes profils (DJ, Organisateur, Communauté...)',
+    icon: 'person-circle-outline',
+    titleFr: 'Mes profils',
+    titleEn: 'My profiles',
+    descFr: 'DJ, organisateur, communauté…',
+    descEn: 'DJ, booker, community…',
     onlyWhenLoggedIn: true,
   },
   {
     id: 'communityFriends',
-    emoji: '👥',
-    title: 'Mes amis',
-    description: 'Recherche et liste d\'amis Communauté',
+    icon: 'people-outline',
+    titleFr: 'Mes amis',
+    titleEn: 'My friends',
+    descFr: 'Amis communauté',
+    descEn: 'Community friends',
     onlyWhenLoggedIn: true,
     onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
     id: 'staffEvents',
-    emoji: '📱',
-    title: 'Scanner billets',
-    description: 'Événements où tu es staff',
+    icon: 'qr-code-outline',
+    titleFr: 'Scanner billets',
+    titleEn: 'Scan tickets',
+    descFr: 'Événements où tu es staff',
+    descEn: 'Events where you are staff',
     onlyWhenLoggedIn: true,
     onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
     id: 'bookerFriends',
-    emoji: '👥',
-    title: 'Mes amis',
-    description: 'Amis Communauté pour staff événements',
+    icon: 'people-outline',
+    titleFr: 'Mes amis',
+    titleEn: 'My friends',
+    descFr: 'Communauté pour le staff événements',
+    descEn: 'Community for event staff',
     onlyWhenLoggedIn: true,
     onlyForActiveProfileTypes: ['BOOKER'],
   },
   {
     id: 'admin',
-    emoji: '🛡️',
-    title: 'Admin',
-    description: 'Modération & utilisateurs',
+    icon: 'shield-checkmark-outline',
+    titleFr: 'Administration',
+    titleEn: 'Admin',
+    descFr: 'Modération et utilisateurs',
+    descEn: 'Moderation & users',
     onlyWhenLoggedIn: true,
     onlyWhenAdmin: true,
   },
 ];
 
 export default function DrawerContent({ navigation }) {
+  const { language } = useLanguage();
   const { navigate } = useNavigation();
   const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
@@ -223,27 +251,33 @@ export default function DrawerContent({ navigation }) {
       case 'DJ':
         return {
           id: 'djDashboard',
-          emoji: '🎧',
-          title: 'Dashboard DJ',
-          description: 'Messages, bookings, statut',
+          icon: 'headset-outline',
+          titleFr: 'Tableau de bord DJ',
+          titleEn: 'DJ dashboard',
+          descFr: 'Messages, bookings, statut',
+          descEn: 'Messages, bookings, status',
           showBadge: true,
           badgeCount: unreadByProfileType?.DJ ?? unreadCount,
         };
       case 'BOOKER':
         return {
           id: 'bookerDashboard',
-          emoji: '📋',
-          title: 'Dashboard Organisateur',
-          description: 'Messages & événements',
+          icon: 'clipboard-outline',
+          titleFr: 'Tableau de bord organisateur',
+          titleEn: 'Organizer dashboard',
+          descFr: 'Messages et événements',
+          descEn: 'Messages & events',
           showBadge: true,
           badgeCount: unreadByProfileType?.BOOKER ?? unreadCount,
         };
       case 'VENUE':
         return {
           id: 'venueDashboard',
-          emoji: '📍',
-          title: 'Dashboard Lieu',
-          description: 'Infos, médias, avis',
+          icon: 'location-outline',
+          titleFr: 'Tableau de bord lieu',
+          titleEn: 'Venue dashboard',
+          descFr: 'Infos, médias, avis',
+          descEn: 'Info, media, reviews',
           showBadge: false,
           badgeCount: 0,
         };
@@ -252,7 +286,10 @@ export default function DrawerContent({ navigation }) {
     }
   })();
 
-  const itemsToRender = dashboardItem ? [dashboardItem, ...menuItems] : menuItems;
+  const itemsToRender = dashboardItem ? [dashboardItem, ...MENU_DEF] : MENU_DEF;
+
+  const menuLabel = (item) => (language === 'fr' ? item.titleFr : item.titleEn);
+  const menuDesc = (item) => (language === 'fr' ? item.descFr : item.descEn);
 
   const contentPaddingBottom = useMemo(() => 24 + (insets?.bottom || 0), [insets?.bottom]);
 
@@ -262,13 +299,18 @@ export default function DrawerContent({ navigation }) {
         <View style={styles.logoContainer}>
           <Logo size={60} />
         </View>
-        <Text style={styles.title}>Menu Principal</Text>
-        <Text style={styles.subtitle}>Que voulez-vous faire ?</Text>
+        <Text style={styles.title}>
+          {language === 'fr' ? 'Menu principal' : 'Main menu'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {language === 'fr' ? 'Que souhaitez-vous faire ?' : 'What would you like to do?'}
+        </Text>
 
         {isLoggedIn && (
           <View style={styles.profilePill}>
             <Text style={styles.profilePillText}>
-              Profil actif : {getProfileLabel(activeProfileType)}
+              {language === 'fr' ? 'Profil actif :' : 'Active profile:'}{' '}
+              {getProfileLabel(activeProfileType)}
             </Text>
           </View>
         )}
@@ -306,20 +348,24 @@ export default function DrawerContent({ navigation }) {
             if (!active || !item.onlyForActiveProfileTypes.includes(active)) return null;
           }
           
+          const title = menuLabel(item);
+          const description = menuDesc(item);
           return (
             <TouchableOpacity
               key={item.id}
               style={styles.menuItem}
               onPress={() => handleMenuItemPress(item.id, item.params)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${title}. ${description}`}
             >
               <View style={styles.menuEmojiContainer}>
-                <Text style={styles.menuEmoji}>{item.emoji}</Text>
+                <Ionicons name={item.icon} size={26} color={Colors.primary} />
                 {item.showBadge && (item.badgeCount || 0) > 0 && <NotificationBadge count={item.badgeCount} />}
               </View>
               <View style={styles.menuItemText}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuDescription}>{item.description}</Text>
+                <Text style={styles.menuTitle}>{title}</Text>
+                <Text style={styles.menuDescription}>{description}</Text>
               </View>
             </TouchableOpacity>
           );
@@ -327,20 +373,40 @@ export default function DrawerContent({ navigation }) {
       </View>
 
       <View style={styles.legalLinks}>
-        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'cgu' })}>
+        <TouchableOpacity
+          onPress={() => handleMenuItemPress('legal', { type: 'cgu' })}
+          accessibilityRole="button"
+          accessibilityLabel="CGU"
+        >
           <Text style={styles.legalLinkText}>CGU</Text>
         </TouchableOpacity>
         <Text style={styles.legalSeparator}>•</Text>
-        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'cgv' })}>
+        <TouchableOpacity
+          onPress={() => handleMenuItemPress('legal', { type: 'cgv' })}
+          accessibilityRole="button"
+          accessibilityLabel="CGV"
+        >
           <Text style={styles.legalLinkText}>CGV</Text>
         </TouchableOpacity>
         <Text style={styles.legalSeparator}>•</Text>
-        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'mentions' })}>
-          <Text style={styles.legalLinkText}>Mentions légales</Text>
+        <TouchableOpacity
+          onPress={() => handleMenuItemPress('legal', { type: 'mentions' })}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Mentions légales' : 'Legal notice'}
+        >
+          <Text style={styles.legalLinkText}>
+            {language === 'fr' ? 'Mentions légales' : 'Legal'}
+          </Text>
         </TouchableOpacity>
         <Text style={styles.legalSeparator}>•</Text>
-        <TouchableOpacity onPress={() => handleMenuItemPress('legal', { type: 'privacy' })}>
-          <Text style={styles.legalLinkText}>Confidentialité</Text>
+        <TouchableOpacity
+          onPress={() => handleMenuItemPress('legal', { type: 'privacy' })}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Confidentialité' : 'Privacy'}
+        >
+          <Text style={styles.legalLinkText}>
+            {language === 'fr' ? 'Confidentialité' : 'Privacy'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -350,8 +416,12 @@ export default function DrawerContent({ navigation }) {
             style={styles.updateButton}
             activeOpacity={0.85}
             onPress={showUpdateInfo}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Vérifier les mises à jour' : 'Check for updates'}
           >
-            <Text style={styles.updateButtonText}>⬇️ Updates</Text>
+            <Text style={styles.updateButtonText}>
+              {language === 'fr' ? 'Mises à jour (OTA)' : 'Updates (OTA)'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.logoutButton}
@@ -364,8 +434,12 @@ export default function DrawerContent({ navigation }) {
                 navigate('home');
               }
             }}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Se déconnecter' : 'Log out'}
           >
-            <Text style={styles.logoutButtonText}>🚪 Déconnexion</Text>
+            <Text style={styles.logoutButtonText}>
+              {language === 'fr' ? 'Déconnexion' : 'Log out'}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -376,7 +450,7 @@ export default function DrawerContent({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   content: {
     paddingTop: 20,
@@ -387,19 +461,19 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: Colors.border,
   },
   logoContainer: {
     marginBottom: 16,
   },
   title: {
-    color: '#ffffff',
+    color: Colors.text,
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 4,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.textSecondary,
     fontSize: 14,
   },
   profilePill: {
@@ -459,10 +533,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
-  menuEmoji: {
-    fontSize: 28,
-    textAlign: 'center',
-  },
   menuEmojiContainer: {
     width: 40,
     marginRight: 16,
@@ -474,13 +544,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuTitle: {
-    color: '#ffffff',
+    color: Colors.text,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
   menuDescription: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.textTertiary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -513,7 +583,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '900',
   },

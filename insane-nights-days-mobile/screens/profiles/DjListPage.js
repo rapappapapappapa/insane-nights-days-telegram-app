@@ -11,6 +11,7 @@ import {
   TextInput,
   RefreshControl, // ✅ AJOUT: Import de RefreshControl pour le pull-to-refresh
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import { Ionicons } from '@expo/vector-icons';
@@ -110,7 +111,7 @@ export default function DjListPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
           </Text>
@@ -210,8 +211,8 @@ export default function DjListPage() {
           <RefreshControl
             refreshing={refreshing} // État de rafraîchissement
             onRefresh={() => fetchDjs(true)} // Fonction appelée quand l'utilisateur tire vers le bas
-            tintColor="#FF1744" // Couleur de l'indicateur (iOS)
-            colors={['#FF1744']} // Couleur de l'indicateur (Android)
+            tintColor={Colors.primary} // Couleur de l'indicateur (iOS)
+            colors={[Colors.primary]} // Couleur de l'indicateur (Android)
           />
         }
       >
@@ -276,7 +277,7 @@ export default function DjListPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     paddingTop: 50,
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -340,13 +341,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   djAvatarText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 24,
     fontWeight: '800',
   },
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   filtersContainer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,23,68,0.2)',
   },
@@ -455,8 +456,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.3)',
   },
   ratingButtonActive: {
-    backgroundColor: '#FF1744',
-    borderColor: '#FF1744',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   ratingButtonText: {
     color: 'rgba(255,255,255,0.7)',
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ratingButtonTextActive: {
-    color: '#0b0b0e',
+    color: Colors.background,
   },
 });
 

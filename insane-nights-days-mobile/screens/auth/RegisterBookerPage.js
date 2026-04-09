@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -376,7 +377,7 @@ export default function RegisterBookerPage() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#0b0b0e" />
+            <ActivityIndicator color={Colors.background} />
           ) : (
             <Text style={styles.submitButtonText}>
               {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
@@ -448,7 +449,7 @@ export default function RegisterBookerPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -487,7 +488,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   label: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   submitButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -514,7 +515,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '800',
   },
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
     borderTopWidth: 2,
-    borderTopColor: '#FF1744',
+    borderTopColor: Colors.primary,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,23,68,0.3)',
   },
   modalTitle: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -573,7 +574,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCloseButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 24,
     fontWeight: '300',
   },
@@ -588,13 +589,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: 'rgba(255,23,68,0.2)',
   },
   modalOptionSelected: {
     backgroundColor: 'rgba(255,23,68,0.2)',
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
   },
   modalOptionText: {
     color: '#ffffff',
@@ -602,11 +603,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   modalOptionTextSelected: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontWeight: '700',
   },
   modalOptionCheck: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 18,
     fontWeight: '700',
   },

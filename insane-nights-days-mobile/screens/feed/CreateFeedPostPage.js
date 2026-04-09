@@ -10,6 +10,7 @@ import {
   Image, // ✅ AJOUT: Import Image pour l'aperçu
   Platform,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 // Import dynamique pour éviter crash au chargement (expo-image-picker peut poser problème sur certains devices)
@@ -253,7 +254,7 @@ export default function CreateFeedPostPage() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#FF1744" />
+            <ActivityIndicator size="small" color={Colors.primary} />
           ) : (
             <Text style={styles.publishButtonText}>
               {language === 'fr' ? 'Publier' : 'Publish'}
@@ -302,7 +303,7 @@ export default function CreateFeedPostPage() {
             onPress={handlePickImage}
             disabled={uploadingImage || loading}
           >
-            <Ionicons name="image-outline" size={20} color="#FF1744" />
+            <Ionicons name="image-outline" size={20} color={Colors.primary} />
             <Text style={styles.selectImageButtonText}>
               {language === 'fr' ? 'Sélectionner depuis la galerie' : 'Select from gallery'}
             </Text>
@@ -339,11 +340,11 @@ export default function CreateFeedPostPage() {
                   setImageUrl('');
                 }}
               >
-                <Ionicons name="close-circle" size={24} color="#FF1744" />
+                <Ionicons name="close-circle" size={24} color={Colors.primary} />
               </TouchableOpacity>
               {uploadingImage && (
                 <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="large" color="#FF1744" />
+                  <ActivityIndicator size="large" color={Colors.primary} />
                   <Text style={styles.uploadingText}>
                     {language === 'fr' ? 'Upload en cours...' : 'Uploading...'}
                   </Text>
@@ -367,7 +368,7 @@ export default function CreateFeedPostPage() {
                   setSelectedImageUri(null);
                 }}
               >
-                <Ionicons name="close-circle" size={24} color="#FF1744" />
+                <Ionicons name="close-circle" size={24} color={Colors.primary} />
               </TouchableOpacity>
             </View>
           )}
@@ -380,7 +381,7 @@ export default function CreateFeedPostPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   publishButtonDisabled: {
     opacity: 0.5,
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   selectImageButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorGuardButton: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,

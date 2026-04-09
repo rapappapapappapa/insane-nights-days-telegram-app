@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler } from 'react-native';
+import Colors from './constants/colors';
 import * as Updates from 'expo-updates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -117,7 +118,7 @@ const SCREENS = {
 };
 
 function AppContent() {
-  const { currentPage, navigate, goBack } = useNavigation();
+  const { currentPage, navigate, goBack, tryHardwareBack } = useNavigation();
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
@@ -150,6 +151,13 @@ function AppContent() {
       }
     }
   }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
+
+  // Android : bouton retour = pile de navigation (sinon laisser le système, ex. quitter l’app sur l’écran racine).
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => tryHardwareBack());
+    return () => sub.remove();
+  }, [tryHardwareBack]);
 
   // Gérer la navigation vers le chat quand on clique sur la notification
   const handleNotificationPress = async () => {
@@ -206,7 +214,7 @@ function AppContent() {
   if (isInitializing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF1744" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -222,12 +230,12 @@ function AppContent() {
             title="Erreur création de post"
             fallback={(err, reset) => (
               <View style={[styles.loadingContainer, { padding: 20 }]}>
-                <Text style={{ color: '#FF1744', fontSize: 14, marginBottom: 12, textAlign: 'center' }}>
+                <Text style={{ color: Colors.primary, fontSize: 14, marginBottom: 12, textAlign: 'center' }}>
                   {err?.message || 'Erreur inconnue'}
                 </Text>
                 <TouchableOpacity
                   onPress={() => { reset(); goBack(); }}
-                  style={{ backgroundColor: '#FF1744', padding: 12, borderRadius: 8 }}
+                  style={{ backgroundColor: Colors.primary, padding: 12, borderRadius: 8 }}
                 >
                   <Text style={{ color: '#fff' }}>Retour</Text>
                 </TouchableOpacity>
@@ -262,7 +270,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
 });
 

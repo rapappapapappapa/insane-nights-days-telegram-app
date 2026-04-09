@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-nati
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import Colors from '../../constants/colors';
 
 const menuItems = [
   {
@@ -96,7 +97,7 @@ export default function MenuPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   content: {
     padding: 20,
@@ -109,14 +110,14 @@ const styles = StyleSheet.create({
   logo: {
     width: 72,
     height: 72,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   logoText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 32,
     fontWeight: '900',
   },
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -25,6 +25,7 @@ import { useToast } from '../../hooks/useToast'; // ✅ AJOUT: Hook Toast pour r
 import Toast from '../../components/Toast'; // ✅ AJOUT: Composant Toast
 import ImageWithRetry from '../../components/ImageWithRetry'; // ✅ AJOUT: Image avec retry automatique
 import FeedPostSkeleton from '../../components/FeedPostSkeleton'; // ✅ AJOUT: Skeleton pour les posts
+import Colors from '../../constants/colors';
 
 /**
  * ✅ AJOUT: Reducer pour gérer les états des posts (optimisation performance)
@@ -437,7 +438,7 @@ export default function FeedPage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF1744" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
             {language === 'fr' ? 'Chargement du feed...' : 'Loading feed...'}
           </Text>
@@ -457,6 +458,8 @@ export default function FeedPage() {
             style={styles.feedLogoButton}
             onPress={() => fetchFeed(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Actualiser le fil' : 'Refresh feed'}
           >
             <Logo size={48} />
           </TouchableOpacity>
@@ -473,8 +476,10 @@ export default function FeedPage() {
             <TouchableOpacity
               style={styles.notificationsButton}
               onPress={openFeedNotifications}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Notifications du fil' : 'Feed notifications'}
             >
-              <Ionicons name="notifications" size={24} color="#FF1744" />
+              <Ionicons name="notifications" size={24} color={Colors.primary} />
               <NotificationBadge count={feedNotificationsCount} />
             </TouchableOpacity>
           )}
@@ -483,8 +488,10 @@ export default function FeedPage() {
             <TouchableOpacity
               style={styles.createPostButton}
               onPress={() => navigate('createFeedPost')}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Créer une publication' : 'Create post'}
             >
-              <Ionicons name="add-circle" size={24} color="#FF1744" />
+              <Ionicons name="add-circle" size={24} color={Colors.primary} />
               <Text style={styles.createPostText}>
                 {language === 'fr' ? 'Poster' : 'Post'}
               </Text>
@@ -499,6 +506,9 @@ export default function FeedPage() {
           style={[styles.feedTab, feedTab === 'all' && styles.feedTabActive]}
           onPress={() => setFeedTab('all')}
           activeOpacity={0.7}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: feedTab === 'all' }}
+          accessibilityLabel={language === 'fr' ? 'Fil pour tous' : 'For you feed'}
         >
           <Text style={[styles.feedTabText, feedTab === 'all' && styles.feedTabTextActive]}>
             {language === 'fr' ? 'Pour tous' : 'For you'}
@@ -509,6 +519,9 @@ export default function FeedPage() {
           style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
           onPress={() => setFeedTab('following')}
           activeOpacity={0.7}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: feedTab === 'following' }}
+          accessibilityLabel={language === 'fr' ? 'Fil abonnements' : 'Following feed'}
         >
           <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
             {language === 'fr' ? 'Abonnements' : 'Following'}
@@ -524,8 +537,8 @@ export default function FeedPage() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => fetchFeed(true)}
-            tintColor="#FF1744"
-            colors={['#FF1744']}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
           />
         }
       >
@@ -672,8 +685,8 @@ export default function FeedPage() {
                       <Ionicons 
                         name={likedPosts[item.id] ? "heart" : "heart-outline"} 
                         size={18} 
-                        color={likedPosts[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"}
-                        style={likedPosts[item.id] ? { color: '#FF1744' } : undefined}
+                        color={likedPosts[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"}
+                        style={likedPosts[item.id] ? { color: Colors.primary } : undefined}
                       />
                       {(postLikesCount[item.id] || item.likes || 0) > 0 && (
                         <Text style={[
@@ -691,7 +704,7 @@ export default function FeedPage() {
                       <Ionicons 
                         name={expandedComments[item.id] ? "chatbubble" : "chatbubble-outline"} 
                         size={18} 
-                        color={expandedComments[item.id] ? "#FF1744" : "rgba(255,255,255,0.6)"} 
+                        color={expandedComments[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"} 
                       />
                       {(postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)) > 0 && (
                         <Text style={[
@@ -744,7 +757,7 @@ export default function FeedPage() {
                             style={styles.commentSendButton}
                             onPress={() => handleCreateComment(item.id)}
                           >
-                            <Ionicons name="send" size={18} color="#FF1744" />
+                            <Ionicons name="send" size={18} color={Colors.primary} />
                           </TouchableOpacity>
                         </View>
                       )}
@@ -761,7 +774,7 @@ export default function FeedPage() {
                   onPress={() => handleEventPress(item.id)}
                 >
                   <View style={styles.eventHeader}>
-                    <Ionicons name="musical-notes" size={24} color="#FF1744" />
+                    <Ionicons name="musical-notes" size={24} color={Colors.primary} />
                     <Text style={styles.eventBadge}>
                       {language === 'fr' ? 'Événement' : 'Event'}
                     </Text>
@@ -868,7 +881,7 @@ export default function FeedPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -947,7 +960,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.3)',
   },
   createPostText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
@@ -956,7 +969,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   feedTab: {
     flex: 1,
@@ -979,7 +992,7 @@ const styles = StyleSheet.create({
     left: '25%',
     right: '25%',
     height: 3,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     borderRadius: 2,
   },
   feed: {
@@ -990,7 +1003,7 @@ const styles = StyleSheet.create({
   },
   // ✅ MODIFICATION: Post card style Twitter/X - plus compact avec séparateur fin
   postCard: {
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -1036,7 +1049,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarDj: {
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
   },
   avatarBooker: {
     backgroundColor: '#4CAF50', // Vert pour différencier des DJs
@@ -1160,7 +1173,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   postActionTextLiked: {
-    color: '#FF1744',
+    color: Colors.primary,
   },
   // ✅ AJOUT: Styles pour les commentaires
   commentsSection: {
@@ -1180,7 +1193,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   commentAuthor: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 4,
@@ -1237,7 +1250,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   eventBadge: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 8,

@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
   },
   buttonText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 16,
     fontWeight: '700',
   },

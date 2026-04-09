@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 
 import { api } from '../../api/config';
@@ -89,7 +90,7 @@ export default function RankingPage({ onNavigate }) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#FF1744" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Chargement du classement...</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('menu')}>
           <Text style={styles.backButtonText}>← Retour</Text>
@@ -111,7 +112,7 @@ export default function RankingPage({ onNavigate }) {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => fetchRanking(true)} tintColor="#FF1744" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => fetchRanking(true)} tintColor={Colors.primary} />
         }
       >
         <View style={styles.header}>
@@ -160,13 +161,13 @@ export default function RankingPage({ onNavigate }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   topBar: {
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
   },
   backButtonTop: {
     alignSelf: 'flex-start',
@@ -174,13 +175,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonTopText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0b0b0e',
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.4)',
   },
   backButtonText: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   podiumStep1: {
     transform: [{ translateY: -12 }],
-    borderColor: '#FF1744',
+    borderColor: Colors.primary,
     backgroundColor: '#201f1a',
   },
   podiumStep2: {
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.2)',
   },
   podiumRank: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 20,
     fontWeight: '800',
   },
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   podiumScore: {
-    color: '#FF1744',
+    color: Colors.primary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -301,12 +302,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FF1744',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rankBadgeText: {
-    color: '#0b0b0e',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '900',
   },

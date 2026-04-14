@@ -15,6 +15,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`BookerDashboardPage`** : bloc liste des porteurs de billets délégué à **`BookerTicketHoldersSection`** (mêmes styles `ticketHoldersBlock` / lignes) ; **tirer pour actualiser** la liste **« Mes événements »** (`RefreshControl` + `getBookerEvents`, indicateur de chargement en **`Colors.primary`**).
 - **Accessibilité** : **`WelcomePage`** / **`HomePage`** / **`FeedPage`** — modales **signalement** et **suppression de post** ; cartes **post** (profil, j’aime, commentaires, partage indisponible, signalement / suppression) ; **champ commentaire** et **envoi** ; cartes **événement** ; **`EventDetailPage`** (retour, signalement, liens lieu / DJ / organisateur, groupe d’amis, CGV, achat, notation, modal d’invitation) ; **`TicketsPage`**, **`PurchasesPage`**, **`ScanTicketPage`**, **`StaffEventsPage`** — `accessibilityRole` / `accessibilityLabel` (et `accessibilityState` / `accessibilityHint` le cas échéant) sur retour et actions principales.
 - **`FeedPage`** : le bouton **signaler** n’est affiché que si le post **n’est pas** le vôtre (aligné avec l’écran d’accueil).
+- **`WelcomePage`** : suppression du **code mort** de l’ancien **menu bas** (déjà remplacé par le drawer latéral) — plus de `{false && …}`, d’animation `translateY` ni de styles associés.
 
 ---
 

@@ -6,18 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Animated,
-  Dimensions,
   Image,
   Modal,
   RefreshControl,
-  KeyboardAvoidingView,
-  Platform,
   TextInput,
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -31,21 +27,16 @@ import EmptyState from '../../components/EmptyState';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MENU_HEIGHT = SCREEN_HEIGHT * 0.7; // Hauteur du menu (70% de l'écran)
-
 export default function WelcomePage() {
-  const { language, t } = useLanguage();
-  const { user, logout, updateUser, refreshCurrentUser } = useAuth();
+  const { language } = useLanguage();
+  const { user, updateUser, refreshCurrentUser } = useAuth();
   const { navigate } = useNavigation();
   const { unreadCount: feedNotificationsCount, refreshUnreadCount: refreshFeedNotifications } = useFeedNotifications();
   const { unreadCount: chatUnreadCount, latest: chatLatest } = useNotifications();
   const { toast, showError, showSuccess, showInfo, hideToast } = useToast();
   
   const [loadingUserData, setLoadingUserData] = useState(false);
-  const [showMenu, setShowMenu] = useState(false); // État pour afficher/cacher le menu
-  // Drawer global géré dans App.js
-  
+
   // ✅ AJOUT: États pour le feed complet
   const [feed, setFeed] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
@@ -105,9 +96,6 @@ export default function WelcomePage() {
     { id: 'ILLEGAL', label: language === 'fr' ? 'Illégal' : 'Illegal' },
     { id: 'OTHER', label: language === 'fr' ? 'Autre' : 'Other' },
   ];
-  
-  // Animation pour le feed
-  const feedTranslateY = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
     if (user?.isAuthenticated && user?.token) {
@@ -443,21 +431,6 @@ export default function WelcomePage() {
     }
   };
 
-  /**
-   * ✅ FONCTION: Toggle l'affichage du menu
-   */
-  const toggleMenu = () => {
-    const toValue = showMenu ? 0 : -MENU_HEIGHT;
-    setShowMenu(!showMenu);
-    
-    Animated.spring(feedTranslateY, {
-      toValue,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 8,
-    }).start();
-  };
-
   return (
       <View style={styles.container}>
         {/* Vidéo d'arrière-plan */}
@@ -480,170 +453,8 @@ export default function WelcomePage() {
           <Text style={styles.usernameText}>{user?.username || 'Utilisateur'}</Text>
         </View>
 
-        {/* ✅ MENU BAS DÉSACTIVÉ: remplacé par le drawer latéral */}
-        {false && (
-        <View style={styles.menuContainer}>
-          <KeyboardAvoidingView
-            style={styles.menuContent}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-          >
-            <ScrollView
-              style={styles.menuScroll}
-              contentContainerStyle={styles.menuScrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={styles.menuTitle}>
-                {language === 'fr'
-                  ? 'Que souhaitez-vous faire ?'
-                  : 'What would you like to do?'}
-              </Text>
-
-              <View style={styles.actionsContainer}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigate('events')}
-                >
-                  <Ionicons name="musical-notes" size={36} color={Colors.primary} />
-                  <Text style={styles.actionText}>
-                    {language === 'fr' ? 'Événements' : 'Events'}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Afficher "Mes Tickets" uniquement pour le profil COMMUNITY */}
-                {user?.activeProfileType === 'COMMUNITY' && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigate('tickets')}
-                  >
-                    <MaterialIcons name="confirmation-number" size={36} color={Colors.primary} />
-                    <Text style={styles.actionText}>
-                      {language === 'fr' ? 'Mes Tickets' : 'My Tickets'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Afficher "Dashboard DJ" pour les DJs */}
-                {user?.activeProfileType === 'DJ' && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigate('djDashboard')}
-                  >
-                    <Ionicons name="headset" size={36} color={Colors.primary} />
-                    <Text style={styles.actionText}>
-                      {language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Afficher "Dashboard Lieu" pour les Lieux */}
-                {user?.activeProfileType === 'VENUE' && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigate('venueDashboard')}
-                  >
-                    <Ionicons name="business" size={36} color={Colors.primary} />
-                    <Text style={styles.actionText}>
-                      {language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Bouton pour parcourir les profils de lieux */}
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigate('venueList')}
-                >
-                  <Ionicons name="location" size={36} color={Colors.primary} />
-                  <Text style={styles.actionText}>
-                    {language === 'fr' ? 'Profils de lieux' : 'Venue profiles'}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Afficher "Dashboard Organisateur" et les listes DJ / Lieux pour les Organisateurs */}
-                {user?.activeProfileType === 'BOOKER' && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => navigate('bookerDashboard')}
-                    >
-                      <MaterialIcons name="event" size={36} color={Colors.primary} />
-                      <Text style={styles.actionText}>
-                        {language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => navigate('venueList')}
-                    >
-                      <MaterialIcons name="location-city" size={36} color={Colors.primary} />
-                      <Text style={styles.actionText}>
-                        {language === 'fr' ? 'Liste des lieux' : 'Venue List'}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigate('djList')}
-                >
-                  <Ionicons name="people" size={36} color={Colors.primary} />
-                  <Text style={styles.actionText}>
-                    {language === 'fr' ? 'Liste des DJs' : 'DJ List'}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigate('profile')}
-                >
-                  <Ionicons name="person" size={36} color={Colors.primary} />
-                  <Text style={styles.actionText}>
-                    {language === 'fr' ? 'Mon Profil' : 'My Profile'}
-                  </Text>
-                </TouchableOpacity>
-
-                {user?.isAuthenticated && (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigate('switchProfile')}
-                  >
-                    <Ionicons name="swap-horizontal" size={36} color={Colors.primary} />
-                    <Text style={styles.actionText}>
-                      {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={() => {
-                  logout();
-                  navigate('home');
-                }}
-              >
-                <Ionicons name="log-out-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
-                <Text style={styles.logoutButtonText}>
-                  {language === 'fr' ? 'Déconnexion' : 'Logout'}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </View>
-        )}
-
-        {/* ✅ FEED: Affiché par-dessus le menu avec animation */}
-        <Animated.View
-          style={[
-            styles.feedContainer,
-            {
-              transform: [{ translateY: feedTranslateY }],
-            },
-          ]}
-        >
+        {/* Feed (navigation principale via le drawer latéral — App.js) */}
+        <View style={styles.feedContainer}>
           {/* Header du feed */}
           <View style={styles.feedHeader}>
             {/* ✅ AJOUT: Logo NOX à gauche */}
@@ -1088,30 +899,7 @@ export default function WelcomePage() {
               )}
             </ScrollView>
           )}
-
-          {/* ✅ TOGGLE menu bas désactivé */}
-          {false && (
-            <TouchableOpacity
-              style={styles.menuToggleButton}
-              onPress={toggleMenu}
-              activeOpacity={0.8}
-            >
-              <View style={styles.menuToggleButtonContent}>
-                <Ionicons
-                  name={showMenu ? "chevron-down" : "chevron-up"}
-                  size={24}
-                  color={Colors.primary}
-                />
-                <Text style={styles.menuToggleButtonText}>
-                  {showMenu
-                    ? (language === 'fr' ? 'Masquer le menu' : 'Hide menu')
-                    : (language === 'fr' ? 'Afficher le menu' : 'Show menu')
-                  }
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
+        </View>
       </View>
       
       {/* ✅ AJOUT: Toast pour les notifications */}
@@ -1237,20 +1025,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  menuButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 23, 68, 0.2)',
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.3)',
-  },
   headerRight: {
-    width: 44, // Même largeur que menuButton pour équilibrer
+    width: 44,
   },
   headerTitleContainer: {
     alignItems: 'center',
@@ -1270,81 +1046,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-  // ✅ MENU: Styles pour le menu d'actions en bas
-  menuContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: MENU_HEIGHT,
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderTopWidth: 2,
-    borderTopColor: 'rgba(255,23,68,0.3)',
-    zIndex: 2,
-  },
-  menuContent: {
-    flex: 1,
-  },
-  menuScroll: {
-    flex: 1,
-  },
-  menuScrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100,
-  },
-  menuTitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  actionsContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  actionButton: {
-    width: '45%',
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 110,
-  },
-  actionText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  logoutButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // ✅ FEED: Styles pour le feed par-dessus le menu
   feedContainer: {
     position: 'absolute',
     top: 0,
@@ -1722,30 +1423,6 @@ const styles = StyleSheet.create({
   eventInfoText: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
-  },
-  // ✅ BOUTON: Styles pour le bouton de toggle du menu
-  menuToggleButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#1a1a1f',
-    borderTopWidth: 2,
-    borderTopColor: 'rgba(255,23,68,0.3)',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuToggleButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  menuToggleButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '700',
   },
   // ✅ AJOUT: Styles pour les modals
   modalOverlay: {

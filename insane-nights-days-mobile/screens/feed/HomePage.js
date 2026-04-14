@@ -561,6 +561,12 @@ export default function HomePage() {
                             style={styles.postHeaderLeft}
                             activeOpacity={0.7}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityRole="link"
+                            accessibilityLabel={
+                              language === 'fr'
+                                ? `Profil ${profileName || 'utilisateur'}, ${isDj ? 'DJ' : 'organisateur'}`
+                                : `Profile ${profileName || 'user'}, ${isDj ? 'DJ' : 'organizer'}`
+                            }
                             onPress={() => {
                               if (isDj && item.dj) {
                                 navigate('djProfile', {
@@ -620,6 +626,8 @@ export default function HomePage() {
                             <TouchableOpacity
                               style={styles.deletePostButton}
                               onPress={() => handleDeletePost(item.id)}
+                              accessibilityRole="button"
+                              accessibilityLabel={language === 'fr' ? 'Supprimer ce post' : 'Delete this post'}
                             >
                               <Ionicons name="trash-outline" size={18} color="rgba(255,255,255,0.6)" />
                             </TouchableOpacity>
@@ -630,6 +638,8 @@ export default function HomePage() {
                               style={styles.reportPostButton}
                               onPress={() => reportPost(item.id)}
                               activeOpacity={0.75}
+                              accessibilityRole="button"
+                              accessibilityLabel={language === 'fr' ? 'Signaler ce post' : 'Report this post'}
                             >
                               <Ionicons name="flag-outline" size={18} color="rgba(255,255,255,0.6)" />
                             </TouchableOpacity>
@@ -664,6 +674,13 @@ export default function HomePage() {
                           <TouchableOpacity 
                             style={styles.postActionButton}
                             onPress={() => handleToggleLike(item.id)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: !!likedPosts[item.id] }}
+                            accessibilityLabel={
+                              likedPosts[item.id]
+                                ? (language === 'fr' ? 'Retirer le j\'aime' : 'Unlike')
+                                : (language === 'fr' ? 'J\'aime' : 'Like')
+                            }
                           >
                             <Ionicons 
                               name={likedPosts[item.id] ? "heart" : "heart-outline"} 
@@ -683,6 +700,12 @@ export default function HomePage() {
                           <TouchableOpacity 
                             style={styles.postActionButton}
                             onPress={() => toggleComments(item.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                              expandedComments[item.id]
+                                ? (language === 'fr' ? 'Masquer les commentaires' : 'Hide comments')
+                                : (language === 'fr' ? 'Afficher les commentaires' : 'Show comments')
+                            }
                           >
                             <Ionicons 
                               name={expandedComments[item.id] ? "chatbubble" : "chatbubble-outline"} 
@@ -698,7 +721,14 @@ export default function HomePage() {
                               </Text>
                             )}
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.postActionButton}>
+                          <TouchableOpacity
+                            style={styles.postActionButton}
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: true }}
+                            accessibilityLabel={
+                              language === 'fr' ? 'Partager, non disponible pour le moment' : 'Share not available yet'
+                            }
+                          >
                             <Ionicons name="share-outline" size={18} color="rgba(255,255,255,0.6)" />
                           </TouchableOpacity>
                         </View>
@@ -735,10 +765,13 @@ export default function HomePage() {
                                     [item.id]: text,
                                   }))}
                                   multiline
+                                  accessibilityLabel={language === 'fr' ? 'Votre commentaire' : 'Your comment'}
                                 />
                                 <TouchableOpacity
                                   style={styles.commentSendButton}
                                   onPress={() => handleCreateComment(item.id)}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={language === 'fr' ? 'Envoyer le commentaire' : 'Send comment'}
                                 >
                                   <Ionicons name="send" size={18} color={Colors.primary} />
                                 </TouchableOpacity>
@@ -761,6 +794,11 @@ export default function HomePage() {
                             navigate('eventDetail', { eventId: item.id });
                           }
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          `${item.title || 'Événement'}. ${item.price != null ? `${item.price} €. ` : ''}` +
+                          (language === 'fr' ? 'Voir l\'événement' : 'View event')
+                        }
                       >
                         <View style={styles.eventHeader}>
                           <Ionicons name="musical-notes" size={24} color={Colors.primary} />
@@ -890,6 +928,8 @@ export default function HomePage() {
                 key={reason.id}
                 style={styles.modalButton}
                 onPress={() => handleReportReason(reason)}
+                accessibilityRole="button"
+                accessibilityLabel={reason.label}
               >
                 <Text style={styles.modalButtonText}>{reason.label}</Text>
               </TouchableOpacity>
@@ -901,6 +941,8 @@ export default function HomePage() {
                 setReportModalVisible(false);
                 setPostToReport(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Annuler le signalement' : 'Cancel report'}
             >
               <Text style={styles.modalCancelButtonText}>
                 {language === 'fr' ? 'Annuler' : 'Cancel'}
@@ -935,6 +977,8 @@ export default function HomePage() {
                   setDeleteModalVisible(false);
                   setPostToDelete(null);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Annuler la suppression' : 'Cancel deletion'}
               >
                 <Text style={styles.modalCancelButtonText}>
                   {language === 'fr' ? 'Annuler' : 'Cancel'}
@@ -944,6 +988,9 @@ export default function HomePage() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalDeleteButton]}
                 onPress={confirmDeletePost}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Supprimer définitivement ce post' : 'Permanently delete this post'}
+                accessibilityHint={language === 'fr' ? 'Action irréversible' : 'Cannot be undone'}
               >
                 <Text style={styles.modalDeleteButtonText}>
                   {language === 'fr' ? 'Supprimer' : 'Delete'}

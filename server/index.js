@@ -6574,22 +6574,33 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     const myCommunity = await prisma.userCommunity.findFirst({ where: { userId: req.user.id } });
     const isStaff = myCommunity && event.eventStaff.some((s) => s.communityId === myCommunity.id && s.role === 'STAFF_SCAN');
     if (!isBooker && !isStaff) return res.status(403).json({ success: false, message: 'Seul l\'organisateur ou le staff peut scanner.' });
-    // Vérifier que le scan est autorisé le jour de l'événement uniquement
+    // Fenêtre de scan : même jour calendaire (UTC) que l'événement, OU événement déjà en cours, OU override dev (SCAN_TICKET_ALLOW_ANY_DAY=true)
     const eventDate = new Date(event.date);
     const now = new Date();
-    const sameDay = eventDate.getUTCFullYear() === now.getUTCFullYear() &&
+    const sameDay =
+      eventDate.getUTCFullYear() === now.getUTCFullYear() &&
       eventDate.getUTCMonth() === now.getUTCMonth() &&
       eventDate.getUTCDate() === now.getUTCDate();
-    if (!sameDay) {
+    const scanTicketAllowAnyDay = (process.env.SCAN_TICKET_ALLOW_ANY_DAY || '').toLowerCase() === 'true';
+    const allowScanByWindow = scanTicketAllowAnyDay || event.status === 'ONGOING' || sameDay;
+    if (!allowScanByWindow) {
       return res.status(400).json({
         success: false,
         valid: false,
-        message: 'Le scan des billets n\'est autorisé que le jour de l\'événement.',
+        message: 'Le scan des billets n\'est autorisé que le jour de l\'événement (ou pendant l\'événement une fois commencé).',
       });
     }
     const ticket = await prisma.ticket.findUnique({
       where: { qrCode },
-      include: { event: { select: { id: true, title: true } }, user: { select: { email: true } } },
+      include: {
+        event: { select: { id: true, title: true } },
+        user: {
+          select: {
+            username: true,
+            communities: { select: { pseudo: true, prenom: true, nom: true }, take: 1 },
+          },
+        },
+      },
     });
     if (!ticket) return res.json({ success: false, valid: false, message: 'Billet introuvable.' });
     if (ticket.eventId !== eventId) return res.json({ success: false, valid: false, message: 'Ce billet n\'est pas pour cet événement.' });
@@ -6598,11 +6609,23 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
       where: { id: ticket.id },
       data: { status: 'used', scannedAt: new Date() },
     });
+    const c = ticket.user?.communities?.[0];
+    let holderDisplayName = c?.pseudo || '';
+    if (!holderDisplayName) {
+      const full = [c?.prenom, c?.nom].filter(Boolean).join(' ').trim();
+      holderDisplayName = full || '';
+    }
+    if (!holderDisplayName) holderDisplayName = ticket.user?.username || 'Participant';
     res.json({
       success: true,
       valid: true,
       message: 'Billet validé.',
-      ticket: { id: ticket.id, eventTitle: ticket.event.title },
+      ticket: {
+        id: ticket.id,
+        eventTitle: ticket.event.title,
+        holderDisplayName,
+        entered: true,
+      },
     });
   } catch (e) {
     console.error('Erreur scan ticket:', e);

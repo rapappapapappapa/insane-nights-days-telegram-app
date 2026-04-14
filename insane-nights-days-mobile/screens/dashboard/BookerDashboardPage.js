@@ -44,8 +44,11 @@ import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BookerTicketHoldersSection from '../../components/BookerTicketHoldersSection';
 import Colors from '../../constants/colors';
+
+const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
 
 function cleanText(s) {
   if (!s) return '';
@@ -672,12 +675,16 @@ export default function BookerDashboardPage() {
   };
 
   useEffect(() => {
-    if (user?.token) {
+    if (!user?.token) return;
+    (async () => {
+      try {
+        const flag = await AsyncStorage.getItem(BOOKER_EVENTS_REFRESH_FLAG);
+        if (flag === '1') await AsyncStorage.removeItem(BOOKER_EVENTS_REFRESH_FLAG);
+      } catch (_) {}
       fetchVenues();
       fetchMyEvents();
-      loadBookerProfile(); // ✅ AJOUT: Charger le profil booker
-      // Ne pas charger les DJs ici, on les chargera quand la date sera sélectionnée
-    }
+      loadBookerProfile();
+    })();
   }, [user?.token]);
 
   // Note: fetchAvailableDjs et initialisation des slots sont dans BookerEventDashboardPage

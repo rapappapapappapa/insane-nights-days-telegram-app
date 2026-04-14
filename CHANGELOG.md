@@ -17,6 +17,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`FeedPage`** : le bouton **signaler** n’est affiché que si le post **n’est pas** le vôtre (aligné avec l’écran d’accueil).
 - **`WelcomePage`** : suppression du **code mort** de l’ancien **menu bas** (déjà remplacé par le drawer latéral) — plus de `{false && …}`, d’animation `translateY` ni de styles associés.
 
+### Scan billets → présence (participants)
+- **Backend** (`POST /api/events/:eventId/scan-ticket`) : fenêtre de scan élargie — **même jour (UTC)** **ou** événement **ONGOING** **ou** override **`SCAN_TICKET_ALLOW_ANY_DAY=true`** ; réponse enrichie avec **`ticket.holderDisplayName`** et **`entered: true`**.
+- **Mobile** : après scan réussi, flag **AsyncStorage** pour rafraîchir la liste événements / porteurs au retour sur **`BookerDashboardPage`** ; **`ScanTicketPage`** affiche le nom du participant validé.
+
 ---
 
 ## Semaine du 7 au 10 avril 2026 (lun. - ven.)

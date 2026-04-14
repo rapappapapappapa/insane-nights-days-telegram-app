@@ -18,6 +18,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
@@ -54,8 +55,15 @@ export default function ScanTicketPage() {
       }
       const res = await api.scanTicket(user.token, eventId, qrCode);
       if (res?.success && res.valid) {
-        setLastResult({ valid: true, message: res.message || (fr ? 'Billet validé !' : 'Ticket validated!') });
-        showSuccess(res.message || (fr ? 'Billet validé !' : 'Ticket validated!'));
+        try {
+          await AsyncStorage.setItem(BOOKER_EVENTS_REFRESH_FLAG, '1');
+        } catch (_) {}
+        const name = res.ticket?.holderDisplayName;
+        const okMsg = name
+          ? (fr ? `Entrée : ${name}` : `Entry: ${name}`)
+          : (res.message || (fr ? 'Billet validé !' : 'Ticket validated!'));
+        setLastResult({ valid: true, message: okMsg });
+        showSuccess(okMsg);
       } else {
         setLastResult({ valid: false, message: res?.message || (fr ? 'Billet invalide' : 'Invalid ticket') });
         showError(res?.message || (fr ? 'Billet invalide' : 'Invalid ticket'));

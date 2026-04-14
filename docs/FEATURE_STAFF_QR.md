@@ -41,7 +41,9 @@ Permettre aux organisateurs (bookers) d'ajouter des profils Communauté comme "a
 ### Scan ticket
 - `POST /api/events/:eventId/scan-ticket` - body: { qrCode: "TICKET_XXX" ou JSON parsé }
 - Autorisation : booker de l'événement OU staff avec rôle STAFF_SCAN
-- Réponse : { valid, ticket, message } — si valid, ticket passé à status 'used'
+- Fenêtre de scan : **même jour calendaire (UTC)** que `event.date`, **ou** événement au statut **ONGOING**, **ou** (développement / démo) variable d’environnement **`SCAN_TICKET_ALLOW_ANY_DAY=true`** sur le serveur pour désactiver la contrainte de date.
+- Réponse si valid : ticket `used` + `scannedAt` ; JSON inclut `ticket.holderDisplayName`, `ticket.entered: true` pour l’UI.
+- La liste **Participants (billets)** sur le dashboard organisateur (`GET /api/booker/events` → `ticketHolders`) reflète `entered` dès rechargement (pull-to-refresh ou retour depuis l’écran scan ; l’app pose un flag AsyncStorage après un scan réussi).
 
 ## Mobile
 

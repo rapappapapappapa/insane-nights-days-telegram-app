@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler, ToastAndroid } from 'react-native';
 import Colors from './constants/colors';
 import * as Updates from 'expo-updates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -122,6 +122,7 @@ function AppContent() {
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
+  const androidExitPressRef = useRef(0);
 
   // expo-av Video is deprecated in favor of expo-video, but we use it as a
   // temporary workaround for Android crashes with expo-video.
@@ -152,12 +153,30 @@ function AppContent() {
     }
   }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
 
-  // Android : bouton retour = pile de navigation (sinon laisser le système, ex. quitter l’app sur l’écran racine).
+  useEffect(() => {
+    androidExitPressRef.current = 0;
+  }, [currentPage]);
+
+  // Android : pile d’abord ; sur écran racine (home / welcome), double appui pour quitter.
   useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => tryHardwareBack());
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (tryHardwareBack()) return true;
+      if (currentPage !== 'home' && currentPage !== 'welcome') return false;
+      const now = Date.now();
+      if (now - androidExitPressRef.current < 2500) {
+        BackHandler.exitApp();
+        return true;
+      }
+      androidExitPressRef.current = now;
+      ToastAndroid.show(
+        language === 'fr' ? 'Appuyez encore pour quitter' : 'Press again to exit',
+        ToastAndroid.SHORT
+      );
+      return true;
+    });
     return () => sub.remove();
-  }, [tryHardwareBack]);
+  }, [tryHardwareBack, currentPage, language]);
 
   // Gérer la navigation vers le chat quand on clique sur la notification
   const handleNotificationPress = async () => {

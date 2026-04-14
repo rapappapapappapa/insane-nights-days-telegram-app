@@ -663,6 +663,8 @@ export default function WelcomePage() {
                 <TouchableOpacity
                   style={styles.notificationsButton}
                   onPress={openChatNotifications}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Messages et chats' : 'Messages and chats'}
                 >
                   <Ionicons name="notifications" size={24} color={Colors.primary} />
                   <NotificationBadge count={chatUnreadCount} />
@@ -673,6 +675,8 @@ export default function WelcomePage() {
                 <TouchableOpacity
                   style={styles.notificationsButton}
                   onPress={openFeedNotifications}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Notifications du fil' : 'Feed notifications'}
                 >
                   <Ionicons name="notifications" size={24} color={Colors.primary} />
                   <NotificationBadge count={feedNotificationsCount} />
@@ -682,6 +686,8 @@ export default function WelcomePage() {
                 <TouchableOpacity
                   style={styles.createPostButton}
                   onPress={() => navigate('createFeedPost')}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Créer une publication' : 'Create post'}
                 >
                   <Ionicons name="add-circle" size={24} color={Colors.primary} />
                   <Text style={styles.createPostText}>
@@ -698,6 +704,9 @@ export default function WelcomePage() {
               style={[styles.feedTab, feedTab === 'all' && styles.feedTabActive]}
               onPress={() => setFeedTab('all')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: feedTab === 'all' }}
+              accessibilityLabel={language === 'fr' ? 'Fil pour tous' : 'For you feed'}
             >
               <Text style={[styles.feedTabText, feedTab === 'all' && styles.feedTabTextActive]}>
                 {language === 'fr' ? 'Pour tous' : 'For you'}
@@ -708,6 +717,9 @@ export default function WelcomePage() {
               style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
               onPress={() => setFeedTab('following')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: feedTab === 'following' }}
+              accessibilityLabel={language === 'fr' ? 'Fil abonnements' : 'Following feed'}
             >
               <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
                 {language === 'fr' ? 'Abonnements' : 'Following'}

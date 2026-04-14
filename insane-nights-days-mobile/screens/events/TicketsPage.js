@@ -132,7 +132,12 @@ export default function TicketsPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
+        <TouchableOpacity
+          style={styles.backButtonTop}
+          onPress={() => navigate('welcome')}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+        >
           <Text style={styles.backButtonTopText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
@@ -170,6 +175,8 @@ export default function TicketsPage() {
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => navigate('eventDetail', { eventId: ticket.eventId })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${ticket.eventTitle || 'Event'}. ${language === 'fr' ? 'Voir le détail' : 'View details'}`}
                 >
                   <View style={styles.ticketHeader}>
                     <View style={styles.ticketTitleWrapper}>
@@ -190,6 +197,10 @@ export default function TicketsPage() {
                         onPress={() => setSelectedTicketQR(ticket.qrCode)}
                         style={styles.qrCodeContainer}
                         activeOpacity={0.6}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          language === 'fr' ? 'Agrandir le QR code du billet' : 'Enlarge ticket QR code'
+                        }
                       >   
                         <QRCode
                           value={JSON.stringify({

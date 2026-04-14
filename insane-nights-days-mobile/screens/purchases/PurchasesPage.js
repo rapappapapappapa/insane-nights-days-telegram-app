@@ -89,7 +89,12 @@ export default function PurchasesPage() {
       <StatusBar style="light" />
 
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
+        <TouchableOpacity
+          style={styles.backButtonTop}
+          onPress={() => navigate('welcome')}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+        >
           <Text style={styles.backButtonTopText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
@@ -118,7 +123,12 @@ export default function PurchasesPage() {
                 ? 'Achetez un ticket sur un événement à venir pour voir apparaître vos achats ici.'
                 : 'Buy a ticket for an upcoming event to see your purchases here.'}
             </Text>
-            <TouchableOpacity style={styles.primaryCta} onPress={() => navigate('events')}>
+            <TouchableOpacity
+              style={styles.primaryCta}
+              onPress={() => navigate('events')}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Voir les événements' : 'Browse events'}
+            >
               <Text style={styles.primaryCtaText}>{language === 'fr' ? 'Voir les événements' : 'Browse events'}</Text>
             </TouchableOpacity>
           </View>
@@ -132,6 +142,10 @@ export default function PurchasesPage() {
                 onPress={() => {
                   if (p?.event?.id) navigate('eventDetail', { eventId: p.event.id });
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  `${p?.event?.title || (language === 'fr' ? 'Événement' : 'Event')}. ${language === 'fr' ? 'Voir le détail' : 'View details'}`
+                }
               >
                 <View style={styles.rowTop}>
                   <View style={styles.left}>
@@ -148,7 +162,12 @@ export default function PurchasesPage() {
                   <Text style={styles.meta}>
                     {language === 'fr' ? 'Quantité' : 'Quantity'}: {p.quantity ?? 1} • {language === 'fr' ? 'Devise' : 'Currency'}: {String(p.currency || 'eur').toUpperCase()}
                   </Text>
-                  <TouchableOpacity style={styles.ticketsButton} onPress={() => navigate('tickets')}>
+                  <TouchableOpacity
+                    style={styles.ticketsButton}
+                    onPress={() => navigate('tickets')}
+                    accessibilityRole="button"
+                    accessibilityLabel={language === 'fr' ? 'Mes tickets' : 'My tickets'}
+                  >
                     <Text style={styles.ticketsButtonText}>{language === 'fr' ? 'Mes tickets' : 'My tickets'}</Text>
                   </TouchableOpacity>
                 </View>

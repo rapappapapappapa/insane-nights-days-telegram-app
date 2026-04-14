@@ -332,6 +332,13 @@ export default function ContractPdfPreviewModal({
         )}
 
         <View style={styles.footer}>
+          {Platform.OS === 'android' && pdfBase64 && !loading ? (
+            <Text style={styles.pdfOfflineHint}>
+              {language === 'fr'
+                ? 'L’aperçu charge PDF.js depuis Internet. Sans connexion ou si l’écran reste vide, utilisez le bouton ci-dessous pour ouvrir le fichier.'
+                : 'Preview loads PDF.js from the internet. If offline or the screen stays blank, use the button below to open the file.'}
+            </Text>
+          ) : null}
           {pdfBase64 && !loading ? (
             <TouchableOpacity
               style={[styles.secondaryBtn, (shareBusy || showSpinner) && styles.confirmBtnDisabled]}
@@ -406,6 +413,14 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   hint: { color: 'rgba(255,255,255,0.55)', marginTop: 12, fontSize: 14 },
   error: { color: '#ff8a80', textAlign: 'center', fontSize: 14 },
+  pdfOfflineHint: {
+    color: Colors.textTertiary,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
   footer: {
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 28 : 16,

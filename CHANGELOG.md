@@ -4,6 +4,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 14 au 17 avril 2026 (lun. - ven.)
+
+### Ajouté
+- **Organisateur — participants (billets)** : composant **`BookerTicketHoldersSection`** (`components/BookerTicketHoldersSection.js`) — filtre par nom (champ affiché dès **plus de 3** porteurs), compteur si le filtre réduit la liste, message si aucun résultat.
+- **Android — quitter l’app** : double appui sur **Retour** depuis **Accueil** ou **Bienvenue** (~2,5 s) pour **`exitApp`**, avec toast « Appuyez encore pour quitter » / équivalent EN (`App.js`).
+- **Aperçu PDF contrat (Android)** : texte d’aide **`pdfOfflineHint`** — rappel que l’aperçu peut dépendre du réseau (PDF.js) ; en cas d’écran vide, utiliser ouvrir / partager (`ContractPdfPreviewModal`).
+
+### Modifié
+- **`BookerDashboardPage`** : bloc liste des porteurs de billets délégué à **`BookerTicketHoldersSection`** (mêmes styles `ticketHoldersBlock` / lignes) ; **tirer pour actualiser** la liste **« Mes événements »** (`RefreshControl` + `getBookerEvents`, indicateur de chargement en **`Colors.primary`**).
+- **Accessibilité** : **`WelcomePage`** (feed — notifications, création de post, onglets « Pour tous / Abonnements ») ; **`EventDetailPage`** (retour, signalement, liens lieu / DJ / organisateur, groupe d’amis, CGV, achat, notation, modal d’invitation) ; **`TicketsPage`**, **`PurchasesPage`**, **`ScanTicketPage`**, **`StaffEventsPage`** — `accessibilityRole` / `accessibilityLabel` sur retour et actions principales.
+
+---
+
 ## Semaine du 7 au 10 avril 2026 (lun. - ven.)
 
 ### Ajouté

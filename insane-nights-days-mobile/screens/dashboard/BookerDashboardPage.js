@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   useWindowDimensions,
+  RefreshControl,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -43,6 +44,7 @@ import DealTypePickerModal from '../../components/DealTypePickerModal';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
 import ContractPdfPreviewModal from '../../components/ContractPdfPreviewModal';
+import BookerTicketHoldersSection from '../../components/BookerTicketHoldersSection';
 import Colors from '../../constants/colors';
 
 function cleanText(s) {
@@ -70,6 +72,7 @@ export default function BookerDashboardPage() {
   const [creating, setCreating] = useState(false);
   const [myEvents, setMyEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [refreshingEvents, setRefreshingEvents] = useState(false);
   // Ouvrir la section événements si demandé via routeParams (pour les notifications)
   const shouldOpenBookings =
     !!routeParams?.openBookings ||
@@ -693,6 +696,19 @@ export default function BookerDashboardPage() {
       setLoadingEvents(false);
     }
   };
+
+  const onRefreshEventsList = useCallback(async () => {
+    if (!user?.token) return;
+    setRefreshingEvents(true);
+    try {
+      const response = await api.getBookerEvents(user.token);
+      if (response?.success) setMyEvents(response.events || []);
+    } catch (e) {
+      console.error('[BookerDashboard] refresh events', e);
+    } finally {
+      setRefreshingEvents(false);
+    }
+  }, [user?.token]);
 
   useEffect(() => {
     const hid = routeParams?.highlightEventId;
@@ -1516,6 +1532,16 @@ export default function BookerDashboardPage() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        refreshControl={
+          activeSection === 'events' ? (
+            <RefreshControl
+              refreshing={refreshingEvents}
+              onRefresh={onRefreshEventsList}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          ) : undefined
+        }
       >
         {activeSection === 'profil' ? (
           // ✅ AJOUT: Section "Profil"
@@ -1699,7 +1725,7 @@ export default function BookerDashboardPage() {
               {language === 'fr' ? 'Mes événements' : 'My Events'} ({myEvents.length})
             </Text>
             {loadingEvents ? (
-              <ActivityIndicator size="large" color="#FF6B6B" style={styles.loader} />
+              <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
             ) : myEvents.length === 0 ? (
               <Text style={styles.emptyText}>
                 {language === 'fr' ? 'Aucun événement créé pour le moment.' : 'No events created yet.'}
@@ -1775,27 +1801,11 @@ export default function BookerDashboardPage() {
                     </TouchableOpacity>
                   </View>
 
-                  {Array.isArray(event.ticketHolders) && event.ticketHolders.length > 0 && (
-                    <View style={styles.ticketHoldersBlock}>
-                      <Text style={styles.eventInfoLabel}>
-                        {language === 'fr' ? '🎫 Participants (billets)' : '🎫 Ticket holders'}{' '}
-                        ({event.ticketHolders.length})
-                      </Text>
-                      {event.ticketHolders.map((h) => (
-                        <Text
-                          key={h.ticketId}
-                          style={[styles.ticketHolderLine, h.entered && styles.ticketHolderEntered]}
-                          numberOfLines={1}
-                        >
-                          {h.entered ? '✓ ' : '· '}
-                          {h.displayName}
-                          {h.ticketStatus && h.ticketStatus !== 'valid' && h.ticketStatus !== 'used'
-                            ? ` (${h.ticketStatus})`
-                            : ''}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
+                  <BookerTicketHoldersSection
+                    language={language}
+                    ticketHolders={event.ticketHolders}
+                    styles={styles}
+                  />
                   
                   <View style={styles.djsList}>
                     <Text style={styles.eventInfoLabel}>

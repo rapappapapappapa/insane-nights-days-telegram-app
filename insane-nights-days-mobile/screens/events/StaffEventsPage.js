@@ -83,7 +83,12 @@ export default function StaffEventsPage() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel={fr ? 'Retour' : 'Back'}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>{fr ? 'Événements staff' : 'Staff events'}</Text>
@@ -128,6 +133,12 @@ export default function StaffEventsPage() {
                 <TouchableOpacity
                   style={styles.scanBtn}
                   onPress={() => navigate('scanTicket', { eventId: event.id, eventTitle: event.title })}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    fr
+                      ? `Scanner les billets pour ${event.title || 'cet événement'}`
+                      : `Scan tickets for ${event.title || 'this event'}`
+                  }
                 >
                   <Ionicons name="qr-code" size={20} color={Colors.background} />
                   <Text style={styles.scanBtnText}>{fr ? 'Scanner billets' : 'Scan tickets'}</Text>

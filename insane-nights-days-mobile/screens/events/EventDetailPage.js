@@ -455,7 +455,12 @@ export default function EventDetailPage() {
         <StatusBar style="light" />
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Chargement de l'événement...</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigate('events')}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigate('events')}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Retour à la liste des événements' : 'Back to events list'}
+        >
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
@@ -470,7 +475,12 @@ export default function EventDetailPage() {
     >
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('events')}>
+        <TouchableOpacity
+          style={styles.backButtonTop}
+          onPress={() => navigate('events')}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Retour à la liste des événements' : 'Back to events list'}
+        >
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
 
@@ -479,6 +489,8 @@ export default function EventDetailPage() {
           onPress={handleReportEvent}
           activeOpacity={0.85}
           disabled={reporting}
+          accessibilityRole="button"
+          accessibilityLabel={language === 'fr' ? 'Signaler cet événement' : 'Report this event'}
         >
           <Text style={styles.reportChipText}>
             {reporting ? '...' : (language === 'fr' ? '🚩 Signaler' : '🚩 Report')}
@@ -522,6 +534,12 @@ export default function EventDetailPage() {
                 <TouchableOpacity
                   onPress={() => navigate('venueProfile', { venueId: event.venue.id })}
                   activeOpacity={0.7}
+                  accessibilityRole="link"
+                  accessibilityLabel={
+                    language === 'fr'
+                      ? `Lieu : ${event.venue.venueName}`
+                      : `Venue: ${event.venue.venueName}`
+                  }
                 >
                   <Text style={styles.linkText}>{event.venue.venueName}</Text>
                 </TouchableOpacity>
@@ -541,6 +559,10 @@ export default function EventDetailPage() {
                           onPress={() => navigate('djProfile', { djUserId: dj.userId, djId: dj.djId })}
                           activeOpacity={0.7}
                           style={styles.djChip}
+                          accessibilityRole="link"
+                          accessibilityLabel={
+                            language === 'fr' ? `Profil DJ : ${name}` : `DJ profile: ${name}`
+                          }
                         >
                           <Text style={styles.linkText}>{name}</Text>
                         </TouchableOpacity>
@@ -559,6 +581,12 @@ export default function EventDetailPage() {
                 <TouchableOpacity
                   onPress={() => navigate('bookerProfile', { bookerId: event.booker.id })}
                   activeOpacity={0.7}
+                  accessibilityRole="link"
+                  accessibilityLabel={
+                    language === 'fr'
+                      ? `Organisateur : ${event.booker.name}`
+                      : `Organizer: ${event.booker.name}`
+                  }
                 >
                   <Text style={styles.linkText}>
                     {language === 'fr' ? 'Organisateur : ' : 'Organizer: '}{event.booker.name}
@@ -600,7 +628,16 @@ export default function EventDetailPage() {
                     <View key={g.id} style={styles.groupCard}>
                       <View style={styles.groupHeader}>
                         <Text style={styles.groupName}>{g.name || (language === 'fr' ? 'Mon groupe' : 'My group')}</Text>
-                        <TouchableOpacity style={styles.inviteMoreBtn} onPress={() => openInviteModal(g.id)}>
+                        <TouchableOpacity
+                          style={styles.inviteMoreBtn}
+                          onPress={() => openInviteModal(g.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            language === 'fr'
+                              ? `Inviter des amis au groupe ${g.name || ''}`
+                              : `Invite friends to group ${g.name || ''}`
+                          }
+                        >
                           <Text style={styles.inviteMoreBtnText}>+ {language === 'fr' ? 'Inviter' : 'Invite'}</Text>
                         </TouchableOpacity>
                       </View>
@@ -621,6 +658,12 @@ export default function EventDetailPage() {
                 style={[styles.friendsButton, creatingGroup && styles.friendsButtonDisabled]}
                 onPress={handleCreateOrOpenGroup}
                 disabled={creatingGroup}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  eventGroups.length > 0
+                    ? (language === 'fr' ? 'Créer un autre groupe' : 'Create another group')
+                    : (language === 'fr' ? 'Créer un groupe pour cet événement' : 'Create a group for this event')
+                }
               >
                 {creatingGroup ? (
                   <ActivityIndicator color={Colors.background} size="small" />
@@ -646,6 +689,8 @@ export default function EventDetailPage() {
                 <TouchableOpacity
                   style={styles.profileButton}
                   onPress={() => navigate('profile')}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Aller au profil' : 'Go to profile'}
                 >
                   <Text style={styles.profileButtonText}>
                     {language === 'fr' ? 'Aller au profil' : 'Go to profile'}
@@ -659,6 +704,13 @@ export default function EventDetailPage() {
                     style={[styles.cgvCheckbox, acceptedCgv && styles.cgvCheckboxChecked]}
                     onPress={() => setAcceptedCgv(!acceptedCgv)}
                     activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: acceptedCgv }}
+                    accessibilityLabel={
+                      language === 'fr'
+                        ? 'Accepter les conditions générales de vente'
+                        : 'Accept terms of sale'
+                    }
                   >
                     {acceptedCgv && <Text style={styles.cgvCheckmark}>✓</Text>}
                   </TouchableOpacity>
@@ -666,7 +718,13 @@ export default function EventDetailPage() {
                     <Text style={styles.cgvText}>
                       {language === 'fr' ? "J'accepte les " : 'I accept the '}
                     </Text>
-                    <TouchableOpacity onPress={() => navigate('legal', { type: 'cgv' })}>
+                    <TouchableOpacity
+                      onPress={() => navigate('legal', { type: 'cgv' })}
+                      accessibilityRole="link"
+                      accessibilityLabel={
+                        language === 'fr' ? 'Lire les conditions générales de vente' : 'Read terms of sale'
+                      }
+                    >
                       <Text style={styles.cgvLink}>{language === 'fr' ? 'CGV' : 'Terms of Sale'}</Text>
                     </TouchableOpacity>
                     <Text style={styles.cgvText}>
@@ -678,6 +736,12 @@ export default function EventDetailPage() {
                   style={[styles.buyButton, (buyingTicket || !acceptedCgv) && styles.buyButtonDisabled]}
                   onPress={handleBuyTicket}
                   disabled={buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    language === 'fr'
+                      ? `Acheter un ticket pour ${event.price} euros`
+                      : `Buy ticket for ${event.price} euros`
+                  }
                 >
                   {buyingTicket ? (
                     <ActivityIndicator color={Colors.background} />
@@ -707,6 +771,8 @@ export default function EventDetailPage() {
                     djIds: event.djIds || [],
                   });
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Noter cet événement' : 'Rate this event'}
               >
                 <Text style={styles.rateButtonText}>
                   {language === 'fr' ? 'Noter cet événement' : 'Rate this event'}
@@ -744,6 +810,9 @@ export default function EventDetailPage() {
                         isSelected ? prev.filter((f) => f.communityId !== item.communityId) : [...prev, item]
                       );
                     }}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={item.pseudo}
                   >
                     <Text style={styles.friendItemText}>{item.pseudo}</Text>
                     {isSelected && <Text style={styles.friendItemCheck}>✓</Text>}
@@ -752,13 +821,24 @@ export default function EventDetailPage() {
               }}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => { setInviteModalVisible(false); setInvitingGroupId(null); }}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => { setInviteModalVisible(false); setInvitingGroupId(null); }}
+                accessibilityRole="button"
+                accessibilityLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
+              >
                 <Text style={styles.modalCancelText}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalInviteBtn, (inviting || selectedFriends.length === 0) && styles.modalInviteBtnDisabled]}
                 onPress={handleInviteFriends}
                 disabled={inviting || selectedFriends.length === 0}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  language === 'fr'
+                    ? `Inviter ${selectedFriends.length} ami${selectedFriends.length > 1 ? 's' : ''}`
+                    : `Invite ${selectedFriends.length} friend${selectedFriends.length !== 1 ? 's' : ''}`
+                }
               >
                 {inviting ? (
                   <ActivityIndicator color={Colors.background} size="small" />

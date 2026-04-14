@@ -85,10 +85,20 @@ export default function ScanTicketPage() {
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <StatusBar style="light" />
         <Text style={styles.permissionText}>{fr ? 'Autorise l\'accès à la caméra pour scanner les billets.' : 'Allow camera access to scan tickets.'}</Text>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+        <TouchableOpacity
+          style={styles.permissionBtn}
+          onPress={requestPermission}
+          accessibilityRole="button"
+          accessibilityLabel={fr ? 'Autoriser la caméra' : 'Allow camera'}
+        >
           <Text style={styles.permissionBtnText}>{fr ? 'Autoriser' : 'Grant permission'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel={fr ? 'Retour' : 'Back'}
+        >
           <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
@@ -99,7 +109,12 @@ export default function ScanTicketPage() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={goBack}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel={fr ? 'Retour' : 'Back'}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{eventTitle || (fr ? 'Scanner billet' : 'Scan ticket')}</Text>

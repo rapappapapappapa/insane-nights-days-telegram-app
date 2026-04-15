@@ -25,6 +25,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Backend** (`POST /api/booker/events`) : la date de l’événement doit être **au moins 7 jours après aujourd’hui** (calendrier, même logique que le contrôle « date passée »). Variable **`EVENT_MIN_LEAD_DAYS`** (`0` = désactiver, défaut `7`). Documenté dans **`server/env.example.txt`**.
 - **Mobile** (`BookerEventDashboardPage`) : **date minimum** sur les sélecteurs, validation avant envoi, texte d’étape 1. **`EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0`** dans l’environnement de build pour désactiver côté UI (aligné avec le serveur pour tests type « événement aujourd’hui »).
 - **Suppression événement (booker)** : variable **`BOOKER_ALLOW_DELETE_WITH_TICKETS=true`** sur le serveur pour lever le blocage « ticket(s) déjà vendu(s) » (cleanup de test uniquement) ; suppression des **DjRating / VenueRating** liés à l’événement avant effacement. Documenté dans **`server/env.example.txt`**.
+- **`BookerEventDashboardPage`** : correction bouton **Suivant** / **Confirmer et créer** — le prix **0 €** (ou `price` numérique `0` depuis un brouillon) ne doit pas désactiver le bouton (`!price` est vrai pour `0` en JavaScript).
 
 ---
 

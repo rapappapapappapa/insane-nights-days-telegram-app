@@ -44,6 +44,24 @@ function getMinEventCalendarDate(leadDays) {
   return min;
 }
 
+/** Titre saisi (évite !title qui rate les espaces). */
+function hasBookerEventTitle(formData) {
+  return formData?.title != null && String(formData.title).trim().length > 0;
+}
+
+/**
+ * Prix billetterie saisi : 0 € est valide.
+ * Bug évité : `!formData.price` désactivait le bouton quand price était le nombre 0 (ex. brouillon JSON).
+ */
+function hasBookerEventPrice(formData) {
+  const p = formData?.price;
+  if (p === '' || p == null) return false;
+  if (typeof p === 'number') return !Number.isNaN(p);
+  const t = String(p).trim();
+  if (t === '') return false;
+  return !Number.isNaN(parseFloat(t.replace(',', '.')));
+}
+
 function stepRequirementsHint(step, lang) {
   const fr = lang === 'fr';
   const leadDays = getEventMinLeadDaysFromEnv();
@@ -1320,13 +1338,16 @@ export default function BookerEventDashboardPage() {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.nextButton, (!formData.title || !formData.price) && styles.nextButtonDisabled]}
+                  style={[
+                    styles.nextButton,
+                    (!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)) && styles.nextButtonDisabled,
+                  ]}
                   onPress={() => {
-                    if (formData.title && formData.price) {
+                    if (hasBookerEventTitle(formData) && hasBookerEventPrice(formData)) {
                       setCurrentStep(5);
                     }
                   }}
-                  disabled={!formData.title || !formData.price}
+                  disabled={!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)}
                 >
                   <Text style={styles.nextButtonText}>
                     {language === 'fr' ? 'Suivant →' : 'Next →'}
@@ -1469,7 +1490,7 @@ export default function BookerEventDashboardPage() {
                 <TouchableOpacity
                   style={[styles.createButton, creating && styles.createButtonDisabled]}
                   onPress={handleCreateEvent}
-                  disabled={creating || !formData.title || !formData.price}
+                  disabled={creating || !hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)}
                 >
                   {creating ? (
                     <ActivityIndicator color={Colors.background} />

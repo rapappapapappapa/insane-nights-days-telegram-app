@@ -21,6 +21,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Backend** (`POST /api/events/:eventId/scan-ticket`) : fenêtre de scan élargie — **même jour (UTC)** **ou** événement **ONGOING** **ou** override **`SCAN_TICKET_ALLOW_ANY_DAY=true`** ; réponse enrichie avec **`ticket.holderDisplayName`** et **`entered: true`**.
 - **Mobile** : après scan réussi, flag **AsyncStorage** pour rafraîchir la liste événements / porteurs au retour sur **`BookerDashboardPage`** ; **`ScanTicketPage`** affiche le nom du participant validé.
 
+### Création d’événement — délai minimal (7 jours)
+- **Backend** (`POST /api/booker/events`) : la date de l’événement doit être **au moins 7 jours après aujourd’hui** (calendrier, même logique que le contrôle « date passée »). Variable **`EVENT_MIN_LEAD_DAYS`** (`0` = désactiver, défaut `7`). Documenté dans **`server/env.example.txt`**.
+- **Mobile** (`BookerEventDashboardPage`) : **date minimum** sur les sélecteurs, validation avant envoi, texte d’étape 1. **`EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0`** dans l’environnement de build pour désactiver côté UI (aligné avec le serveur pour tests type « événement aujourd’hui »).
+
 ---
 
 ## Semaine du 7 au 10 avril 2026 (lun. - ven.)

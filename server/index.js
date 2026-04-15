@@ -7853,6 +7853,27 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
+    // Délai minimal avant la date de l'événement (défaut 7 jours). EVENT_MIN_LEAD_DAYS=0 pour désactiver (tests, démos).
+    let minLeadDays = 7;
+    const envLead = process.env.EVENT_MIN_LEAD_DAYS;
+    if (envLead === '0') {
+      minLeadDays = 0;
+    } else if (envLead != null && String(envLead).trim() !== '') {
+      const n = parseInt(String(envLead), 10);
+      if (Number.isFinite(n) && n >= 0) minLeadDays = n;
+    }
+    if (minLeadDays > 0) {
+      const minEventDay = new Date(today);
+      minEventDay.setDate(minEventDay.getDate() + minLeadDays);
+      if (eventDay < minEventDay) {
+        return res.status(400).json({
+          success: false,
+          message: `La date de l'événement doit être au moins ${minLeadDays} jour(s) après aujourd'hui.`,
+          code: 'EVENT_DATE_TOO_SOON',
+        });
+      }
+    }
+
     // Créer les dates de début et fin de journée sans modifier l'objet original
     const startOfDay = new Date(eventDate);
     startOfDay.setHours(0, 0, 0, 0);

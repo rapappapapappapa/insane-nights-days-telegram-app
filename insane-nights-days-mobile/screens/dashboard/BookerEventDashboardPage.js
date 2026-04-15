@@ -28,10 +28,32 @@ import { useToast } from '../../hooks/useToast';
 const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v1';
 const DRAFT_VERSION = 1;
 
+/** Aligné avec EVENT_MIN_LEAD_DAYS côté serveur. 0 = désactiver (EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0). */
+function getEventMinLeadDaysFromEnv() {
+  const raw = process.env.EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS;
+  if (raw === '0') return 0;
+  const n = parseInt(String(raw ?? '7'), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 7;
+}
+
+function getMinEventCalendarDate(leadDays) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const min = new Date(today);
+  min.setDate(min.getDate() + leadDays);
+  return min;
+}
+
 function stepRequirementsHint(step, lang) {
   const fr = lang === 'fr';
+  const leadDays = getEventMinLeadDaysFromEnv();
   switch (step) {
     case 1:
+      if (leadDays > 0) {
+        return fr
+          ? `Obligatoire : date au moins ${leadDays} jour(s) après aujourd'hui, heure de début, durée (h).`
+          : `Required: date at least ${leadDays} day(s) from today, start time, duration (h).`;
+      }
       return fr ? 'Obligatoire : date, heure de début, durée (h).' : 'Required: date, start time, duration (h).';
     case 2:
       return fr ? 'Obligatoire : choisir un lieu pour l’événement.' : 'Required: choose a venue.';
@@ -158,10 +180,13 @@ export default function BookerEventDashboardPage() {
 
   // Ouvrir le sélecteur de date
   const openDatePicker = () => {
+    const leadDays = getEventMinLeadDaysFromEnv();
+    const minDate = leadDays > 0 ? getMinEventCalendarDate(leadDays) : undefined;
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
         value: eventDateTime || new Date(),
         mode: 'date',
+        minimumDate: minDate,
         onChange: (_, selectedDate) => {
           if (selectedDate) {
             setEventDateTime((prev) => {
@@ -177,7 +202,24 @@ export default function BookerEventDashboardPage() {
       });
       return;
     }
-    setTempDate(eventDateTime || new Date());
+    {
+      const lead = getEventMinLeadDaysFromEnv();
+      const base = eventDateTime || new Date();
+      if (lead > 0) {
+        const min = getMinEventCalendarDate(lead);
+        const baseDay = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        if (baseDay < min) {
+          const n = new Date(min);
+          n.setHours(base.getHours());
+          n.setMinutes(base.getMinutes());
+          setTempDate(n);
+        } else {
+          setTempDate(base);
+        }
+      } else {
+        setTempDate(base);
+      }
+    }
     setShowDatePicker(true);
   };
 
@@ -381,6 +423,26 @@ export default function BookerEventDashboardPage() {
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  /** Après chargement du brouillon : ramener la date au minimum légal si besoin. */
+  useEffect(() => {
+    if (draftGate) return;
+    const leadDays = getEventMinLeadDaysFromEnv();
+    if (leadDays <= 0) return;
+    setEventDateTime((prev) => {
+      if (!prev || isNaN(prev.getTime())) return prev;
+      const min = getMinEventCalendarDate(leadDays);
+      const prevDay = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate());
+      if (prevDay < min) {
+        const n = new Date(min);
+        n.setHours(prev.getHours());
+        n.setMinutes(prev.getMinutes());
+        queueMicrotask(() => setFormData((fd) => ({ ...fd, date: n.toISOString() })));
+        return n;
+      }
+      return prev;
+    });
+  }, [draftGate, setEventDateTime, setFormData]);
 
   const applyEventDraft = useCallback((d) => {
     if (!d?.formData) return;
@@ -646,6 +708,19 @@ export default function BookerEventDashboardPage() {
             ? 'Vous ne pouvez pas créer un événement à une date déjà passée.'
             : 'You cannot create an event on a past date.');
           return;
+        }
+
+        const leadDays = getEventMinLeadDaysFromEnv();
+        if (leadDays > 0) {
+          const minEventDay = getMinEventCalendarDate(leadDays);
+          if (eventDay < minEventDay) {
+            showError(
+              language === 'fr'
+                ? `Choisis une date au moins ${leadDays} jour(s) après aujourd'hui.`
+                : `Pick a date at least ${leadDays} day(s) from today.`
+            );
+            return;
+          }
         }
       }
     } catch (e) {
@@ -1445,6 +1520,11 @@ export default function BookerEventDashboardPage() {
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   themeVariant="light"
+                  minimumDate={
+                    getEventMinLeadDaysFromEnv() > 0
+                      ? getMinEventCalendarDate(getEventMinLeadDaysFromEnv())
+                      : undefined
+                  }
                   onChange={(_, selectedDate) => {
                     if (selectedDate) {
                       setTempDate(selectedDate);

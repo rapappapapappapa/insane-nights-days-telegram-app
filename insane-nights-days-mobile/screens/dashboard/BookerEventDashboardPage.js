@@ -94,6 +94,25 @@ function stepRequirementsHint(step, lang) {
 
 const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
 
+/**
+ * Premier rendu du wizard : si on revient depuis la sélection lieu/DJ, éviter l’étape 1
+ * (state local repart à 1 au remontage de l’écran ; le brouillon « Reprendre » peut aussi
+ * réappliquer un currentStep obsolète).
+ */
+function getInitialStepFromRouteParams(routeParams) {
+  const p = routeParams || {};
+  if (
+    p.selectedVenueId &&
+    (p.action === 'select' || p.action === 'replaceVenue')
+  ) {
+    return 2;
+  }
+  if (p.selectedDjId && (p.action === 'add' || p.action === 'remove')) {
+    return 3;
+  }
+  return 1;
+}
+
 function parseHM(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -174,7 +193,9 @@ export default function BookerEventDashboardPage() {
   const [postCreateModal, setPostCreateModal] = useState(null);
 
   // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() =>
+    getInitialStepFromRouteParams(routeParams)
+  );
   
   // Slots DJ pour la création d'événement (créneau horaire par ligne)
   const [djSlots, setDjSlots] = useState([emptyDjSlot()]);
@@ -396,8 +417,11 @@ export default function BookerEventDashboardPage() {
       }
     }
     
-    // Sélection de lieu
-    if (currentVenueId && currentAction === 'select') {
+    // Sélection de lieu (replaceVenue = remplacement depuis un événement existant)
+    if (
+      currentVenueId &&
+      (currentAction === 'select' || currentAction === 'replaceVenue')
+    ) {
       setVenue(currentVenueId);
       setCurrentStep(2); // Rester sur l'étape Lieu pour voir la sélection
     } else if (currentVenueId && currentAction === 'remove') {
@@ -462,34 +486,55 @@ export default function BookerEventDashboardPage() {
     });
   }, [draftGate, setEventDateTime, setFormData]);
 
-  const applyEventDraft = useCallback((d) => {
-    if (!d?.formData) return;
-    setFormData(d.formData);
-    const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
-    if (!isNaN(ed.getTime())) {
-      setEventDateTime(ed);
-      setTempDate(ed);
-      setTempTime(ed);
-    }
-    setCurrentStep(Math.min(5, Math.max(1, d.currentStep || 1)));
-    if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
-    else setCoverImageUri(null);
-    if (Array.isArray(d.djSlots) && d.djSlots.length > 0) {
-      setDjSlots(d.djSlots);
-      hasInitializedSlots.current = true;
-    } else if (d.formData?.djIds?.length) {
-      const assigns = d.formData.djSlotAssignments || [];
-      setDjSlots([
-        ...d.formData.djIds.map((id, i) => ({
-          djId: id,
-          slotStart: assigns[i]?.slotStart || '',
-          slotEnd: assigns[i]?.slotEnd || '',
-        })),
-        emptyDjSlot(),
-      ]);
-      hasInitializedSlots.current = true;
-    }
-  }, [setFormData, setEventDateTime, setCoverImageUri]);
+  const applyEventDraft = useCallback(
+    (d) => {
+      if (!d?.formData) return;
+      const rp = routeParams;
+      const resumeVenue =
+        rp?.selectedVenueId &&
+        (rp?.action === 'select' || rp?.action === 'replaceVenue');
+      const resumeDj =
+        rp?.selectedDjId && (rp?.action === 'add' || rp?.action === 'remove');
+      const shouldResumeFromSelection = resumeVenue || resumeDj;
+
+      setFormData((prev) => {
+        const merged = { ...d.formData };
+        if (resumeVenue && rp?.selectedVenueId) {
+          merged.venueId = rp.selectedVenueId;
+        } else if (prev?.venueId && !merged.venueId) {
+          merged.venueId = prev.venueId;
+        }
+        return merged;
+      });
+      const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
+      if (!isNaN(ed.getTime())) {
+        setEventDateTime(ed);
+        setTempDate(ed);
+        setTempTime(ed);
+      }
+      if (!shouldResumeFromSelection) {
+        setCurrentStep(Math.min(5, Math.max(1, d.currentStep || 1)));
+      }
+      if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
+      else setCoverImageUri(null);
+      if (Array.isArray(d.djSlots) && d.djSlots.length > 0) {
+        setDjSlots(d.djSlots);
+        hasInitializedSlots.current = true;
+      } else if (d.formData?.djIds?.length) {
+        const assigns = d.formData.djSlotAssignments || [];
+        setDjSlots([
+          ...d.formData.djIds.map((id, i) => ({
+            djId: id,
+            slotStart: assigns[i]?.slotStart || '',
+            slotEnd: assigns[i]?.slotEnd || '',
+          })),
+          emptyDjSlot(),
+        ]);
+        hasInitializedSlots.current = true;
+      }
+    },
+    [setFormData, setEventDateTime, setCoverImageUri, routeParams]
+  );
 
   useEffect(() => {
     let cancelled = false;

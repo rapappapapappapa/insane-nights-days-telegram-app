@@ -26,6 +26,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Mobile** (`BookerEventDashboardPage`) : **date minimum** sur les sélecteurs, validation avant envoi, texte d’étape 1. **`EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0`** dans l’environnement de build pour désactiver côté UI (aligné avec le serveur pour tests type « événement aujourd’hui »).
 - **Suppression événement (booker)** : variable **`BOOKER_ALLOW_DELETE_WITH_TICKETS=true`** sur le serveur pour lever le blocage « ticket(s) déjà vendu(s) » (cleanup de test uniquement) ; suppression des **DjRating / VenueRating** liés à l’événement avant effacement. Documenté dans **`server/env.example.txt`**.
 - **`BookerEventDashboardPage`** : correction bouton **Suivant** / **Confirmer et créer** — le prix **0 €** (ou `price` numérique `0` depuis un brouillon) ne doit pas désactiver le bouton (`!price` est vrai pour `0` en JavaScript).
+- **`BookerEventDashboardPage`** : retour depuis la sélection **lieu** ou **DJ** — l’étape du formulaire ne repart plus à l’**étape 1** alors que la sélection est conservée (étape initiale depuis `routeParams`, brouillon « Reprendre » qui ne réécrase plus l’étape ni le lieu en cas de retour avec sélection, action **`replaceVenue`** prise en charge comme **`select`**).
 
 ---
 

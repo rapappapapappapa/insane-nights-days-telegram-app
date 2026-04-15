@@ -113,6 +113,14 @@ function getInitialStepFromRouteParams(routeParams) {
   return 1;
 }
 
+/** Si les routeParams ne sont pas encore fiables au 1er rendu, reprendre l’étape persistée dans EventFormContext. */
+function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
+  const fromRoute = getInitialStepFromRouteParams(routeParams);
+  if (fromRoute > 1) return fromRoute;
+  const c = ctxStep ?? 1;
+  return Math.min(5, Math.max(1, c));
+}
+
 function parseHM(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -181,6 +189,8 @@ export default function BookerEventDashboardPage() {
     setVenue,
     coverImageUri,
     setCoverImageUri,
+    bookerEventWizardStep,
+    setBookerEventWizardStep,
   } = useEventForm();
 
   const [availableDjs, setAvailableDjs] = useState([]);
@@ -194,9 +204,13 @@ export default function BookerEventDashboardPage() {
 
   // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
   const [currentStep, setCurrentStep] = useState(() =>
-    getInitialStepFromRouteParams(routeParams)
+    getMergedInitialBookerWizardStep(routeParams, bookerEventWizardStep)
   );
-  
+
+  useEffect(() => {
+    setBookerEventWizardStep(currentStep);
+  }, [currentStep, setBookerEventWizardStep]);
+
   // Slots DJ pour la création d'événement (créneau horaire par ligne)
   const [djSlots, setDjSlots] = useState([emptyDjSlot()]);
   const [slotTimePicker, setSlotTimePicker] = useState(null);

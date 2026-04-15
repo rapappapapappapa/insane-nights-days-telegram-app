@@ -6,6 +6,13 @@ export function EventFormProvider({ children }) {
   /** URI locale (expo-image-picker) pour la couverture ; upload après création de l’événement. */
   const [coverImageUri, setCoverImageUri] = useState(null);
 
+  /**
+   * Étape du wizard « Créer un événement » (1–5). Persistée dans le provider pour survivre
+   * au démontage de l’écran (navigation vers sélection lieu/DJ) quand routeParams ne sont pas
+   * encore fiables au premier rendu.
+   */
+  const [bookerEventWizardStep, setBookerEventWizardStep] = useState(1);
+
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -61,6 +68,7 @@ export function EventFormProvider({ children }) {
 
   const resetForm = useCallback(() => {
     setCoverImageUri(null);
+    setBookerEventWizardStep(1);
     setFormData({
       title: '',
       date: '',
@@ -86,6 +94,8 @@ export function EventFormProvider({ children }) {
         setEventDateTime,
         coverImageUri,
         setCoverImageUri,
+        bookerEventWizardStep,
+        setBookerEventWizardStep,
         addDj,
         removeDj,
         setVenue,

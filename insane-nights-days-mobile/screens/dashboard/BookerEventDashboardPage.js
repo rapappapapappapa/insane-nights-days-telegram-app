@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useEventForm } from '../../contexts/EventFormContext';
 import { api } from '../../api/config';
 import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 
 const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v1';
 const DRAFT_VERSION = 1;
@@ -177,7 +178,7 @@ export default function BookerEventDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const { showError, showSuccess } = useToast();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const {
     formData,
     setFormData,
@@ -742,7 +743,22 @@ export default function BookerEventDashboardPage() {
   const handleCreateEvent = async () => {
     if (creating) return;
 
-    if (!formData.title || !formData.date || !formData.time || !formData.venueId || formData.djIds.length === 0) {
+    if (!user?.token) {
+      showError(
+        language === 'fr'
+          ? 'Session expirée. Reconnecte-toi pour créer un événement.'
+          : 'Session expired. Sign in again to create an event.'
+      );
+      return;
+    }
+
+    if (
+      !hasBookerEventTitle(formData) ||
+      !formData.date ||
+      !formData.time ||
+      !formData.venueId ||
+      formData.djIds.length === 0
+    ) {
       showError(language === 'fr' ? 'Veuillez remplir tous les champs requis (titre, date, heure, lieu, DJ).' : 'Please fill in all required fields (title, date, time, venue, DJ).');
       return;
     }
@@ -1846,6 +1862,13 @@ export default function BookerEventDashboardPage() {
           </View>
         </View>
       </Modal>
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
     </KeyboardAvoidingView>
   );
 }

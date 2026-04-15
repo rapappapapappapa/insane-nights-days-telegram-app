@@ -7537,17 +7537,22 @@ app.delete('/api/booker/events/:eventId', authenticateToken, async (req, res) =>
       });
     }
 
-    // Vérifier s'il y a des tickets vendus
+    // Vérifier s'il y a des tickets vendus (désactivable en dev/staging : BOOKER_ALLOW_DELETE_WITH_TICKETS=true)
+    const allowDeleteWithTickets = (process.env.BOOKER_ALLOW_DELETE_WITH_TICKETS || '').toLowerCase() === 'true';
     const ticketsCount = await prisma.ticket.count({
       where: { eventId: eventId },
     });
 
-    if (ticketsCount > 0) {
+    if (ticketsCount > 0 && !allowDeleteWithTickets) {
       return res.status(400).json({
         success: false,
         message: `Impossible de supprimer l'événement : ${ticketsCount} ticket(s) déjà vendu(s).`,
       });
     }
+
+    // Notes liées à l'événement (pas en cascade automatique sur Event)
+    await prisma.djRating.deleteMany({ where: { eventId } });
+    await prisma.venueRating.deleteMany({ where: { eventId } });
 
     // Supprimer les EventDj associés (cascade)
     await prisma.eventDj.deleteMany({

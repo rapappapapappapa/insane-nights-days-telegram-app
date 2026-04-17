@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
   Text,
@@ -105,6 +106,8 @@ export default function HomePage() {
   
   // Animation pour le feed
   const feedTranslateY = useRef(new Animated.Value(0)).current;
+  const [feedAvatarBust, setFeedAvatarBust] = useState(0);
+  const feedFocusSkipOnce = useRef(true);
   
   // ✅ NOTE: Le formulaire de connexion/inscription est maintenant sur LoginPage (plein écran).
 
@@ -184,6 +187,19 @@ export default function HomePage() {
       }
     }
   };
+
+  const fetchFeedRef = useRef(fetchFeed);
+  fetchFeedRef.current = fetchFeed;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (feedFocusSkipOnce.current) {
+        feedFocusSkipOnce.current = false;
+        return;
+      }
+      fetchFeedRef.current(true).finally(() => setFeedAvatarBust((n) => n + 1));
+    }, [])
+  );
 
   /**
    * ✅ FONCTION: Vérifier quels posts sont likés par l'utilisateur
@@ -547,10 +563,16 @@ export default function HomePage() {
                     const profileName = isDj
                       ? item.dj?.artistName
                       : (item.booker?.name || item.author?.username);
-                    const profileImage = isDj ? normalizeMediaUrl(item.dj?.profileImage) : normalizeMediaUrl(item.booker?.profileImage); // DJs et Organisateurs
                     const profileLocation = isDj ? item.dj?.city : null;
                     
                     const isAuthor = user?.id && item.author?.id === user.id;
+                    const baseProfileImg = isDj
+                      ? normalizeMediaUrl(item.dj?.profileImage)
+                      : normalizeMediaUrl(item.booker?.profileImage);
+                    const profileImage =
+                      isAuthor && baseProfileImg
+                        ? `${String(baseProfileImg).split('?')[0]}?cb=${feedAvatarBust}`
+                        : baseProfileImg;
                     const imageUri = normalizeMediaUrl(item.imageUrl);
                     const isBrokenImage = !!brokenPostImages[item.id];
                     

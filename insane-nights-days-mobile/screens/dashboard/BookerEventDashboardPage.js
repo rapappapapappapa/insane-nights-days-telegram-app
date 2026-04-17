@@ -116,6 +116,11 @@ function getInitialStepFromRouteParams(routeParams) {
 
 /** Si les routeParams ne sont pas encore fiables au 1er rendu, reprendre l’étape persistée dans EventFormContext. */
 function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
+  const p = routeParams || {};
+  const rs = p.resumeStep;
+  if (typeof rs === 'number' && !Number.isNaN(rs) && rs >= 1 && rs <= 5) {
+    return rs;
+  }
   const fromRoute = getInitialStepFromRouteParams(routeParams);
   if (fromRoute > 1) return fromRoute;
   const c = ctxStep ?? 1;
@@ -230,7 +235,14 @@ export default function BookerEventDashboardPage() {
   const currentDjId = routeParams?.selectedDjId;
   const currentVenueId = routeParams?.selectedVenueId;
   const currentAction = routeParams?.action;
-  const currentSlotIndex = routeParams?.slotIndex;
+  /** Android / bridge : slotIndex peut arriver en string ; 0 doit rester 0 (sinon 2e DJ écrase le 1er). */
+  const rawSlot = routeParams?.slotIndex;
+  const safeSlotIndex =
+    rawSlot === undefined || rawSlot === null
+      ? undefined
+      : Number.isFinite(Number(rawSlot)) && Number(rawSlot) >= 0
+        ? Math.floor(Number(rawSlot))
+        : undefined;
 
   // Ouvrir le sélecteur de date
   const openDatePicker = () => {
@@ -342,10 +354,10 @@ export default function BookerEventDashboardPage() {
 
   // Gérer les sélections depuis routeParams
   React.useLayoutEffect(() => {
-    const isSlotUpdate = currentSlotIndex !== undefined && currentSlotIndex !== null;
+    const isSlotUpdate = safeSlotIndex !== undefined && safeSlotIndex !== null;
     
     if (!isSlotUpdate) {
-      const paramsKey = `${currentDjId}-${currentVenueId}-${currentAction}-${currentSlotIndex}`;
+      const paramsKey = `${currentDjId}-${currentVenueId}-${currentAction}-${safeSlotIndex}`;
       const lastParamsKey = `${lastProcessedParams.current.selectedDjId}-${lastProcessedParams.current.selectedVenueId}-${lastProcessedParams.current.action}-${lastProcessedParams.current.slotIndex}`;
       
       if (paramsKey === lastParamsKey && paramsKey !== 'null-null-null-null') {
@@ -357,7 +369,7 @@ export default function BookerEventDashboardPage() {
       selectedDjId: currentDjId,
       selectedVenueId: currentVenueId,
       action: currentAction,
-      slotIndex: currentSlotIndex,
+      slotIndex: safeSlotIndex,
     };
     
     const syncSlotsToForm = (slotsAfter /* applyEqual déjà fait */) => {
@@ -373,14 +385,14 @@ export default function BookerEventDashboardPage() {
     if (currentDjId && currentAction === 'add') {
       const dur = parseFloat(formData.durationHours);
       const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
-      if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
+      if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
         setDjSlots((prev) => {
           const newSlots = [...prev];
-          while (newSlots.length <= currentSlotIndex) {
+          while (newSlots.length <= safeSlotIndex) {
             newSlots.push(emptyDjSlot());
           }
-          const cur = newSlots[currentSlotIndex] || emptyDjSlot();
-          newSlots[currentSlotIndex] = { ...cur, djId: currentDjId };
+          const cur = newSlots[safeSlotIndex] || emptyDjSlot();
+          newSlots[safeSlotIndex] = { ...cur, djId: currentDjId };
           const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
           syncSlotsToForm(timed);
           return timed;
@@ -418,10 +430,10 @@ export default function BookerEventDashboardPage() {
     } else if (currentDjId && currentAction === 'remove') {
       const dur = parseFloat(formData.durationHours);
       const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
-      if (currentSlotIndex !== undefined && currentSlotIndex !== null) {
+      if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
         setDjSlots((prev) => {
           const newSlots = [...prev];
-          newSlots[currentSlotIndex] = emptyDjSlot();
+          newSlots[safeSlotIndex] = emptyDjSlot();
           const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
           syncSlotsToForm(timed);
           return timed;
@@ -442,7 +454,7 @@ export default function BookerEventDashboardPage() {
     } else if (currentVenueId && currentAction === 'remove') {
       setVenue('');
     }
-  }, [currentDjId, currentVenueId, currentAction, currentSlotIndex, formData.time, formData.durationHours]);
+  }, [currentDjId, currentVenueId, currentAction, safeSlotIndex, formData.time, formData.durationHours]);
 
   const fetchAvailableDjs = async () => {
     if (!user?.token || loadingDjs) return;
@@ -912,7 +924,7 @@ export default function BookerEventDashboardPage() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <StatusBar style="light" />
@@ -926,7 +938,10 @@ export default function BookerEventDashboardPage() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          Platform.OS === 'android' && { flexGrow: 1, paddingBottom: 140 },
+        ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >

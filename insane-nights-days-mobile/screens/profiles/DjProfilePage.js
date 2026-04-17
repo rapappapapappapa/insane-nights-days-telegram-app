@@ -356,6 +356,7 @@ export default function DjProfilePage() {
                   action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
                   eventId: eventId || undefined,
                   slotIndex: slotIndexToPass, // Toujours passer slotIndex s'il est défini
+                  ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
                 });
               }}
             >

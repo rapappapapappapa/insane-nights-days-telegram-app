@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useReducer, useRef } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
   Text,
@@ -118,6 +119,9 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [feedTab, setFeedTab] = useState('all'); // 'all' | 'following' - style X
+  /** Incrémenté au retour sur l’écran pour forcer le rechargement avatar (cache RN + données API). */
+  const [feedAvatarBust, setFeedAvatarBust] = useState(0);
+  const feedFocusSkipOnce = useRef(true);
   // ✅ OPTIMISATION: Utiliser useReducer pour grouper les états liés aux posts
   const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
   
@@ -248,6 +252,19 @@ export default function FeedPage() {
       setRefreshing(false);
     }
   };
+
+  const fetchFeedRef = useRef(fetchFeed);
+  fetchFeedRef.current = fetchFeed;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (feedFocusSkipOnce.current) {
+        feedFocusSkipOnce.current = false;
+        return;
+      }
+      fetchFeedRef.current(true).finally(() => setFeedAvatarBust((n) => n + 1));
+    }, [])
+  );
 
   /**
    * ✅ FONCTION: Formater la date pour l'affichage
@@ -576,8 +593,12 @@ export default function FeedPage() {
               const profileImage = isDj ? item.dj?.profileImage : item.booker?.profileImage; // booker = organisateur (API)
               const profileLocation = isDj ? item.dj?.city : null;
               const imageUri = normalizeMediaUrl(item.imageUrl);
-              const avatarUri = normalizeMediaUrl(profileImage); // ✅ Afficher la photo de profil pour DJs et Organisateurs
               const isAuthor = user?.id && item.author?.id === user.id;
+              const baseAvatar = normalizeMediaUrl(profileImage);
+              const avatarUri =
+                isAuthor && baseAvatar
+                  ? `${String(baseAvatar).split('?')[0]}?cb=${feedAvatarBust}`
+                  : baseAvatar;
               // ✅ SUPPRIMÉ: isBrokenImage n'est plus nécessaire car ImageWithRetry gère les erreurs
               
               return (

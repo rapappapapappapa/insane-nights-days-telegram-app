@@ -153,13 +153,17 @@ export default function DrawerContent({ navigation }) {
 
   const showUpdateInfo = async () => {
     try {
-      // Vérifier si expo-updates est disponible
       const isEnabled = Updates.isEnabled;
       const channel = Updates?.channel || 'no-channel';
       const runtimeVersion = Updates?.runtimeVersion || 'n/a';
       const updateId = Updates?.updateId || 'n/a';
       const isEmbedded = Updates?.isEmbeddedLaunch || false;
-      
+
+      const autoHintFr =
+        'Une vérification OTA est aussi faite au lancement de l’app. « Vérifier » force une recherche tout de suite (secours si besoin).';
+      const autoHintEn =
+        'An OTA check also runs when the app starts. “Check” forces a search now (fallback if needed).';
+
       const updateInfo = [
         `Updates activés: ${isEnabled ? '✅ Oui' : '❌ Non'}`,
         `Canal: ${channel}`,
@@ -167,27 +171,33 @@ export default function DrawerContent({ navigation }) {
         `Update ID: ${updateId}`,
         `Embedded: ${isEmbedded ? 'oui' : 'non'}`,
         '',
-        isEnabled 
-          ? 'Les OTA updates sont activés. Cliquez sur "Vérifier" pour chercher des mises à jour.'
+        isEnabled
+          ? language === 'fr'
+            ? autoHintFr
+            : autoHintEn
           : '⚠️ Les OTA updates ne sont PAS activés.\n\nL\'app doit être rebuildée avec EAS Build pour que les updates fonctionnent.',
       ].join('\n');
 
       showConfirm(
-        'Informations Updates',
+        language === 'fr' ? 'Informations mises à jour' : 'Update information',
         updateInfo,
         [
           { text: 'OK', style: 'cancel' },
           {
-            text: 'Vérifier',
+            text: language === 'fr' ? 'Vérifier' : 'Check',
             onPress: async () => {
               try {
                 if (!isEnabled) {
-                  showError('Les OTA updates ne sont pas activés. Rebuild l\'app avec EAS Build pour les activer.');
+                  showError(
+                    language === 'fr'
+                      ? 'Les OTA ne sont pas activés. Rebuild avec EAS Build pour les activer.'
+                      : 'OTA is not enabled. Rebuild with EAS Build to enable it.'
+                  );
                   return;
                 }
                 const res = await Updates.checkForUpdateAsync();
                 if (!res?.isAvailable) {
-                  showSuccess('Aucune mise à jour disponible.');
+                  showSuccess(language === 'fr' ? 'Aucune mise à jour disponible.' : 'No update available.');
                   return;
                 }
                 await Updates.fetchUpdateAsync();

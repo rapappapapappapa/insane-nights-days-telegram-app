@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler, ToastAndroid } from 'react-native';
 import Colors from './constants/colors';
 import * as Updates from 'expo-updates';
@@ -291,32 +291,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.background,
   },
+  /** Écran minimal avant montage de l’app : évite reload OTA pendant que React Navigation / auth tournent (crashes). */
+  updateBootstrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
 });
 
-/** Vérifie EAS Update au lancement (équivalent au flux « Vérifier » du drawer) et recharge si une MAJ est dispo. */
-function EASUpdateOnLaunch() {
+export default function App() {
+  const [updateBootstrapDone, setUpdateBootstrapDone] = useState(__DEV__);
+
   useEffect(() => {
-    if (__DEV__) return;
+    if (__DEV__) return undefined;
+
     let cancelled = false;
+    const safetyMs = 25000;
+    const safetyTimer = setTimeout(() => {
+      if (!cancelled) setUpdateBootstrapDone(true);
+    }, safetyMs);
+
     (async () => {
       try {
-        if (!Updates.isEnabled) return;
-        const check = await Updates.checkForUpdateAsync();
-        if (cancelled || !check.isAvailable) return;
-        await Updates.fetchUpdateAsync();
-        if (!cancelled) await Updates.reloadAsync();
+        if (Updates.isEnabled) {
+          const check = await Updates.checkForUpdateAsync();
+          if (cancelled) return;
+          if (check.isAvailable) {
+            await Updates.fetchUpdateAsync();
+            if (cancelled) return;
+            clearTimeout(safetyTimer);
+            const reloadSafety = setTimeout(() => {
+              if (!cancelled) setUpdateBootstrapDone(true);
+            }, 20000);
+            Updates.reloadAsync()
+              .catch((reloadErr) => {
+                console.warn('[EASUpdate] reloadAsync', reloadErr?.message || reloadErr);
+              })
+              .finally(() => {
+                clearTimeout(reloadSafety);
+                if (!cancelled) setUpdateBootstrapDone(true);
+              });
+            return;
+          }
+        }
       } catch (e) {
-        console.warn('[EASUpdate] vérif au lancement', e?.message || e);
+        console.warn('[EASUpdate] bootstrap', e?.message || e);
       }
+      clearTimeout(safetyTimer);
+      if (!cancelled) setUpdateBootstrapDone(true);
     })();
+
     return () => {
       cancelled = true;
+      clearTimeout(safetyTimer);
     };
   }, []);
-  return null;
-}
 
-export default function App() {
+  if (!updateBootstrapDone) {
+    return (
+      <SafeAreaProvider>
+        <View style={styles.updateBootstrap}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
@@ -325,7 +366,6 @@ export default function App() {
             <NavigationProvider>
               <EventFormProvider>
                 <ConfirmProvider>
-                  <EASUpdateOnLaunch />
                   <AppContent />
                 </ConfirmProvider>
               </EventFormProvider>

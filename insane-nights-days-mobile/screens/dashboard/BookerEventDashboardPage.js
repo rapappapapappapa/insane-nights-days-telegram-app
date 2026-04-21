@@ -114,11 +114,20 @@ function getInitialStepFromRouteParams(routeParams) {
   return 1;
 }
 
+/** Normalise resumeStep (nombre ou chaîne « 2 » / « 3 » selon les ponts natifs). */
+function parseResumeStepFromParams(p) {
+  const raw = p?.resumeStep;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 1 || n > 5) return null;
+  return n;
+}
+
 /** Si les routeParams ne sont pas encore fiables au 1er rendu, reprendre l’étape persistée dans EventFormContext. */
 function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
   const p = routeParams || {};
-  const rs = p.resumeStep;
-  if (typeof rs === 'number' && !Number.isNaN(rs) && rs >= 1 && rs <= 5) {
+  const rs = parseResumeStepFromParams(p);
+  if (rs != null) {
     return rs;
   }
   const fromRoute = getInitialStepFromRouteParams(routeParams);

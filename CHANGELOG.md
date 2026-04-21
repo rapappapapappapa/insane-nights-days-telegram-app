@@ -4,6 +4,21 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 21 au 24 avril 2026 (mar. - ven.)
+
+### Modifié (refactor — dette technique)
+- **Client mobile — couche API** : le monolithe `api/config.js` est découpé en **`endpointsConfig.js`**, **`http.js`** (requêtes, cache, retry), **`normalizeMediaUrl.js`**, **`apiMethods.js`** (assembleur) et le dossier **`api/methods/`** (`coreAuth`, `emailPassword`, `profiles`, `bookerEvents`, `bookerStaff`, `chat`, `feed`, `admin`). Les imports applicatifs restent **`from '.../api/config'`** ; comportement des appels inchangé.
+- **`getBookerProfile`** : utilise directement **`apiRequest(USER_PROFILES)`** au lieu de **`api.getUserProfiles`** (suppression de la dépendance circulaire lors du chargement du module).
+- **Méthodes booker** : suppression d’un doublon **`publishEventToFeed`** dans l’objet API (deux entrées identiques ; seule la version avec **`API_CONFIG.ENDPOINTS.BOOKER_EVENTS`** est conservée).
+
+### Modifié (refactor — serveur)
+- **Validation créneaux DJ** : **`parseHmClock`** et **`djSlotFitsEventWindow`** sont déplacés dans **`server/utils/djSlotWindow.js`** ; **`server/index.js`** les importe (comportement identique).
+- **`server/lib/prisma.js`** : instance unique **`PrismaClient`** partagée par **`index.js`** et les modules de routes (plus de second **`new PrismaClient()`** dans l’entrée serveur).
+- **Routes extraites de `index.js`** : **`routes/registerAdminAndReports.js`** (bootstrap, seed démo, **`/api/admin/*`**, **`POST /api/reports`**, modération signalements / événements / feed) et **`routes/registerChatRoutes.js`** (tous les **`/api/chat/*`**, constante **`MAX_CHAT_MESSAGE_LENGTH`** locale au module). Enregistrement juste après le healthcheck ; chemins HTTP inchangés.
+- **Suite refactor serveur** : **`routes/registerTicketsAndPayments.js`** (achat billets classique, webhook Stripe, intents / confirmation, **`/api/payments/me`**, tickets utilisateur), **`routes/registerFeedRoutes.js`** (feed, follow, notifs feed, upload image post — chemins fichiers via **`SERVER_ROOT`**), **`routes/registerBookerOrganizerRoutes.js`** (disponibilités booker, événements organisateur, contrats DJ/lieu, staff, scan, amis, etc.). Enregistrement après **`eurosToCents`** / multer selon les dépendances ; **`index.js`** nettement raccourci, comportement API inchangé.
+
+---
+
 ## Semaine du 14 au 17 avril 2026 (lun. - ven.)
 
 ### Ajouté

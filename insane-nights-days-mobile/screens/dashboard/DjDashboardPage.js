@@ -134,7 +134,6 @@ export default function DjDashboardPage() {
   const [editTitleValue, setEditTitleValue] = useState('');
   
   // Sélection de photo pour profil/bannière
-  const [selectingPhotoFor, setSelectingPhotoFor] = useState(null); // 'profile' | 'banner' | null
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 
@@ -1338,74 +1337,55 @@ export default function DjDashboardPage() {
     }
   };
 
-  // Photo de profil / bannière : même principe que lieu & communauté (galerie directe), pas seulement les médias déjà uploadés
-  const pickProfileImage = async () => {
+  /** Même flux que CommunityProfileEditPage / VenueProfileEditPage : galerie, recadrage 1:1 ou 3:1, qualité 0,8. */
+  const pickDjProfileImage = async (type) => {
     if (!user?.token) return;
-    if (uploadingProfileImage || uploadingBannerImage) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      showError(language === 'fr' ? "Permission d'accès à la galerie requise" : 'Gallery access permission required');
+      showError(language === 'fr' ? 'Permission refusée' : 'Permission denied');
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
+      aspect: type === 'banner' ? [3, 1] : [1, 1],
+      quality: 0.8,
     });
-
     if (result.canceled || !result.assets?.[0]?.uri) return;
+    const uri = result.assets[0].uri;
 
-    setUploadingProfileImage(true);
-    try {
-      const response = await saveMedia('photo', result.assets[0].uri, 'profile');
-      if (response?.success && response.media?.url) {
-        setProfileImage(normalizeMediaUrl(response.media.url));
-        showSuccess(language === 'fr' ? 'Photo de profil mise à jour' : 'Profile picture updated');
-      } else {
-        showError(
-          language === 'fr' ? "Impossible d'enregistrer la photo de profil." : 'Could not save profile photo.'
-        );
+    if (type === 'banner') {
+      setUploadingBannerImage(true);
+      try {
+        const response = await saveMedia('photo', uri, 'banner');
+        if (response?.success && response.media?.url) {
+          setBannerImage(normalizeMediaUrl(response.media.url));
+          showSuccess(language === 'fr' ? 'Bannière mise à jour' : 'Banner updated');
+        } else {
+          showError(language === 'fr' ? "Impossible d'enregistrer la bannière." : 'Could not save banner.');
+        }
+      } catch (e) {
+        console.error('[pickDjProfileImage] bannière:', e);
+      } finally {
+        setUploadingBannerImage(false);
       }
-    } catch (e) {
-      console.error('Erreur sauvegarde photo de profil:', e);
-    } finally {
-      setUploadingProfileImage(false);
-    }
-  };
-
-  const pickBannerImage = async () => {
-    if (!user?.token) return;
-    if (uploadingProfileImage || uploadingBannerImage) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      showError(language === 'fr' ? "Permission d'accès à la galerie requise" : 'Gallery access permission required');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 1],
-      quality: 0.85,
-    });
-
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-
-    setUploadingBannerImage(true);
-    try {
-      const response = await saveMedia('photo', result.assets[0].uri, 'banner');
-      if (response?.success && response.media?.url) {
-        setBannerImage(normalizeMediaUrl(response.media.url));
-        showSuccess(language === 'fr' ? 'Bannière mise à jour' : 'Banner updated');
-      } else {
-        showError(language === 'fr' ? "Impossible d'enregistrer la bannière." : 'Could not save banner.');
+    } else {
+      setUploadingProfileImage(true);
+      try {
+        const response = await saveMedia('photo', uri, 'profile');
+        if (response?.success && response.media?.url) {
+          setProfileImage(normalizeMediaUrl(response.media.url));
+          showSuccess(language === 'fr' ? 'Photo mise à jour' : 'Photo updated');
+        } else {
+          showError(
+            language === 'fr' ? "Impossible d'enregistrer la photo de profil." : 'Could not save profile photo.'
+          );
+        }
+      } catch (e) {
+        console.error('[pickDjProfileImage] profil:', e);
+      } finally {
+        setUploadingProfileImage(false);
       }
-    } catch (e) {
-      console.error('Erreur sauvegarde bannière:', e);
-    } finally {
-      setUploadingBannerImage(false);
     }
   };
 
@@ -1502,77 +1482,61 @@ export default function DjDashboardPage() {
               <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
                 </View>
 
-            {/* Photos de profil et bannière (galerie comme les autres profils ; option « Médias » en secours) */}
-            <View style={styles.imageUploadSection}>
-              <View style={styles.profileImageContainer}>
+            {/* Photo / bannière : même présentation que profils communauté & lieu */}
+            <View style={styles.profileEditMediaHeader}>
+              {bannerImage ? (
                 <TouchableOpacity
-                  style={profileImage ? styles.profileImageWrapper : styles.profileImagePlaceholder}
-                  onPress={pickProfileImage}
-                  activeOpacity={0.8}
-                  disabled={uploadingProfileImage || uploadingBannerImage}
+                  style={styles.profileEditBannerWrap}
+                  onPress={() => pickDjProfileImage('banner')}
+                  disabled={uploadingBannerImage}
+                  activeOpacity={0.9}
                 >
-                  {uploadingProfileImage ? (
-                    <View style={[styles.profileImage, { alignItems: 'center', justifyContent: 'center' }]}>
-                      <ActivityIndicator color={Colors.primary} />
-                    </View>
-                  ) : profileImage ? (
-                    <>
-                      <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                      <View style={[styles.imageEditOverlay, { borderRadius: 40 }]} pointerEvents="none">
-                        <Ionicons name="camera" size={22} color="#fff" />
-                      </View>
-                    </>
-                  ) : (
-                    <Ionicons name="person" size={28} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={bannerImage ? styles.bannerImageWrapper : styles.bannerPlaceholder}
-                  onPress={pickBannerImage}
-                  activeOpacity={0.8}
-                  disabled={uploadingProfileImage || uploadingBannerImage}
-                >
+                  <Image source={{ uri: normalizeMediaUrl(bannerImage) }} style={styles.profileEditBanner} />
                   {uploadingBannerImage ? (
-                    <View style={[styles.bannerImage, { alignItems: 'center', justifyContent: 'center' }]}>
-                      <ActivityIndicator color={Colors.primary} />
+                    <View style={styles.profileEditOverlayLoader}>
+                      <ActivityIndicator size="small" color="#fff" />
                     </View>
-                  ) : bannerImage ? (
-                    <>
-                      <Image source={{ uri: bannerImage }} style={styles.bannerImage} />
-                      <View style={[styles.imageEditOverlay, { borderRadius: 8 }]} pointerEvents="none">
-                        <Ionicons name="camera" size={22} color="#fff" />
+                  ) : null}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.profileEditBannerPlaceholder}
+                  onPress={() => pickDjProfileImage('banner')}
+                  disabled={uploadingBannerImage}
+                  activeOpacity={0.9}
+                >
+                  <Ionicons name="image-outline" size={40} color="rgba(255,255,255,0.5)" />
+                  <Text style={styles.profileEditPlaceholderText}>
+                    {language === 'fr' ? 'Ajouter une bannière' : 'Add banner'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.profileEditAvatarWrap}>
+                {profileImage ? (
+                  <TouchableOpacity
+                    onPress={() => pickDjProfileImage('profile')}
+                    disabled={uploadingProfileImage}
+                    activeOpacity={0.9}
+                    style={styles.profileEditAvatarTouch}
+                  >
+                    <Image source={{ uri: normalizeMediaUrl(profileImage) }} style={styles.profileEditAvatar} />
+                    {uploadingProfileImage ? (
+                      <View style={styles.profileEditAvatarLoader}>
+                        <ActivityIndicator size="small" color="#fff" />
                       </View>
-                    </>
-                  ) : (
-                    <Ionicons name="image-outline" size={28} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.imageHint}>
-                {language === 'fr'
-                  ? 'Appuyez pour ouvrir la galerie (photo carrée · bannière large).'
-                  : 'Tap to open your gallery (square photo · wide banner).'}
-              </Text>
-              <View style={styles.mediaReuseRow}>
-                <TouchableOpacity
-                  onPress={() => setSelectingPhotoFor('profile')}
-                  disabled={uploadingProfileImage || uploadingBannerImage}
-                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                >
-                  <Text style={styles.mediaReuseLink}>
-                    {language === 'fr' ? 'Profil depuis Médias' : 'Profile from Media'}
-                  </Text>
-                </TouchableOpacity>
-                <Text style={styles.mediaReuseSep}>·</Text>
-                <TouchableOpacity
-                  onPress={() => setSelectingPhotoFor('banner')}
-                  disabled={uploadingProfileImage || uploadingBannerImage}
-                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                >
-                  <Text style={styles.mediaReuseLink}>
-                    {language === 'fr' ? 'Bannière depuis Médias' : 'Banner from Media'}
-                  </Text>
-                </TouchableOpacity>
+                    ) : null}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.profileEditAvatarPlaceholder}
+                    onPress={() => pickDjProfileImage('profile')}
+                    disabled={uploadingProfileImage}
+                    activeOpacity={0.9}
+                  >
+                    <Ionicons name="person" size={50} color="rgba(255,255,255,0.6)" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -3428,85 +3392,6 @@ export default function DjDashboardPage() {
         language={language}
       />
 
-      {/* Modal de sélection de photo pour profil/bannière */}
-      <Modal
-        visible={selectingPhotoFor !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectingPhotoFor(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.photoSelectionModal}>
-            <View style={styles.photoSelectionHeader}>
-              <Text style={styles.modalTitle}>
-                {language === 'fr'
-                  ? selectingPhotoFor === 'profile'
-                    ? 'Photo de profil — vos médias DJ'
-                    : 'Bannière — vos médias DJ'
-                  : selectingPhotoFor === 'profile'
-                    ? 'Profile photo — your DJ media'
-                    : 'Banner — your DJ media'}
-              </Text>
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={() => setSelectingPhotoFor(null)}
-              >
-                <Text style={styles.closeModalButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.photoSelectionContent}>
-              {photos.length > 0 ? (
-                <View style={styles.photoSelectionGrid}>
-                  {photos.map((photo, index) => (
-                    <TouchableOpacity
-                      key={photo.id || index}
-                      style={styles.photoSelectionItem}
-                      onPress={async () => {
-                        try {
-                          await saveMedia('photo', photo.url, selectingPhotoFor);
-                          if (selectingPhotoFor === 'profile') {
-                            setProfileImage(normalizeMediaUrl(photo.url));
-                          } else {
-                            setBannerImage(normalizeMediaUrl(photo.url));
-                          }
-                          showSuccess(language === 'fr' 
-                            ? (selectingPhotoFor === 'profile' ? 'Photo de profil mise à jour' : 'Bannière mise à jour')
-                            : (selectingPhotoFor === 'profile' ? 'Profile picture updated' : 'Banner updated'));
-                          setSelectingPhotoFor(null);
-                        } catch (error) {
-                          console.error('Erreur sélection photo:', error);
-                        }
-                      }}
-                    >
-                      <Image source={{ uri: photo.url }} style={styles.photoSelectionImage} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.photoSelectionEmpty}>
-                  <Text style={styles.photoSelectionEmptyText}>
-                    {language === 'fr'
-                      ? 'Aucune photo dans Médias pour l’instant. Ajoutez-en dans l’onglet Médias, ou fermez et appuyez sur la vignette pour utiliser la galerie du téléphone.'
-                      : 'No photos in Media yet. Add some in the Media tab, or close and tap the thumbnail to use your phone gallery.'}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.addPhotoButton}
-                    onPress={() => {
-                      setSelectingPhotoFor(null);
-                      setActiveSection('medias');
-                    }}
-                  >
-                    <Text style={styles.addPhotoButtonText}>
-                      {language === 'fr' ? 'Aller aux médias' : 'Go to Media'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       <RejectReasonModal
         visible={rejectModalVisible}
         onClose={() => {
@@ -3774,78 +3659,78 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  imageUploadSection: {
+  profileEditMediaHeader: {
+    alignItems: 'center',
     marginBottom: 20,
   },
-  profileImageContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  profileImageWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  profileEditBannerWrap: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
     overflow: 'hidden',
-    position: 'relative',
+    marginBottom: 8,
   },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.backgroundCard,
+  profileEditBanner: {
+    width: '100%',
+    height: '100%',
   },
-  profileImagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    alignItems: 'center',
+  profileEditBannerPlaceholder: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
-  },
-  bannerImageWrapper: {
-    width: 120,
-    height: 80,
-    borderRadius: 8,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  bannerImage: {
-    width: 120,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: Colors.backgroundCard,
-  },
-  bannerPlaceholder: {
-    width: 120,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 8,
   },
-  imageEditOverlay: {
+  profileEditPlaceholderText: {
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 8,
+    fontSize: 14,
+  },
+  profileEditOverlayLoader: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  imageEditIcon: {
-    fontSize: 20,
+  profileEditAvatarWrap: {
+    marginBottom: 8,
+    alignItems: 'center',
   },
-  uploadIcon: {
-    color: Colors.primary,
-    fontSize: 24,
+  profileEditAvatarTouch: {
+    position: 'relative',
+  },
+  profileEditAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.backgroundCard,
+  },
+  profileEditAvatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,23,68,0.4)',
+  },
+  profileEditAvatarLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 50,
   },
   daysContainer: {
     flexDirection: 'row',
@@ -4352,102 +4237,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '700',
-  },
-  imageHint: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  mediaReuseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginTop: 10,
-    gap: 6,
-  },
-  mediaReuseLink: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  mediaReuseSep: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    marginHorizontal: 2,
-  },
-  photoSelectionModal: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: 16,
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  photoSelectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  closeModalButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeModalButtonText: {
-    color: Colors.text,
-    fontSize: 24,
-    fontWeight: '300',
-  },
-  photoSelectionContent: {
-    padding: 16,
-  },
-  photoSelectionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  photoSelectionItem: {
-    width: (width - 100) / 3,
-    height: (width - 100) / 3,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  photoSelectionImage: {
-    width: '100%',
-    height: '100%',
-  },
-  photoSelectionEmpty: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  photoSelectionEmptyText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  addPhotoButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  addPhotoButtonText: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: '600',
   },
   // Bookings
   invitationsSection: {

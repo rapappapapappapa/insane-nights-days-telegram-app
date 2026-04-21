@@ -133,7 +133,6 @@ export default function DjDashboardPage() {
   const [editingTitle, setEditingTitle] = useState(null); // { type: 'video'|'audio', id, currentTitle }
   const [editTitleValue, setEditTitleValue] = useState('');
   
-  // Sélection de photo pour profil/bannière
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 
@@ -1457,32 +1456,7 @@ export default function DjDashboardPage() {
               </View>
             )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Nom d\'artiste' : 'Artist Name'}</Text>
-              <View style={styles.readOnlyInput}>
-                <Text style={styles.readOnlyText}>{artistName || '-'}</Text>
-              </View>
-              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
-      </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Alias'}</Text>
-              <TextInput
-                style={styles.input}
-                value={pseudo}
-                onChangeText={setPseudo}
-              />
-                </View>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{language === 'fr' ? 'Nom réel' : 'Real Name'}</Text>
-              <View style={styles.readOnlyInput}>
-                <Text style={styles.readOnlyText}>{realName || '-'}</Text>
-                </View>
-              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
-                </View>
-
-            {/* Photo / bannière : même présentation que profils communauté & lieu */}
+            {/* Photo / bannière en premier (comme booker : galerie directe, sans passer par l’onglet Médias) */}
             <View style={styles.profileEditMediaHeader}>
               {bannerImage ? (
                 <TouchableOpacity
@@ -1538,7 +1512,37 @@ export default function DjDashboardPage() {
                   </TouchableOpacity>
                 )}
               </View>
+              <Text style={styles.profileEditGalleryHint}>
+                {language === 'fr'
+                  ? 'Touchez la photo ou la bannière : la galerie s’ouvre et la photo choisie devient tout de suite votre image de profil ou bannière (comme pour un organisateur).'
+                  : 'Tap the photo or banner: your gallery opens and the image you pick becomes your profile or banner right away (same as for a booker).'}
+              </Text>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Nom d\'artiste' : 'Artist Name'}</Text>
+              <View style={styles.readOnlyInput}>
+                <Text style={styles.readOnlyText}>{artistName || '-'}</Text>
+              </View>
+              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
+      </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Alias'}</Text>
+              <TextInput
+                style={styles.input}
+                value={pseudo}
+                onChangeText={setPseudo}
+              />
+                </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{language === 'fr' ? 'Nom réel' : 'Real Name'}</Text>
+              <View style={styles.readOnlyInput}>
+                <Text style={styles.readOnlyText}>{realName || '-'}</Text>
+                </View>
+              <Text style={styles.readOnlyHint}>{language === 'fr' ? 'Ce champ ne peut pas être modifié' : 'This field cannot be modified'}</Text>
+                </View>
 
             {(() => {
               const legalEditable = !(djProfile?.legalName || djProfile?.address || djProfile?.postalCode || djProfile?.country || djProfile?.siret || djProfile?.vatNumber);
@@ -2299,6 +2303,11 @@ export default function DjDashboardPage() {
             {/* Photos */}
             <Text style={styles.mediaSubtitle}>
               {language === 'fr' ? 'PHOTOS' : 'PHOTOS'}
+            </Text>
+            <Text style={styles.mediaHint}>
+              {language === 'fr'
+                ? 'Galerie de portfolio. Pour la photo de profil ou la bannière : onglet « Profil artiste », touchez l’image — la galerie s’ouvre directement.'
+                : 'Portfolio gallery. For profile photo or banner: open « Artist Profile », tap the image — your gallery opens directly.'}
             </Text>
             <Text style={styles.mediaHint}>
               {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
@@ -3699,8 +3708,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   profileEditAvatarWrap: {
-    marginBottom: 8,
+    marginBottom: 6,
     alignItems: 'center',
+  },
+  profileEditGalleryHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   profileEditAvatarTouch: {
     position: 'relative',

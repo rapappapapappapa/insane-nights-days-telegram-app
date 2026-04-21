@@ -323,15 +323,16 @@ export default function App() {
             clearTimeout(safetyTimer);
             const reloadSafety = setTimeout(() => {
               if (!cancelled) setUpdateBootstrapDone(true);
-            }, 20000);
-            Updates.reloadAsync()
-              .catch((reloadErr) => {
-                console.warn('[EASUpdate] reloadAsync', reloadErr?.message || reloadErr);
-              })
-              .finally(() => {
-                clearTimeout(reloadSafety);
-                if (!cancelled) setUpdateBootstrapDone(true);
-              });
+            }, 25000);
+            try {
+              await Updates.reloadAsync();
+              clearTimeout(reloadSafety);
+              if (!cancelled) setUpdateBootstrapDone(true);
+            } catch (reloadErr) {
+              clearTimeout(reloadSafety);
+              console.warn('[EASUpdate] reloadAsync', reloadErr?.message || reloadErr);
+              if (!cancelled) setUpdateBootstrapDone(true);
+            }
             return;
           }
         }

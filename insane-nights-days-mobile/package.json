@@ -10,7 +10,8 @@
     "tunnel:go": "bash scripts/start_expo_tunnel_android.sh 8081",
     "tunnel:devclient": "bash scripts/start_expo_tunnel_devclient.sh 8082",
     "tunnel:android": "npm run tunnel:go",
-    "update:both": "bash scripts/publish-update-both.sh"
+    "update:both": "bash scripts/publish-update-both.sh",
+    "eas:verify-fingerprint": "bash scripts/verify-eas-fingerprint.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

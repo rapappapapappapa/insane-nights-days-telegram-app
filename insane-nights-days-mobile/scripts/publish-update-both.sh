@@ -20,12 +20,18 @@ echo "📱 Publication de l'update sur les deux canaux..."
 echo "Message: $MESSAGE"
 echo ""
 
+# eas n’est pas toujours installé globalement : utiliser la CLI du projet (devDependency) ou npx
+EAS=(npx eas-cli)
+if [ -x "./node_modules/.bin/eas" ]; then
+  EAS=(./node_modules/.bin/eas)
+fi
+
 echo "🔵 Publication sur canal PREVIEW (Android)..."
-eas update --branch preview --message "$MESSAGE (Android)"
+"${EAS[@]}" update --branch preview --message "$MESSAGE (Android)"
 
 echo ""
 echo "🟢 Publication sur canal PRODUCTION (iOS)..."
-eas update --branch production --message "$MESSAGE (iOS)"
+"${EAS[@]}" update --branch production --message "$MESSAGE (iOS)"
 
 echo ""
 echo "✅ Updates publiées sur les deux canaux !"

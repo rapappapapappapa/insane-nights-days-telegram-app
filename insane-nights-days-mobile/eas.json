@@ -1,13 +1,16 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "appVersionSource": "local",
+    "version": ">=16.28.0"
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "environment": "preview",
       "channel": "preview",
       "distribution": "internal",
       "android": {
@@ -15,6 +18,7 @@
       }
     },
     "production": {
+      "environment": "production",
       "channel": "production",
       "distribution": "store",
       "ios": {

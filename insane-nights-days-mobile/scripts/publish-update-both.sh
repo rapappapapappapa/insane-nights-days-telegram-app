@@ -27,11 +27,11 @@ if [ -x "./node_modules/.bin/eas" ]; then
 fi
 
 echo "🔵 Publication sur canal PREVIEW (Android)..."
-"${EAS[@]}" update --branch preview --message "$MESSAGE (Android)"
+"${EAS[@]}" update --branch preview --environment preview --message "$MESSAGE (Android)"
 
 echo ""
 echo "🟢 Publication sur canal PRODUCTION (iOS)..."
-"${EAS[@]}" update --branch production --message "$MESSAGE (iOS)"
+"${EAS[@]}" update --branch production --environment production --message "$MESSAGE (iOS)"
 
 echo ""
 echo "✅ Updates publiées sur les deux canaux !"

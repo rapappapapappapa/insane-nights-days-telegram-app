@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { api } from '../api/config';
 import Logo from './Logo';
@@ -141,7 +142,7 @@ export default function DrawerContent({ navigation }) {
   const { navigate } = useNavigation();
   const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
-  const { showError, showSuccess } = useToast();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const insets = useSafeAreaInsets();
 
@@ -304,7 +305,16 @@ export default function DrawerContent({ navigation }) {
   const contentPaddingBottom = useMemo(() => 24 + (insets?.bottom || 0), [insets?.bottom]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}>
+    <>
+      {toast?.visible ? (
+        <Toast
+          message={toast.message}
+          type={toast.type || 'info'}
+          visible
+          onHide={hideToast}
+        />
+      ) : null}
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}>
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Logo size={60} />
@@ -454,6 +464,7 @@ export default function DrawerContent({ navigation }) {
         </View>
       ) : null}
     </ScrollView>
+    </>
   );
 }
 

@@ -12,11 +12,12 @@ import {
 import Colors from '../constants/colors';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useToast } from '../hooks/useToast';
+import Toast from './Toast';
 import StarRating from './StarRating';
 
 export default function RatingModal({ visible, onClose, onSubmit, title, loading = false }) {
   const { language } = useLanguage();
-  const { showError } = useToast();
+  const { toast, showError, hideToast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
@@ -39,12 +40,21 @@ export default function RatingModal({ visible, onClose, onSubmit, title, loading
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
+    <>
+      {toast?.visible ? (
+        <Toast
+          message={toast.message}
+          type={toast.type || 'info'}
+          visible
+          onHide={hideToast}
+        />
+      ) : null}
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleClose}
+      >
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
@@ -111,7 +121,8 @@ export default function RatingModal({ visible, onClose, onSubmit, title, loading
           </View>
         </View>
       </View>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 

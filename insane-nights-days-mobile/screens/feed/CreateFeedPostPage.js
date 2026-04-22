@@ -18,7 +18,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useToast } from '../../hooks/useToast';
-import { Toast } from '../../components/Toast';
+import Toast from '../../components/Toast';
 import { api } from '../../api/config';
 
 /**

@@ -1,3 +1,5 @@
+import logger from '../../utils/logger';
+
 export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API_CONFIG }) {
   return {
   // ============================================

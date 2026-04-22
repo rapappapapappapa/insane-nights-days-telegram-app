@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -107,7 +106,6 @@ export default function HomePage() {
   // Animation pour le feed
   const feedTranslateY = useRef(new Animated.Value(0)).current;
   const [feedAvatarBust, setFeedAvatarBust] = useState(0);
-  const feedFocusSkipOnce = useRef(true);
   
   // ✅ NOTE: Le formulaire de connexion/inscription est maintenant sur LoginPage (plein écran).
 
@@ -170,6 +168,7 @@ export default function HomePage() {
           }
         });
         setPostLikesCount(likesCountState);
+        if (isRefresh) setFeedAvatarBust((n) => n + 1);
       } else {
         setFeed([]);
       }
@@ -187,19 +186,6 @@ export default function HomePage() {
       }
     }
   };
-
-  const fetchFeedRef = useRef(fetchFeed);
-  fetchFeedRef.current = fetchFeed;
-
-  useFocusEffect(
-    useCallback(() => {
-      if (feedFocusSkipOnce.current) {
-        feedFocusSkipOnce.current = false;
-        return;
-      }
-      fetchFeedRef.current(true).finally(() => setFeedAvatarBust((n) => n + 1));
-    }, [])
-  );
 
   /**
    * ✅ FONCTION: Vérifier quels posts sont likés par l'utilisateur

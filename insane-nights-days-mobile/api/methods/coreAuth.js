@@ -1,3 +1,6 @@
+import logger from '../../utils/logger';
+import { apiCache } from '../../utils/apiCache';
+
 export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName, API_CONFIG }) {
   return {
   connectWallet: async (walletAddress, username) => {

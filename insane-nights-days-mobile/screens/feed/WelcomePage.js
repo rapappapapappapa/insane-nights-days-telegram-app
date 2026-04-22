@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -58,7 +57,6 @@ export default function WelcomePage() {
   const fetchAbortRef = useRef(null);
   const toggledLikeRef = useRef({}); // postId -> { liked, at } - évite que checkLikes écrase un like récent
   const [feedAvatarBust, setFeedAvatarBust] = useState(0);
-  const feedFocusSkipOnce = useRef(true);
 
   const reportPost = (postId) => {
     if (!user?.token) {
@@ -233,6 +231,7 @@ export default function WelcomePage() {
         });
         setPostLikesCount(likesCountState);
         setLikedPosts(prev => ({ ...prev, ...likedState }));
+        if (isRefresh) setFeedAvatarBust((n) => n + 1);
       } else {
         setFeed([]);
       }
@@ -244,19 +243,6 @@ export default function WelcomePage() {
       setRefreshing(false);
     }
   };
-
-  const fetchFeedRef = useRef(fetchFeed);
-  fetchFeedRef.current = fetchFeed;
-
-  useFocusEffect(
-    useCallback(() => {
-      if (feedFocusSkipOnce.current) {
-        feedFocusSkipOnce.current = false;
-        return;
-      }
-      fetchFeedRef.current(true).finally(() => setFeedAvatarBust((n) => n + 1));
-    }, [])
-  );
 
   /**
    * ✅ FONCTION: Vérifier quels posts sont likés par l'utilisateur

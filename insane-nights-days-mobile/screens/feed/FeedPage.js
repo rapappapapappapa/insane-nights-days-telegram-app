@@ -578,7 +578,7 @@ export default function FeedPage() {
                 : (item.booker?.name || item.author?.username);
               const profileImage = isDj ? item.dj?.profileImage : item.booker?.profileImage; // booker = organisateur (API)
               const profileLocation = isDj ? item.dj?.city : null;
-              const imageUri = normalizeMediaUrl(item.imageUrl);
+              const imageUri = normalizeMediaUrl(item.imageUrl || item.image);
               const isAuthor = user?.id && item.author?.id === user.id;
               const baseAvatar = normalizeMediaUrl(profileImage);
               const avatarUri =

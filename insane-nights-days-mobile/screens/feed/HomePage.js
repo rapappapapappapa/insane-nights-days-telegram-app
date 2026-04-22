@@ -559,7 +559,7 @@ export default function HomePage() {
                       isAuthor && baseProfileImg
                         ? `${String(baseProfileImg).split('?')[0]}?cb=${feedAvatarBust}`
                         : baseProfileImg;
-                    const imageUri = normalizeMediaUrl(item.imageUrl);
+                    const imageUri = normalizeMediaUrl(item.imageUrl || item.image);
                     const isBrokenImage = !!brokenPostImages[item.id];
                     
                     return (

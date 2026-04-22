@@ -55,6 +55,20 @@ function roundMoney(n) {
   return Math.round(Number(n) * 100) / 100;
 }
 
+/**
+ * Texte issu du contractPayload (mobile / JSON) : évite TypeError si la valeur est un nombre
+ * alors que l’ancien code appelait .trim() directement (ex. notes, financialClause).
+ */
+function payloadText(v) {
+  if (v == null) return null;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    return t === '' ? null : t;
+  }
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return null;
+}
+
 function contentWidth(doc) {
   return doc.page.width - doc.page.margins.left - doc.page.margins.right;
 }
@@ -131,9 +145,9 @@ async function generateDjContractPdf({
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = paymentTermsLabel(payload.paymentTerms);
     const cancellation = resolveCancellation(payload.cancellation);
-    const notes = payload.notes?.trim() || null;
-    const equipment = payload.equipment?.trim() || null;
-    const eventEnd = payload.eventEnd?.trim() || null;
+    const notes = payloadText(payload.notes);
+    const equipment = payloadText(payload.equipment);
+    const eventEnd = payloadText(payload.eventEnd);
 
     const feeNox = amount != null ? roundMoney(Number(amount) * NOX_DJ_COMMISSION_RATE) : null;
     const feeTotal =
@@ -343,19 +357,20 @@ async function generateVenueContractPdf({
     const depositPercent = payload.depositPercent ?? null;
     const paymentTerms = paymentTermsLabel(payload.paymentTerms);
     const cancellation = resolveCancellation(payload.cancellation);
-    const notes = payload.notes?.trim() || null;
-    const eventEnd = payload.eventEnd?.trim() || null;
-    const equipmentVenue = payload.equipmentVenue?.trim() || payload.equipment_venue?.trim() || null;
+    const notes = payloadText(payload.notes);
+    const eventEnd = payloadText(payload.eventEnd);
+    const equipmentVenue = payloadText(payload.equipmentVenue) || payloadText(payload.equipment_venue);
     const equipmentOrganizer =
-      payload.equipmentOrganizer?.trim() || payload.equipment_organizer?.trim() || null;
-    const customTerms = payload.customTerms?.trim() || payload.custom_terms?.trim() || notes;
+      payloadText(payload.equipmentOrganizer) || payloadText(payload.equipment_organizer);
+    const customTerms = payloadText(payload.customTerms) || payloadText(payload.custom_terms) || notes;
 
     const splitBarOrg = numPayload(payload, 'splitBarOrg', 'split_bar_org');
     const splitBarVenue = numPayload(payload, 'splitBarVenue', 'split_bar_venue');
     const splitTicketOrg = numPayload(payload, 'splitTicketOrg', 'split_ticket_org');
     const splitTicketVenue = numPayload(payload, 'splitTicketVenue', 'split_ticket_venue');
     const minimumGuarantee = numPayload(payload, 'minimumGuarantee', 'minimum_guarantee');
-    const splitTerms = payload.splitTerms?.trim() || payload.split_terms?.trim() || '—';
+    const splitTerms =
+      payloadText(payload.splitTerms) || payloadText(payload.split_terms) || '—';
 
     const venueProfile = resolveVenueProfileForVenueContract(event, venue, eventVenue);
 
@@ -414,8 +429,9 @@ async function generateVenueContractPdf({
 
     titleLine(doc, 'Article 2 — Conditions financières', 11);
     p(doc, 'Les parties conviennent des modalités suivantes :');
-    if (payload.financialClause?.trim()) {
-      p(doc, payload.financialClause.trim());
+    const financialClause = payloadText(payload.financialClause);
+    if (financialClause) {
+      p(doc, financialClause);
       doc.moveDown(0.35);
     }
 

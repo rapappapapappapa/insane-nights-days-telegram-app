@@ -1007,7 +1007,7 @@ app.post('/api/contracts/event-djs/:eventDjId/preview-pdf', authenticateToken, a
       pdfBase64: pdfBuffer.toString('base64'),
     });
   } catch (e) {
-    console.error('Erreur preview PDF contrat DJ:', e);
+    console.error('Erreur preview PDF contrat DJ:', e?.message || e, e?.stack);
     res.status(500).json({ success: false, message: 'Erreur génération PDF' });
   }
 });
@@ -1344,7 +1344,7 @@ app.post('/api/contracts/event-venues/:eventVenueId/preview-pdf', authenticateTo
       pdfBase64: pdfBuffer.toString('base64'),
     });
   } catch (e) {
-    console.error('Erreur preview PDF contrat lieu:', e);
+    console.error('Erreur preview PDF contrat lieu:', e?.message || e, e?.stack);
     res.status(500).json({ success: false, message: 'Erreur génération PDF' });
   }
 });

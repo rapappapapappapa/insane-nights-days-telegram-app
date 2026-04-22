@@ -6,6 +6,20 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 21 au 24 avril 2026 (mar. - ven.)
 
+### Corrigé (client mobile — stabilité & feed)
+- **Crash au lancement** (« Oups ! Une erreur est survenue » / ErrorBoundary) : **`WelcomePage`** et **`FeedPage`** utilisaient encore **`useFocusEffect`** sans import valide et sans **`NavigationContainer`** (navigation custom). Bloc retiré ; **cache-bust** des avatars sur **pull-to-refresh** (`fetchFeed(true)`) ; **`HomePage`** alignée.
+- **Changement de profil** : **`api/methods/coreAuth.js`** — ajout des imports **`logger`** et **`apiCache`** utilisés dans **`switchProfile`** (invalidation cache après succès), supprimant l’erreur du type *property 'logger' doesn't exist*.
+- **Création de post avec image** : **`CreateFeedPostPage`** — import **`Toast`** en **export default** (plus de **`{ Toast }`**) ; correction de l’erreur *Element type is invalid… undefined* à l’affichage du toast.
+- **Upload image feed** : **`api/methods/feed.js`** — import **`logger`** pour **`uploadFeedPostImage`** (logs / catch cohérents avec le reste de la couche API).
+- **Toasts invisibles** : **`DrawerContent`** (OTA, erreurs menu) et **`RatingModal`** — montage du composant **`Toast`** + **`hideToast`** ; fragment JSX corrigé dans **`RatingModal`**.
+
+### Modifié (client mobile — affichage des images de posts)
+- **`api/normalizeMediaUrl.js`** : pour les URLs **`/uploads/`**, réécriture vers l’origine de **`API_CONFIG.BASE_URL`** lorsque l’hôte est **`localhost` / `127.0.0.1`** ou différent de l’API (fichiers servis par le backend, inaccessibles depuis le téléphone avec une ancienne base d’URL). **`trim`** des chaînes ; logique tunnel **`trycloudflare.com`** conservée.
+- **`HomePage`**, **`WelcomePage`**, **`FeedPage`** : image de post **`normalizeMediaUrl(item.imageUrl || item.image)`** pour tolérer un éventuel champ **`image`**.
+
+### Note (hors code)
+- **Build iOS / EAS** : erreur Apple **403 — PLA Update available** : acceptation du **Program License Agreement** (et accords App Store Connect en attente) sur le compte **Apple Developer** / **Account Holder** ; pas de correctif dans le dépôt.
+
 ### Modifié (refactor — dette technique)
 - **Client mobile — couche API** : le monolithe `api/config.js` est découpé en **`endpointsConfig.js`**, **`http.js`** (requêtes, cache, retry), **`normalizeMediaUrl.js`**, **`apiMethods.js`** (assembleur) et le dossier **`api/methods/`** (`coreAuth`, `emailPassword`, `profiles`, `bookerEvents`, `bookerStaff`, `chat`, `feed`, `admin`). Les imports applicatifs restent **`from '.../api/config'`** ; comportement des appels inchangé.
 - **`getBookerProfile`** : utilise directement **`apiRequest(USER_PROFILES)`** au lieu de **`api.getUserProfiles`** (suppression de la dépendance circulaire lors du chargement du module).

@@ -4,6 +4,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 28 au 30 avril 2026 (mar. – jeu.)
+
+### Corrigé (serveur — prévisualisation PDF contrats / chat)
+- **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).
+- **`server/routes/registerBookerOrganizerRoutes.js`** : logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.
+
+### Modifié (config build)
+- **`insane-nights-days-mobile/app.json`** : **`ios.buildNumber`** porté à **4**.
+
+---
+
 ## Semaine du 21 au 24 avril 2026 (mar. - ven.)
 
 ### Corrigé (client mobile — stabilité & feed)

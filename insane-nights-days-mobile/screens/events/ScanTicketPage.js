@@ -24,6 +24,19 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 
+const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
+const SCAN_ANY_DAY_TEST_STORAGE = '@nox_scan_test_any_day';
+
+/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Vide en prod → pas d’UI de test réelle sans __DEV__. */
+const SCAN_TEST_SECRET = (process.env.EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET || '').trim();
+
+function shouldShowScanTestToggle() {
+  if (__DEV__) return true;
+  const flag = process.env.EXPO_PUBLIC_ENABLE_SCAN_TEST_TOGGLE;
+  if (flag === '1' || flag === 'true') return true;
+  return SCAN_TEST_SECRET.length >= 8;
+}
+
 export default function ScanTicketPage() {
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();

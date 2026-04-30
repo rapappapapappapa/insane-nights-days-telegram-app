@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 28 au 30 avril 2026 (mar. – jeu.)
 
+### Modifié (client mobile — Android, aperçu PDF contrat)
+- **PDF.js hors ligne** : plus de chargement depuis jsDelivr dans **`ContractPdfPreviewModal`** — bundles **`pdfjs-dist`** embarqués dans **`assets/pdfjs/`** (extensions **`.pdfjs`**), **`metro.config.js`** (`assetExts`), script **`scripts/copy-pdfjs-assets.js`** exécuté en **`postinstall`** ; copie unique vers le cache Expo puis **`file://`** pour le worker et le rendu canvas (texte d’aide **`pdfOfflineHint`** aligné sur l’embarqué).
+
 ### Corrigé (serveur — prévisualisation PDF contrats / chat)
 - **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).
 - **`server/routes/registerBookerOrganizerRoutes.js`** : logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.

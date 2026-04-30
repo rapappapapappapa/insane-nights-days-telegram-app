@@ -12,9 +12,16 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Sharing from 'expo-sharing';
+import { Asset } from 'expo-asset';
 // Expo SDK 54+ : l’API « default » ne fournit plus writeAsStringAsync (elle throw). Utiliser legacy.
 import * as FileSystem from 'expo-file-system/legacy';
 import Colors from '../constants/colors';
+
+/** Version alignée sur pdfjs-dist / assets/pdfjs — invalide le cache si on upgrade PDF.js */
+const PDFJS_ANDROID_ASSET_VERSION = '3.11.174';
+
+/** Base `file://.../nox-pdfjs-x/` une fois les bundles copiés dans le cache (Android). */
+let androidPdfScriptsDirUrl = null;
 
 function normalizePdfBase64(raw) {
   if (raw == null || typeof raw !== 'string') return '';
@@ -44,12 +51,14 @@ function buildPdfPreviewHtmlEmbeddedBase64(base64) {
 </html>`;
 }
 
-/** PDF.js (canvas) — le WebView Android ne rend souvent pas les PDF dans un iframe / data URL (écran gris). */
-const PDFJS_LEGACY = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js';
-const PDFJS_WORKER = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
-
-function buildPdfPreviewHtmlPdfJs(base64) {
+/**
+ * PDF.js (canvas) — scripts chargés en local depuis file:// (bundles embarqués, pas de CDN).
+ * @param {string} base64 - PDF en base64
+ * @param {string} scriptsDirUrl - URL du dossier avec pdf.min.js et pdf.worker.min.js (slash final)
+ */
+function buildPdfPreviewHtmlPdfJsLocal(base64, scriptsDirUrl) {
   const b64literal = JSON.stringify(base64);
+  const baseLiteral = JSON.stringify(scriptsDirUrl);
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -63,7 +72,6 @@ function buildPdfPreviewHtmlPdfJs(base64) {
     #err { color: #ff8a80; padding: 16px; font: 14px/1.4 system-ui, sans-serif; display: none; white-space: pre-wrap; }
     #loading { color: rgba(255,255,255,0.55); text-align: center; padding: 24px; font: 14px system-ui, sans-serif; }
   </style>
-  <script src="${PDFJS_LEGACY}"></script>
 </head>
 <body>
   <div id="err"></div>
@@ -71,6 +79,7 @@ function buildPdfPreviewHtmlPdfJs(base64) {
   <div id="root"></div>
   <script>
     (function () {
+      var scriptsBase = ${baseLiteral};
       var b64 = ${b64literal};
       var root = document.getElementById('root');
       var errEl = document.getElementById('err');
@@ -83,46 +92,93 @@ function buildPdfPreviewHtmlPdfJs(base64) {
       function showErr(e) {
         fail((e && e.message) ? String(e.message) : String(e));
       }
-      try {
-        if (typeof pdfjsLib === 'undefined') {
-          fail('PDF.js indisponible (réseau ?).');
-          return;
-        }
-        pdfjsLib.GlobalWorkerOptions.workerSrc = ${JSON.stringify(PDFJS_WORKER)};
-        var bin = atob(b64);
-        var len = bin.length;
-        var bytes = new Uint8Array(len);
-        for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-        pdfjsLib.getDocument({ data: bytes }).promise.then(function (pdf) {
-          var n = pdf.numPages;
-          return pdf.getPage(1).then(function (firstPage) {
-            var pageW = firstPage.getViewport({ scale: 1 }).width;
-            var scale = Math.min(Math.max((window.innerWidth - 24) / pageW, 0.85), 2.2);
-            loadEl.style.display = 'none';
-            function pageLoop(p) {
-              if (p > n) return Promise.resolve();
-              return pdf.getPage(p).then(function (page) {
-                var vp = page.getViewport({ scale: scale });
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-                canvas.width = vp.width;
-                canvas.height = vp.height;
-                root.appendChild(canvas);
-                return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
-                  return pageLoop(p + 1);
+      function runPdf() {
+        try {
+          if (typeof pdfjsLib === 'undefined') {
+            fail('PDF.js indisponible.');
+            return;
+          }
+          pdfjsLib.GlobalWorkerOptions.workerSrc = scriptsBase + 'pdf.worker.min.js';
+          var bin = atob(b64);
+          var len = bin.length;
+          var bytes = new Uint8Array(len);
+          for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+          pdfjsLib.getDocument({ data: bytes }).promise.then(function (pdf) {
+            var n = pdf.numPages;
+            return pdf.getPage(1).then(function (firstPage) {
+              var pageW = firstPage.getViewport({ scale: 1 }).width;
+              var scale = Math.min(Math.max((window.innerWidth - 24) / pageW, 0.85), 2.2);
+              loadEl.style.display = 'none';
+              function pageLoop(p) {
+                if (p > n) return Promise.resolve();
+                return pdf.getPage(p).then(function (page) {
+                  var vp = page.getViewport({ scale: scale });
+                  var canvas = document.createElement('canvas');
+                  var ctx = canvas.getContext('2d');
+                  canvas.width = vp.width;
+                  canvas.height = vp.height;
+                  root.appendChild(canvas);
+                  return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+                    return pageLoop(p + 1);
+                  });
                 });
-              });
-            }
-            return pageLoop(1);
-          });
-        }).catch(showErr);
-      } catch (e) {
-        showErr(e);
+              }
+              return pageLoop(1);
+            });
+          }).catch(showErr);
+        } catch (e) {
+          showErr(e);
+        }
       }
+      var s = document.createElement('script');
+      s.src = scriptsBase + 'pdf.min.js';
+      s.onload = runPdf;
+      s.onerror = function () { fail('Impossible de charger PDF.js (fichiers locaux).'); };
+      document.head.appendChild(s);
     })();
   </script>
 </body>
 </html>`;
+}
+
+/**
+ * Copie une fois (par version) les bundles PDF.js depuis les assets Expo vers le cache,
+ * pour que le WebView puisse les charger en file://.
+ */
+async function ensureAndroidPdfJsScriptsInCache() {
+  if (androidPdfScriptsDirUrl) return androidPdfScriptsDirUrl;
+
+  const cacheRoot = FileSystem.cacheDirectory;
+  if (!cacheRoot) {
+    throw new Error('cacheDirectory indisponible');
+  }
+
+  const basePath = cacheRoot.endsWith('/') ? cacheRoot : `${cacheRoot}/`;
+  const targetDir = `${basePath}nox-pdfjs-${PDFJS_ANDROID_ASSET_VERSION}/`;
+  await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+
+  const mainDest = `${targetDir}pdf.min.js`;
+  const workerDest = `${targetDir}pdf.worker.min.js`;
+  const mainInfo = await FileSystem.getInfoAsync(mainDest);
+  const workerInfo = await FileSystem.getInfoAsync(workerDest);
+
+  if (!mainInfo.exists || !workerInfo.exists) {
+    if (mainInfo.exists) await FileSystem.deleteAsync(mainDest, { idempotent: true });
+    if (workerInfo.exists) await FileSystem.deleteAsync(workerDest, { idempotent: true });
+    const mainAsset = Asset.fromModule(require('../assets/pdfjs/pdf.min.pdfjs'));
+    const workerAsset = Asset.fromModule(require('../assets/pdfjs/pdf.worker.min.pdfjs'));
+    await mainAsset.downloadAsync();
+    await workerAsset.downloadAsync();
+    if (!mainAsset.localUri || !workerAsset.localUri) {
+      throw new Error('Asset PDF.js sans localUri');
+    }
+    await FileSystem.copyAsync({ from: mainAsset.localUri, to: mainDest });
+    await FileSystem.copyAsync({ from: workerAsset.localUri, to: workerDest });
+  }
+
+  const fileUrlBase = targetDir.startsWith('file://') ? targetDir : `file://${targetDir}`;
+  androidPdfScriptsDirUrl = fileUrlBase.endsWith('/') ? fileUrlBase : `${fileUrlBase}/`;
+  return androidPdfScriptsDirUrl;
 }
 
 /**
@@ -211,13 +267,14 @@ export default function ContractPdfPreviewModal({
       }
       setFilePreparing(true);
       try {
-        // Android : iframe data: PDF → écran gris sur Chrome WebView ; rendu canvas via PDF.js + CDN.
+        // Android : iframe data: PDF → écran gris sur Chrome WebView ; PDF.js embarqué (file://) + canvas.
         if (Platform.OS === 'android') {
+          const scriptsBase = await ensureAndroidPdfJsScriptsInCache();
           if (!cancelled) {
             setWebSource({
               type: 'html',
-              html: buildPdfPreviewHtmlPdfJs(clean),
-              baseUrl: 'https://localhost',
+              html: buildPdfPreviewHtmlPdfJsLocal(clean, scriptsBase),
+              baseUrl: scriptsBase,
             });
           }
           return;
@@ -335,8 +392,8 @@ export default function ContractPdfPreviewModal({
           {Platform.OS === 'android' && pdfBase64 && !loading ? (
             <Text style={styles.pdfOfflineHint}>
               {language === 'fr'
-                ? 'L’aperçu charge PDF.js depuis Internet. Sans connexion ou si l’écran reste vide, utilisez le bouton ci-dessous pour ouvrir le fichier.'
-                : 'Preview loads PDF.js from the internet. If offline or the screen stays blank, use the button below to open the file.'}
+                ? 'L’aperçu utilise PDF.js fourni avec l’app (pas besoin d’Internet). Si l’écran reste vide, utilisez le bouton ci-dessous pour ouvrir le fichier.'
+                : 'Preview uses the app-bundled PDF.js (no internet required). If the screen stays blank, use the button below to open the file.'}
             </Text>
           ) : null}
           {pdfBase64 && !loading ? (

@@ -257,6 +257,7 @@ require('./routes/registerTicketsAndPayments')(app, {
   uuidv4,
   stripe,
   stripeSecretKey,
+  stripePublishableKey,
   stripeWebhookSecret,
   eurosToCents,
 });

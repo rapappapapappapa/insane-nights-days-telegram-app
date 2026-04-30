@@ -10,6 +10,7 @@ module.exports = function registerTicketsAndPaymentsRoutes(app, deps) {
     uuidv4,
     stripe,
     stripeSecretKey,
+    stripePublishableKey,
     stripeWebhookSecret,
     eurosToCents,
   } = deps;

@@ -50,11 +50,15 @@ export function createBookerStaffApiMethods({ apiRequest, getMimeType, getFileNa
       token
     );
   },
-  scanTicket: async (token, eventId, qrCode) => {
+  scanTicket: async (token, eventId, qrCode, opts = {}) => {
     if (!token) throw new Error('Token requis.');
+    const body = { qrCode };
+    if (opts.scanTestSecret && String(opts.scanTestSecret).length >= 8) {
+      body.scanTestSecret = String(opts.scanTestSecret);
+    }
     return apiRequest(
       `${API_CONFIG.ENDPOINTS.SCAN_TICKET}/${eventId}/scan-ticket`,
-      { method: 'POST', body: JSON.stringify({ qrCode }) },
+      { method: 'POST', body: JSON.stringify(body) },
       token
     );
   },

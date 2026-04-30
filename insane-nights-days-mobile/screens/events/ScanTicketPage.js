@@ -2,14 +2,14 @@
  * Page Scan QR - Scanner les billets (booker ou staff)
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
+  Switch,
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
@@ -38,6 +38,30 @@ export default function ScanTicketPage() {
   const [scanning, setScanning] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const showTestToggle = shouldShowScanTestToggle();
+  const [scanAnyDayTest, setScanAnyDayTest] = useState(false);
+
+  useEffect(() => {
+    if (!showTestToggle) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem(SCAN_ANY_DAY_TEST_STORAGE);
+        if (!cancelled) setScanAnyDayTest(v === '1');
+      } catch (_) {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showTestToggle]);
+
+  const persistScanTestToggle = async (on) => {
+    setScanAnyDayTest(on);
+    try {
+      if (on) await AsyncStorage.setItem(SCAN_ANY_DAY_TEST_STORAGE, '1');
+      else await AsyncStorage.removeItem(SCAN_ANY_DAY_TEST_STORAGE);
+    } catch (_) {}
+  };
 
   const fr = language === 'fr';
 
@@ -53,7 +77,11 @@ export default function ScanTicketPage() {
           qrCode = parsed.qrCode || parsed.data || data;
         } catch {}
       }
-      const res = await api.scanTicket(user.token, eventId, qrCode);
+      const scanOpts =
+        showTestToggle && scanAnyDayTest && SCAN_TEST_SECRET.length >= 8
+          ? { scanTestSecret: SCAN_TEST_SECRET }
+          : {};
+      const res = await api.scanTicket(user.token, eventId, qrCode, scanOpts);
       if (res?.success && res.valid) {
         try {
           await AsyncStorage.setItem(BOOKER_EVENTS_REFRESH_FLAG, '1');
@@ -129,6 +157,37 @@ export default function ScanTicketPage() {
         <View style={styles.headerBtn} />
       </View>
 
+      {showTestToggle ? (
+        <View style={styles.testModeRow}>
+          <View style={styles.testModeTextCol}>
+            <Text style={styles.testModeTitle}>
+              {fr ? 'Test : scan hors jour événement' : 'Test: scan any event day'}
+            </Text>
+            <Text style={styles.testModeHint}>
+              {SCAN_TEST_SECRET.length >= 8
+                ? fr
+                  ? 'Active seulement si SCAN_TICKET_TEST_SECRET côté API correspond à la clé Expo.'
+                  : 'Only works if server SCAN_TICKET_TEST_SECRET matches the Expo key.'
+                : fr
+                  ? 'Ajoute EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET (≥ 8 car.) et la même valeur en SCAN_TICKET_TEST_SECRET sur le serveur.'
+                  : 'Set EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET (≥ 8 chars) and SCAN_TICKET_TEST_SECRET on the server.'}
+            </Text>
+          </View>
+          <Switch
+            value={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8}
+            onValueChange={(v) => {
+              if (SCAN_TEST_SECRET.length < 8) return;
+              persistScanTestToggle(v);
+            }}
+            trackColor={{ false: 'rgba(255,255,255,0.2)', true: 'rgba(255,23,68,0.45)' }}
+            thumbColor={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8 ? Colors.primary : '#888'}
+            disabled={SCAN_TEST_SECRET.length < 8}
+            accessibilityRole="switch"
+            accessibilityLabel={fr ? 'Autoriser le scan test hors jour' : 'Allow test scan any day'}
+          />
+        </View>
+      ) : null}
+
       <View style={styles.cameraWrapper}>
         <CameraView
           style={styles.camera}
@@ -177,6 +236,22 @@ const styles = StyleSheet.create({
   scanFrame: { position: 'absolute', top: '25%', left: '15%', right: '15%', height: 200, borderWidth: 2, borderColor: 'rgba(255,23,68,0.6)', borderRadius: 12 },
   footer: { padding: 20, backgroundColor: Colors.background },
   hint: { color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' },
+  testModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,193,7,0.12)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,193,7,0.35)',
+  },
+  testModeTextCol: { flex: 1 },
+  testModeTitle: { color: '#ffc107', fontSize: 13, fontWeight: '700' },
+  testModeHint: { color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 4, lineHeight: 15 },
   permissionText: { color: '#fff', fontSize: 16, textAlign: 'center', marginBottom: 20, paddingHorizontal: 20 },
   permissionBtn: { backgroundColor: Colors.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
   permissionBtnText: { color: Colors.background, fontSize: 16, fontWeight: '700' },

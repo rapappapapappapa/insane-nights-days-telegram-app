@@ -16,6 +16,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (serveur — billets / Stripe)
 - **`registerTicketsAndPayments`** : injection de **`stripePublishableKey`** depuis **`index.js`** dans **`deps`** (variable utilisée pour **`POST /api/payments/create-ticket-intent`** mais absente du module → **`ReferenceError`** et **500** « Erreur serveur » à l’achat).
 
+### Ajouté (scan billets — mode test « any day »)
+- **Serveur** : **`POST /api/events/:eventId/scan-ticket`** — si **`SCAN_TICKET_TEST_SECRET`** (≥ 8 car.) est défini et le body contient **`scanTestSecret`** identique, la contrainte **jour de l’événement** est contournée (en complément de **`SCAN_TICKET_ALLOW_ANY_DAY`** / **`ONGOING`** / même jour UTC). Documenté dans **`server/env.example.txt`**.
+- **Mobile** : **`ScanTicketPage`** — interrupteur *« Test : scan hors jour événement »* (visible en **`__DEV__`**, ou si **`EXPO_PUBLIC_ENABLE_SCAN_TEST_TOGGLE`**, ou si **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** ≥ 8 car.) ; envoi du secret via **`api.scanTicket`** ; persistance AsyncStorage ; correction constante **`BOOKER_EVENTS_REFRESH_FLAG`** pour le refresh dashboard. **`docs/FEATURE_STAFF_QR.md`** mis à jour.
+
 ### Corrigé (serveur — prévisualisation PDF contrats / chat)
 - **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).
 - **`server/routes/registerBookerOrganizerRoutes.js`** : **`require('../utils/contractPreview')`** et **`require('../utils/contractEmail')`** (chemins corrects depuis **`routes/`** ; **`./utils/...`** provoquait **`MODULE_NOT_FOUND`**, **500** sur **`POST …/preview-pdf`** et e-mails contrat signé). Logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.

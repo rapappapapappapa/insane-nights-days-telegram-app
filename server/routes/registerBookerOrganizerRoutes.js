@@ -576,7 +576,16 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
       eventDate.getUTCMonth() === now.getUTCMonth() &&
       eventDate.getUTCDate() === now.getUTCDate();
     const scanTicketAllowAnyDay = (process.env.SCAN_TICKET_ALLOW_ANY_DAY || '').toLowerCase() === 'true';
-    const allowScanByWindow = scanTicketAllowAnyDay || event.status === 'ONGOING' || sameDay;
+    // Phase de test : même effet que ALLOW_ANY_DAY si le client envoie scanTestSecret identique à SCAN_TICKET_TEST_SECRET (≥ 8 car.).
+    const serverTestSecret = process.env.SCAN_TICKET_TEST_SECRET;
+    const clientTestSecret = req.body?.scanTestSecret;
+    const allowByTestSecret =
+      typeof serverTestSecret === 'string' &&
+      serverTestSecret.length >= 8 &&
+      typeof clientTestSecret === 'string' &&
+      clientTestSecret === serverTestSecret;
+    const allowScanByWindow =
+      scanTicketAllowAnyDay || allowByTestSecret || event.status === 'ONGOING' || sameDay;
     if (!allowScanByWindow) {
       return res.status(400).json({
         success: false,

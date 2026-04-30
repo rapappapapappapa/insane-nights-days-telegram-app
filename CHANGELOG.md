@@ -11,6 +11,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Modifié (client mobile — wizard « Créer un événement » booker)
 - **`BookerEventDashboardPage`** : brouillon AsyncStorage **rechargé sans alerte** (plus de dialogue *Brouillon / Reprendre / Effacer / Plus tard*) ; lien **« Nouvel événement — effacer le brouillon »** sous l’aide d’étapes → reset du formulaire, suppression de la clé locale, toast de confirmation (FR/EN) ; après **`createEvent`** réussi, le brouillon est **systématiquement** effacé du stockage (comportement explicite dans le code).
+- **Sélection DJ / lieu dans le wizard** : correction d’une **course critique** au retour depuis le profil — **`applyEventDraft`** ne s’exécute plus si **`routeParams`** indiquent un retour sélection (**`isReturnFromVenueOrDjPicker`**) ; l’init des **créneaux** à l’étape 3 ignore ce retour pour ne pas écraser le **`useLayoutEffect`** ; **`hasInitializedSlots`** est posé après application DJ depuis les **`routeParams`** (évite la perte du DJ choisi).
 
 ### Corrigé (serveur — prévisualisation PDF contrats / chat)
 - **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).

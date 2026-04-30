@@ -135,6 +135,22 @@ function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
   return Math.min(5, Math.max(1, c));
 }
 
+/** Retour depuis profil lieu/DJ : ne pas réappliquer le JSON AsyncStorage (écraserait la sélection en cours). */
+function isReturnFromVenueOrDjPicker(rp) {
+  if (!rp || typeof rp !== 'object') return false;
+  const a = rp.action;
+  if (
+    rp.selectedVenueId &&
+    (a === 'select' || a === 'replaceVenue' || a === 'remove')
+  ) {
+    return true;
+  }
+  if (rp.selectedDjId && (a === 'add' || a === 'remove')) {
+    return true;
+  }
+  return false;
+}
+
 function parseHM(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -340,25 +356,29 @@ export default function BookerEventDashboardPage() {
     }
   }, [formData.date, currentStep, user?.token]);
 
-  // Initialiser les slots seulement la première fois qu'on arrive à l'étape 3
+  // Initialiser les slots au premier passage à l’étape 3 (jamais depuis formData périmé si retour profil DJ/lieu).
   useEffect(() => {
-    if (currentStep === 3 && !hasInitializedSlots.current) {
-      if (formData.djIds.length > 0) {
-        const assigns = formData.djSlotAssignments || [];
-        setDjSlots([
-          ...formData.djIds.map((id, i) => ({
-            djId: id,
-            slotStart: assigns[i]?.slotStart || '',
-            slotEnd: assigns[i]?.slotEnd || '',
-          })),
-          emptyDjSlot(),
-        ]);
-      }
-      hasInitializedSlots.current = true;
-    } else if (currentStep !== 3) {
+    if (currentStep !== 3) {
       hasInitializedSlots.current = false;
+      return;
     }
-  }, [currentStep]);
+    if (hasInitializedSlots.current) return;
+    if (isReturnFromVenueOrDjPicker(routeParams)) {
+      return;
+    }
+    if (formData.djIds.length > 0) {
+      const assigns = formData.djSlotAssignments || [];
+      setDjSlots([
+        ...formData.djIds.map((id, i) => ({
+          djId: id,
+          slotStart: assigns[i]?.slotStart || '',
+          slotEnd: assigns[i]?.slotEnd || '',
+        })),
+        emptyDjSlot(),
+      ]);
+    }
+    hasInitializedSlots.current = true;
+  }, [currentStep, formData.djIds, formData.djSlotAssignments, routeParams]);
 
   // Gérer les sélections depuis routeParams
   React.useLayoutEffect(() => {
@@ -388,6 +408,8 @@ export default function BookerEventDashboardPage() {
         djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
       }));
     };
+
+    let appliedDjFromRoute = false;
 
     // Sélection de DJ
     if (currentDjId && currentAction === 'add') {
@@ -435,6 +457,7 @@ export default function BookerEventDashboardPage() {
         }
         setCurrentStep(4);
       }
+      appliedDjFromRoute = true;
     } else if (currentDjId && currentAction === 'remove') {
       const dur = parseFloat(formData.durationHours);
       const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
@@ -450,6 +473,11 @@ export default function BookerEventDashboardPage() {
       } else {
         removeDj(currentDjId);
       }
+      appliedDjFromRoute = true;
+    }
+
+    if (appliedDjFromRoute) {
+      hasInitializedSlots.current = true;
     }
     
     // Sélection de lieu (replaceVenue = remplacement depuis un événement existant)
@@ -587,7 +615,10 @@ export default function BookerEventDashboardPage() {
           setDraftGate(false);
           return;
         }
-        applyEventDraft(d);
+        // Retour liste / profil lieu ou DJ : le contexte + routeParams sont la source de vérité (évite d’écraser les slots).
+        if (!isReturnFromVenueOrDjPicker(routeParams)) {
+          applyEventDraft(d);
+        }
         if (!cancelled) setDraftGate(false);
       } catch (e) {
         console.warn('[EventDraft] load', e);

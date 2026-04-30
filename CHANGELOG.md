@@ -18,6 +18,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Ajouté (scan billets — mode test « any day »)
 - **Serveur** : **`POST /api/events/:eventId/scan-ticket`** — si **`SCAN_TICKET_TEST_SECRET`** (≥ 8 car.) est défini et le body contient **`scanTestSecret`** identique, la contrainte **jour de l’événement** est contournée (en complément de **`SCAN_TICKET_ALLOW_ANY_DAY`** / **`ONGOING`** / même jour UTC). Documenté dans **`server/env.example.txt`**.
+- **Serveur (Railway)** : si **`SCAN_TICKET_ALLOW_ANY_DAY`** est **absent**, le scan hors jour est **autorisé** lorsque l’API tourne sur Railway (détection **`RAILWAY_PUBLIC_DOMAIN`** / **`RAILWAY_ENVIRONMENT`** / **`RAILWAY_SERVICE_NAME`**) ; en **local** sans ces variables, comportement **strict** (sauf secret test / **`ONGOING`** / même jour UTC). **`SCAN_TICKET_ALLOW_ANY_DAY=false`** dans les variables Railway restaure la contrainte jour.
 - **Mobile** : **`ScanTicketPage`** — interrupteur *« Test : scan hors jour événement »* (visible en **`__DEV__`**, ou si **`EXPO_PUBLIC_ENABLE_SCAN_TEST_TOGGLE`**, ou si **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** ≥ 8 car.) ; envoi du secret via **`api.scanTicket`** ; persistance AsyncStorage ; correction constante **`BOOKER_EVENTS_REFRESH_FLAG`** pour le refresh dashboard. **`docs/FEATURE_STAFF_QR.md`** mis à jour.
 
 ### Corrigé (client mobile — scan billets)

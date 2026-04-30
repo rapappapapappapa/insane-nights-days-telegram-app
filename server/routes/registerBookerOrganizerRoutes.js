@@ -568,14 +568,23 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     const myCommunity = await prisma.userCommunity.findFirst({ where: { userId: req.user.id } });
     const isStaff = myCommunity && event.eventStaff.some((s) => s.communityId === myCommunity.id && s.role === 'STAFF_SCAN');
     if (!isBooker && !isStaff) return res.status(403).json({ success: false, message: 'Seul l\'organisateur ou le staff peut scanner.' });
-    // Fenêtre de scan : même jour calendaire (UTC) que l'événement, OU événement déjà en cours, OU override dev (SCAN_TICKET_ALLOW_ANY_DAY=true)
+    // Fenêtre de scan : même jour UTC, OU ONGOING, OU SCAN_TICKET_ALLOW_ANY_DAY (explicite), OU défaut Railway si var absente, OU scanTestSecret
     const eventDate = new Date(event.date);
     const now = new Date();
     const sameDay =
       eventDate.getUTCFullYear() === now.getUTCFullYear() &&
       eventDate.getUTCMonth() === now.getUTCMonth() &&
       eventDate.getUTCDate() === now.getUTCDate();
-    const scanTicketAllowAnyDay = (process.env.SCAN_TICKET_ALLOW_ANY_DAY || '').toLowerCase() === 'true';
+    const rawAllowAnyDay = process.env.SCAN_TICKET_ALLOW_ANY_DAY;
+    const deployedOnRailway = Boolean(
+      process.env.RAILWAY_PUBLIC_DOMAIN ||
+        process.env.RAILWAY_ENVIRONMENT ||
+        process.env.RAILWAY_SERVICE_NAME,
+    );
+    const scanTicketAllowAnyDay =
+      rawAllowAnyDay !== undefined && String(rawAllowAnyDay).trim() !== ''
+        ? String(rawAllowAnyDay).toLowerCase() === 'true'
+        : deployedOnRailway;
     // Phase de test : même effet que ALLOW_ANY_DAY si le client envoie scanTestSecret identique à SCAN_TICKET_TEST_SECRET (≥ 8 car.).
     const serverTestSecret = process.env.SCAN_TICKET_TEST_SECRET;
     const clientTestSecret = req.body?.scanTestSecret;

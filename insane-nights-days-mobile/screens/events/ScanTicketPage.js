@@ -27,14 +27,17 @@ import { Ionicons } from '@expo/vector-icons';
 const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
 const SCAN_ANY_DAY_TEST_STORAGE = '@nox_scan_test_any_day';
 
-/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Vide en prod → pas d’UI de test réelle sans __DEV__. */
+/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Sans ça, le switch reste désactivé mais le bandeau reste visible (build prod). */
 const SCAN_TEST_SECRET = (process.env.EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET || '').trim();
 
+/**
+ * Bandeau « test scan hors jour » : visible par défaut (seuls orga/staff ouvrent cet écran).
+ * Masquer en prod finale : EXPO_PUBLIC_HIDE_SCAN_TEST_UI=true
+ */
 function shouldShowScanTestToggle() {
-  if (__DEV__) return true;
-  const flag = process.env.EXPO_PUBLIC_ENABLE_SCAN_TEST_TOGGLE;
-  if (flag === '1' || flag === 'true') return true;
-  return SCAN_TEST_SECRET.length >= 8;
+  const hide = process.env.EXPO_PUBLIC_HIDE_SCAN_TEST_UI;
+  if (hide === '1' || hide === 'true') return false;
+  return true;
 }
 
 export default function ScanTicketPage() {

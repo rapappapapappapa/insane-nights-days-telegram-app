@@ -22,6 +22,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Corrigé (client mobile — scan billets)
 - **`ScanTicketPage`** : ouverture de l’écran → **ErrorBoundary** (*« Oups »*) causée par des identifiants manquants (**`shouldShowScanTestToggle`**, **`SCAN_TEST_SECRET`**, **`SCAN_ANY_DAY_TEST_STORAGE`**, **`BOOKER_EVENTS_REFRESH_FLAG`**) — déclarations rétablies en tête de fichier.
+- **Bandeau « test scan hors jour »** : invisible sur **build prod / OTA** car **`__DEV__`** était faux et aucune variable Expo n’était posée — le bandeau est **affiché par défaut** sur l’écran scan (interrupteur actif seulement si secret Expo + serveur alignés) ; masquage opt-in via **`EXPO_PUBLIC_HIDE_SCAN_TEST_UI=true`**.
 
 ### Corrigé (serveur — prévisualisation PDF contrats / chat)
 - **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).

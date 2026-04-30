@@ -1000,7 +1000,7 @@ app.post('/api/contracts/event-djs/:eventDjId/preview-pdf', authenticateToken, a
         payloadForPdf = rawPayload;
       }
     }
-    const { buildDjContractPreviewPdf } = require('./utils/contractPreview');
+    const { buildDjContractPreviewPdf } = require('../utils/contractPreview');
     const pdfBuffer = await buildDjContractPreviewPdf(prisma, ed, payloadForPdf);
     return res.json({
       success: true,
@@ -1246,7 +1246,7 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
 
     // Envoi du contrat par email aux deux parties une fois signé
     if (shouldSign) {
-      const { sendContractSignedEmailDj } = require('./utils/contractEmail');
+      const { sendContractSignedEmailDj } = require('../utils/contractEmail');
       sendContractSignedEmailDj(eventDjId).catch((err) => console.error('[contract] Email:', err));
     }
 
@@ -1337,7 +1337,7 @@ app.post('/api/contracts/event-venues/:eventVenueId/preview-pdf', authenticateTo
         payloadForPdf = rawPayload;
       }
     }
-    const { buildVenueContractPreviewPdf } = require('./utils/contractPreview');
+    const { buildVenueContractPreviewPdf } = require('../utils/contractPreview');
     const pdfBuffer = await buildVenueContractPreviewPdf(prisma, full, payloadForPdf);
     return res.json({
       success: true,
@@ -1477,7 +1477,7 @@ app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, 
 
     // Envoi du contrat par email aux deux parties une fois signé
     if (shouldSign) {
-      const { sendContractSignedEmailVenue } = require('./utils/contractEmail');
+      const { sendContractSignedEmailVenue } = require('../utils/contractEmail');
       sendContractSignedEmailVenue(eventVenueId).catch((err) => console.error('[contract] Email:', err));
     }
 

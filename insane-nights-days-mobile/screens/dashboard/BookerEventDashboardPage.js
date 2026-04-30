@@ -136,6 +136,22 @@ function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
   return Math.min(5, Math.max(1, c));
 }
 
+/** Retour depuis profil lieu/DJ vers le wizard (params posés par VenueProfilePage / DjProfilePage). */
+function isReturnFromVenueOrDjPicker(rp) {
+  if (!rp || typeof rp !== 'object') return false;
+  const a = rp.action;
+  if (
+    rp.selectedVenueId &&
+    (a === 'select' || a === 'replaceVenue' || a === 'remove')
+  ) {
+    return true;
+  }
+  if (rp.selectedDjId && (a === 'add' || a === 'remove')) {
+    return true;
+  }
+  return false;
+}
+
 function parseHM(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -215,6 +231,8 @@ export default function BookerEventDashboardPage() {
   const [creating, setCreating] = useState(false);
   /** Bloque la sauvegarde auto du brouillon tant que l’alerte « Reprendre ? » n’est pas tranchée. */
   const [draftGate, setDraftGate] = useState(true);
+  /** Évite une double alerte si `routeParams` change sans remonter depuis le picker. */
+  const draftResumePromptShownRef = useRef(false);
   const [postCreateModal, setPostCreateModal] = useState(null);
 
   // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
@@ -587,6 +605,18 @@ export default function BookerEventDashboardPage() {
           setDraftGate(false);
           return;
         }
+        // Retour sélection lieu/DJ : le wizard remonte avec des routeParams — reprendre le brouillon sans pop-up.
+        if (isReturnFromVenueOrDjPicker(routeParams)) {
+          applyEventDraft(d);
+          draftResumePromptShownRef.current = true;
+          setDraftGate(false);
+          return;
+        }
+        if (draftResumePromptShownRef.current) {
+          setDraftGate(false);
+          return;
+        }
+        draftResumePromptShownRef.current = true;
         Alert.alert(
           language === 'fr' ? 'Brouillon' : 'Draft',
           language === 'fr'
@@ -627,9 +657,7 @@ export default function BookerEventDashboardPage() {
     return () => {
       cancelled = true;
     };
-    // Une seule invite brouillon à l’entrée sur l’écran (applyEventDraft stable).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [routeParams, language, applyEventDraft]);
 
   const persistDraft = useCallback(async () => {
     try {

@@ -10,7 +10,6 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from 'react-native';
 import Colors from '../../constants/colors';
@@ -136,22 +135,6 @@ function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
   return Math.min(5, Math.max(1, c));
 }
 
-/** Retour depuis profil lieu/DJ vers le wizard (params posés par VenueProfilePage / DjProfilePage). */
-function isReturnFromVenueOrDjPicker(rp) {
-  if (!rp || typeof rp !== 'object') return false;
-  const a = rp.action;
-  if (
-    rp.selectedVenueId &&
-    (a === 'select' || a === 'replaceVenue' || a === 'remove')
-  ) {
-    return true;
-  }
-  if (rp.selectedDjId && (a === 'add' || a === 'remove')) {
-    return true;
-  }
-  return false;
-}
-
 function parseHM(str) {
   if (!str || typeof str !== 'string') return null;
   const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -229,10 +212,8 @@ export default function BookerEventDashboardPage() {
   const [loadingDjs, setLoadingDjs] = useState(false);
   const [loadingVenues, setLoadingVenues] = useState(false);
   const [creating, setCreating] = useState(false);
-  /** Bloque la sauvegarde auto du brouillon tant que l’alerte « Reprendre ? » n’est pas tranchée. */
+  /** Bloque la persistance auto jusqu’à la lecture AsyncStorage (évite d’écraser le brouillon au premier rendu). */
   const [draftGate, setDraftGate] = useState(true);
-  /** Évite une double alerte si `routeParams` change sans remonter depuis le picker. */
-  const draftResumePromptShownRef = useRef(false);
   const [postCreateModal, setPostCreateModal] = useState(null);
 
   // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
@@ -590,6 +571,7 @@ export default function BookerEventDashboardPage() {
     [setFormData, setEventDateTime, setCoverImageUri, routeParams]
   );
 
+  /** Brouillon : restauration silencieuse depuis AsyncStorage (pas d’alerte). */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -605,59 +587,17 @@ export default function BookerEventDashboardPage() {
           setDraftGate(false);
           return;
         }
-        // Retour sélection lieu/DJ : le wizard remonte avec des routeParams — reprendre le brouillon sans pop-up.
-        if (isReturnFromVenueOrDjPicker(routeParams)) {
-          applyEventDraft(d);
-          draftResumePromptShownRef.current = true;
-          setDraftGate(false);
-          return;
-        }
-        if (draftResumePromptShownRef.current) {
-          setDraftGate(false);
-          return;
-        }
-        draftResumePromptShownRef.current = true;
-        Alert.alert(
-          language === 'fr' ? 'Brouillon' : 'Draft',
-          language === 'fr'
-            ? 'Une création d’événement était en cours. Que veux-tu faire ?'
-            : 'An event draft was in progress. What would you like to do?',
-          [
-            {
-              text: language === 'fr' ? 'Plus tard' : 'Later',
-              style: 'cancel',
-              onPress: () => setDraftGate(false),
-            },
-            {
-              text: language === 'fr' ? 'Effacer' : 'Discard',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
-                } catch (e) {
-                  /* ignore */
-                }
-                setDraftGate(false);
-              },
-            },
-            {
-              text: language === 'fr' ? 'Reprendre' : 'Resume',
-              onPress: () => {
-                applyEventDraft(d);
-                setDraftGate(false);
-              },
-            },
-          ]
-        );
+        applyEventDraft(d);
+        if (!cancelled) setDraftGate(false);
       } catch (e) {
         console.warn('[EventDraft] load', e);
-        setDraftGate(false);
+        if (!cancelled) setDraftGate(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [routeParams, language, applyEventDraft]);
+  }, [routeParams, applyEventDraft]);
 
   const persistDraft = useCallback(async () => {
     try {
@@ -788,6 +728,28 @@ export default function BookerEventDashboardPage() {
     setTempSlotTime(d);
     setSlotTimePicker({ index: slotIndex, field });
   };
+
+  /** Formulaire vierge + suppression du brouillon local (sans alerte). */
+  const clearDraftAndRestartWizard = useCallback(async () => {
+    if (creating) return;
+    try {
+      await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+    resetForm();
+    setCurrentStep(1);
+    setDjSlots([emptyDjSlot()]);
+    hasInitializedSlots.current = false;
+    const now = new Date();
+    setTempDate(now);
+    setTempTime(now);
+    showSuccess(
+      language === 'fr'
+        ? 'Brouillon effacé. Tu peux créer un nouvel événement.'
+        : 'Draft cleared. You can create a new event.'
+    );
+  }, [creating, resetForm, language, showSuccess]);
 
   const handleCreateEvent = async () => {
     if (creating) return;
@@ -929,6 +891,7 @@ export default function BookerEventDashboardPage() {
       const localCover = coverImageUri;
       const newEventId = response.event?.id;
 
+      // Création réussie : toujours supprimer le brouillon local (ne pas le rouvrir au prochain accès).
       try {
         await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
       } catch (e) {
@@ -1021,6 +984,24 @@ export default function BookerEventDashboardPage() {
         </View>
 
         <Text style={styles.stepRequiredHint}>{stepRequirementsHint(currentStep, language)}</Text>
+
+        <TouchableOpacity
+          onPress={clearDraftAndRestartWizard}
+          disabled={creating}
+          style={[styles.startFreshLinkWrap, creating && styles.startFreshLinkWrapDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel={
+            language === 'fr'
+              ? 'Nouvel événement, effacer le brouillon sauvegardé'
+              : 'New event, clear saved draft'
+          }
+        >
+          <Text style={[styles.startFreshLinkText, creating && styles.startFreshLinkTextDisabled]}>
+            {language === 'fr'
+              ? 'Nouvel événement — effacer le brouillon'
+              : 'New event — clear draft'}
+          </Text>
+        </TouchableOpacity>
 
         <View style={styles.form}>
           {/* ÉTAPE 1: Date et Durée */}
@@ -2105,8 +2086,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 4,
     fontStyle: 'italic',
+  },
+  startFreshLinkWrap: {
+    alignSelf: 'center',
+    marginBottom: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  startFreshLinkWrapDisabled: {
+    opacity: 0.45,
+  },
+  startFreshLinkText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    textAlign: 'center',
+  },
+  startFreshLinkTextDisabled: {
+    color: 'rgba(255,255,255,0.4)',
   },
   costDisclaimer: {
     color: 'rgba(255,255,255,0.5)',

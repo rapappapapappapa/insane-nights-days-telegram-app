@@ -9,9 +9,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (client mobile — Android, aperçu PDF contrat)
 - **PDF.js hors ligne** : plus de chargement depuis jsDelivr dans **`ContractPdfPreviewModal`** — bundles **`pdfjs-dist`** embarqués dans **`assets/pdfjs/`** (extensions **`.pdfjs`**), **`metro.config.js`** (`assetExts`), script **`scripts/copy-pdfjs-assets.js`** exécuté en **`postinstall`** ; copie unique vers le cache Expo puis **`file://`** pour le worker et le rendu canvas (texte d’aide **`pdfOfflineHint`** aligné sur l’embarqué).
 
+### Modifié (client mobile — wizard « Créer un événement » booker)
+- **`BookerEventDashboardPage`** : brouillon AsyncStorage **rechargé sans alerte** (plus de dialogue *Brouillon / Reprendre / Effacer / Plus tard*) ; lien **« Nouvel événement — effacer le brouillon »** sous l’aide d’étapes → reset du formulaire, suppression de la clé locale, toast de confirmation (FR/EN) ; après **`createEvent`** réussi, le brouillon est **systématiquement** effacé du stockage (comportement explicite dans le code).
+
 ### Corrigé (serveur — prévisualisation PDF contrats / chat)
 - **`server/utils/contractPreview.js`** : **`normalizeContractPayload`** (JSON sain, pas de tableau racine ni structure exotique) ; résolution du profil DJ par **`userId: ed.djId`** avec repli sur **`UserDj.id`** si besoin ; e-mail DJ via **`djProfile.userId`** ; objets **`eventDjPreview`** / **`eventVenuePreview`** limités aux champs utiles au PDF (suppression du spread du row Prisma complet qui pouvait provoquer *« Erreur génération PDF »*).
-- **`server/routes/registerBookerOrganizerRoutes.js`** : logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.
+- **`server/routes/registerBookerOrganizerRoutes.js`** : **`require('../utils/contractPreview')`** et **`require('../utils/contractEmail')`** (chemins corrects depuis **`routes/`** ; **`./utils/...`** provoquait **`MODULE_NOT_FOUND`**, **500** sur **`POST …/preview-pdf`** et e-mails contrat signé). Logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.
 
 ### Modifié (config build)
 - **`insane-nights-days-mobile/app.json`** : **`ios.buildNumber`** porté à **4**.

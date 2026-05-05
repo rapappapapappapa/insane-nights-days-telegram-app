@@ -29,6 +29,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useChatPoll } from '../../hooks/useChatPoll';
 import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import DealTypePickerModal from '../../components/DealTypePickerModal';
@@ -312,20 +313,49 @@ export default function VenueDashboardPage() {
     await loadVenueContract(eventVenueId);
   };
 
-  const loadChatMessages = async (eventVenueId) => {
+  const loadChatMessages = async (eventVenueId, options = {}) => {
+    const silent = options.silent === true;
     if (!user?.token || !eventVenueId) return;
-    setLoadingChatMessages(true);
+    if (!silent) setLoadingChatMessages(true);
     try {
       const response = await api.getVenueMessages(user.token, eventVenueId);
       if (response?.success && Array.isArray(response.messages)) {
-        setChatMessages(response.messages);
+        const incoming = response.messages;
+        if (silent) {
+          setChatMessages((prev) => {
+            const prevLast = prev[prev.length - 1]?.id;
+            const nextLast = incoming[incoming.length - 1]?.id;
+            const changed = prevLast !== nextLast || incoming.length !== prev.length;
+            if (changed) {
+              setTimeout(() => {
+                chatScrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 60);
+            }
+            return incoming;
+          });
+        } else {
+          setChatMessages(incoming);
+          setTimeout(() => {
+            chatScrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
       }
     } catch (e) {
       console.error('[VenueDashboard] loadChatMessages error:', e);
     } finally {
-      setLoadingChatMessages(false);
+      if (!silent) setLoadingChatMessages(false);
     }
   };
+
+  const pollVenueChatRef = useRef(() => {});
+  pollVenueChatRef.current = () => {
+    if (!user?.token || !chatModalVisible || !selectedChatEventVenueId) return;
+    loadChatMessages(selectedChatEventVenueId, { silent: true });
+  };
+  useChatPoll({
+    active: chatModalVisible && !!user?.token && !!selectedChatEventVenueId,
+    pollRef: pollVenueChatRef,
+  });
 
   const sendMessage = async () => {
     if (!user?.token || !newMessageText.trim() || sendingMessage || !selectedChatEventVenueId) return;

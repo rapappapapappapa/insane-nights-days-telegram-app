@@ -33,6 +33,7 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useChatPoll } from '../../hooks/useChatPoll';
 import RejectReasonModal from '../../components/RejectReasonModal';
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
@@ -504,32 +505,61 @@ export default function DjDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventId]);
 
-  const loadChatMessages = async (id, isGroup = false) => {
+  const loadChatMessages = async (id, isGroup = false, options = {}) => {
+    const silent = options.silent === true;
     if (!user?.token || !id) return;
-    
-    setLoadingChatMessages(true);
+
+    if (!silent) setLoadingChatMessages(true);
     try {
-      const response = isGroup 
+      const response = isGroup
         ? await api.getGroupMessages(user.token, id)
         : await api.getMessages(user.token, id);
       if (response && response.success && response.messages) {
-        setChatMessages(response.messages);
-        // Scroll vers le bas après un court délai
-        setTimeout(() => {
-          if (chatScrollViewRef.current) {
-            chatScrollViewRef.current.scrollToEnd({ animated: true });
-          }
-        }, 100);
+        const incoming = response.messages;
+        if (silent) {
+          setChatMessages((prev) => {
+            const prevLast = prev[prev.length - 1]?.id;
+            const nextLast = incoming[incoming.length - 1]?.id;
+            const changed = prevLast !== nextLast || incoming.length !== prev.length;
+            if (changed) {
+              setTimeout(() => {
+                chatScrollViewRef.current?.scrollToEnd({ animated: true });
+              }, 60);
+            }
+            return incoming;
+          });
+        } else {
+          setChatMessages(incoming);
+          setTimeout(() => {
+            if (chatScrollViewRef.current) {
+              chatScrollViewRef.current.scrollToEnd({ animated: true });
+            }
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Erreur chargement messages:', error);
-      showError(
-        language === 'fr' ? 'Impossible de charger les messages.' : 'Unable to load messages.'
-      );
+      if (!silent) {
+        showError(
+          language === 'fr' ? 'Impossible de charger les messages.' : 'Unable to load messages.'
+        );
+      }
     } finally {
-      setLoadingChatMessages(false);
+      if (!silent) setLoadingChatMessages(false);
     }
   };
+
+  const pollDjChatRef = useRef(() => {});
+  pollDjChatRef.current = () => {
+    if (!user?.token || !chatModalVisible) return;
+    const id = isGroupChat ? selectedChatEventId : selectedChatEventDjId;
+    if (!id) return;
+    loadChatMessages(id, isGroupChat, { silent: true });
+  };
+  useChatPoll({
+    active: chatModalVisible && !!user?.token,
+    pollRef: pollDjChatRef,
+  });
 
   const handleDeleteMessage = async (messageId) => {
     if (!user?.token || !messageId) return;

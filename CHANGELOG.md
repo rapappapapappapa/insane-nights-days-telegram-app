@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
+### Modifié (client mobile — chat, quasi temps réel)
+- **Booker / DJ / Lieu** : pendant que le **modal de chat** est ouvert, **rafraîchissement silencieux** des messages (~2,8 s, `useChatPoll`) — le **destinataire** voit les nouveaux messages **sans fermer la conversation** ; pas de spinner ni toast en boucle ; **scroll** vers le bas seulement si la liste a changé (évite de tirer l’utilisateur quand il remonte l’historique sans nouveau message).
+
 ### Modifié (client mobile — scan & staff, retour visuel)
 - **`ScanTicketPage`** : après lecture d’un QR, **plein écran assombri** + **carte résultat** plus lisible (icône plus grande, texte multiligne) avec **animation spring** ; **viseur** en **quatre coins** façon lecteur pro (plus de rectangle plein).
 - **`StaffEventsPage`** : **état vide** enrichi (icône QR, titre, texte d’aide) au lieu d’une seule ligne.

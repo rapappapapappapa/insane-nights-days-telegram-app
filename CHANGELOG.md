@@ -6,6 +6,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
+### Ajouté (client + serveur — notifications push chat, MVP)
+- **Serveur** : modèle Prisma **`PushDevice`** (token Expo par utilisateur) ; migration **`20260506120000_add_push_device`** ; utilitaires **`server/utils/expoPush.js`** / **`server/utils/chatPush.js`** ; routes **`POST /api/push/register`**, **`POST /api/push/unregister`** ; envoi push après **`POST`** message **DJ/booker**, **lieu**, **groupe** (`registerChatRoutes`).
+- **Mobile** : **`expo-notifications`** + **`expo-device`** ; plugin dans **`app.json`** ; hook **`useExpoPushRegistration`** (permission, canal Android, enregistrement token) ; **`App.js`** : ouverture du bon dashboard + chat au **tap** sur la notification (y compris cold start via **`getLastNotificationResponseAsync`**) ; **`AuthContext`** : **`unregister`** à la déconnexion ; API **`registerExpoPushToken`** / **`unregisterExpoPushToken`**.
+
+**Déploiement** : appliquer la migration DB (`prisma migrate deploy` sur Railway) ; **rebuild natif** (EAS) — les push ne passent pas par un simple **OTA** seul à cause du module natif.
+
 ### Modifié (client mobile — chat, quasi temps réel)
 - **Booker / DJ / Lieu** : pendant que le **modal de chat** est ouvert, **rafraîchissement silencieux** des messages (~2,8 s, `useChatPoll`) — le **destinataire** voit les nouveaux messages **sans fermer la conversation** ; pas de spinner ni toast en boucle ; **scroll** vers le bas seulement si la liste a changé (évite de tirer l’utilisateur quand il remonte l’historique sans nouveau message).
 

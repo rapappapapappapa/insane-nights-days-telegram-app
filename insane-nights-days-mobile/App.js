@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler, ToastAndroid } from 'react-native';
 import Colors from './constants/colors';
 import * as Updates from 'expo-updates';
@@ -11,6 +11,8 @@ import { EventFormProvider } from './contexts/EventFormContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
 import { useNavigation } from './contexts/NavigationContext';
 import { useNotifications } from './hooks/useNotifications';
+import { useExpoPushRegistration } from './hooks/useExpoPushRegistration';
+import * as Notifications from 'expo-notifications';
 import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
@@ -123,6 +125,9 @@ function AppContent() {
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
   const androidExitPressRef = useRef(0);
+  const initialPushHandledRef = useRef(false);
+
+  useExpoPushRegistration(user);
 
   // expo-av Video is deprecated in favor of expo-video, but we use it as a
   // temporary workaround for Android crashes with expo-video.
@@ -228,7 +233,72 @@ function AppContent() {
 
     clearNewMessage();
   };
-  
+
+  const navigateToChatFromPushData = useCallback(
+    async (data) => {
+      if (!data || data.type !== 'CHAT_MESSAGE') return;
+      if (!user?.isAuthenticated || !user?.token) return;
+      const targetProfile = data.profileType;
+      if (!targetProfile || !['DJ', 'BOOKER', 'VENUE'].includes(targetProfile)) return;
+
+      if (user.activeProfileType && user.activeProfileType !== targetProfile) {
+        try {
+          const res = await api.switchProfile(user.token, targetProfile);
+          if (res?.success) {
+            await refreshCurrentUser();
+          }
+        } catch (e) {
+          console.warn('[App] push: switch profil', e?.message ?? e);
+        }
+      }
+
+      const params = {
+        openBookings: true,
+        openChatType: data.messageType ?? null,
+        openChatEventDjId: data.eventDjId ?? null,
+        openChatEventVenueId: data.eventVenueId ?? null,
+        openChatEventId: data.eventId ?? null,
+        openChatPreview: data.preview ?? null,
+        openChatEventTitle: data.eventTitle ?? null,
+      };
+
+      if (targetProfile === 'DJ') {
+        navigate('djDashboard', params);
+      } else if (targetProfile === 'VENUE') {
+        navigate('venueDashboard', params);
+      } else {
+        navigate('bookerDashboard', params);
+      }
+    },
+    [user?.isAuthenticated, user?.token, user?.activeProfileType, navigate, refreshCurrentUser]
+  );
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      navigateToChatFromPushData(data);
+    });
+    return () => sub.remove();
+  }, [navigateToChatFromPushData]);
+
+  useEffect(() => {
+    if (!user?.isAuthenticated) {
+      initialPushHandledRef.current = false;
+    }
+  }, [user?.isAuthenticated]);
+
+  useEffect(() => {
+    if (isInitializing || !user?.isAuthenticated || initialPushHandledRef.current) return;
+    initialPushHandledRef.current = true;
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response?.notification) return;
+        const data = response.notification.request.content.data;
+        navigateToChatFromPushData(data);
+      })
+      .catch(() => {});
+  }, [isInitializing, user?.isAuthenticated, navigateToChatFromPushData]);
+
   // Afficher un loader pendant l'initialisation de l'authentification
   if (isInitializing) {
     return (

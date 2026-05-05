@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const chatPush = require('../utils/chatPush');
 
 const MAX_CHAT_MESSAGE_LENGTH = 5000;
 
@@ -89,6 +90,15 @@ app.post('/api/chat/:eventDjId/messages', authenticateToken, async (req, res) =>
         },
       },
     });
+
+    void chatPush
+      .afterPrivateDjMessage({
+        senderId: userId,
+        invitation,
+        content: trimmed,
+        eventTitle: invitation.event?.title,
+      })
+      .catch((err) => console.error('[chatPush] private DJ/booker:', err));
 
     res.status(201).json({
       success: true,
@@ -263,6 +273,15 @@ app.post('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, asyn
         deleted: false,
       },
     });
+
+    void chatPush
+      .afterVenueMessage({
+        senderId: userId,
+        ev,
+        content: trimmedVenue,
+        eventTitle: ev.event?.title,
+      })
+      .catch((err) => console.error('[chatPush] venue:', err));
 
     res.status(201).json({
       success: true,
@@ -924,6 +943,14 @@ app.post('/api/chat/group/:eventId/messages', authenticateToken, async (req, res
         },
       },
     });
+
+    void chatPush
+      .afterGroupMessage({
+        senderId: userId,
+        event,
+        content: trimmedGroup,
+      })
+      .catch((err) => console.error('[chatPush] group:', err));
 
     res.status(201).json({
       success: true,

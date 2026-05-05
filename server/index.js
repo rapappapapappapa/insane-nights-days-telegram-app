@@ -135,6 +135,10 @@ require('./routes/registerChatRoutes')(app, {
   authenticateToken,
 });
 
+require('./routes/registerPushRoutes')(app, {
+  authenticateToken,
+});
+
 // Configuration Multer pour l'upload de fichiers
 const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {

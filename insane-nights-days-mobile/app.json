@@ -50,6 +50,14 @@
       "expo-updates",
       "expo-asset",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ff1744",
+          "defaultChannel": "default"
+        }
+      ],
+      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.com.insanenightsdays.mobile"

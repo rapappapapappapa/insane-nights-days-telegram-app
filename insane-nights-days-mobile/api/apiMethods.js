@@ -9,6 +9,7 @@ import { createBookerStaffApiMethods } from './methods/bookerStaff';
 import { createChatApiMethods } from './methods/chat';
 import { createFeedApiMethods } from './methods/feed';
 import { createAdminApiMethods } from './methods/admin';
+import { createPushApiMethods } from './methods/push';
 
 export function createApiMethods(deps) {
   return {
@@ -20,5 +21,6 @@ export function createApiMethods(deps) {
     ...createChatApiMethods(deps),
     ...createFeedApiMethods(deps),
     ...createAdminApiMethods(deps),
+    ...createPushApiMethods(deps),
   };
 }

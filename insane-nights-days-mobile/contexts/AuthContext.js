@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api } from '../api/config';
 import { saveToken, getToken, deleteToken, saveUserData, getUserData, isTokenExpired } from '../utils/tokenStorage';
+import { getLocalExpoPushToken, clearLocalExpoPushToken } from '../utils/pushTokenStorage';
 import logger from '../utils/logger';
 
 const AuthContext = createContext();
@@ -188,7 +189,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    // Supprimer le token et les données utilisateur
+    try {
+      const authTok = await getToken();
+      const expoTok = await getLocalExpoPushToken();
+      if (authTok && expoTok) {
+        await api.unregisterExpoPushToken(authTok, expoTok).catch(() => {});
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    await clearLocalExpoPushToken();
     await deleteToken();
     setUser({
       id: null,

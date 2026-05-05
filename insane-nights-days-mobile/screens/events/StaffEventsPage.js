@@ -106,9 +106,19 @@ export default function StaffEventsPage() {
         {loading ? (
           <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : events.length === 0 ? (
-          <Text style={styles.emptyText}>
-            {fr ? 'Aucun événement. Un organisateur doit t\'ajouter comme staff.' : 'No events. A booker must add you as staff.'}
-          </Text>
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="qr-code-outline" size={44} color={Colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {fr ? 'Aucun événement staff' : 'No staff events yet'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {fr
+                ? 'Lorsqu’un organisateur t’ajoutera comme staff scan, l’événement apparaîtra ici avec un bouton pour scanner les billets.'
+                : 'When a booker adds you as scan staff, the event will show up here with a button to scan tickets.'}
+            </Text>
+          </View>
         ) : (
           events.map((event) => (
             <View key={event.id} style={styles.eventCard}>
@@ -169,7 +179,36 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   loader: { marginTop: 40 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 24, textAlign: 'center' },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 24,
+  },
+  emptyIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(255,23,68,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
   eventCard: {
     flexDirection: 'row',
     backgroundColor: '#141419',

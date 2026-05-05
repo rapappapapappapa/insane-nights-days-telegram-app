@@ -6,9 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
-### Documenté
-- **`insane-nights-days-mobile/README.md`** : tableau des variables **`EXPO_PUBLIC_*`** utiles (API, wizard événement, scan test / masquage UI) ; renvoi vers **`server/env.example.txt`** pour **`SCAN_TICKET_*`** ; section TODO remplacée par un renvoi au **`CHANGELOG`** (le README listait encore des tâches déjà couvertes ailleurs).
-- **`docs/FEATURE_STAFF_QR.md`** : corps de requête **`POST …/scan-ticket`** explicite (`qrCode`, optionnel **`scanTestSecret`**).
+### Modifié (client mobile — scan & staff, retour visuel)
+- **`ScanTicketPage`** : après lecture d’un QR, **plein écran assombri** + **carte résultat** plus lisible (icône plus grande, texte multiligne) avec **animation spring** ; **viseur** en **quatre coins** façon lecteur pro (plus de rectangle plein).
+- **`StaffEventsPage`** : **état vide** enrichi (icône QR, titre, texte d’aide) au lieu d’une seule ligne.
 
 ---
 

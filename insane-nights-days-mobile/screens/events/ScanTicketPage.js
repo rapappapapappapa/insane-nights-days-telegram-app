@@ -2,7 +2,7 @@
  * Page Scan QR - Scanner les billets (booker ou staff)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Switch,
+  Animated,
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
@@ -56,6 +57,7 @@ export default function ScanTicketPage() {
   const [lastResult, setLastResult] = useState(null);
   const showTestToggle = shouldShowScanTestToggle();
   const [scanAnyDayTest, setScanAnyDayTest] = useState(false);
+  const resultScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!showTestToggle) return;
@@ -70,6 +72,18 @@ export default function ScanTicketPage() {
       cancelled = true;
     };
   }, [showTestToggle]);
+
+  useEffect(() => {
+    if (lastResult && !processing) {
+      resultScale.setValue(0.85);
+      Animated.spring(resultScale, {
+        toValue: 1,
+        friction: 7,
+        tension: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [lastResult, processing, resultScale]);
 
   const persistScanTestToggle = async (on) => {
     setScanAnyDayTest(on);
@@ -218,12 +232,25 @@ export default function ScanTicketPage() {
           </View>
         )}
         {lastResult && !processing && (
-          <View style={[styles.resultBadge, lastResult.valid ? styles.resultValid : styles.resultInvalid]}>
-            <Ionicons name={lastResult.valid ? 'checkmark-circle' : 'close-circle'} size={48} color="#fff" />
-            <Text style={styles.resultText}>{lastResult.message}</Text>
+          <View style={styles.resultBackdrop} pointerEvents="none">
+            <Animated.View
+              style={[
+                styles.resultBadge,
+                lastResult.valid ? styles.resultValid : styles.resultInvalid,
+                { transform: [{ scale: resultScale }] },
+              ]}
+            >
+              <Ionicons name={lastResult.valid ? 'checkmark-circle' : 'close-circle'} size={56} color="#fff" />
+              <Text style={styles.resultText}>{lastResult.message}</Text>
+            </Animated.View>
           </View>
         )}
-        <View style={styles.scanFrame} />
+        <View style={styles.scanFrame} pointerEvents="none">
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+        </View>
       </View>
 
       <View style={styles.footer}>
@@ -245,11 +272,51 @@ const styles = StyleSheet.create({
   camera: { flex: 1, width: '100%' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', gap: 12 },
   overlayText: { color: '#fff', fontSize: 16 },
-  resultBadge: { position: 'absolute', top: '50%', left: '50%', marginLeft: -80, marginTop: -50, width: 160, alignItems: 'center', padding: 16, borderRadius: 16 },
-  resultValid: { backgroundColor: 'rgba(16,185,129,0.9)' },
-  resultInvalid: { backgroundColor: 'rgba(239,68,68,0.9)' },
-  resultText: { color: '#fff', fontSize: 14, fontWeight: '600', marginTop: 8, textAlign: 'center' },
-  scanFrame: { position: 'absolute', top: '25%', left: '15%', right: '15%', height: 200, borderWidth: 2, borderColor: 'rgba(255,23,68,0.6)', borderRadius: 12 },
+  resultBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  resultBadge: {
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  resultValid: { backgroundColor: 'rgba(16,185,129,0.95)' },
+  resultInvalid: { backgroundColor: 'rgba(239,68,68,0.95)' },
+  resultText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  scanFrame: {
+    position: 'absolute',
+    top: '25%',
+    left: '15%',
+    right: '15%',
+    height: 200,
+  },
+  corner: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderColor: 'rgba(255,23,68,0.95)',
+  },
+  cornerTL: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 4 },
+  cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 4 },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 4 },
   footer: { padding: 20, backgroundColor: Colors.background },
   hint: { color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' },
   testModeRow: {

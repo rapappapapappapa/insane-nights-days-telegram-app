@@ -4,6 +4,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
+
+### Documenté
+- **`insane-nights-days-mobile/README.md`** : tableau des variables **`EXPO_PUBLIC_*`** utiles (API, wizard événement, scan test / masquage UI) ; renvoi vers **`server/env.example.txt`** pour **`SCAN_TICKET_*`** ; section TODO remplacée par un renvoi au **`CHANGELOG`** (le README listait encore des tâches déjà couvertes ailleurs).
+- **`docs/FEATURE_STAFF_QR.md`** : corps de requête **`POST …/scan-ticket`** explicite (`qrCode`, optionnel **`scanTestSecret`**).
+
+---
+
 ## Semaine du 28 au 30 avril 2026 (mar. – jeu.)
 
 ### Modifié (client mobile — Android, aperçu PDF contrat)
@@ -19,7 +27,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté (scan billets — mode test « any day »)
 - **Serveur** : **`POST /api/events/:eventId/scan-ticket`** — si **`SCAN_TICKET_TEST_SECRET`** (≥ 8 car.) est défini et le body contient **`scanTestSecret`** identique, la contrainte **jour de l’événement** est contournée (en complément de **`SCAN_TICKET_ALLOW_ANY_DAY`** / **`ONGOING`** / même jour UTC). Documenté dans **`server/env.example.txt`**.
 - **Serveur (Railway)** : si **`SCAN_TICKET_ALLOW_ANY_DAY`** est **absent**, le scan hors jour est **autorisé** lorsque l’API tourne sur Railway (détection **`RAILWAY_PUBLIC_DOMAIN`** / **`RAILWAY_ENVIRONMENT`** / **`RAILWAY_SERVICE_NAME`**) ; en **local** sans ces variables, comportement **strict** (sauf secret test / **`ONGOING`** / même jour UTC). **`SCAN_TICKET_ALLOW_ANY_DAY=false`** dans les variables Railway restaure la contrainte jour.
-- **Mobile** : **`ScanTicketPage`** — interrupteur *« Test : scan hors jour événement »* (visible en **`__DEV__`**, ou si **`EXPO_PUBLIC_ENABLE_SCAN_TEST_TOGGLE`**, ou si **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** ≥ 8 car.) ; envoi du secret via **`api.scanTicket`** ; persistance AsyncStorage ; correction constante **`BOOKER_EVENTS_REFRESH_FLAG`** pour le refresh dashboard. **`docs/FEATURE_STAFF_QR.md`** mis à jour.
+- **Mobile** : **`ScanTicketPage`** — interrupteur *« Test : scan hors jour événement »* (bandeau visible sauf **`EXPO_PUBLIC_HIDE_SCAN_TEST_UI`** ; switch actif si **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** ≥ 8 car. aligné serveur) ; envoi du secret via **`api.scanTicket`** ; persistance AsyncStorage ; correction constante **`BOOKER_EVENTS_REFRESH_FLAG`** pour le refresh dashboard. **`docs/FEATURE_STAFF_QR.md`** mis à jour.
 
 ### Corrigé (client mobile — scan billets)
 - **`ScanTicketPage`** : ouverture de l’écran → **ErrorBoundary** (*« Oups »*) causée par des identifiants manquants (**`shouldShowScanTestToggle`**, **`SCAN_TEST_SECRET`**, **`SCAN_ANY_DAY_TEST_STORAGE`**, **`BOOKER_EVENTS_REFRESH_FLAG`**) — déclarations rétablies en tête de fichier.

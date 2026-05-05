@@ -39,7 +39,7 @@ Permettre aux organisateurs (bookers) d'ajouter des profils Communauté comme "a
 - `DELETE /api/events/:eventId/staff/:communityId` - Retirer un staff
 
 ### Scan ticket
-- `POST /api/events/:eventId/scan-ticket` - body: { qrCode: "TICKET_XXX" ou JSON parsé }
+- `POST /api/events/:eventId/scan-ticket` - body: `{ qrCode: "TICKET_…" | chaîne / JSON scanné }`, optionnel : **`scanTestSecret`** (string, ≥ 8 car.) si **`SCAN_TICKET_TEST_SECRET`** est défini côté serveur avec la même valeur — contourne la contrainte « jour de l’événement » comme **`SCAN_TICKET_ALLOW_ANY_DAY=true`**.
 - Autorisation : booker de l'événement OU staff avec rôle STAFF_SCAN
 - Fenêtre de scan : **même jour calendaire (UTC)** que `event.date`, **ou** événement au statut **ONGOING**, **ou** **`SCAN_TICKET_ALLOW_ANY_DAY=true`** sur le serveur, **ou** si cette variable est **absente** sur un déploiement **Railway** (présence de `RAILWAY_PUBLIC_DOMAIN` / `RAILWAY_ENVIRONMENT` / `RAILWAY_SERVICE_NAME`) : équivalent **autorisé tous les jours** ; en **local** sans Railway : contrainte jour **stricte** sauf secret test (voir ci‑dessous). Pour la prod stricte sur Railway : **`SCAN_TICKET_ALLOW_ANY_DAY=false`**.
 - **Phase de test (app)** : le bandeau *Test : scan hors jour événement* est **affiché par défaut** sur **ScanTicketPage** (seuls orga/staff y accèdent). L’interrupteur n’est **activable** que si **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** (≥ 8 car.) est défini **au build** et **`SCAN_TICKET_TEST_SECRET`** côté API vaut la même chaîne. Pour **masquer** tout le bandeau en prod finale : **`EXPO_PUBLIC_HIDE_SCAN_TEST_UI=true`**.

@@ -6,16 +6,11 @@ Application mobile React Native avec Expo pour la plateforme Insane Nights & Day
 
 ```
 insane-nights-days-mobile/
-├── App.js                 # Navigation principale
+├── App.js                      # Navigation principale
 ├── api/
-│   └── config.js         # Configuration API et fonctions backend
-├── screens/
-│   ├── HomePage.js       # Page d'accueil avec connexion wallet
-│   ├── MenuPage.js       # Menu principal
-│   ├── EventsPage.js     # Liste des événements
-│   ├── EventDetailPage.js # Détails d'un événement
-│   ├── ProfilePage.js    # Profil utilisateur
-│   └── TicketsPage.js    # Tickets de l'utilisateur
+│   ├── endpointsConfig.js     # URL API (`EXPO_PUBLIC_API_BASE`, …)
+│   └── config.js              # Agrégation méthodes API
+├── screens/                    # Écrans (booker, staff, feed, …)
 └── package.json
 ```
 
@@ -32,10 +27,19 @@ insane-nights-days-mobile/
 
 ### Configuration API
 
-Le fichier `api/config.js` contient toute la configuration pour se connecter au backend :
+Le fichier **`api/endpointsConfig.js`** définit l’URL du backend. En build **EAS**, définir par exemple :
+
+| Variable | Usage |
+|----------|--------|
+| **`EXPO_PUBLIC_API_BASE`** | URL de l’API (sans slash final), ex. `https://…up.railway.app`. |
+| **`EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS`** | Délai minimum (jours) affiché côté wizard événement booker ; `0` = aligné sur serveur sans contrainte locale. |
+| **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** | (Optionnel, ≥ 8 car.) Même valeur que **`SCAN_TICKET_TEST_SECRET`** sur le serveur → active l’interrupteur *scan hors jour* sur **`ScanTicketPage`** (sinon le bandeau reste visible mais le switch peut rester inactif). |
+| **`EXPO_PUBLIC_HIDE_SCAN_TEST_UI`** | `true` / `1` → masque tout le bandeau de test sur l’écran scan (prod finale). |
+
+Variables serveur associées : **`server/env.example.txt`** (`SCAN_TICKET_TEST_SECRET`, `SCAN_TICKET_ALLOW_ANY_DAY`, etc.).
 
 ```javascript
-// URL de base (modifiable via variable d'environnement)
+// Ancienne note locale — préférer EXPO_PUBLIC_API_BASE en CI / EAS
 API_CONFIG.BASE_URL = 'http://172.20.10.7:5000'
 ```
 
@@ -86,11 +90,8 @@ npm install
 npx expo start
 ```
 
-## 📝 TODO
+## 📝 Pistes / dette doc
 
-- [ ] Activer la connexion backend dans EventsPage
-- [ ] Implémenter la vraie connexion wallet dans HomePage
-- [ ] Ajouter la gestion des tickets
-- [ ] Ajouter le scan QR code pour les tickets
-- [ ] Intégrer Telegram Web App SDK
+- Voir **`CHANGELOG.md`** (racine du dépôt) pour l’historique récent (booker, scan QR, PDF, Railway).
+- Le client web **`client/`** contient encore des listes TODO génériques ; le flux principal exposé ici est l’app **Expo** sous ce dossier.
 

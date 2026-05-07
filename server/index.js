@@ -65,13 +65,17 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// ✅ Sécurité: Rate limiting général (500 req/15min par IP)
+// ✅ Sécurité: Rate limiting général (défaut 2000 req/15min par IP, voir RATE_LIMIT_MAX)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 500,
+  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 2000,
   message: { success: false, message: 'Trop de requêtes. Réessayez plus tard.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    console.warn('[rateLimit] 429 général', req.ip, req.method, req.originalUrl);
+    res.status(options.statusCode).json(options.message);
+  },
 });
 app.use('/api/', generalLimiter);
 
@@ -108,17 +112,25 @@ app.use(express.json({
 })); // Augmenter la limite pour les vidéos
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ✅ Healthcheck Railway
-app.get('/api/health', (req, res) => {
+// ✅ Healthcheck Railway (+ ping DB pour diagnostic « tout vide » sans erreur applicative)
+app.get('/api/health', async (req, res) => {
   let emailConfigured = false;
+  let dbOk = false;
+  try {
+    const prismaHealth = require('./lib/prisma');
+    await prismaHealth.$queryRaw`SELECT 1`;
+    dbOk = true;
+  } catch (e) {
+    console.error('[health] DB indisponible:', e?.message || e);
+  }
   try {
     const { isConfigured, getProvider } = require('./utils/mailer');
     emailConfigured = isConfigured();
-    const payload = { success: true, status: 'ok', emailConfigured };
+    const payload = { success: true, status: 'ok', db: dbOk, emailConfigured };
     if (emailConfigured) payload.emailProvider = getProvider();
     res.json(payload);
   } catch {
-    res.json({ success: true, status: 'ok', emailConfigured: false });
+    res.json({ success: true, status: 'ok', db: dbOk, emailConfigured: false });
   }
 });
 const prisma = require('./lib/prisma');

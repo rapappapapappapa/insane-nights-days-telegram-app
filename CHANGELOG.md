@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
+### Corrigé (serveur — diagnostic « tout vide » sans log métier)
+- **`GET /api/health`** : réponse enrichie avec **`db: true|false`** (ping Prisma) ; si **`db: false`**, PostgreSQL / `DATABASE_URL` est en cause.
+- **Rate limiting** : défaut **2000** req / 15 min / IP (au lieu de 500) pour réduire les **429** qui vident le feed / les messages sans erreur SQL ; log **`[rateLimit] 429`** ; variable **`RATE_LIMIT_MAX`** documentée dans **`env.example.txt`**.
+
+### Modifié (client mobile — requêtes API)
+- Échec réseau **`Network request failed`** : log **`logger.error`** avec **`endpoint`** et **`url`** (plus visible que le simple warn).
+
 ### Modifié (outillage EAS)
 - **`eas.json`** : contrainte **`cli.version`** portée à **`>=18.11.0`** (alignement avec la CLI recommandée par Expo).
 - **`package.json`** : **`eas-cli`** en **`^18.11.0`** (devDependency) — **`npx eas-cli build`** utilise la même génération que le message « upgrade available » ; le bandeau « Proceeding with outdated version » disparaît après `npm install` dans **`insane-nights-days-mobile`**.

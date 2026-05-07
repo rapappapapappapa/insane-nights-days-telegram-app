@@ -153,7 +153,7 @@ export const apiRequest = async (endpoint, options = {}, token = null, customTim
     return data;
   } catch (error) {
     if (error?.message?.includes('Network request failed')) {
-      logger.warn('API Request Warning: backend inaccessible après plusieurs tentatives, fallback local utilisé.');
+      logger.error('[apiRequest] Backend inaccessible (réseau)', { endpoint, url });
       return null;
     }
     logger.error('API Request Error:', {

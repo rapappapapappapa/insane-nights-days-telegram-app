@@ -850,6 +850,17 @@ const hashContract = (payload) => {
   return crypto.createHash('sha256').update(stableStringify(payload || {})).digest('hex');
 };
 
+/** Partie qui doit répondre (accepter / contre-proposer), pas celle qui a envoyé la dernière version. */
+const venueContractResponderRole = (ev) => {
+  const sentBy = ev.contractSentBy ?? 'BOOKER';
+  return sentBy === 'BOOKER' ? 'VENUE' : 'BOOKER';
+};
+
+const eventDjResponderRole = (ed) => {
+  const sentBy = ed.contractSentBy ?? 'BOOKER';
+  return sentBy === 'BOOKER' ? 'DJ' : 'BOOKER';
+};
+
 const loadEventDjWithAccess = async (eventDjId, userId) => {
   const ed = await prisma.eventDj.findUnique({
     where: { id: eventDjId },
@@ -1137,13 +1148,12 @@ app.post('/api/contracts/event-djs/:eventDjId/counter', authenticateToken, async
       return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
     }
 
-    const sender = isBooker ? 'BOOKER' : 'DJ';
-    if (!sender) return res.status(403).json({ success: false, message: 'Accès refusé.' });
-
-    const currentSentBy = ed.contractSentBy ?? 'BOOKER';
-    // On ne peut contre-proposer que si l'autre partie a envoyé la dernière version
-    if (currentSentBy === sender) {
-      return res.status(400).json({ success: false, message: 'Tu as déjà la main. Accepte ou attends la réponse.' });
+    const sender = eventDjResponderRole(ed);
+    if (sender === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (sender === 'DJ' && !isDj) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
 
     const nextPayload = payload ?? {};
@@ -1202,12 +1212,12 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
       return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
     }
 
-    const role = isBooker ? 'BOOKER' : (isDj ? 'DJ' : null);
-    if (!role) return res.status(403).json({ success: false, message: 'Accès refusé.' });
-    const currentSentBy = ed.contractSentBy ?? 'BOOKER';
-    // On ne peut accepter que si l'autre partie a envoyé la dernière version
-    if (currentSentBy === role) {
-      return res.status(400).json({ success: false, message: 'Tu as déjà accepté cette version. Attends la réponse.' });
+    const role = eventDjResponderRole(ed);
+    if (role === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (role === 'DJ' && !isDj) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
 
     // Re-hash pour revalidation
@@ -1431,9 +1441,13 @@ app.post('/api/contracts/event-venues/:eventVenueId/counter', authenticateToken,
     const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
     if (error) return res.status(error.code).json({ success: false, message: error.message });
     if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
-    const sender = isBooker ? 'BOOKER' : 'VENUE';
-    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
-    if (currentSentBy === sender) return res.status(400).json({ success: false, message: 'Tu as déjà la main.' });
+    const sender = venueContractResponderRole(ev);
+    if (sender === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (sender === 'VENUE' && !isVenue) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
     const nextPayload = payload ?? {};
     const hash = hashContract(nextPayload);
     await prisma.eventVenue.update({
@@ -1464,10 +1478,13 @@ app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, 
     const { ev, isBooker, isVenue, error } = await loadEventVenueWithAccess(eventVenueId, req.user.id);
     if (error) return res.status(error.code).json({ success: false, message: error.message });
     if (ev.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
-    const role = isBooker ? 'BOOKER' : (isVenue ? 'VENUE' : null);
-    if (!role) return res.status(403).json({ success: false, message: 'Accès refusé.' });
-    const currentSentBy = ev.contractSentBy ?? 'BOOKER';
-    if (currentSentBy === role) return res.status(400).json({ success: false, message: 'Tu as déjà accepté.' });
+    const role = venueContractResponderRole(ev);
+    if (role === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (role === 'VENUE' && !isVenue) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
     const payload = ev.contractPayload ?? {};
     const expectedHash = ev.contractHash ?? '';
     const actualHash = hashContract(payload);

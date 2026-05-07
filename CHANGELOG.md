@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
+### Corrigé (serveur — contrats, même compte organisateur + lieu)
+- **Accept / contre-proposition** (**`/api/contracts/event-venues/...`** et **EventDj** en miroir) : le rôle n’est plus **`isBooker ? BOOKER : …`** (qui forçait toujours BOOKER si les deux profils partagent le même `userId`). On déduit la partie qui doit répondre depuis **`contractSentBy`** (celui qui n’a pas envoyé la dernière version) — l’acceptation **lieu** après envoi **organisateur** fonctionne à nouveau.
+
 ### Corrigé (serveur — diagnostic « tout vide » sans log métier)
 - **`GET /api/health`** : réponse enrichie avec **`db: true|false`** (ping Prisma) ; si **`db: false`**, PostgreSQL / `DATABASE_URL` est en cause.
 - **Rate limiting** : défaut **2000** req / 15 min / IP (au lieu de 500) pour réduire les **429** qui vident le feed / les messages sans erreur SQL ; log **`[rateLimit] 429`** ; variable **`RATE_LIMIT_MAX`** documentée dans **`env.example.txt`**.

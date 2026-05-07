@@ -56,6 +56,6 @@
   "private": true,
   "devDependencies": {
     "baseline-browser-mapping": "^2.9.19",
-    "eas-cli": "^16.28.0"
+    "eas-cli": "^18.11.0"
   }
 }

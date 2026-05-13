@@ -40,3 +40,5 @@ Untitled-1
 client/build/
 docs/contract-templates/
 
+# Script perso / assistant : heure système (`node scripts/local-time.js`)
+scripts/local-time.js

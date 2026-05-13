@@ -10,6 +10,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Serveur** : **`POST /api/auth/google`** (corps **`idToken`**) ; vérification du jeton avec **`google-auth-library`** ; champs **`User.googleId`**, **`User.password`** optionnel (migration **`20260507140000_user_google_oauth`**) ; compte email existant : **liaison** `googleId` si absent ; inscription Google : même règles **âge / CGU** que **`/register`** ; connexion mot de passe refusée si **`password`** absent (pointer vers Google).
 - **Mobile** : **`expo-auth-session`** / **`GoogleSignInSection`** ; boutons **Continuer avec Google** / **S'inscrire avec Google** si les **`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`** sont définis ; schéma d’URL **`com.insanenightsdays.mobile`** dans **`app.json`**.
 
+### Modifié (outillage dépôt)
+- **`.gitignore`** : **`scripts/local-time.js`** — script perso **`node scripts/local-time.js`** pour afficher l’heure système ; modèle versionné **`scripts/local-time.example.js`** (`cp scripts/local-time.example.js scripts/local-time.js`).
+
 ---
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)

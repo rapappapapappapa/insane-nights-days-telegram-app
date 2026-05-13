@@ -56,4 +56,5 @@ Liste des pistes d’évolution. Les cases permettent de suivre l’avancement ;
 
 ---
 
-*Dernière mise à jour : 7 mai 2026*
+*Dernière mise à jour : 13 mai 2026*
+

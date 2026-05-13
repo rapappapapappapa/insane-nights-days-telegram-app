@@ -13,6 +13,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (outillage dépôt)
 - **`.gitignore`** : **`scripts/local-time.js`** — script perso **`node scripts/local-time.js`** pour afficher l’heure système ; modèle versionné **`scripts/local-time.example.js`** (`cp scripts/local-time.example.js scripts/local-time.js`).
 
+### Documentation
+- **`docs/AMELIORATIONS.md`** — réorganisation et reformulation des **notes billetterie (multi-phases, TTC, commission, hors-plateforme)**, **wizard événement** (prestataires, récap, modalités, matériel, agenda matériel), **lieu secret**, **multi-DJ**, médias et **revente / liste d’attente**.
+
 ---
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)

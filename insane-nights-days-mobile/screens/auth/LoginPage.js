@@ -22,10 +22,11 @@ import Logo from '../../components/Logo';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
+import GoogleSignInSection, { isGoogleOAuthConfigured } from '../../components/GoogleSignInSection';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
-  const { user, login, register } = useAuth();
+  const { user, login, register, loginWithGoogle } = useAuth();
   const { navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -191,6 +192,23 @@ export default function LoginPage() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {isGoogleOAuthConfigured() ? (
+              <GoogleSignInSection
+                language={language}
+                mode={mode}
+                birthDate={birthDate}
+                certifiedMajor={certifiedMajor}
+                acceptedCgu={acceptedCgu}
+                username={username}
+                loginWithGoogle={loginWithGoogle}
+                navigate={navigate}
+                nextScreen={nextScreen}
+                showSuccess={showSuccess}
+                showError={showError}
+                formBusy={loading}
+              />
+            ) : null}
 
             <Text style={styles.label}>{language === 'fr' ? 'Email' : 'Email'}</Text>
             <TextInput

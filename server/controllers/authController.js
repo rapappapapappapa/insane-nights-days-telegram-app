@@ -5,7 +5,17 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
-const { validateRegistration, validateLogin, normalizeEmail, validatePassword, isValidEmail, parseBirthDate, validateAge } = require('../utils/validation');
+const {
+  validateRegistration,
+  validateLogin,
+  normalizeEmail,
+  validatePassword,
+  isValidEmail,
+  parseBirthDate,
+  validateAge,
+  sanitizeInvisibleChars,
+} = require('../utils/validation');
+const { verifyGoogleIdToken } = require('../utils/googleIdTokenVerify');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
@@ -139,7 +149,14 @@ const login = async (req, res) => {
       return sendError(res, 'Identifiants invalides.', 401);
     }
 
-    // Vérifier le mot de passe
+    if (user.password == null || user.password === '') {
+      return sendError(
+        res,
+        'Ce compte utilise Google (ou une autre méthode sans mot de passe). Utilise « Continuer avec Google ».',
+        401
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return sendError(res, 'Identifiants invalides.', 401);
@@ -159,6 +176,134 @@ const login = async (req, res) => {
     });
   } catch (error) {
     handleError(error, res, 'Erreur lors de la connexion.');
+  }
+};
+
+/**
+ * Connexion ou inscription avec Google (id_token vérifié côté serveur).
+ * Nouveau compte : mêmes exigences que l'inscription classique (âge, CGU…).
+ */
+const googleAuth = async (req, res) => {
+  try {
+    const { idToken, birthDate: birthDateStr, certifiedMajor, acceptedCgu, username: usernameRaw } =
+      req.body ?? {};
+    let profile;
+    try {
+      profile = await verifyGoogleIdToken(idToken);
+    } catch (e) {
+      const code = Number(e.statusCode);
+      const http = Number.isFinite(code) && code >= 400 && code < 600 ? code : 500;
+      return sendError(res, e.message || 'Token Google invalide.', http);
+    }
+
+    const { googleId } = profile;
+    const normalizedEmail = normalizeEmail(profile.email);
+
+    let user = await prisma.user.findFirst({ where: { googleId } });
+
+    if (user) {
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (user) {
+      if (user.googleId && user.googleId !== googleId) {
+        return sendError(res, 'Ce compte email est déjà lié à un autre compte Google.', 409);
+      }
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId },
+        });
+      }
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    if (!birthDateStr || !String(birthDateStr).trim()) {
+      return sendError(res, 'La date de naissance est requise pour créer un compte.', 400);
+    }
+    const parsed = parseBirthDate(String(birthDateStr).trim());
+    if (!parsed.valid) return sendError(res, parsed.message, 400);
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) return sendError(res, ageCheck.message, 403);
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
+    }
+    if (!acceptedCgu) {
+      return sendError(res, 'Vous devez accepter les CGU et la politique de confidentialité.', 400);
+    }
+
+    const usernameCheck = validateOptionalUsername(usernameRaw);
+    if (!usernameCheck.valid) return sendError(res, usernameCheck.message, 400);
+    let finalUsername = usernameCheck.value;
+    if (!finalUsername) {
+      try {
+        finalUsername = await allocateUniqueUsername(prisma, suggestUsernameFromEmail(normalizedEmail));
+      } catch (allocErr) {
+        console.error('[googleAuth] allocate username:', allocErr);
+        return sendError(
+          res,
+          'Impossible de créer un pseudo unique. Choisis un pseudo ou réessaie.',
+          500
+        );
+      }
+    } else {
+      const taken = await prisma.user.findFirst({
+        where: { username: { equals: finalUsername, mode: 'insensitive' } },
+      });
+      if (taken) return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        username: finalUsername,
+        password: null,
+        googleId,
+        birthDate: parsed.date,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        score: 100,
+        level: 1,
+      },
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    return sendSuccess(
+      res,
+      {
+        message: 'Compte créé avec succès.',
+        user: sanitizeUser(newUser),
+        token,
+      },
+      201
+    );
+  } catch (error) {
+    console.error('[googleAuth]', error);
+    handleError(error, res, 'Erreur lors de la connexion Google.');
   }
 };
 
@@ -313,7 +458,7 @@ const connectWallet = async (req, res) => {
         data: {
           email: walletAddress,
           username: username || `Wallet_${walletAddress.slice(0, 8)}`,
-          password: '', // Pas de mot de passe pour les wallets
+          password: null,
           score: 100,
           level: 1,
         },
@@ -336,11 +481,43 @@ const connectWallet = async (req, res) => {
   }
 };
 
+function suggestUsernameFromEmail(email) {
+  const normalized = normalizeEmail(email);
+  const local = normalized.split('@')[0] || 'user';
+  const cleaned = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24);
+  if (cleaned.length >= 2) return cleaned;
+  return `user_${cleaned || 'nox'}`;
+}
+
+function validateOptionalUsername(raw) {
+  if (raw == null || String(raw).trim() === '') return { valid: true, value: null };
+  const s = sanitizeInvisibleChars(String(raw)).trim();
+  if (s.length < 2) return { valid: false, message: 'Le pseudo doit contenir au moins 2 caractères.' };
+  if (s.length > 40) return { valid: false, message: 'Le pseudo est trop long (40 caractères max).' };
+  if (!/^[a-zA-Z0-9_-]+$/.test(s)) {
+    return { valid: false, message: 'Pseudo invalide (lettres, chiffres, tirets et underscore).' };
+  }
+  return { valid: true, value: s };
+}
+
+async function allocateUniqueUsername(prismaClient, base) {
+  const safeBase = (base || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24) || 'user';
+  for (let i = 0; i < 40; i += 1) {
+    const suffix = i === 0 ? '' : `_${Math.random().toString(36).slice(2, 7)}`;
+    const candidate = `${safeBase}${suffix}`.slice(0, 40);
+    const exists = await prismaClient.user.findFirst({
+      where: { username: { equals: candidate, mode: 'insensitive' } },
+    });
+    if (!exists) return candidate;
+  }
+  throw new Error('Impossible d\'attribuer un pseudo unique.');
+}
+
 module.exports = {
   register,
   login,
+  googleAuth,
   connectWallet,
   forgotPassword,
   resetPassword,
 };
-

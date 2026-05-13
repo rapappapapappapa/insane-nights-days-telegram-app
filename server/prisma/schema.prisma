@@ -11,7 +11,8 @@ model User {
   id                        String             @id @default(uuid())
   email                     String             @unique
   username                  String
-  password                  String
+  password                  String?
+  googleId                  String?            @unique
   role                      UserRole           @default(USER)
   score                     Int                @default(0)
   level                     Int                @default(1)

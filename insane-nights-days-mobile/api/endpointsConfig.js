@@ -10,6 +10,7 @@ export const API_CONFIG = {
     DJ_RANKING: '/api/djs/ranking',
     AUTH_REGISTER: '/api/auth/register',
     AUTH_LOGIN: '/api/auth/login',
+    AUTH_GOOGLE: '/api/auth/google',
     PROFILE_COMMUNITY: '/api/profile/community',
     PROFILE_DJ: '/api/profile/dj',
     PROFILE_BOOKER: '/api/profile/booker',

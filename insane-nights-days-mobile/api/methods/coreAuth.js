@@ -26,6 +26,14 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     });
   },
 
+  /** OAuth Google : { idToken } (connexion) ou + birthDate, certifiedMajor, acceptedCgu, username? (inscription) */
+  loginWithGoogle: async (payload) => {
+    return apiRequest(API_CONFIG.ENDPOINTS.AUTH_GOOGLE, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
   // Créer un profil Communauté (nécessite un token JWT)
   createCommunityProfile: async ({ token, pseudo, nom, prenom, email, pays, dateNaissance }) => {
     if (!token) {

@@ -2,6 +2,7 @@
   "expo": {
     "name": "Nox",
     "slug": "insane-nights-days-mobile",
+    "scheme": "com.insanenightsdays.mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.insanenightsdays.mobile",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sélectionner des images et vidéos.",
         "NSPhotoLibraryAddUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sauvegarder des images.",
@@ -62,7 +63,8 @@
         {
           "merchantIdentifier": "merchant.com.insanenightsdays.mobile"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

@@ -21,6 +21,12 @@ router.post('/register', authController.register);
 router.post('/login', authController.login);
 
 /**
+ * @route POST /api/auth/google
+ * @desc Connexion / inscription OAuth Google (corps JSON : idToken + champs inscription si nouveau compte)
+ */
+router.post('/google', authController.googleAuth);
+
+/**
  * @route POST /api/auth/forgot-password
  * @desc Envoie un code de réinitialisation par email
  * @access Public

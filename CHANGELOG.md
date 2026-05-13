@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
 
+### Ajouté (auth — connexion Google)
+- **Serveur** : **`POST /api/auth/google`** (corps **`idToken`**) ; vérification du jeton avec **`google-auth-library`** ; champs **`User.googleId`**, **`User.password`** optionnel (migration **`20260507140000_user_google_oauth`**) ; compte email existant : **liaison** `googleId` si absent ; inscription Google : même règles **âge / CGU** que **`/register`** ; connexion mot de passe refusée si **`password`** absent (pointer vers Google).
+- **Mobile** : **`expo-auth-session`** / **`GoogleSignInSection`** ; boutons **Continuer avec Google** / **S'inscrire avec Google** si les **`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`** sont définis ; schéma d’URL **`com.insanenightsdays.mobile`** dans **`app.json`**.
+
 ### Corrigé (serveur — contrats, même compte organisateur + lieu)
 - **Accept / contre-proposition** (**`/api/contracts/event-venues/...`** et **EventDj** en miroir) : le rôle n’est plus **`isBooker ? BOOKER : …`** (qui forçait toujours BOOKER si les deux profils partagent le même `userId`). On déduit la partie qui doit répondre depuis **`contractSentBy`** (celui qui n’a pas envoyé la dernière version) — l’acceptation **lieu** après envoi **organisateur** fonctionne à nouveau.
 - **Symptôme corrigé** : en dashboard **lieu**, après avoir coché la case, **Accepter** déclenchait une erreur (toast **« Erreur contrat »** / HTTP 400 côté API car le serveur pensait que le booker « acceptait » sa propre proposition).

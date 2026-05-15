@@ -7,16 +7,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 10 au 13 mai 2026 (sam. – mer.)
 
 ### Modifié (mobile — dashboard DJ, médias)
-- **Onglet Médias** : suppression de la section **AUDIO (MP3)** (upload / lecteur intégré) et message invitant à utiliser **Spotify / SoundCloud** depuis l’onglet **Profil** — pas d’MP3 hébergés sur la plateforme (droits d’auteur).
+- **Onglet Médias** : suppression de la section **AUDIO (MP3)** (upload / lecteur intégré) ; message invitant à renseigner **Spotify / SoundCloud** dans **Profil artiste** — pas de fichiers audio hébergés sur la plateforme (droits d’auteur).
 
-### Modifié (mobile — Spotify / SoundCloud, lecteur intégré)
-- **Fiche DJ publique** : action principale renommée pour indiquer la lecture **dans l’app** ; si le lien ne permet pas l’embed, **alerte** explicative au lieu d’une redirection silencieuse vers le navigateur.
-- **URLs Spotify** : prise en charge élargie (**artiste**, **podcast / show**, URI `spotify:…`, certains liens **www.spotify.com**).
-- **`BuiltInStreamPlayerModal`** : panneau plus haut, **WebView** avec **originWhitelist** / **mixedContentMode** (Android).
-- **Dashboard DJ → Profil artiste** : texte d’aide + boutons **« Tester la lecture intégrée »** sous SoundCloud / Spotify.
-
-### Ajouté (mobile — profil DJ, streaming)
-- **Spotify / SoundCloud** : bouton **« Écouter ici (intégré) »** — modal **`BuiltInStreamPlayerModal`** + **WebView** (embed Spotify / widget SoundCloud), à partir des **URLs déjà stockées** ; **« Ouvrir dans l’app / SoundCloud »** en secours. **Pas de module natif** = **pas de rebuild** (déployable en **OTA**). Fichiers **`utils/streamingEmbedUrl.js`**.
+### Ajouté / modifié (mobile — Spotify / SoundCloud, lecteur intégré)
+- **`BuiltInStreamPlayerModal`** + **`react-native-webview`** : lecture **dans l’app** via embed Spotify officiel et widget SoundCloud, à partir des URLs stockées en profil ; ouverture dans **Spotify / SoundCloud / navigateur** reste **optionnelle** (bouton secondaire sur la fiche DJ publique).
+- **Sans module audio natif supplémentaire** : déployable en **OTA** ; utilitaires **`utils/streamingEmbedUrl.js`** (`spotifyOpenUrlToEmbedUrl`, `soundcloudUrlToWidgetUrl`, **`resolveStreamingEmbed`**).
+- **Fiche DJ publique** (écran **`DjProfilePage`**) : libellé principal **« Écouter dans l’app (lecteur intégré) »** ; court texte d’intro sous la section **Musique** ; si l’URL ne peut pas être convertie en embed → **alerte** avec choix (plus de **redirection silencieuse** vers le navigateur).
+- **URLs Spotify** reconnues pour l’embed : pistes, albums, playlists, **artistes**, **shows / podcasts**, URI `spotify:…`, certains liens **www.spotify.com**.
+- **Modal** : hauteur augmentée (~54 % de l’écran, max 560 px) ; **WebView** : **`originWhitelist`**, **`mixedContentMode`** (Android).
+- **Dashboard DJ → Profil artiste** : rappel sur la lecture intégrée + boutons **« Tester la lecture intégrée (SoundCloud / Spotify) »** sous les champs correspondants (prévisualisation du même lecteur que sur la fiche publique).
 
 ### Ajouté (mobile — agenda système)
 - **`expo-calendar`** : permission + plugin EAS ; **`buildNumber` iOS 7** ; export **Android** (lecture/écriture calendrier).

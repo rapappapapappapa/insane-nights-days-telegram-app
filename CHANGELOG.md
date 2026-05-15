@@ -14,7 +14,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`.gitignore`** : **`scripts/local-time.js`** — script perso **`node scripts/local-time.js`** pour afficher l’heure système ; modèle versionné **`scripts/local-time.example.js`** (`cp scripts/local-time.example.js scripts/local-time.js`).
 
 ### Documentation
-- **`docs/AMELIORATIONS.md`** — réorganisation (**billetterie**, **wizard**, **matériel**, **lieu secret**, **multi-DJ**, **revente / liste d’attente**) puis **priorisation technique** : bloc **rebuild EAS** (Apple, agenda, lecteurs natifs, profil prestataire *à trancher*) vs **`[souvent OTA]`** pour limiter les cycles de soumission store.
+- **`docs/AMELIORATIONS.md`** — **Phase 1 = rebuild en premier** (cycles store les plus longs ; regroupement dans un même binaire), puis phases **OTA** ; backlog inchangé (billetterie, wizard, prestataire *à trancher*, etc.).
 
 ---
 

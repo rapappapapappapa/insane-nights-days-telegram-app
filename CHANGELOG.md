@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 10 au 13 mai 2026 (sam. – mer.)
 
+### Ajouté (mobile — agenda système)
+- **`expo-calendar`** : permission + plugin EAS ; **`buildNumber` iOS 7** ; export **Android** (lecture/écriture calendrier).
+- **Fiche événement** & **Mes tickets** : bouton **« Ajouter à mon agenda »** — crée un événement dans le calendrier par défaut (synchro Google / iCloud selon le compte du téléphone). Fin d’événement via **`durationHours`** (sinon défaut **4 h**).
+
+### Ajouté (API — événements / tickets)
+- **`GET /api/events/:id`** : champ **`durationHours`** pour le client agenda.
+- **`GET /api/user/me/tickets`** et **`GET /api/user/:userId/tickets`** : **`eventDurationHours`**.
+
 ### Ajouté (auth — connexion Apple)
 - **Prisma / User** : **`appleId`** optionnel unique + migration **`20260513140000_user_apple_oauth`** (à déployer : `prisma migrate deploy`).
 - **Serveur** : **`POST /api/auth/apple`** (corps **`identityToken`**) ; vérification JWKS **`appleid.apple.com`** ; **`jwks-rsa`** ; audience **`APPLE_IOS_BUNDLE_ID`** (sinon défaut **`com.insanenightsdays.mobile`**).

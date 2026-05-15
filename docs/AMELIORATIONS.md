@@ -12,7 +12,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [x] **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur). *Capacité Xcode / App Store + `APPLE_IOS_BUNDLE_ID` si ≠ défaut.*
 
-- [ ] **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement le même milestone** que **Sign in Apple**.
+- [x] **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement le même milestone** que **Sign in Apple**.
 
 - [ ] *(option)* **Lecteurs média natifs** (SoundCloud / Spotify / YouTube) — **uniquement si** stratégie = **SDK natif** ; si **WebView / URLs**, traiter en **Phase 3** (**OTA**).
 

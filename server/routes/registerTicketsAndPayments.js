@@ -568,6 +568,7 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       eventTitle: ticket.event.title,
       eventDate: ticket.event.date.toISOString().split('T')[0],
       eventTime: ticket.event.time,
+      eventDurationHours: ticket.event.durationHours ?? null,
       eventLocation: ticket.event.location,
       eventGenre: ticket.event.genre,
       eventStatus: ticket.event.status || 'UPCOMING',
@@ -621,6 +622,7 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
       eventTitle: ticket.event.title,
       eventDate: ticket.event.date.toISOString().split('T')[0],
       eventTime: ticket.event.time,
+      eventDurationHours: ticket.event.durationHours ?? null,
       eventLocation: ticket.event.location,
       eventGenre: ticket.event.genre,
       eventStatus: ticket.event.status || 'UPCOMING', // Statut de l'événement

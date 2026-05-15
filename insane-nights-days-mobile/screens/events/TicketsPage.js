@@ -10,6 +10,12 @@ import Colors from '../../constants/colors';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import {
+  addNoxEventToDeviceCalendar,
+  isDeviceCalendarExportSupported,
+} from '../../utils/addNoxEventToCalendar';
+
+const API_TICKET_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const formatPurchaseDate = (dateString) => {
   if (!dateString) {
@@ -38,6 +44,7 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicketQR, setSelectedTicketQR] = useState(null);
+  const [calendarBusyTicketId, setCalendarBusyTicketId] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -110,6 +117,54 @@ export default function TicketsPage() {
         },
       ],
     );
+  };
+
+  const handleAddTicketToCalendar = async (ticket) => {
+    if (
+      calendarBusyTicketId ||
+      !API_TICKET_DATE_RE.test(String(ticket?.eventDate || ''))
+    ) {
+      return;
+    }
+    try {
+      setCalendarBusyTicketId(ticket.id);
+      await addNoxEventToDeviceCalendar({
+        title: ticket.eventTitle,
+        date: ticket.eventDate,
+        time: ticket.eventTime,
+        durationHours: ticket.eventDurationHours,
+        location: ticket.eventLocation,
+        notes: `${ticket.eventGenre ? `${ticket.eventGenre} · ` : ''}${language === 'fr' ? 'Billet Nox' : 'Nox ticket'}`,
+      });
+      showSuccess(
+        language === 'fr'
+          ? 'Événement ajouté à ton agenda.'
+          : 'Event added to your calendar.'
+      );
+    } catch (e) {
+      const code = e?.message;
+      if (code === 'PERMISSION_DENIED') {
+        showError(
+          language === 'fr'
+            ? 'Accès au calendrier refusé.'
+            : 'Calendar access denied.'
+        );
+      } else if (code === 'NO_CALENDAR') {
+        showError(
+          language === 'fr'
+            ? 'Aucun calendrier modifiable trouvé.'
+            : 'No writable calendar found.'
+        );
+      } else {
+        showError(
+          language === 'fr'
+            ? 'Impossible d’ajouter au calendrier.'
+            : 'Could not add to calendar.'
+        );
+      }
+    } finally {
+      setCalendarBusyTicketId(null);
+    }
   };
 
   // Utiliser le statut de l'événement plutôt que de calculer depuis la date
@@ -237,6 +292,30 @@ export default function TicketsPage() {
                     </View>
                   </View>
                 </TouchableOpacity>
+                {!isEventPast(ticket) &&
+                isDeviceCalendarExportSupported() &&
+                API_TICKET_DATE_RE.test(String(ticket.eventDate || '')) ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.calendarTicketButton,
+                      calendarBusyTicketId === ticket.id && styles.calendarTicketButtonDisabled,
+                    ]}
+                    onPress={() => handleAddTicketToCalendar(ticket)}
+                    disabled={calendarBusyTicketId === ticket.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      language === 'fr' ? 'Ajouter cet événement à mon agenda' : 'Add this event to my calendar'
+                    }
+                  >
+                    {calendarBusyTicketId === ticket.id ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.calendarTicketButtonText}>
+                        {language === 'fr' ? '📅 Ajouter à mon agenda' : '📅 Add to my calendar'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
                 {isEventPast(ticket) && (
                   <TouchableOpacity
                     style={styles.rateButton}
@@ -449,6 +528,24 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  calendarTicketButton: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  calendarTicketButtonDisabled: {
+    opacity: 0.58,
+  },
+  calendarTicketButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
   ticketQRWrapper: {
     flexDirection: 'row',

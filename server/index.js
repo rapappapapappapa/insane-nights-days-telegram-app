@@ -1217,6 +1217,7 @@ app.get('/api/events/:eventId', async (req, res) => {
       title: event.title,
       date: event.date.toISOString().split('T')[0],
       time: event.time,
+      durationHours: event.durationHours ?? null,
       location: event.location,
       price: event.price,
       capacity: event.capacity,

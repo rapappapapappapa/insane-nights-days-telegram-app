@@ -23,6 +23,10 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
 import * as Stripe from '../../utils/stripe';
+import {
+  addNoxEventToDeviceCalendar,
+  isDeviceCalendarExportSupported,
+} from '../../utils/addNoxEventToCalendar';
 
 const mockEvents = [
   {
@@ -102,8 +106,9 @@ export default function EventDetailPage() {
   const [selectedFriends, setSelectedFriends] = useState([]);
   const [inviting, setInviting] = useState(false);
   const [acceptedCgv, setAcceptedCgv] = useState(false);
+  const [addingToCalendar, setAddingToCalendar] = useState(false);
 
-  // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
+  const API_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   useEffect(() => {
     if (!user?.isAuthenticated) {
       navigate('home');
@@ -301,6 +306,51 @@ export default function EventDetailPage() {
     );
   };
 
+  const showAddToCalendarBtn =
+    isDeviceCalendarExportSupported() &&
+    typeof event?.date === 'string' &&
+    API_DATE_RE.test(event.date) &&
+    (event.status === 'UPCOMING' || event.status === 'ONGOING');
+
+  const handleAddToCalendar = async () => {
+    if (addingToCalendar || !showAddToCalendarBtn) return;
+    try {
+      setAddingToCalendar(true);
+      await addNoxEventToDeviceCalendar({
+        title: event.title,
+        date: event.date,
+        time: event.time,
+        durationHours: event.durationHours,
+        location: event.location,
+        notes: event.description,
+      });
+      showSuccess(
+        language === 'fr' ? 'Événement ajouté à ton agenda.' : 'Event added to your calendar.'
+      );
+    } catch (e) {
+      const code = e?.message;
+      if (code === 'PERMISSION_DENIED') {
+        showError(
+          language === 'fr'
+            ? 'Accès au calendrier refusé. Autorise Nox dans Réglages.'
+            : 'Calendar access denied. Allow Nox in Settings.'
+        );
+      } else if (code === 'NO_CALENDAR') {
+        showError(
+          language === 'fr'
+            ? 'Aucun calendrier modifiable trouvé sur l’appareil.'
+            : 'No writable calendar found on this device.'
+        );
+      } else {
+        showError(
+          e?.message ||
+            (language === 'fr' ? 'Impossible d’ajouter au calendrier.' : 'Could not add to calendar.')
+        );
+      }
+    } finally {
+      setAddingToCalendar(false);
+    }
+  };
 
   const fetchEvent = async () => {
     setLoading(true);
@@ -601,6 +651,26 @@ export default function EventDetailPage() {
               </Text>
             </View>
           </View>
+
+          {showAddToCalendarBtn ? (
+            <TouchableOpacity
+              style={[styles.calendarOutlineButton, addingToCalendar && styles.calendarOutlineButtonDisabled]}
+              onPress={handleAddToCalendar}
+              disabled={addingToCalendar}
+              accessibilityRole="button"
+              accessibilityLabel={
+                language === 'fr' ? 'Ajouter cet événement à mon agenda' : 'Add this event to my calendar'
+              }
+            >
+              {addingToCalendar ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.calendarOutlineButtonText}>
+                  {language === 'fr' ? '📅 Ajouter à mon agenda' : '📅 Add to my calendar'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
 
           {/* Badge de statut */}
           {event.status && (
@@ -1015,6 +1085,24 @@ const styles = StyleSheet.create({
   },
   djChip: {
     paddingVertical: 2,
+  },
+  calendarOutlineButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    marginBottom: -6,
+  },
+  calendarOutlineButtonDisabled: {
+    opacity: 0.58,
+  },
+  calendarOutlineButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
   },
   cgvRow: {
     flexDirection: 'row',

@@ -1,96 +1,96 @@
 # Améliorations à prévoir — NOX
 
-Liste des pistes d’évolution ; **la première section** fixe la priorité **technique** (nouveau **build App Store / Play** vs **OTA**).
+**Ordre de travail conseillé :** commence par **tout ce qui impose un nouveau build App Store / Play (`[Rebuild EAS]`)**. Les cycles sont en général **les plus longs** (bundle EAS, empreintes Android, revue Apple / Google, diffusion aux utilisateurs). En **regroupant plusieurs chantiers rebuild dans le même binaire**, tu évites de **subir plusieurs fois cette même durée**.
+
+Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via JS + API tant que le **runtime** reste compatible — vérifier **fingerprint** Expo Updates si besoin).
 
 ---
 
-## Comment décider « quoi faire en premier »
+## Phase 1 — Rebuild (**à faire en premier** · `[Rebuild EAS]`)
 
-**Oui en principe :** tout ce qui **oblige un nouveau binaire** (capabilités Apple, nouveau **plugin Expo**, **module natif**, **empreinte SHA-1**, **OAuth lié aux identifiants bundle**, etc.), il vaut mieux le traiter **tôt et en lot** avec d’autres chantiers **`[Rebuild EAS]`**, pour éviter **plusieurs campagnes** « retélécharger l’app ».
+À **regrouper dans un même build** quand c’est possible.
 
-**Nuance importante**
+- [ ] **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur).
 
-- Un **nouveau type de profil** (prestataire) reste très souvent **`[souvent OTA]`** si reste dans **backend + écrans + navigation** sans lib native nouvelle.
+- [ ] **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement le même milestone** que **Sign in Apple**.
+
+- [ ] *(option)* **Lecteurs média natifs** (SoundCloud / Spotify / YouTube) — **uniquement si** stratégie = **SDK natif** ; si **WebView / URLs**, traiter en **Phase 3** (**OTA**).
+
+- [ ] **`[à trancher]`** **Profil « prestataire »** — **inclure dans ce build** seulement si **nouveau plugin / entitlements** ; sinon souvent **sans** nouveau binaire (données + écrans uniquement).
+
+---
+
+## Étiquettes (rappel)
 
 | Repère | Lecture |
 |--------|--------|
-| **`[Rebuild EAS]`** | À **combiner** avec les autres lignes équivalentes avant **un même build**. |
-| **`[souvent OTA]`** | Surtout **JS + API** ; mise à jour **Expo Updates** si **runtime inchangé** (vérifier **fingerprint**). |
-| **`[à trancher]`** | Décision après POC (besoin réel de natif ou non). |
+| **`[Rebuild EAS]`** | Nouveau **binaire** ⇒ **démarrer en premier**. |
+| **`[souvent OTA]`** | Surtout **JS + API** ; **Expo Updates** si runtime inchangé. |
+| **`[à trancher]`** | POC : faut-il du **natif** ou non. |
+
+**Nuance** — un **nouveau type de profil** sans nouveau module natif reste très souvent **OTA**, pas forcément Phase 1.
 
 ---
 
-## À planifier avant / avec un build natif **`[Rebuild EAS]`**
+## Phase 2 — Priorité produit forte (`[souvent OTA]`)
 
-- [ ] **`[Rebuild EAS]`** **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur).
+- [ ] Billetterie **multi-tarifs** / **phases** — infos vs grille de prix ; libellés ; total ; **TTC ~20 %** ; **commission Nox** ; phases répétables.
 
-- [ ] **`[Rebuild EAS]`** **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement même build** qu’Apple ci-dessus.
+- [ ] Places **hors Nox** sans décompte stock interne.
 
-- [ ] **`[Rebuild EAS]`** *(option)* **Lecteurs média natifs** (SoundCloud / Spotify / YouTube) — uniquement si **SDK natif** ; sinon **priorité moyenne** (WebView = OTA).
+- [ ] **Capacité** max = **capacité du lieu**.
 
-- [ ] **`[à trancher]`** **Profil « prestataire »** comme **capability store** — **OTA** si seulement données + écrans ; **Rebuild** si plugin / entitlements.
+- [ ] **Plusieurs DJs** + **correctif bug** actuel.
 
----
-
-## Priorité haute (produit)
-
-- [ ] **`[souvent OTA]`** Billetterie **multi-tarifs** / **phases** — infos vs grille de prix ; libellés ; total ; **TTC ~20 %** ; **commission Nox** ; phases répétables.
-
-- [ ] **`[souvent OTA]`** Places **hors Nox** sans décompte stock interne.
-
-- [ ] **`[souvent OTA]`** **Capacité** max = **capacité du lieu**.
-
-- [ ] **`[souvent OTA]`** **Plusieurs DJs** + **fix bug** actuel.
-
-- [ ] **`[souvent OTA]`** **Lieu secret** — révélation adresse **à partir d’une date**.
+- [ ] **Lieu secret** — révélation adresse **à partir d’une date**.
 
 ---
 
-## Priorité moyenne
+## Phase 3 — Priorité moyenne (`[souvent OTA]`)
 
-- [ ] **`[souvent OTA]`** **Type d’événement** (club, festival, privé, bar, concert…).
+- [ ] **Type d’événement** (club, festival, privé, bar, concert…).
 
-- [ ] **`[souvent OTA]`** **Lieu externe** (nom + adresse).
+- [ ] **Lieu externe** (nom + adresse).
 
-- [ ] **`[souvent OTA]`** **Fiches lieu — deals possibles.**
+- [ ] **Fiches lieu — deals possibles.**
 
-- [ ] **`[souvent OTA]`** **Lecteurs média** *si WebView / URLs* (sinon bloc Rebuild).
+- [ ] **Lecteurs média** *(WebView / URLs — pas de SDK natif)*.
 
-- [ ] **`[souvent OTA]`** **Prestataires** dans le wizard (photo, vidéaste, VDJ…) ; **futur** type profil **`[à trancher]`** (voir bloc natif).
+- [ ] **Prestataires** dans le wizard (photo, vidéaste, VDJ…) ; type profil « prestataire » — voir **Phase 1** si ajout **natif**.
 
-- [ ] **`[souvent OTA]`** **Récap final** + **modalités** chronologiques / prestations / prix.
+- [ ] **Récap final** + **modalités** chronologiques / prestations / prix.
 
-- [ ] **`[souvent OTA]`** **Location matériel** dans le wizard (cases, stock, réservation).
+- [ ] **Location matériel** (cases, stock, réservation).
 
-- [ ] **`[souvent OTA]`** **Agenda matériel** (dispo / réservation par créneaux).
+- [ ] **Agenda matériel** (dispo / créneaux).
 
-- [ ] **`[souvent OTA]`** **Visuels événement — format carré.**
+- [ ] **Visuels événement — format carré.**
 
-- [ ] **`[souvent OTA]`** **Carrousel / slides** événement (images + vidéos, contenu profils DJ).
+- [ ] **Carrousel / slides** événement.
 
-- [ ] **`[souvent OTA]`** **Sortie anticipée** + **revente places** + **liste d’attente** (notification quand une place se libère).
+- [ ] **Sortie anticipée** + **revente** + **liste d’attente**.
 
 ---
 
-## Priorité basse / chantiers structurants
+## Phase 4 — Plus tard / chantiers lourds
 
-- [ ] **`[souvent OTA]`** **Dossier médias post-événement** *(chantier souvent lourd **back + stockage**)* — espace commun organisateur · DJ · lieu, dépôt, choix pour chaque profil, export global.
+- [ ] **Dossier médias post-événement** *(souvent lourd **back + stockage**)*.
 
 ---
 
 ## Dette technique
 
-- [ ] **Billetterie** — tests multi-phases, TTC / commission, capacité vs lieu.
+- [ ] Billetterie — tests multi-phases, TTC / commission, capacité vs lieu.
 
-- [ ] **Plusieurs DJs** — tests + migrations **n-n** si nécessaire.
+- [ ] Multi-DJs — tests + migrations **n-n** si nécessaire.
 
 ---
 
 ## UX / accessibilité
 
-- [ ] Wizard : **clarté** infos vs tarifs, messages **TTC / commission**, erreur **capacité > lieu**.
+- [ ] Wizard : clarté infos vs tarifs, **TTC / commission**, erreur **capacité > lieu**.
 
-- [ ] **Lieu secret** : quand l’adresse sera visible ; états accessibles.
+- [ ] Lieu secret : visibilité de l’adresse ; états accessibles.
 
 ---
 
@@ -102,4 +102,4 @@ Liste des pistes d’évolution ; **la première section** fixe la priorité **t
 
 ---
 
-*Dernière mise à jour : 13 mai 2026 — priorisation « rebuild EAS » vs OTA et profil prestataire.*
+*Dernière mise à jour : 13 mai 2026 — ordre explicite : Phase 1 = rebuild en premier (cycles les plus longs).*

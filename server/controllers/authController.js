@@ -16,6 +16,7 @@ const {
   sanitizeInvisibleChars,
 } = require('../utils/validation');
 const { verifyGoogleIdToken } = require('../utils/googleIdTokenVerify');
+const { verifyAppleIdentityToken } = require('../utils/appleIdTokenVerify');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
 const prisma = new PrismaClient();
@@ -152,7 +153,7 @@ const login = async (req, res) => {
     if (user.password == null || user.password === '') {
       return sendError(
         res,
-        'Ce compte utilise Google (ou une autre méthode sans mot de passe). Utilise « Continuer avec Google ».',
+        'Ce compte utilise Google, Apple ou une autre méthode sans mot de passe. Utilise le bouton correspondant.',
         401
       );
     }
@@ -304,6 +305,149 @@ const googleAuth = async (req, res) => {
   } catch (error) {
     console.error('[googleAuth]', error);
     handleError(error, res, 'Erreur lors de la connexion Google.');
+  }
+};
+
+/**
+ * Connexion ou inscription avec Apple (identityToken vérifié côté serveur, JWKS Apple).
+ * L’email est lu **uniquement** depuis le JWT (pas de confiance au corps brut).
+ */
+const appleAuth = async (req, res) => {
+  try {
+    const { identityToken, birthDate: birthDateStr, certifiedMajor, acceptedCgu, username: usernameRaw } =
+      req.body ?? {};
+
+    let verified;
+    try {
+      verified = await verifyAppleIdentityToken(identityToken);
+    } catch (e) {
+      const code = Number(e.statusCode);
+      const http = Number.isFinite(code) && code >= 400 && code < 600 ? code : 500;
+      return sendError(res, e.message || 'Token Apple invalide.', http);
+    }
+
+    const { appleId } = verified;
+    const normalizedEmail = verified.email ? normalizeEmail(verified.email) : null;
+
+    if (normalizedEmail && verified.emailVerified === false) {
+      return sendError(res, 'Ton compte Apple doit partager une email vérifiée.', 400);
+    }
+
+    let user = await prisma.user.findFirst({ where: { appleId } });
+
+    if (user) {
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    if (normalizedEmail) {
+      user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (user) {
+        if (user.appleId && user.appleId !== appleId) {
+          return sendError(res, 'Ce compte email est déjà lié à un autre compte Apple.', 409);
+        }
+        if (!user.appleId) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { appleId },
+          });
+        }
+        const token = jwt.sign(
+          { userId: user.id, email: user.email },
+          JWT_SECRET,
+          { expiresIn: JWT_EXPIRES_IN }
+        );
+        return sendSuccess(res, {
+          message: 'Connexion réussie.',
+          user: sanitizeUser(user),
+          token,
+        });
+      }
+    }
+
+    if (!normalizedEmail) {
+      return sendError(
+        res,
+        'Apple n’a pas inclus d’email dans le jeton. Réessaie : sur un iPhone, Réglages → [ton nom] → Connexion avec Apple → Nox → « Arrêter d’utiliser Apple ID », puis reconnecte-toi en partageant l’email. Tu peux aussi utiliser Google ou l’email.',
+        400
+      );
+    }
+
+    if (!birthDateStr || !String(birthDateStr).trim()) {
+      return sendError(res, 'La date de naissance est requise pour créer un compte.', 400);
+    }
+    const parsed = parseBirthDate(String(birthDateStr).trim());
+    if (!parsed.valid) return sendError(res, parsed.message, 400);
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) return sendError(res, ageCheck.message, 403);
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
+    }
+    if (!acceptedCgu) {
+      return sendError(res, 'Vous devez accepter les CGU et la politique de confidentialité.', 400);
+    }
+
+    const usernameCheck = validateOptionalUsername(usernameRaw);
+    if (!usernameCheck.valid) return sendError(res, usernameCheck.message, 400);
+    let finalUsername = usernameCheck.value;
+    if (!finalUsername) {
+      try {
+        finalUsername = await allocateUniqueUsername(prisma, suggestUsernameFromEmail(normalizedEmail));
+      } catch (allocErr) {
+        console.error('[appleAuth] allocate username:', allocErr);
+        return sendError(
+          res,
+          'Impossible de créer un pseudo unique. Choisis un pseudo ou réessaie.',
+          500
+        );
+      }
+    } else {
+      const taken = await prisma.user.findFirst({
+        where: { username: { equals: finalUsername, mode: 'insensitive' } },
+      });
+      if (taken) return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        username: finalUsername,
+        password: null,
+        appleId,
+        birthDate: parsed.date,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        score: 100,
+        level: 1,
+      },
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    return sendSuccess(
+      res,
+      {
+        message: 'Compte créé avec succès.',
+        user: sanitizeUser(newUser),
+        token,
+      },
+      201
+    );
+  } catch (error) {
+    console.error('[appleAuth]', error);
+    handleError(error, res, 'Erreur lors de la connexion Apple.');
   }
 };
 
@@ -517,6 +661,7 @@ module.exports = {
   register,
   login,
   googleAuth,
+  appleAuth,
   connectWallet,
   forgotPassword,
   resetPassword,

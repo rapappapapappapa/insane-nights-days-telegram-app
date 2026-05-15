@@ -33,6 +33,7 @@ export default function GoogleSignInSection({
   showSuccess,
   showError,
   formBusy,
+  showTopDivider = true,
 }) {
   const iosId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
   const androidId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
@@ -161,11 +162,13 @@ export default function GoogleSignInSection({
 
   return (
     <>
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>{language === 'fr' ? 'ou' : 'or'}</Text>
-        <View style={styles.dividerLine} />
-      </View>
+      {showTopDivider ? (
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>{language === 'fr' ? 'ou' : 'or'}</Text>
+          <View style={styles.dividerLine} />
+        </View>
+      ) : null}
       <TouchableOpacity
         style={[styles.googleBtn, busy && styles.googleBtnDisabled]}
         onPress={async () => {

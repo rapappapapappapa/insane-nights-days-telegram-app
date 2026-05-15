@@ -233,6 +233,51 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const loginWithApple = useCallback(async (payload) => {
+    try {
+      const response = await api.loginWithApple(payload);
+
+      if (!response) {
+        return {
+          success: false,
+          error: 'Backend inaccessible. Vérifie que le serveur est lancé et que tu es sur le même réseau Wi-Fi.',
+        };
+      }
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.message ?? 'Erreur connexion Apple.',
+        };
+      }
+
+      const userData = {
+        id: response.user.id ?? null,
+        email: response.user.email ?? '',
+        username: response.user.username ?? '',
+        role: response.user.role ?? 'USER',
+        emailVerified: response.user.emailVerified ?? false,
+        score: response.user.score ?? 0,
+        level: response.user.level ?? 1,
+        activeProfileType: response.user.activeProfileType ?? null,
+        isAuthenticated: true,
+        token: response.token ?? null,
+      };
+
+      if (response.token) {
+        await saveToken(response.token);
+        await saveUserData(userData);
+      }
+
+      setUser(userData);
+
+      return { success: true, user: response.user, token: response.token };
+    } catch (error) {
+      const msg = error?.payload?.message || error?.message || 'Erreur connexion Apple.';
+      return { success: false, error: msg };
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       const authTok = await getToken();
@@ -314,6 +359,7 @@ export function AuthProvider({ children }) {
       login, 
       register,
       loginWithGoogle,
+      loginWithApple,
       logout, 
       updateUser, 
       isInitializing,

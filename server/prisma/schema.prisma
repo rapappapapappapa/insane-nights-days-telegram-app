@@ -13,6 +13,7 @@ model User {
   username                  String
   password                  String?
   googleId                  String?            @unique
+  appleId                   String?            @unique
   role                      UserRole           @default(USER)
   score                     Int                @default(0)
   level                     Int                @default(1)

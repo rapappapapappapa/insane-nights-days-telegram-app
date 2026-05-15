@@ -11,6 +11,7 @@ export const API_CONFIG = {
     AUTH_REGISTER: '/api/auth/register',
     AUTH_LOGIN: '/api/auth/login',
     AUTH_GOOGLE: '/api/auth/google',
+    AUTH_APPLE: '/api/auth/apple',
     PROFILE_COMMUNITY: '/api/profile/community',
     PROFILE_DJ: '/api/profile/dj',
     PROFILE_BOOKER: '/api/profile/booker',

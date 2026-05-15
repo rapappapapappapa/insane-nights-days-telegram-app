@@ -27,6 +27,12 @@ router.post('/login', authController.login);
 router.post('/google', authController.googleAuth);
 
 /**
+ * @route POST /api/auth/apple
+ * @desc Connexion / inscription Sign in with Apple (corps : identityToken + champs inscription si nouveau compte)
+ */
+router.post('/apple', authController.appleAuth);
+
+/**
  * @route POST /api/auth/forgot-password
  * @desc Envoie un code de réinitialisation par email
  * @access Public

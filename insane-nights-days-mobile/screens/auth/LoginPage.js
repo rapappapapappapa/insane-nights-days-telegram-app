@@ -23,10 +23,12 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
 import GoogleSignInSection, { isGoogleOAuthConfigured } from '../../components/GoogleSignInSection';
+import AppleSignInSection from '../../components/AppleSignInSection';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
-  const { user, login, register, loginWithGoogle } = useAuth();
+  const { user, login, register, loginWithGoogle, loginWithApple } = useAuth();
   const { navigate, routeParams } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -47,6 +49,7 @@ export default function LoginPage() {
   const [acceptedCgu, setAcceptedCgu] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [certifiedMajor, setCertifiedMajor] = useState(false);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
 
@@ -65,7 +68,21 @@ export default function LoginPage() {
     }
   }, [user?.isAuthenticated, navigate, nextScreen]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'ios') {
+      setAppleAuthAvailable(false);
+      return;
+    }
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAuthAvailable)
+      .catch(() => setAppleAuthAvailable(false));
+  }, []);
+
   if (user?.isAuthenticated) return null;
+
+  const showAppleAuth = Platform.OS === 'ios' && appleAuthAvailable;
+  const showGoogleAuth = isGoogleOAuthConfigured();
+  const showSocialDivider = showAppleAuth || showGoogleAuth;
 
   const handleLogin = async () => {
     if (loading) return;
@@ -193,7 +210,33 @@ export default function LoginPage() {
               </TouchableOpacity>
             </View>
 
-            {isGoogleOAuthConfigured() ? (
+            {showSocialDivider ? (
+              <View style={styles.socialDividerRow}>
+                <View style={styles.socialDividerLine} />
+                <Text style={styles.socialDividerText}>{language === 'fr' ? 'ou' : 'or'}</Text>
+                <View style={styles.socialDividerLine} />
+              </View>
+            ) : null}
+
+            {showAppleAuth ? (
+              <AppleSignInSection
+                language={language}
+                mode={mode}
+                birthDate={birthDate}
+                certifiedMajor={certifiedMajor}
+                acceptedCgu={acceptedCgu}
+                username={username}
+                loginWithApple={loginWithApple}
+                navigate={navigate}
+                nextScreen={nextScreen}
+                showSuccess={showSuccess}
+                showError={showError}
+                formBusy={loading}
+                isAvailable={appleAuthAvailable}
+              />
+            ) : null}
+
+            {showGoogleAuth ? (
               <GoogleSignInSection
                 language={language}
                 mode={mode}
@@ -207,6 +250,7 @@ export default function LoginPage() {
                 showSuccess={showSuccess}
                 showError={showError}
                 formBusy={loading}
+                showTopDivider={false}
               />
             ) : null}
 
@@ -595,6 +639,24 @@ const styles = StyleSheet.create({
   },
   modePillTextActive: {
     color: '#fff',
+  },
+  socialDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 12,
+    gap: 10,
+  },
+  socialDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  socialDividerText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'lowercase',
   },
   label: {
     color: 'rgba(255,255,255,0.85)',

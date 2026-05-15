@@ -10,7 +10,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 À **regrouper dans un même build** quand c’est possible.
 
-- [ ] **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur).
+- [x] **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur). *Capacité Xcode / App Store + `APPLE_IOS_BUNDLE_ID` si ≠ défaut.*
 
 - [ ] **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement le même milestone** que **Sign in Apple**.
 

@@ -16,7 +16,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.insanenightsdays.mobile",
-      "buildNumber": "5",
+      "buildNumber": "6",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sélectionner des images et vidéos.",
         "NSPhotoLibraryAddUsageDescription": "Cette application a besoin d'accéder à votre bibliothèque de photos pour sauvegarder des images.",
@@ -64,7 +65,8 @@
           "merchantIdentifier": "merchant.com.insanenightsdays.mobile"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

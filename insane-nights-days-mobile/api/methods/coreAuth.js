@@ -34,6 +34,14 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     });
   },
 
+  /** Sign in with Apple : { identityToken } ou + inscription (birthDate, certifiedMajor, acceptedCgu, username?) */
+  loginWithApple: async (payload) => {
+    return apiRequest(API_CONFIG.ENDPOINTS.AUTH_APPLE, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
   // Créer un profil Communauté (nécessite un token JWT)
   createCommunityProfile: async ({ token, pseudo, nom, prenom, email, pays, dateNaissance }) => {
     if (!token) {

@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 10 au 13 mai 2026 (sam. – mer.)
 
+### Ajouté (auth — connexion Apple)
+- **Prisma / User** : **`appleId`** optionnel unique + migration **`20260513140000_user_apple_oauth`** (à déployer : `prisma migrate deploy`).
+- **Serveur** : **`POST /api/auth/apple`** (corps **`identityToken`**) ; vérification JWKS **`appleid.apple.com`** ; **`jwks-rsa`** ; audience **`APPLE_IOS_BUNDLE_ID`** (sinon défaut **`com.insanenightsdays.mobile`**).
+- **Mobile (iOS)** : **`expo-apple-authentication`** ; **`AppleSignInSection`** sur l’écran connexion/inscription ; **`ios.usesAppleSignIn`**, **`buildNumber` 6** ; pas de bouton Apple sur Android (comportement natif Expo).
+
+### Modifié (auth)
+- Message erreur connexion mot de passe : compte **Google / Apple** sans MDP.
+
 ### Ajouté (auth — connexion Google)
 - **Serveur** : **`POST /api/auth/google`** (corps **`idToken`**) ; vérification du jeton avec **`google-auth-library`** ; champs **`User.googleId`**, **`User.password`** optionnel (migration **`20260507140000_user_google_oauth`**) ; compte email existant : **liaison** `googleId` si absent ; inscription Google : même règles **âge / CGU** que **`/register`** ; connexion mot de passe refusée si **`password`** absent (pointer vers Google).
 - **Mobile** : **`expo-auth-session`** / **`GoogleSignInSection`** ; boutons **Continuer avec Google** / **S'inscrire avec Google** si les **`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`** sont définis ; schéma d’URL **`com.insanenightsdays.mobile`** dans **`app.json`**.

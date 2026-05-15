@@ -17,7 +17,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-// Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -27,7 +26,6 @@ import { api, API_CONFIG, normalizeMediaUrl } from '../../api/config';
 import Colors from '../../constants/colors';
 import StarRating from '../../components/StarRating';
 import VideoPlayer from '../../components/VideoPlayer';
-import AudioPlayer from '../../components/AudioPlayer';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
@@ -124,14 +122,13 @@ export default function DjDashboardPage() {
   // Médias
   const [photos, setPhotos] = useState([]); // Array of { id, url }
   const [videos, setVideos] = useState([]); // Array of { id, url }
-  const [audioFiles, setAudioFiles] = useState([]); // Array of { id, url }
   const [bannerImage, setBannerImage] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
   
   // Édition de titre
-  const [editingTitle, setEditingTitle] = useState(null); // { type: 'video'|'audio', id, currentTitle }
+  const [editingTitle, setEditingTitle] = useState(null); // { type: 'video', id, currentTitle }
   const [editTitleValue, setEditTitleValue] = useState('');
   
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
@@ -267,13 +264,7 @@ export default function DjDashboardPage() {
     { value: 'j+30', labelFr: 'J+30', labelEn: 'D+30' },
   ];
 
-  const handleBack = async () => {
-    try {
-      // Note: expo-audio ne nécessite plus setIsEnabledAsync
-      // Les players audio se gèrent individuellement
-    } catch (e) {
-      console.error("Erreur lors de l'arrêt de l'audio au retour dashboard:", e);
-    }
+  const handleBack = () => {
     goBack();
   };
 
@@ -755,7 +746,6 @@ export default function DjDashboardPage() {
             // Stocker avec ID et titre pour pouvoir supprimer et éditer
             setPhotos(media.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner').map(m => ({ id: m.id, url: m.url })));
             setVideos(media.filter(m => m.type === 'video').map(m => ({ id: m.id, url: m.url, title: m.title })));
-            setAudioFiles(media.filter(m => m.type === 'audio').map(m => ({ id: m.id, url: m.url, title: m.title })));
             const profileImg = media.find(m => m.type === 'photo' && m.title === 'profile');
             const bannerImg = media.find(m => m.type === 'photo' && m.title === 'banner');
             if (profileImg) setProfileImage(normalizeMediaUrl(profileImg.url));
@@ -923,7 +913,6 @@ export default function DjDashboardPage() {
               // Mettre à jour les états avec les médias rechargés
               setPhotos(media.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner').map(m => ({ id: m.id, url: m.url })));
               setVideos(media.filter(m => m.type === 'video').map(m => ({ id: m.id, url: m.url, title: m.title })));
-              setAudioFiles(media.filter(m => m.type === 'audio').map(m => ({ id: m.id, url: m.url, title: m.title })));
               const profileImg = media.find(m => m.type === 'photo' && m.title === 'profile');
               const bannerImg = media.find(m => m.type === 'photo' && m.title === 'banner');
               if (profileImg) setProfileImage(normalizeMediaUrl(profileImg.url));
@@ -963,10 +952,6 @@ export default function DjDashboardPage() {
           setVideos(videos.map(v => 
             v.id === mediaId ? { ...v, title: newTitle } : v
           ));
-        } else if (type === 'audio') {
-          setAudioFiles(audioFiles.map(a => 
-            a.id === mediaId ? { ...a, title: newTitle } : a
-          ));
         }
         showSuccess(language === 'fr' ? 'Titre mis à jour avec succès' : 'Title updated successfully');
         setEditingTitle(null);
@@ -997,8 +982,6 @@ export default function DjDashboardPage() {
           setPhotos(photos.filter(p => p.id !== mediaId));
         } else if (type === 'video') {
           setVideos(videos.filter(v => v.id !== mediaId));
-        } else if (type === 'audio') {
-          setAudioFiles(audioFiles.filter(a => a.id !== mediaId));
         }
         showSuccess(
           language === 'fr' ? 'Média supprimé avec succès' : 'Media deleted successfully'
@@ -1318,51 +1301,6 @@ export default function DjDashboardPage() {
             : `Error selecting video: ${error.message || 'Unknown error'}`
         );
       }
-    }
-  };
-
-  // Upload de fichiers audio MP3
-  const pickAudio = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'audio/*',
-        copyToCacheDirectory: true,
-        multiple: true,
-      });
-
-      if (!result.canceled && result.assets) {
-        const audioAssets = result.assets.filter(
-          asset => asset.mimeType?.includes('audio') || asset.name?.endsWith('.mp3')
-        );
-        
-        // Sauvegarder chaque fichier audio et récupérer l'ID
-        for (const asset of audioAssets) {
-          try {
-            const response = await saveMedia('audio', asset.uri);
-            if (response && response.success && response.media) {
-              // Utiliser l'URL retournée par le serveur (URL publique)
-              setAudioFiles([...audioFiles, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-            } else {
-              setAudioFiles([...audioFiles, { id: null, url: asset.uri }]);
-            }
-          } catch (error) {
-            console.error('[pickAudio] Erreur sauvegarde audio:', error);
-          }
-        }
-        
-        if (audioAssets.length > 0) {
-          showSuccess(
-            language === 'fr' 
-              ? `${audioAssets.length} fichier(s) audio ajouté(s)` 
-              : `${audioAssets.length} audio file(s) added`
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Erreur sélection audio:', error);
-      showError(
-        language === 'fr' ? 'Erreur lors de la sélection du fichier audio' : 'Error selecting audio file'
-      );
     }
   };
 
@@ -2375,7 +2313,7 @@ export default function DjDashboardPage() {
 
             {/* Vidéos */}
             <Text style={styles.mediaSubtitle}>
-              {language === 'fr' ? 'VIDÉOS & MUSIQUE' : 'VIDEOS & MUSIC'}
+              {language === 'fr' ? 'VIDÉOS' : 'VIDEOS'}
             </Text>
             <Text style={styles.mediaHint}>
               {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
@@ -2524,92 +2462,11 @@ export default function DjDashboardPage() {
               </TouchableOpacity>
             </View>
 
-            {/* Audio MP3 */}
-            <Text style={styles.mediaSubtitle}>
-              {language === 'fr' ? 'AUDIO (MP3)' : 'AUDIO (MP3)'}
+            <Text style={[styles.mediaHint, styles.mediaHintLinks]}>
+              {language === 'fr'
+                ? 'Pas de fichiers audio hébergés ici (droits d’auteur). Pour la musique : liens Spotify / SoundCloud dans l’onglet Profil.'
+                : 'No hosted audio here (copyright). For music: Spotify / SoundCloud links under Profile.'}
             </Text>
-            <Text style={styles.mediaHint}>
-              {language === 'fr' ? 'Taille max ~100 Mo par média' : 'Max size ~100 MB per media'}
-            </Text>
-            <View style={styles.mediaList}>
-              {audioFiles
-                .filter(audio => {
-                  const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
-                  return audioUrl && typeof audioUrl === 'string';
-                })
-                .map((audio, index) => {
-                  const audioUrl = audio?.url || (typeof audio === 'string' ? audio : null);
-                  const audioTitle = audio?.title || `${language === 'fr' ? 'Set audio' : 'Audio Set'} ${index + 1}`;
-                  
-                  if (!audioUrl || typeof audioUrl !== 'string') {
-                    return null;
-                  }
-
-                  let finalAudioUrl = audioUrl;
-                  
-                  // Pour les URLs HTTP/HTTPS, s'assurer qu'elles sont complètes
-                  if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
-                    // Vérifier si c'est une URL de l'ancien tunnel Cloudflare et la remplacer
-                    const oldTunnelPattern = /https?:\/\/[^\/]+\.trycloudflare\.com/;
-                    if (oldTunnelPattern.test(audioUrl)) {
-                      // Remplacer l'ancienne URL du tunnel par la nouvelle
-                      finalAudioUrl = normalizeMediaUrl(audioUrl);
-                    } else {
-                    finalAudioUrl = audioUrl;
-                    }
-                  } else {
-                    finalAudioUrl = normalizeMediaUrl(audioUrl);
-                  }
-
-                  return (
-                    <View key={audio?.id || index} style={styles.audioItemContainer}>
-                      <View style={styles.audioPlayerWrapper}>
-                        <AudioPlayer
-                          audioUrl={finalAudioUrl}
-                          title={audioTitle}
-                        />
-                      </View>
-                      <View style={styles.audioActions}>
-                        {audio.id && (
-                          <TouchableOpacity
-                            style={styles.editButton}
-                            onPress={() => {
-                              setEditingTitle({ type: 'audio', id: audio.id, currentTitle: audioTitle });
-                              setEditTitleValue(audioTitle);
-                            }}
-                          >
-                            <Text style={styles.editButtonText}>✏️</Text>
-                          </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          style={styles.deleteButtonAudio}
-                          onPress={() => {
-                            if (audio.id) {
-                              showConfirm(
-                                language === 'fr' ? 'Supprimer' : 'Delete',
-                                language === 'fr' ? 'Supprimer ce fichier audio ?' : 'Delete this audio file?',
-                                [
-                                  { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-                                  { text: language === 'fr' ? 'Supprimer' : 'Delete', style: 'destructive', onPress: () => deleteMedia(audio.id, 'audio') },
-                                ]
-                              );
-                            } else {
-                              setAudioFiles(audioFiles.filter((_, i) => i !== index));
-                            }
-                          }}
-                        >
-                          <Text style={styles.deleteButtonText}>×</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              <TouchableOpacity style={styles.addAudioButton} onPress={pickAudio}>
-                <Text style={styles.addAudioButtonText}>
-                  {language === 'fr' ? '+ Ajouter un set audio' : '+ Add audio set'}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </ScrollView>
         );
 
@@ -2690,11 +2547,11 @@ export default function DjDashboardPage() {
               <Text style={styles.sidebarFooterTitle}>
                 {language === 'fr' ? 'Liens & réseaux' : 'Links & Networks'}
               </Text>
-              <TouchableOpacity style={styles.addAudioSetButton} onPress={pickAudio}>
-                <Text style={styles.addAudioSetButtonText}>
-                  + {language === 'fr' ? 'Ajouter un set audio' : 'Add an audio set'}
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.sidebarFooterHint}>
+                {language === 'fr'
+                  ? 'Spotify / SoundCloud : onglet Profil.'
+                  : 'Spotify / SoundCloud: Profile tab.'}
+              </Text>
             </View>
           </Animated.View>
 
@@ -3553,16 +3410,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  addAudioSetButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-  },
-  addAudioSetButtonText: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: '600',
+  sidebarFooterHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   overlay: {
     position: 'absolute',
@@ -3975,6 +3826,10 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 8,
   },
+  mediaHintLinks: {
+    marginTop: 8,
+    marginBottom: 0,
+  },
   mediaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -4116,49 +3971,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  audioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: 8,
-    padding: 12,
-    gap: 12,
-  },
-  audioItemContainer: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  audioIcon: {
-    fontSize: 24,
-  },
-  audioInfo: {
-    flex: 1,
-  },
-  audioTitle: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  waveform: {
-    height: 20,
-    backgroundColor: Colors.background,
-    borderRadius: 4,
-  },
-  addAudioButton: {
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addAudioButtonText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
   comingSoon: {
     color: Colors.textSecondary,
     fontSize: 16,
@@ -4200,23 +4012,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   deleteButtonVideo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  audioPlayerWrapper: {
-    flex: 1,
-  },
-  audioActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  deleteButtonAudio: {
     width: 32,
     height: 32,
     borderRadius: 16,

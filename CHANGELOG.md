@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 10 au 13 mai 2026 (sam. – mer.)
 
+### Modifié (mobile — dashboard DJ, médias)
+- **Onglet Médias** : suppression de la section **AUDIO (MP3)** (upload / lecteur intégré) et message invitant à utiliser **Spotify / SoundCloud** depuis l’onglet **Profil** — pas d’MP3 hébergés sur la plateforme (droits d’auteur).
+
 ### Ajouté (mobile — profil DJ, streaming)
 - **Spotify / SoundCloud** : bouton **« Écouter ici (intégré) »** — modal **`BuiltInStreamPlayerModal`** + **WebView** (embed Spotify / widget SoundCloud), à partir des **URLs déjà stockées** ; **« Ouvrir dans l’app / SoundCloud »** en secours. **Pas de module natif** = **pas de rebuild** (déployable en **OTA**). Fichiers **`utils/streamingEmbedUrl.js`**.
 

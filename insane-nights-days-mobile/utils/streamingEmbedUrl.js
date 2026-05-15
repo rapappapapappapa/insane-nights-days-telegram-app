@@ -10,9 +10,23 @@
 export function spotifyOpenUrlToEmbedUrl(openUrl) {
   if (!openUrl || typeof openUrl !== 'string') return null;
   const u = openUrl.trim();
-  const m = u.match(/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|playlist|album|episode)\/([a-zA-Z0-9]+)/i);
-  if (!m) return null;
-  return `https://open.spotify.com/embed/${m[1].toLowerCase()}/${m[2]}`;
+
+  const uriScheme = u.match(/^spotify:(track|playlist|album|episode|artist|show):([a-zA-Z0-9]+)/i);
+  if (uriScheme) {
+    return `https://open.spotify.com/embed/${uriScheme[1].toLowerCase()}/${uriScheme[2]}`;
+  }
+
+  const patterns = [
+    /open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(track|playlist|album|episode|artist|show)\/([a-zA-Z0-9]+)/i,
+    /www\.spotify\.com\/(?:intl-[a-z]{2}\/|[a-z]{2}\/)?(artist|album|track|playlist|show|episode)\/([a-zA-Z0-9]+)/i,
+  ];
+  for (const re of patterns) {
+    const m = u.match(re);
+    if (m) {
+      return `https://open.spotify.com/embed/${m[1].toLowerCase()}/${m[2]}`;
+    }
+  }
+  return null;
 }
 
 /**
@@ -36,4 +50,23 @@ export function soundcloudUrlToWidgetUrl(pageUrl) {
     visual: 'false',
   });
   return `https://w.soundcloud.com/player/?${params.toString()}`;
+}
+
+/**
+ * @param {string} url
+ * @param {'spotify'|'soundcloud'} provider
+ * @returns {{ uri: string, title: string } | null}
+ */
+export function resolveStreamingEmbed(url, provider) {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (provider === 'spotify') {
+    const uri = spotifyOpenUrlToEmbedUrl(trimmed);
+    return uri ? { uri, title: 'Spotify' } : null;
+  }
+  if (provider === 'soundcloud') {
+    const uri = soundcloudUrlToWidgetUrl(trimmed);
+    return uri ? { uri, title: 'SoundCloud' } : null;
+  }
+  return null;
 }

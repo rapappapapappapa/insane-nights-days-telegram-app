@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +27,7 @@ import { api, API_CONFIG, normalizeMediaUrl } from '../../api/config';
 import Colors from '../../constants/colors';
 import StarRating from '../../components/StarRating';
 import VideoPlayer from '../../components/VideoPlayer';
+import BuiltInStreamPlayerModal from '../../components/BuiltInStreamPlayerModal';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
@@ -46,6 +48,7 @@ import {
   formatEventWindowHint,
 } from '../../constants/contractPayload';
 import { Ionicons } from '@expo/vector-icons';
+import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 
 function cleanText(s) {
   if (!s) return '';
@@ -130,6 +133,11 @@ export default function DjDashboardPage() {
   // Édition de titre
   const [editingTitle, setEditingTitle] = useState(null); // { type: 'video', id, currentTitle }
   const [editTitleValue, setEditTitleValue] = useState('');
+  const [streamPreviewPlayer, setStreamPreviewPlayer] = useState({
+    visible: false,
+    uri: null,
+    title: '',
+  });
   
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
@@ -840,6 +848,33 @@ export default function DjDashboardPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openDjStreamPreview = (rawUrl, provider) => {
+    const trimmed = (rawUrl || '').trim();
+    if (!trimmed) return;
+    const resolved = resolveStreamingEmbed(trimmed, provider);
+    if (!resolved) {
+      Alert.alert(
+        language === 'fr' ? 'Lecture intégrée impossible' : 'In-app playback unavailable',
+        language === 'fr'
+          ? 'Ce lien ne peut pas être chargé dans le lecteur intégré (lien court, page compte, etc.). Colle une URL complète du type open.spotify.com (piste, album, playlist, artiste, podcast) ou une URL SoundCloud https://soundcloud.com/…'
+          : 'This link cannot load in the in-app player (short link, profile-only URL, etc.). Use a full open.spotify.com URL (track, album, playlist, artist, show) or an https://soundcloud.com/… URL.',
+        [
+          { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+          {
+            text: language === 'fr' ? 'Ouvrir dans le navigateur / app' : 'Open in browser / app',
+            onPress: () => Linking.openURL(trimmed).catch(() => {}),
+          },
+        ]
+      );
+      return;
+    }
+    setStreamPreviewPlayer({
+      visible: true,
+      uri: resolved.uri,
+      title: resolved.title,
+    });
   };
 
   // Sauvegarder un média
@@ -1639,6 +1674,11 @@ export default function DjDashboardPage() {
             <Text style={[styles.sectionTitle, { marginTop: 30, marginBottom: 16 }]}>
               {language === 'fr' ? 'RÉSEAUX SOCIAUX' : 'SOCIAL NETWORKS'}
                 </Text>
+            <Text style={styles.socialStreamHint}>
+              {language === 'fr'
+                ? 'Spotify et SoundCloud : lecture dans l’app pour les visiteurs (embed officiel). Tu peux tester le lecteur avec les boutons sous chaque champ.'
+                : 'Spotify and SoundCloud: visitors hear music in-app (official embed). Use the buttons under each field to preview.'}
+            </Text>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>🎵 SoundCloud</Text>
@@ -1651,6 +1691,20 @@ export default function DjDashboardPage() {
                 keyboardType="url"
                 autoCapitalize="none"
               />
+              {soundcloudUrl.trim() ? (
+                <TouchableOpacity
+                  style={styles.streamPreviewLink}
+                  onPress={() => openDjStreamPreview(soundcloudUrl, 'soundcloud')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.streamPreviewLinkText}>
+                    ▶{' '}
+                    {language === 'fr'
+                      ? 'Tester la lecture intégrée (SoundCloud)'
+                      : 'Preview in-app player (SoundCloud)'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               </View>
 
             <View style={styles.inputGroup}>
@@ -1664,6 +1718,20 @@ export default function DjDashboardPage() {
                 keyboardType="url"
                 autoCapitalize="none"
               />
+              {spotifyUrl.trim() ? (
+                <TouchableOpacity
+                  style={styles.streamPreviewLink}
+                  onPress={() => openDjStreamPreview(spotifyUrl, 'spotify')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.streamPreviewLinkText}>
+                    ▶{' '}
+                    {language === 'fr'
+                      ? 'Tester la lecture intégrée (Spotify)'
+                      : 'Preview in-app player (Spotify)'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <View style={styles.inputGroup}>
@@ -2644,6 +2712,16 @@ export default function DjDashboardPage() {
         />
       )}
 
+      <BuiltInStreamPlayerModal
+        visible={streamPreviewPlayer.visible}
+        embedUri={streamPreviewPlayer.uri}
+        title={streamPreviewPlayer.title}
+        language={language}
+        onClose={() =>
+          setStreamPreviewPlayer({ visible: false, uri: null, title: '' })
+        }
+      />
+
       {/* Modal d'édition de titre */}
       <Modal
         visible={editingTitle !== null}
@@ -3544,6 +3622,28 @@ const styles = StyleSheet.create({
     padding: 14,
     color: Colors.text,
     fontSize: 16,
+  },
+  socialStreamHint: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: -10,
+    marginBottom: 18,
+  },
+  streamPreviewLink: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,23,68,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+  },
+  streamPreviewLinkText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   textArea: {
     minHeight: 100,

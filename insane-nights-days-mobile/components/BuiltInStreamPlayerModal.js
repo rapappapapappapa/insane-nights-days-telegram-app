@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { Modal, View, TouchableOpacity, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../constants/colors';
@@ -26,13 +26,15 @@ export default function BuiltInStreamPlayerModal({
     return null;
   }
 
+  const sheetHeight = Math.min(Math.round(Dimensions.get('window').height * 0.54), 560);
+
   const labelClose = language === 'fr' ? 'Fermer' : 'Close';
   const header = title || (language === 'fr' ? 'Écouter' : 'Listen');
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={[styles.overlay, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { height: sheetHeight }]}>
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle} numberOfLines={1}>
               {header}
@@ -56,6 +58,8 @@ export default function BuiltInStreamPlayerModal({
               domStorageEnabled
               nestedScrollEnabled
               setSupportMultipleWindows={false}
+              originWhitelist={['https://', 'http://']}
+              {...(Platform.OS === 'android' ? { mixedContentMode: 'always' } : {})}
             />
           </View>
         </View>
@@ -78,7 +82,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,23,68,0.25)',
     paddingHorizontal: 12,
     paddingBottom: 24,
-    height: Platform.OS === 'ios' ? 400 : 380,
     overflow: 'hidden',
   },
   sheetHeader: {

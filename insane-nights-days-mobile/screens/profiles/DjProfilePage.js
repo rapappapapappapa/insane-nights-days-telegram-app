@@ -10,6 +10,7 @@ import {
   Dimensions,
   Linking,
   Modal,
+  Alert,
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
@@ -26,7 +27,7 @@ import BuiltInStreamPlayerModal from '../../components/BuiltInStreamPlayerModal'
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
-import { spotifyOpenUrlToEmbedUrl, soundcloudUrlToWidgetUrl } from '../../utils/streamingEmbedUrl';
+import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -118,31 +119,28 @@ export default function DjProfilePage() {
   const openBuiltInStream = (url, provider) => {
     if (!url || typeof url !== 'string') return;
     const trimmed = url.trim();
-    if (provider === 'spotify') {
-      const embed = spotifyOpenUrlToEmbedUrl(trimmed);
-      if (!embed) {
-        Linking.openURL(trimmed).catch(() => {});
-        return;
-      }
-      setStreamPlayer({
-        visible: true,
-        uri: embed,
-        title: 'Spotify',
-      });
+    const resolved = resolveStreamingEmbed(trimmed, provider);
+    if (!resolved) {
+      Alert.alert(
+        language === 'fr' ? 'Lecture intégrée impossible' : 'In-app playback unavailable',
+        language === 'fr'
+          ? 'Ce lien ne peut pas être chargé dans le lecteur intégré (lien court, page compte, etc.). Colle une URL complète du type open.spotify.com (piste, album, playlist, artiste, podcast) ou une URL SoundCloud https://soundcloud.com/…'
+          : 'This link cannot load in the in-app player (short link, profile-only URL, etc.). Use a full open.spotify.com URL (track, album, playlist, artist, show) or an https://soundcloud.com/… URL.',
+        [
+          { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+          {
+            text: language === 'fr' ? 'Ouvrir dans le navigateur / app' : 'Open in browser / app',
+            onPress: () => Linking.openURL(trimmed).catch(() => {}),
+          },
+        ]
+      );
       return;
     }
-    if (provider === 'soundcloud') {
-      const widget = soundcloudUrlToWidgetUrl(trimmed);
-      if (!widget) {
-        Linking.openURL(trimmed).catch(() => {});
-        return;
-      }
-      setStreamPlayer({
-        visible: true,
-        uri: widget,
-        title: 'SoundCloud',
-      });
-    }
+    setStreamPlayer({
+      visible: true,
+      uri: resolved.uri,
+      title: resolved.title,
+    });
   };
 
   const handleFollowToggle = async () => {
@@ -464,6 +462,11 @@ export default function DjProfilePage() {
         <Text style={styles.sectionTitle}>
           {language === 'fr' ? 'MUSIQUE' : 'MUSIC'}
         </Text>
+        <Text style={styles.streamSectionIntro}>
+          {language === 'fr'
+            ? 'Lecture dans l’app via le lecteur intégré (Spotify / SoundCloud) — le bouton vert lance l’embed ; « Ouvrir dans l’app » est optionnel.'
+            : 'In-app playback via the built-in player (Spotify / SoundCloud) — the main button opens the embed; opening the external app is optional.'}
+        </Text>
         {!dj.spotifyUrl && !dj.soundcloudUrl ? (
           <Text style={styles.emptyHint}>
             {language === 'fr' ? 'Aucun lien Spotify / SoundCloud renseigné.' : 'No Spotify / SoundCloud links yet.'}
@@ -480,7 +483,7 @@ export default function DjProfilePage() {
                   accessibilityLabel={language === 'fr' ? 'Écouter Spotify dans l’application' : 'Listen to Spotify in-app'}
                 >
                   <Text style={styles.streamPrimaryButtonText}>
-                    ▶ {language === 'fr' ? 'Écouter ici (intégré)' : 'Listen here (in-app)'}
+                    ▶ {language === 'fr' ? 'Écouter dans l’app (lecteur intégré)' : 'Listen in app (embedded player)'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -506,7 +509,7 @@ export default function DjProfilePage() {
                   }
                 >
                   <Text style={styles.streamPrimaryButtonText}>
-                    ▶ {language === 'fr' ? 'Écouter ici (intégré)' : 'Listen here (in-app)'}
+                    ▶ {language === 'fr' ? 'Écouter dans l’app (lecteur intégré)' : 'Listen in app (embedded player)'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -1047,6 +1050,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 12,
     textTransform: 'uppercase',
+  },
+  streamSectionIntro: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: -6,
+    marginBottom: 14,
   },
   infoItem: {
     marginBottom: 12,

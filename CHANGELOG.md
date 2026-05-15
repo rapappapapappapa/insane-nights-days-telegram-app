@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 10 au 13 mai 2026 (sam. – mer.)
+## Semaine du 13 au 15 mai 2026 (mer. – ven.)
 
 ### Modifié (mobile — dashboard DJ, médias)
 - **Onglet Médias** : suppression de la section **AUDIO (MP3)** (upload / lecteur intégré) ; message invitant à renseigner **Spotify / SoundCloud** dans **Profil artiste** — pas de fichiers audio hébergés sur la plateforme (droits d’auteur).

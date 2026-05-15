@@ -21,10 +21,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api, API_CONFIG, normalizeMediaUrl } from '../../api/config';
 import StarRating from '../../components/StarRating';
 import VideoPlayer from '../../components/VideoPlayer';
+import BuiltInStreamPlayerModal from '../../components/BuiltInStreamPlayerModal';
 // AudioPlayer retiré: plus d'audio mp3 dans le profil DJ
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
+import { spotifyOpenUrlToEmbedUrl, soundcloudUrlToWidgetUrl } from '../../utils/streamingEmbedUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -80,6 +82,7 @@ export default function DjProfilePage() {
   const previousTabRef = useRef(activeTab);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
+  const [streamPlayer, setStreamPlayer] = useState({ visible: false, uri: null, title: '' });
   // Drawer global géré dans App.js
 
   useEffect(() => {
@@ -110,6 +113,36 @@ export default function DjProfilePage() {
     // Note: expo-audio gère automatiquement le nettoyage des players
     // quand les composants sont démontés, pas besoin d'arrêter manuellement
     goBack();
+  };
+
+  const openBuiltInStream = (url, provider) => {
+    if (!url || typeof url !== 'string') return;
+    const trimmed = url.trim();
+    if (provider === 'spotify') {
+      const embed = spotifyOpenUrlToEmbedUrl(trimmed);
+      if (!embed) {
+        Linking.openURL(trimmed).catch(() => {});
+        return;
+      }
+      setStreamPlayer({
+        visible: true,
+        uri: embed,
+        title: 'Spotify',
+      });
+      return;
+    }
+    if (provider === 'soundcloud') {
+      const widget = soundcloudUrlToWidgetUrl(trimmed);
+      if (!widget) {
+        Linking.openURL(trimmed).catch(() => {});
+        return;
+      }
+      setStreamPlayer({
+        visible: true,
+        uri: widget,
+        title: 'SoundCloud',
+      });
+    }
   };
 
   const handleFollowToggle = async () => {
@@ -264,6 +297,7 @@ export default function DjProfilePage() {
   }
 
   return (
+    <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <StatusBar style="light" />
       
@@ -425,19 +459,68 @@ export default function DjProfilePage() {
         </Text>
       </View>
 
-      {/* SoundCloud (call-to-action) */}
+      {/* SoundCloud + Spotify : lecteur intégré (embed WebView) */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>SOUNDCLOUD</Text>
-        {dj.soundcloudUrl ? (
-          <TouchableOpacity style={styles.soundcloudButton} onPress={() => Linking.openURL(dj.soundcloudUrl)}>
-            <Text style={styles.soundcloudButtonText}>
-              🎵 {language === 'fr' ? 'Ouvrir SoundCloud' : 'Open SoundCloud'}
-            </Text>
-          </TouchableOpacity>
-        ) : (
+        <Text style={styles.sectionTitle}>
+          {language === 'fr' ? 'MUSIQUE' : 'MUSIC'}
+        </Text>
+        {!dj.spotifyUrl && !dj.soundcloudUrl ? (
           <Text style={styles.emptyHint}>
-            {language === 'fr' ? 'Aucun lien SoundCloud renseigné.' : 'No SoundCloud link provided.'}
+            {language === 'fr' ? 'Aucun lien Spotify / SoundCloud renseigné.' : 'No Spotify / SoundCloud links yet.'}
           </Text>
+        ) : (
+          <View style={styles.streamBlock}>
+            {dj.spotifyUrl ? (
+              <View style={styles.streamProviderBlock}>
+                <Text style={styles.streamProviderLabel}>Spotify</Text>
+                <TouchableOpacity
+                  style={styles.streamPrimaryButton}
+                  onPress={() => openBuiltInStream(dj.spotifyUrl, 'spotify')}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Écouter Spotify dans l’application' : 'Listen to Spotify in-app'}
+                >
+                  <Text style={styles.streamPrimaryButtonText}>
+                    ▶ {language === 'fr' ? 'Écouter ici (intégré)' : 'Listen here (in-app)'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.streamSecondaryButton}
+                  onPress={() => Linking.openURL(dj.spotifyUrl)}
+                  accessibilityRole="link"
+                >
+                  <Text style={styles.streamSecondaryButtonText}>
+                    {language === 'fr' ? 'Ouvrir dans l’app Spotify' : 'Open in Spotify app'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {dj.soundcloudUrl ? (
+              <View style={[styles.streamProviderBlock, dj.spotifyUrl ? styles.streamProviderBlockSpaced : null]}>
+                <Text style={styles.streamProviderLabel}>SoundCloud</Text>
+                <TouchableOpacity
+                  style={styles.streamPrimaryButton}
+                  onPress={() => openBuiltInStream(dj.soundcloudUrl, 'soundcloud')}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    language === 'fr' ? 'Écouter SoundCloud dans l’application' : 'Listen to SoundCloud in-app'
+                  }
+                >
+                  <Text style={styles.streamPrimaryButtonText}>
+                    ▶ {language === 'fr' ? 'Écouter ici (intégré)' : 'Listen here (in-app)'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.streamSecondaryButton}
+                  onPress={() => Linking.openURL(dj.soundcloudUrl)}
+                  accessibilityRole="link"
+                >
+                  <Text style={styles.streamSecondaryButtonText}>
+                    {language === 'fr' ? 'Ouvrir dans SoundCloud' : 'Open in SoundCloud'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
         )}
       </View>
 
@@ -769,7 +852,15 @@ export default function DjProfilePage() {
         visible={toast.visible}
         onHide={hideToast}
       />
+      <BuiltInStreamPlayerModal
+        visible={streamPlayer.visible}
+        embedUri={streamPlayer.uri}
+        title={streamPlayer.title}
+        language={language}
+        onClose={() => setStreamPlayer({ visible: false, uri: null, title: '' })}
+      />
       </ScrollView>
+    </>
   );
 }
 
@@ -1036,6 +1127,48 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 14,
     fontWeight: '900',
+  },
+  streamBlock: {
+    gap: 0,
+  },
+  streamProviderBlock: {},
+  streamProviderBlockSpaced: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  streamProviderLabel: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 10,
+    letterSpacing: 0.8,
+  },
+  streamPrimaryButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.5)',
+    backgroundColor: 'rgba(255,23,68,0.14)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  streamPrimaryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  streamSecondaryButton: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  streamSecondaryButtonText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   emptyHint: {
     color: 'rgba(255,255,255,0.6)',

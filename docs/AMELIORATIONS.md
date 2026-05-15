@@ -14,7 +14,9 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [x] **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement le même milestone** que **Sign in Apple**.
 
-- [ ] *(option)* **Lecteurs média natifs** (SoundCloud / Spotify / YouTube) — **uniquement si** stratégie = **SDK natif** ; si **WebView / URLs**, traiter en **Phase 3** (**OTA**).
+- [x] **Lien Spotify / SoundCloud → lecteur dans l’app (embed + WebView)** sur le **profil DJ** — **pas de SDK natif**, donc **pas de rebuild** supplémentaire (souvent **OTA**).
+
+- [ ] *(option, **rebuild** seulement si natif)* **Lecteurs / SDK média natifs** — **uniquement si** tu abandonnes l’embed pour un **SDK** (contrôle OS, fond d’écran, etc.) ; **YouTube** idem (**WebView** = OTA).
 
 - [ ] **`[à trancher]`** **Profil « prestataire »** — **inclure dans ce build** seulement si **nouveau plugin / entitlements** ; sinon souvent **sans** nouveau binaire (données + écrans uniquement).
 

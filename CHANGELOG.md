@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 10 au 13 mai 2026 (sam. – mer.)
 
+### Ajouté (mobile — profil DJ, streaming)
+- **Spotify / SoundCloud** : bouton **« Écouter ici (intégré) »** — modal **`BuiltInStreamPlayerModal`** + **WebView** (embed Spotify / widget SoundCloud), à partir des **URLs déjà stockées** ; **« Ouvrir dans l’app / SoundCloud »** en secours. **Pas de module natif** = **pas de rebuild** (déployable en **OTA**). Fichiers **`utils/streamingEmbedUrl.js`**.
+
 ### Ajouté (mobile — agenda système)
 - **`expo-calendar`** : permission + plugin EAS ; **`buildNumber` iOS 7** ; export **Android** (lecture/écriture calendrier).
 - **Fiche événement** & **Mes tickets** : bouton **« Ajouter à mon agenda »** — crée un événement dans le calendrier par défaut (synchro Google / iCloud selon le compte du téléphone). Fin d’événement via **`durationHours`** (sinon défaut **4 h**).

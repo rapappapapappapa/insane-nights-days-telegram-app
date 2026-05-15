@@ -1,87 +1,105 @@
 # Améliorations à prévoir — NOX
 
-Liste des pistes d’évolution. Cocher au fil des itérations ; l’ordre reflète une **priorisation indicative** (à ajuster selon le produit).
+Liste des pistes d’évolution ; **la première section** fixe la priorité **technique** (nouveau **build App Store / Play** vs **OTA**).
 
 ---
 
-## Priorité haute
+## Comment décider « quoi faire en premier »
 
-*(Adoption, revenus, cohérence données, correctifs bloquants.)*
+**Oui en principe :** tout ce qui **oblige un nouveau binaire** (capabilités Apple, nouveau **plugin Expo**, **module natif**, **empreinte SHA-1**, **OAuth lié aux identifiants bundle**, etc.), il vaut mieux le traiter **tôt et en lot** avec d’autres chantiers **`[Rebuild EAS]`**, pour éviter **plusieurs campagnes** « retélécharger l’app ».
 
-- [ ] **Connexion / inscription** — **Google** déjà en place (`EXPO_PUBLIC_GOOGLE_*` + `GOOGLE_OAUTH_*` serveur). **Sign in with Apple** à faire.
+**Nuance importante**
 
-- [ ] **Synchro agenda pro** — relier événements / créneaux NOX à **Google Agenda** et **Calendrier Apple**.
+- Un **nouveau type de profil** (prestataire) reste très souvent **`[souvent OTA]`** si reste dans **backend + écrans + navigation** sans lib native nouvelle.
 
-- [ ] **Billetterie : plusieurs tarifs et vente par phases** — à la **création d’événement**, dissocier clairement **infos générales** et **configuration des prix** : plusieurs paliers (« X places à Y € », **libellé** par tarif), **estimation du total** (ex. 10 × 10 € = 100 €), affichage **TTC** (ex. TVA ~20 %) et **commission Nox**. Possibilité d’**ajouter d’autres phases** de vente (même logique répétable).
+| Repère | Lecture |
+|--------|--------|
+| **`[Rebuild EAS]`** | À **combiner** avec les autres lignes équivalentes avant **un même build**. |
+| **`[souvent OTA]`** | Surtout **JS + API** ; mise à jour **Expo Updates** si **runtime inchangé** (vérifier **fingerprint**). |
+| **`[à trancher]`** | Décision après POC (besoin réel de natif ou non). |
 
-- [ ] **Places vendues hors Nox** — pouvoir renseigner des **entrées vendues sur une autre plateforme**, **sans décompte** dans le stock géré par Nox.
+---
 
-- [ ] **Capacité liée au lieu** — empêcher une **capacité d’événement supérieure** à ce que le **lieu** peut accueillir (données lieu = plafond).
+## À planifier avant / avec un build natif **`[Rebuild EAS]`**
 
-- [ ] **Plusieurs DJs sur un événement** — permettre **l’ajout de plusieurs DJs** ; **corriger le bug** actuel qui bloque ou fausse ce cas.
+- [ ] **`[Rebuild EAS]`** **Sign in avec Apple** (**Google** déjà : env mobile + variables serveur).
 
-- [ ] **Lieu secret** — **adresse (ou précisions lieu) révélée seulement à partir d’une date** configurée ; avant cette date : affichage masqué ou partiel pour le public.
+- [ ] **`[Rebuild EAS]`** **Synchro agenda pro** (Google / Apple Calendar) — permissions + **expo-calendar** (ou équivalent) ; **idéalement même build** qu’Apple ci-dessus.
+
+- [ ] **`[Rebuild EAS]`** *(option)* **Lecteurs média natifs** (SoundCloud / Spotify / YouTube) — uniquement si **SDK natif** ; sinon **priorité moyenne** (WebView = OTA).
+
+- [ ] **`[à trancher]`** **Profil « prestataire »** comme **capability store** — **OTA** si seulement données + écrans ; **Rebuild** si plugin / entitlements.
+
+---
+
+## Priorité haute (produit)
+
+- [ ] **`[souvent OTA]`** Billetterie **multi-tarifs** / **phases** — infos vs grille de prix ; libellés ; total ; **TTC ~20 %** ; **commission Nox** ; phases répétables.
+
+- [ ] **`[souvent OTA]`** Places **hors Nox** sans décompte stock interne.
+
+- [ ] **`[souvent OTA]`** **Capacité** max = **capacité du lieu**.
+
+- [ ] **`[souvent OTA]`** **Plusieurs DJs** + **fix bug** actuel.
+
+- [ ] **`[souvent OTA]`** **Lieu secret** — révélation adresse **à partir d’une date**.
 
 ---
 
 ## Priorité moyenne
 
-*(Wizard événement, expérience booker/DJ/public, richesse fonctionnelle.)*
+- [ ] **`[souvent OTA]`** **Type d’événement** (club, festival, privé, bar, concert…).
 
-- [ ] **Création d’événement : type** — en plus du titre, champ **type** (club, festival, privé, bar, concert, etc.) pour filtrage / affichage.
+- [ ] **`[souvent OTA]`** **Lieu externe** (nom + adresse).
 
-- [ ] **Lieu externe** — **nom + adresse** saisis sans fiche lieu Nox obligatoire.
+- [ ] **`[souvent OTA]`** **Fiches lieu — deals possibles.**
 
-- [ ] **Fiches lieu : deals possibles** — afficher les **types de deal** / formats d’accord sur le profil lieu.
+- [ ] **`[souvent OTA]`** **Lecteurs média** *si WebView / URLs* (sinon bloc Rebuild).
 
-- [ ] **Lecteurs média (profils)** — **SoundCloud**, **Spotify**, **YouTube** en lecture in-app depuis les profils (DJ / lieu selon périmètre).
+- [ ] **`[souvent OTA]`** **Prestataires** dans le wizard (photo, vidéaste, VDJ…) ; **futur** type profil **`[à trancher]`** (voir bloc natif).
 
-- [ ] **Prestataires dans le wizard** — étape ou page dédiée : **photographe**, **vidéaste**, **VDJ**, etc. **Futur** : nouveau **type de profil « prestataire »** en plus communauté / booker / DJ / lieu.
+- [ ] **`[souvent OTA]`** **Récap final** + **modalités** chronologiques / prestations / prix.
 
-- [ ] **Récap final avant validation** — quand **toutes les parties** ont validé ce qui les concerne : **récap synthétique** (lieux, DJs, équipe, billetterie, etc.). **Modalités dans ce récap** : prestations / interventions **avec moment**, **description** et **prix** (ex. « telle perf à telle heure pour X € »).
+- [ ] **`[souvent OTA]`** **Location matériel** dans le wizard (cases, stock, réservation).
 
-- [ ] **Location de matériel (wizard)** — case à cocher par type (**platines**, **enceintes**, …) avec **stock** éditable côté back-office ou profil lieu ; **réserver** uniquement si dispo.
+- [ ] **`[souvent OTA]`** **Agenda matériel** (dispo / réservation par créneaux).
 
-- [ ] **Agenda matériel** — **planning de disponibilité** du matériel pour réserver sur des **créneaux / jours** sans conflit.
+- [ ] **`[souvent OTA]`** **Visuels événement — format carré.**
 
-- [ ] **Visuels événement — format carré** — vignettes **plus carrées** que les rectangles actuels lors de la création / mise en avant.
+- [ ] **`[souvent OTA]`** **Carrousel / slides** événement (images + vidéos, contenu profils DJ).
 
-- [ ] **Carrousel / slides événement** — médias (**images et vidéos**) pour l’événement, en s’appuyant notamment sur le **contenu des profils DJ**.
-
-- [ ] **Sortie anticipée & revente & liste d’attente** — **scan « sortie »** avant la fin de l’événement ; **remettre en vente** les places ainsi libérées ; **liste d’attente** / notification lorsqu’une **place redevient dispo**.
+- [ ] **`[souvent OTA]`** **Sortie anticipée** + **revente places** + **liste d’attente** (notification quand une place se libère).
 
 ---
 
 ## Priorité basse / chantiers structurants
 
-*(Gros morceaux transverses ou hors cœur immédiat.)*
-
-- [ ] **Dossier médias après l’événement** — espace **commun** (organisateur · DJ · lieu), **dépôt** de fichiers, **choix des visuels** affichés sur **chaque profil**, **export / téléchargement** du dossier global.
+- [ ] **`[souvent OTA]`** **Dossier médias post-événement** *(chantier souvent lourd **back + stockage**)* — espace commun organisateur · DJ · lieu, dépôt, choix pour chaque profil, export global.
 
 ---
 
 ## Dette technique
 
-- [ ] **Tests et robustesse billetterie** — multi-phases, TTC / commission Nox, intégration lieu–capacité (scénarios de régression).
+- [ ] **Billetterie** — tests multi-phases, TTC / commission, capacité vs lieu.
 
-- [ ] **Évènements à plusieurs DJs** — couverture tests + migration des données si modèle évènement ⇄ DJ en `n-n`.
+- [ ] **Plusieurs DJs** — tests + migrations **n-n** si nécessaire.
 
 ---
 
 ## UX / accessibilité
 
-- [ ] **Clarté wizard** — progressivité (« infos » vs « prix des places »), libellés TTC / commission, erreurs si capacité > lieu.
+- [ ] Wizard : **clarté** infos vs tarifs, messages **TTC / commission**, erreur **capacité > lieu**.
 
-- [ ] **Lieu secret** — message utilisateur sur **quand** l’adresse sera visible ; accessibilité des états masqués / dévoilés.
+- [ ] **Lieu secret** : quand l’adresse sera visible ; états accessibles.
 
 ---
 
 ## Notes libres
 
-*(captures d’écran, tickets, URLs, arbitrages métier précis)*
+*(captures, tickets, URLs)*
 
 -
 
 ---
 
-*Dernière mise à jour : 13 mai 2026 — réorganisation des notes wizard, billetterie, matériel, lieu secret, multi-DJ.*
+*Dernière mise à jour : 13 mai 2026 — priorisation « rebuild EAS » vs OTA et profil prestataire.*

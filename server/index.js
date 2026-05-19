@@ -1065,6 +1065,124 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
   }
 });
 
+// Création profil Prestataire (photo, vidéo, technique, etc.)
+app.post('/api/profile/prestataire', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { businessName, serviceType, phonePro, city, country, bio } = req.body ?? {};
+
+    if (!businessName?.trim() || !serviceType?.trim() || !phonePro?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Champs requis : businessName, serviceType, phonePro.',
+      });
+    }
+
+    const existing = await prisma.userPrestataire.findUnique({ where: { userId } });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un profil prestataire existe déjà pour ce compte.',
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
+    }
+
+    const data = {
+      userId,
+      businessName: businessName.trim(),
+      serviceType: serviceType.trim(),
+      phonePro: phonePro.trim(),
+      city: city != null ? String(city).trim() || null : null,
+      country: country != null ? String(country).trim() || null : null,
+      bio: bio != null ? String(bio).trim() || null : null,
+    };
+
+    const profile = await prisma.userPrestataire.create({ data });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        accountType: 'PRESTATAIRE',
+        activeProfileType: 'PRESTATAIRE',
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Profil Prestataire créé avec succès.',
+      profile: {
+        id: profile.id,
+        businessName: profile.businessName,
+        serviceType: profile.serviceType,
+        phonePro: profile.phonePro,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur création profil Prestataire:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création du profil Prestataire.',
+    });
+  }
+});
+
+app.put('/api/prestataire/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { businessName, serviceType, phonePro, city, country, bio } = req.body ?? {};
+
+    if (!businessName?.trim() || !serviceType?.trim() || !phonePro?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Champs requis : businessName, serviceType, phonePro.',
+      });
+    }
+
+    const row = await prisma.userPrestataire.findUnique({ where: { userId } });
+    if (!row) {
+      return res.status(404).json({ success: false, message: 'Profil Prestataire non trouvé.' });
+    }
+
+    const updated = await prisma.userPrestataire.update({
+      where: { id: row.id },
+      data: {
+        businessName: businessName.trim(),
+        serviceType: serviceType.trim(),
+        phonePro: phonePro.trim(),
+        city: city != null ? String(city).trim() || null : null,
+        country: country != null ? String(country).trim() || null : null,
+        bio: bio != null ? String(bio).trim() || null : null,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Profil Prestataire mis à jour avec succès.',
+      profile: {
+        id: updated.id,
+        businessName: updated.businessName,
+        serviceType: updated.serviceType,
+        phonePro: updated.phonePro,
+        city: updated.city,
+        country: updated.country,
+        bio: updated.bio,
+        profileImage: updated.profileImage,
+        bannerImage: updated.bannerImage,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur mise à jour profil Prestataire:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour du profil Prestataire.',
+    });
+  }
+});
+
 // Fonction pour mettre à jour automatiquement les statuts des événements
 async function updateEventStatuses() {
   try {

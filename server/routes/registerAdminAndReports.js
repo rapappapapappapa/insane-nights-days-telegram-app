@@ -445,7 +445,7 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     const r = typeof reason === 'string' ? reason.trim().toUpperCase() : null;
     const id = typeof targetId === 'string' ? targetId.trim() : null;
 
-    const allowedTypes = ['FEED_POST', 'EVENT', 'USER', 'DJ_PROFILE', 'BOOKER_PROFILE', 'VENUE_PROFILE'];
+    const allowedTypes = ['FEED_POST', 'EVENT', 'USER', 'DJ_PROFILE', 'BOOKER_PROFILE', 'VENUE_PROFILE', 'PRESTATAIRE_PROFILE'];
     const allowedReasons = ['SPAM', 'HARASSMENT', 'SCAM', 'ILLEGAL', 'OTHER'];
 
     if (!t || !allowedTypes.includes(t)) {

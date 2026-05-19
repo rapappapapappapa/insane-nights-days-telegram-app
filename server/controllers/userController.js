@@ -29,6 +29,7 @@ const getUserProfiles = async (req, res) => {
         djs: true,
         bookers: true,
         venues: true,
+        prestataires: true,
       },
     });
 
@@ -92,6 +93,18 @@ const getUserProfiles = async (req, res) => {
         country: v.country,
         siret: v.siret,
       })),
+      prestataire: user.prestataires.map((p) => ({
+        id: p.id,
+        type: 'PRESTATAIRE',
+        businessName: p.businessName,
+        serviceType: p.serviceType,
+        phonePro: p.phonePro,
+        city: p.city,
+        country: p.country,
+        bio: p.bio,
+        profileImage: p.profileImage,
+        bannerImage: p.bannerImage,
+      })),
     };
 
     return sendSuccess(res, {
@@ -114,9 +127,9 @@ const switchProfile = async (req, res) => {
     const { profileType } = req.body;
     const userId = req.user.id;
 
-    const validProfileTypes = ['COMMUNITY', 'DJ', 'BOOKER', 'VENUE'];
+    const validProfileTypes = ['COMMUNITY', 'DJ', 'BOOKER', 'VENUE', 'PRESTATAIRE'];
     if (!profileType || !validProfileTypes.includes(profileType)) {
-      return sendError(res, 'profileType requis et doit être COMMUNITY, DJ, BOOKER ou VENUE.', 400);
+      return sendError(res, 'profileType requis et doit être COMMUNITY, DJ, BOOKER, VENUE ou PRESTATAIRE.', 400);
     }
 
     const user = await prisma.user.findUnique({
@@ -126,6 +139,7 @@ const switchProfile = async (req, res) => {
         djs: true,
         bookers: true,
         venues: true,
+        prestataires: true,
       },
     });
 
@@ -147,6 +161,9 @@ const switchProfile = async (req, res) => {
         break;
       case 'VENUE':
         hasProfile = user.venues && user.venues.length > 0;
+        break;
+      case 'PRESTATAIRE':
+        hasProfile = user.prestataires && user.prestataires.length > 0;
         break;
     }
 

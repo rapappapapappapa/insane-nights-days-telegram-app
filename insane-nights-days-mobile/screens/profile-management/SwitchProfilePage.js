@@ -45,13 +45,13 @@ const profileTypes = [
     registerScreen: 'registerBooker',
   },
   {
-    type: 'VENUE',
-    emoji: '🏢',
-    titleFr: 'Lieu',
-    titleEn: 'Venue',
-    descriptionFr: 'Héberger des événements',
-    descriptionEn: 'Host events',
-    registerScreen: 'registerVenue',
+    type: 'PRESTATAIRE',
+    emoji: '🛠️',
+    titleFr: 'Prestataire',
+    titleEn: 'Service provider',
+    descriptionFr: 'Photo, vidéo, technique événement',
+    descriptionEn: 'Photo, video, event production',
+    registerScreen: 'registerPrestataire',
   },
 ];
 
@@ -152,6 +152,8 @@ export default function SwitchProfilePage() {
         return profiles.profiles.booker && profiles.profiles.booker.length > 0;
       case 'VENUE':
         return profiles.profiles.venue && profiles.profiles.venue.length > 0;
+      case 'PRESTATAIRE':
+        return profiles.profiles.prestataire && profiles.profiles.prestataire.length > 0;
       default:
         return false;
     }
@@ -172,6 +174,8 @@ export default function SwitchProfilePage() {
         return `${profileData.prenom} ${profileData.nom}`;
       case 'VENUE':
         return profileData.venueName;
+      case 'PRESTATAIRE':
+        return profileData.businessName || profileData.serviceType || '';
       default:
         return '';
     }

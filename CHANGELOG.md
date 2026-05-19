@@ -4,6 +4,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 19 au 22 mai 2026 (lun. – jeu.)
+
+### Ajouté (serveur + mobile — profil Prestataire, MVP)
+- **Modèle Prisma `UserPrestataire`** (nom commercial, type de prestation, téléphone pro, champs optionnels ville / pays / bio / visuels) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).
+- **API** : **`POST /api/profile/prestataire`** (création), **`PUT /api/prestataire/profile`** (mise à jour) ; **`GET /api/user/profiles`** et **`POST /api/user/switch-profile`** prennent en charge le type **`PRESTATAIRE`**.
+- **Signalement** : valeur d’énumération **`PRESTATAIRE_PROFILE`** pour les cibles de signalement.
+- **Mobile** : écran d’inscription **`RegisterPrestatairePage`**, entrée **Prestataire** sur **choix du type de compte**, **`PrestataireDashboardPage`** (placeholder « à venir »), section **Profil** + menu latéral (libellé + accès tableau de bord), méthodes **`api.createPrestataireProfile`** / **`api.updatePrestataireProfile`**.
+
+---
+
 ## Semaine du 13 au 15 mai 2026 (mer. – ven.)
 
 ### Modifié (mobile — dashboard DJ, médias)

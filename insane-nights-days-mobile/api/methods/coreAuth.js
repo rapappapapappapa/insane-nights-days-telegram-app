@@ -114,6 +114,26 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     );
   },
 
+  // Créer un profil Prestataire
+  createPrestataireProfile: async ({ token, businessName, serviceType, phonePro, city, country, bio }) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis pour créer un profil.');
+    }
+    const body = {
+      businessName: businessName?.trim(),
+      serviceType: serviceType?.trim(),
+      phonePro: phonePro?.trim(),
+    };
+    if (city != null) body.city = city;
+    if (country != null) body.country = country;
+    if (bio != null) body.bio = bio;
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.PROFILE_PRESTATAIRE,
+      { method: 'POST', body: JSON.stringify(body) },
+      token
+    );
+  },
+
   // Récupérer le profil utilisateur
   getUserProfile: async (userId) => {
     return apiRequest(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/${userId}`);

@@ -735,10 +735,48 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                   </View>
                 )}
 
+                {/* Profils Prestataire */}
+                {profiles.profiles?.prestataire && profiles.profiles.prestataire.length > 0 && (
+                  <View style={styles.profileSection}>
+                    <Text style={styles.profileSectionTitle}>🛠️ Prestataire</Text>
+                    {profiles.profiles.prestataire.map((profile) => (
+                      <View key={profile.id} style={styles.profileItemRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.profileItem,
+                            styles.profileItemFlex,
+                            profiles.activeProfileType === 'PRESTATAIRE' && styles.profileItemActive,
+                          ]}
+                          onPress={() => handleSwitchProfile('PRESTATAIRE')}
+                          disabled={switchingProfile || profiles.activeProfileType === 'PRESTATAIRE'}
+                        >
+                          <Text style={styles.profileItemText} numberOfLines={2}>
+                            {profile.businessName}
+                            {profile.serviceType ? ` · ${profile.serviceType}` : ''}
+                          </Text>
+                          {profiles.activeProfileType === 'PRESTATAIRE' && (
+                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
+                          )}
+                          {switchingProfile && profiles.activeProfileType !== 'PRESTATAIRE' && (
+                            <ActivityIndicator size="small" color={Colors.primary} />
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.profileEditButton}
+                          onPress={() => navigate('prestataireDashboard')}
+                        >
+                          <Text style={styles.profileEditButtonText}>Modifier</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {(!profiles.profiles?.community || profiles.profiles.community.length === 0) &&
                  (!profiles.profiles?.dj || profiles.profiles.dj.length === 0) &&
                  (!profiles.profiles?.booker || profiles.profiles.booker.length === 0) &&
-                 (!profiles.profiles?.venue || profiles.profiles.venue.length === 0) && (
+                 (!profiles.profiles?.venue || profiles.profiles.venue.length === 0) &&
+                 (!profiles.profiles?.prestataire || profiles.profiles.prestataire.length === 0) && (
                   <View style={styles.noProfilesBox}>
                     <Text style={styles.noProfilesText}>
                       Aucun profil créé. Créez-en un !

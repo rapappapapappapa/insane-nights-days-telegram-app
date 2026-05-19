@@ -18,7 +18,9 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] *(option, **rebuild** seulement si natif)* **Lecteurs / SDK média natifs** — **uniquement si** tu abandonnes l’embed pour un **SDK** (contrôle OS, fond d’écran, etc.) ; **YouTube** idem (**WebView** = OTA).
 
-- [ ] **`[à trancher]`** **Profil « prestataire »** — **inclure dans ce build** seulement si **nouveau plugin / entitlements** ; sinon souvent **sans** nouveau binaire (données + écrans uniquement).
+- [x] **Profil « prestataire » (MVP)** — modèle **`UserPrestataire`**, API création / update, switch **`PRESTATAIRE`**, inscription + dashboard placeholder mobile ; rattachement wizard événements **à suivre**.
+
+- [ ] **`[à trancher]`** **Profil « prestataire » — périmètre métier complet** (rôles, devis, chat dédié, etc.) ; la base données + routes permettent d’itérer en **OTA** sans rebuild.
 
 ---
 
@@ -104,4 +106,4 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ---
 
-*Dernière mise à jour : 13 mai 2026 — ordre explicite : Phase 1 = rebuild en premier (cycles les plus longs).*
+*Dernière mise à jour : 19 mai 2026 — profil Prestataire (MVP) démarré ; ordre rebuild / OTA inchangé.*

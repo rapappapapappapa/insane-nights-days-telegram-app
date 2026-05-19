@@ -244,6 +244,8 @@ export default function DrawerContent({ navigation }) {
         return 'Organisateur';
       case 'VENUE':
         return 'Lieu';
+      case 'PRESTATAIRE':
+        return language === 'fr' ? 'Prestataire' : 'Service provider';
       case 'COMMUNITY':
         return 'Communauté';
       default:
@@ -289,6 +291,17 @@ export default function DrawerContent({ navigation }) {
           titleEn: 'Venue dashboard',
           descFr: 'Infos, médias, avis',
           descEn: 'Info, media, reviews',
+          showBadge: false,
+          badgeCount: 0,
+        };
+      case 'PRESTATAIRE':
+        return {
+          id: 'prestataireDashboard',
+          icon: 'construct-outline',
+          titleFr: 'Tableau de bord prestataire',
+          titleEn: 'Service provider dashboard',
+          descFr: 'Profil et missions (MVP)',
+          descEn: 'Profile & jobs (MVP)',
           showBadge: false,
           badgeCount: 0,
         };

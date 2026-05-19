@@ -38,6 +38,14 @@ const accountTypes = [
     descriptionFr: 'Ajoutez votre lieu',
     descriptionEn: 'Add your venue',
   },
+  {
+    id: 'prestataire',
+    emoji: '🛠️',
+    titleFr: 'Prestataire',
+    titleEn: 'Service provider',
+    descriptionFr: 'Photo, vidéo, technique événement',
+    descriptionEn: 'Photo, video, event production',
+  },
 ];
 
 export default function AccountTypePage() {
@@ -55,7 +63,9 @@ export default function AccountTypePage() {
             ? 'registerBooker'
             : type === 'venue'
               ? 'registerVenue'
-              : null;
+              : type === 'prestataire'
+                ? 'registerPrestataire'
+                : null;
 
     if (!nextScreen) return;
     navigate('login', { mode: 'register', nextScreen });

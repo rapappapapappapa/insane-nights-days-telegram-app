@@ -29,11 +29,13 @@ import RegisterCommunityPage from './screens/auth/RegisterCommunityPage';
 import RegisterDjPage from './screens/auth/RegisterDjPage';
 import RegisterBookerPage from './screens/auth/RegisterBookerPage';
 import RegisterVenuePage from './screens/auth/RegisterVenuePage';
+import RegisterPrestatairePage from './screens/auth/RegisterPrestatairePage';
 
 import DjDashboardPage from './screens/dashboard/DjDashboardPage';
 import BookerDashboardPage from './screens/dashboard/BookerDashboardPage';
 import BookerEventDashboardPage from './screens/dashboard/BookerEventDashboardPage';
 import VenueDashboardPage from './screens/dashboard/VenueDashboardPage';
+import PrestataireDashboardPage from './screens/dashboard/PrestataireDashboardPage';
 import AdminPage from './screens/dashboard/AdminPage';
 
 import EventsPage from './screens/events/EventsPage';
@@ -81,6 +83,7 @@ const SCREENS = {
   registerDj: RegisterDjPage,
   registerBooker: RegisterBookerPage,
   registerVenue: RegisterVenuePage,
+  registerPrestataire: RegisterPrestatairePage,
   welcome: WelcomePage,
   events: EventsPage,
   eventDetail: EventDetailPage,
@@ -96,6 +99,7 @@ const SCREENS = {
   bookerProfile: BookerProfilePage,
   djDashboard: DjDashboardPage,
   venueDashboard: VenueDashboardPage,
+  prestataireDashboard: PrestataireDashboardPage,
   bookerDashboard: BookerDashboardPage,
   bookerEventDashboard: BookerEventDashboardPage,
   selectDj: SelectDjPage,
@@ -226,6 +230,10 @@ function AppContent() {
         navigate('djDashboard', { openBookings: true });
       } else if (user.activeProfileType === 'BOOKER') {
         navigate('bookerDashboard', { openBookings: true });
+      } else if (user.activeProfileType === 'VENUE') {
+        navigate('venueDashboard', { openBookings: true });
+      } else if (user.activeProfileType === 'PRESTATAIRE') {
+        navigate('prestataireDashboard', {});
       } else {
         navigate('welcome');
       }

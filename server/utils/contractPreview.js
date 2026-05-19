@@ -5,6 +5,7 @@
 const {
   generateDjContractPdf,
   generateVenueContractPdf,
+  generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 } = require('./contractPdf');
 
@@ -96,7 +97,38 @@ async function buildVenueContractPreviewPdf(prisma, ev, payloadForPdf) {
   });
 }
 
+async function buildPrestataireContractPreviewPdf(prisma, ep, payloadForPdf) {
+  const payload = normalizeContractPayload(payloadForPdf);
+  const prestUserId = ep.prestataire?.userId;
+  const [bookerUser, prestUser] = await Promise.all([
+    ep.event?.booker?.userId
+      ? prisma.user.findUnique({ where: { id: ep.event.booker.userId }, select: { email: true } })
+      : Promise.resolve(null),
+    prestUserId ? prisma.user.findUnique({ where: { id: prestUserId }, select: { email: true } }) : Promise.resolve(null),
+  ]);
+  const eventPrestatairePreview = {
+    id: ep.id,
+    eventId: ep.eventId,
+    prestataireId: ep.prestataireId,
+    status: ep.status,
+    paymentAmount: ep.paymentAmount,
+    paymentCurrency: ep.paymentCurrency,
+    contractPayload: payload,
+    bookerAcceptedAt: null,
+    prestataireAcceptedAt: null,
+  };
+  return generatePrestataireContractPdf({
+    event: ep.event,
+    booker: ep.event?.booker,
+    prestataire: ep.prestataire,
+    eventPrestataire: eventPrestatairePreview,
+    organizerEmail: bookerUser?.email || null,
+    prestataireEmail: prestUser?.email || null,
+  });
+}
+
 module.exports = {
   buildDjContractPreviewPdf,
   buildVenueContractPreviewPdf,
+  buildPrestataireContractPreviewPdf,
 };

@@ -10,7 +10,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Modèle Prisma `UserPrestataire`** (nom commercial, type de prestation, téléphone pro, champs optionnels ville / pays / bio / visuels) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).
 - **API** : **`POST /api/profile/prestataire`** (création), **`PUT /api/prestataire/profile`** (mise à jour) ; **`GET /api/user/profiles`** et **`POST /api/user/switch-profile`** prennent en charge le type **`PRESTATAIRE`**.
 - **Signalement** : valeur d’énumération **`PRESTATAIRE_PROFILE`** pour les cibles de signalement.
-- **Mobile** : écran d’inscription **`RegisterPrestatairePage`**, entrée **Prestataire** sur **choix du type de compte**, **`PrestataireDashboardPage`** (placeholder « à venir »), section **Profil** + menu latéral (libellé + accès tableau de bord), méthodes **`api.createPrestataireProfile`** / **`api.updatePrestataireProfile`**.
+- **Mobile** : écran d’inscription **`RegisterPrestatairePage`**, entrée **Prestataire** sur **choix du type de compte**, section **Profil** + menu latéral (libellé + accès tableau de bord), méthodes **`api.createPrestataireProfile`** / **`api.updatePrestataireProfile`** ; voir aussi le flux **booking + chat + contrat** dans la sous-section ci-dessous.
+
+### Ajouté (serveur + mobile — événement : prestataire optionnel, chat, contrat)
+- **Prisma** : lien **`EventPrestataire`** (comme lieu / DJ) ; messages et contrats dédiés ; migration **`20260519140000_event_prestataire_chat_contract`** (à appliquer avec **`prisma migrate deploy`** / politique du projet).
+- **API** : sélection **`GET /api/booker/available-prestataires`**, rattachement à l’événement, **chat** `event-prestataire`, **contrat** (brouillon, envoi, contre-proposition, acceptation, PDF / e-mail) et côté prestataire **bookings** + **invitations**.
+- **Mobile booker** : flux type DJ (**`SelectPrestatairePage`** optionnel, ligne sur la carte événement, chat + contrat dans **`BookerDashboardPage`**).
+- **Mobile prestataire** : **`PrestataireDashboardPage`** — liste des bookings, modal **chat & contrat**, contre-proposition avec les mêmes champs **`ContractDraftEditorFields`** (mode DJ) + modales modalités de paiement / annulation / fin de prestation.
 
 ---
 

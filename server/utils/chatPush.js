@@ -37,6 +37,7 @@ async function notifyChatRecipients(recipientUserIds, senderUserId, payload) {
     messageType: payload.messageType,
     eventDjId: payload.eventDjId ?? null,
     eventVenueId: payload.eventVenueId ?? null,
+    eventPrestataireId: payload.eventPrestataireId ?? null,
     eventId: payload.eventId ?? null,
     eventTitle: payload.eventTitle ?? null,
     preview: payload.preview ?? null,
@@ -99,6 +100,32 @@ async function afterVenueMessage({ senderId, ev, content, eventTitle }) {
   });
 }
 
+/** Booker ↔ Prestataire (EventPrestataire) */
+async function afterPrestataireMessage({ senderId, ep, content, eventTitle }) {
+  const bookerUserId = ep?.event?.booker?.userId;
+  const prestUserId = ep?.prestataire?.userId;
+  if (!bookerUserId || !prestUserId) return;
+
+  const recipientId = senderId === bookerUserId ? prestUserId : bookerUserId;
+  const profileType = recipientId === prestUserId ? 'PRESTATAIRE' : 'BOOKER';
+
+  const title = eventTitle ? `Nox — ${eventTitle}` : 'Nox';
+  const body = truncatePreview(content);
+
+  await notifyChatRecipients([recipientId], senderId, {
+    title,
+    body,
+    profileType,
+    messageType: 'PRIVATE',
+    eventPrestataireId: ep.id,
+    eventDjId: null,
+    eventVenueId: null,
+    eventId: null,
+    eventTitle,
+    preview: body,
+  });
+}
+
 /** Chat groupe événement */
 async function afterGroupMessage({ senderId, event, content }) {
   const bookerUserId = event?.booker?.userId;
@@ -134,5 +161,6 @@ module.exports = {
   notifyChatRecipients,
   afterPrivateDjMessage,
   afterVenueMessage,
+  afterPrestataireMessage,
   afterGroupMessage,
 };

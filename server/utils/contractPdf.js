@@ -307,6 +307,133 @@ async function generateDjContractPdf({
   });
 }
 
+/**
+ * Contrat Organisateur ↔ Prestataire (prestation type DJ : montant, acompte, modalités)
+ */
+async function generatePrestataireContractPdf({
+  event,
+  booker,
+  prestataire,
+  eventPrestataire,
+  organizerEmail,
+  prestataireEmail,
+}) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
+    const chunks = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const payload = eventPrestataire?.contractPayload || {};
+    const amount = amountNum(eventPrestataire, payload);
+    const depositPercent = payload.depositPercent ?? null;
+    const paymentTerms = paymentTermsLabel(payload.paymentTerms);
+    const cancellation = resolveCancellation(payload.cancellation);
+    const notes = payloadText(payload.notes);
+    const equipment = payloadText(payload.equipment);
+    const eventEnd = payloadText(payload.eventEnd);
+
+    const feeNox = amount != null ? roundMoney(Number(amount) * NOX_DJ_COMMISSION_RATE) : null;
+    const feeTotal =
+      amount != null && feeNox != null ? roundMoney(Number(amount) + feeNox) : null;
+
+    const eventAddress =
+      formatAddr([
+        event?.venue?.address,
+        event?.venue?.postalCode,
+        event?.venue?.city,
+        event?.venue?.country,
+      ]) !== '—'
+        ? formatAddr([event?.venue?.address, event?.venue?.postalCode, event?.venue?.city, event?.venue?.country])
+        : event?.location || '—';
+
+    doc.fontSize(9).font('Helvetica').fillColor('#333').text('Contrat NOX — Organisateur / Prestataire', {
+      align: 'center',
+      width: contentWidth(doc),
+    });
+    doc.moveDown(0.25);
+    doc.fontSize(16).font('Helvetica-Bold').text('CONTRAT DE PRESTATION (PRESTATAIRE)', {
+      align: 'center',
+      width: contentWidth(doc),
+    });
+    doc.moveDown(1);
+    p(doc, 'Entre les soussignés :');
+    doc.moveDown(0.75);
+
+    titleLine(doc, '1 — Organisateur', 11);
+    p(doc, `Nom / Société : ${organizerDisplayName(booker)}`);
+    p(doc, `Représenté par : ${organizerRepresentative(booker)}`);
+    p(doc, `Adresse : ${formatAddr([booker?.address, booker?.postalCode, booker?.city, booker?.country])}`);
+    p(doc, `SIRET : ${booker?.siret || '—'}`);
+    p(doc, `Email : ${organizerEmail || '—'}`);
+    p(doc, 'Ci-après dénommé « l\'Organisateur »');
+    doc.moveDown(0.75);
+    p(doc, 'ET');
+    doc.moveDown(0.75);
+
+    titleLine(doc, '2 — Prestataire', 11);
+    p(doc, `Raison sociale / Nom : ${prestataire?.businessName || '—'}`);
+    p(doc, `Type de prestation : ${prestataire?.serviceType || '—'}`);
+    p(doc, `Ville : ${formatAddr([prestataire?.city, prestataire?.country])}`);
+    p(doc, `Téléphone pro : ${prestataire?.phonePro || '—'}`);
+    p(doc, `Email : ${prestataireEmail || '—'}`);
+    if (prestataire?.bio) p(doc, `Présentation : ${String(prestataire.bio).slice(0, 500)}`);
+    p(doc, 'Ci-après dénommé « le Prestataire »');
+    doc.moveDown(0.75);
+    p(doc, 'Les parties conviennent ce qui suit :');
+    doc.moveDown(0.75);
+
+    titleLine(doc, 'Article 1 — Objet', 11);
+    p(doc, `Prestation pour l'événement : ${event?.title || '—'}`);
+    p(doc, `Date : ${formatDate(event?.date)}`);
+    p(doc, `Horaires : ${event?.time || '—'}${eventEnd ? ` – fin prévue ${eventEnd}` : ''}`);
+    p(doc, `Lieu : ${eventAddress}`);
+    p(doc, `Notes : ${notes || '—'}`);
+
+    titleLine(doc, 'Article 2 — Rémunération', 11);
+    p(doc, `Montant convenu (hors commission plateforme) : ${amount != null ? `${roundMoney(amount)} €` : '—'}`);
+    p(doc, `Acompte : ${depositPercent != null ? `${depositPercent} %` : '—'}`);
+    p(doc, `Modalités de paiement : ${paymentTerms}`);
+    p(doc, `Commission service NOX (10 %) : ${feeNox != null ? `${feeNox} €` : '—'}`);
+    p(doc, `Total indiquatif TTC commission comprise : ${feeTotal != null ? `${feeTotal} €` : '—'}`);
+
+    titleLine(doc, 'Article 3 — Annulation', 11);
+    p(doc, cancellation || '—');
+
+    titleLine(doc, 'Article 4 — Matériel', 11);
+    p(doc, equipment || '—');
+
+    titleLine(doc, 'Article 5 — Plateforme NOX', 11);
+    p(doc, 'NOX agit comme intermédiaire technique ; les obligations contractuelles lient Organisateur et Prestataire.');
+
+    titleLine(doc, 'Article 6 — Signature électronique', 11);
+    const signDate =
+      eventPrestataire?.bookerAcceptedAt && eventPrestataire?.prestataireAcceptedAt
+        ? formatDate(
+            new Date(
+              Math.max(
+                new Date(eventPrestataire.bookerAcceptedAt).getTime(),
+                new Date(eventPrestataire.prestataireAcceptedAt).getTime()
+              )
+            )
+          )
+        : formatDate(new Date());
+    p(doc, `Date : ${signDate}`);
+    p(doc, '');
+    p(
+      doc,
+      `Signature Organisateur${eventPrestataire?.bookerAcceptedAt ? ` — ${formatDate(eventPrestataire.bookerAcceptedAt)}` : ''}`
+    );
+    p(
+      doc,
+      `Signature Prestataire${eventPrestataire?.prestataireAcceptedAt ? ` — ${formatDate(eventPrestataire.prestataireAcceptedAt)}` : ''}`
+    );
+
+    doc.end();
+  });
+}
+
 function venueDealType(payload) {
   const raw = payload.dealType || payload.deal_type || 'fixed_rent';
   return String(raw).trim();
@@ -607,5 +734,6 @@ async function generateVenueContractPdf({
 module.exports = {
   generateDjContractPdf,
   generateVenueContractPdf,
+  generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 };

@@ -9,7 +9,7 @@ import { api } from '../api/config';
 export function useNotifications() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadByProfileType, setUnreadByProfileType] = useState({ DJ: 0, BOOKER: 0 });
+  const [unreadByProfileType, setUnreadByProfileType] = useState({ DJ: 0, BOOKER: 0, VENUE: 0, PRESTATAIRE: 0 });
   const [latest, setLatest] = useState(null); // { profileType, messageType, preview, eventDjId, eventId, eventTitle, createdAt }
   const [loading, setLoading] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
@@ -23,7 +23,7 @@ export function useNotifications() {
   const refreshUnreadCount = useCallback(async () => {
     if (!user?.token) {
       setUnreadCount(0);
-      setUnreadByProfileType({ DJ: 0, BOOKER: 0 });
+      setUnreadByProfileType({ DJ: 0, BOOKER: 0, VENUE: 0, PRESTATAIRE: 0 });
       setLatest(null);
       previousCountRef.current = null;
       isInitialLoadRef.current = true; // ✅ Réinitialiser le flag si l'utilisateur se déconnecte
@@ -39,6 +39,7 @@ export function useNotifications() {
           DJ: Number(response?.byProfileType?.DJ || 0),
           BOOKER: Number(response?.byProfileType?.BOOKER || 0),
           VENUE: Number(response?.byProfileType?.VENUE || 0),
+          PRESTATAIRE: Number(response?.byProfileType?.PRESTATAIRE || 0),
         };
         const nextLatest = response?.latest ?? null;
         const previousCount = previousCountRef.current;
@@ -77,12 +78,12 @@ export function useNotifications() {
         // Ne pas appeler handleTokenExpired ici car cela pourrait créer une boucle
         // Le token sera géré par les autres hooks/composants
         setUnreadCount(0);
-        setUnreadByProfileType({ DJ: 0, BOOKER: 0 });
+        setUnreadByProfileType({ DJ: 0, BOOKER: 0, VENUE: 0, PRESTATAIRE: 0 });
         setLatest(null);
         previousCountRef.current = null;
       } else {
         setUnreadCount(0);
-        setUnreadByProfileType({ DJ: 0, BOOKER: 0 });
+        setUnreadByProfileType({ DJ: 0, BOOKER: 0, VENUE: 0, PRESTATAIRE: 0 });
         setLatest(null);
         previousCountRef.current = null;
       }

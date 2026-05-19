@@ -2797,6 +2797,98 @@ app.get('/api/venue/bookings', authenticateToken, async (req, res) => {
   }
 });
 
+// Bookings prestataire (EventPrestataire)
+app.get('/api/prestataire/bookings', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const prest = await prisma.userPrestataire.findFirst({
+      where: { userId },
+    });
+
+    if (!prest) {
+      return res.status(404).json({ success: false, message: 'Profil prestataire non trouvé.' });
+    }
+
+    const rows = await prisma.eventPrestataire.findMany({
+      where: { prestataireId: prest.id },
+      include: {
+        event: {
+          include: {
+            venue: {
+              select: {
+                id: true,
+                venueName: true,
+                address: true,
+              },
+            },
+            booker: {
+              select: {
+                id: true,
+                nom: true,
+                prenom: true,
+                bookerType: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          date: 'desc',
+        },
+      },
+    });
+
+    const resolvePaymentStatus = (ep, eventStatus) => {
+      if (ep?.paymentStatus === 'PAID' || ep?.paidAt) return 'PAID';
+      if (ep?.contractStatus === 'SIGNED') return 'PENDING';
+      if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
+      return 'UPCOMING';
+    };
+
+    const bookings = rows.map((ep) => ({
+      id: ep.id,
+      eventPrestataireId: ep.id,
+      eventId: ep.event.id,
+      eventTitle: ep.event.title,
+      eventDate: ep.event.date,
+      eventTime: ep.event.time,
+      eventLocation: ep.event.location,
+      eventStatus: ep.event.status,
+      invitationStatus: ep.status,
+      paymentStatus: resolvePaymentStatus(ep, ep.event.status),
+      paymentAmount: ep.paymentAmount ?? null,
+      paymentCurrency: ep.paymentCurrency ?? 'eur',
+      paidAt: ep.paidAt ?? null,
+      invoiceNumber: ep.invoiceNumber ?? null,
+      venue: ep.event.venue
+        ? {
+            id: ep.event.venue.id,
+            name: ep.event.venue.venueName,
+            address: ep.event.venue.address,
+          }
+        : null,
+      booker: ep.event.booker
+        ? {
+            id: ep.event.booker.id,
+            name: `${ep.event.booker.prenom} ${ep.event.booker.nom}`,
+            type: ep.event.booker.bookerType,
+          }
+        : null,
+      createdAt: ep.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error('Erreur récupération bookings prestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 /**
  * Accepte une invitation à un événement
  * @route PUT /api/dj/invitations/:invitationId/accept
@@ -3197,6 +3289,180 @@ app.put('/api/venue/invitations/:eventVenueId/cancel', authenticateToken, async 
     });
   } catch (error) {
     console.error('Erreur annulation booking lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @route PUT /api/prestataire/invitations/:eventPrestataireId/accept
+ */
+app.put('/api/prestataire/invitations/:eventPrestataireId/accept', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+
+    const prest = await prisma.userPrestataire.findFirst({ where: { userId } });
+    if (!prest) {
+      return res.status(404).json({ success: false, message: 'Profil prestataire non trouvé.' });
+    }
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ep) {
+      return res.status(404).json({ success: false, message: 'Invitation non trouvée.' });
+    }
+    if (ep.prestataireId !== prest.id) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à modifier cette invitation.' });
+    }
+    if (ep.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${ep.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    const updated = await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: { status: 'ACCEPTED' },
+      include: {
+        event: {
+          include: {
+            venue: { select: { id: true, venueName: true, address: true } },
+            booker: { select: { id: true, nom: true, prenom: true, bookerType: true } },
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation acceptée avec succès.',
+      invitation: {
+        id: updated.id,
+        eventId: updated.event.id,
+        eventTitle: updated.event.title,
+        eventDate: updated.event.date,
+        eventTime: updated.event.time,
+        invitationStatus: updated.status,
+        venue: updated.event.venue
+          ? { id: updated.event.venue.id, name: updated.event.venue.venueName, address: updated.event.venue.address }
+          : null,
+        booker: updated.event.booker
+          ? { id: updated.event.booker.id, name: `${updated.event.booker.prenom} ${updated.event.booker.nom}`, type: updated.event.booker.bookerType }
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur acceptation invitation prestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @route PUT /api/prestataire/invitations/:eventPrestataireId/reject
+ */
+app.put('/api/prestataire/invitations/:eventPrestataireId/reject', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+
+    const prest = await prisma.userPrestataire.findFirst({ where: { userId } });
+    if (!prest) {
+      return res.status(404).json({ success: false, message: 'Profil prestataire non trouvé.' });
+    }
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ep) {
+      return res.status(404).json({ success: false, message: 'Invitation non trouvée.' });
+    }
+    if (ep.prestataireId !== prest.id) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à modifier cette invitation.' });
+    }
+    if (ep.status !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: `Cette invitation a déjà été ${ep.status === 'ACCEPTED' ? 'acceptée' : 'refusée'}.`,
+      });
+    }
+
+    const { reason } = req.body ?? {};
+    const rejectionReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
+    const updated = await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: { status: 'REJECTED', rejectionReason },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    res.json({
+      success: true,
+      message: 'Invitation refusée.',
+      invitation: {
+        id: updated.id,
+        eventId: updated.event.id,
+        eventTitle: updated.event.title,
+        invitationStatus: updated.status,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur refus invitation prestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @route PUT /api/prestataire/invitations/:eventPrestataireId/cancel
+ */
+app.put('/api/prestataire/invitations/:eventPrestataireId/cancel', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+
+    const prest = await prisma.userPrestataire.findFirst({ where: { userId } });
+    if (!prest) {
+      return res.status(404).json({ success: false, message: 'Profil prestataire non trouvé.' });
+    }
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { select: { id: true, title: true, date: true, time: true } } },
+    });
+
+    if (!ep) {
+      return res.status(404).json({ success: false, message: 'Booking introuvable.' });
+    }
+    if (ep.prestataireId !== prest.id) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (ep.status !== 'ACCEPTED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Seul un booking accepté peut être annulé.',
+      });
+    }
+
+    const { reason } = req.body ?? {};
+    const cancellationReason = typeof reason === 'string' && reason.trim() ? reason.trim() : null;
+
+    await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: { status: 'CANCELLED', rejectionReason: cancellationReason },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Booking annulé.',
+      invitation: { id: ep.id, eventId: ep.event.id, invitationStatus: 'CANCELLED' },
+    });
+  } catch (error) {
+    console.error('Erreur annulation booking prestataire:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -117,6 +117,76 @@ app.get('/api/booker/available-djs', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Prestataires disponibles (profils UserPrestataire) pour invitation optionnelle
+ * @route GET /api/booker/available-prestataires
+ */
+app.get('/api/booker/available-prestataires', authenticateToken, async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    let prestataires = await prisma.userPrestataire.findMany({
+      include: {
+        user: {
+          select: { id: true, username: true, email: true },
+        },
+      },
+      orderBy: { businessName: 'asc' },
+    });
+
+    if (date) {
+      try {
+        const eventDate = new Date(date);
+        if (!Number.isNaN(eventDate.getTime())) {
+          const targetYear = eventDate.getFullYear();
+          const targetMonth = eventDate.getMonth();
+          const targetDay = eventDate.getDate();
+
+          const allEvents = await prisma.event.findMany({
+            where: { status: { in: ['UPCOMING', 'ONGOING'] } },
+            include: {
+              eventPrestataires: { select: { prestataireId: true } },
+            },
+          });
+
+          const bookedPrestataireProfileIds = new Set();
+          allEvents.forEach((evt) => {
+            const d = new Date(evt.date);
+            if (
+              d.getFullYear() === targetYear &&
+              d.getMonth() === targetMonth &&
+              d.getDate() === targetDay
+            ) {
+              evt.eventPrestataires.forEach((ep) => {
+                bookedPrestataireProfileIds.add(ep.prestataireId);
+              });
+            }
+          });
+
+          prestataires = prestataires.filter((p) => !bookedPrestataireProfileIds.has(p.id));
+        }
+      } catch (dateErr) {
+        console.error('Erreur parsing date prestataires:', dateErr);
+      }
+    }
+
+    const formatted = prestataires.map((p) => ({
+      id: p.id,
+      userId: p.userId,
+      businessName: p.businessName,
+      serviceType: p.serviceType,
+      city: p.city,
+      country: p.country,
+      profileImage: p.profileImage,
+    }));
+
+    res.json({ success: true, prestataires: formatted });
+  } catch (error) {
+    console.error('Erreur récupération prestataires disponibles:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * Récupère tous les lieux disponibles
  * @route GET /api/booker/venues
  */
@@ -190,6 +260,11 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
         eventVenues: {
           include: {
             venue: { select: { id: true, venueName: true, address: true } },
+          },
+        },
+        eventPrestataires: {
+          include: {
+            prestataire: { select: { id: true, businessName: true, serviceType: true, profileImage: true } },
           },
         },
       },
@@ -272,6 +347,10 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
 
         const activeEventVenues = (event.eventVenues || []).filter((ev) => ev.status === 'ACCEPTED' || ev.status === 'PENDING');
         const eventVenue = activeEventVenues[0] || event.eventVenues?.[0];
+        const activeEventPrestataires = (event.eventPrestataires || []).filter(
+          (ep) => ep.status === 'ACCEPTED' || ep.status === 'PENDING'
+        );
+        const eventPrestataireRow = activeEventPrestataires[0] || event.eventPrestataires?.[0];
         const activeEventDjs = (event.eventDjs || []).filter((ed) => ed.status === 'ACCEPTED' || ed.status === 'PENDING');
         const resolveVenuePaymentStatus = (ev) => {
           if (!ev) return 'UPCOMING';
@@ -280,11 +359,26 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };
+        const resolvePrestatairePaymentStatus = (ep) => {
+          if (!ep) return 'UPCOMING';
+          if (ep?.paymentStatus === 'PAID' || ep?.paidAt) return 'PAID';
+          if (ep?.contractStatus === 'SIGNED') return 'PENDING';
+          if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
+          return 'UPCOMING';
+        };
         const allDjContractsSigned = activeEventDjs.length > 0 && activeEventDjs.every((ed) => ed.contractStatus === 'SIGNED');
         const allVenueContractsSigned =
           (event.eventVenues?.length === 0) ||
           (activeEventVenues.length > 0 && activeEventVenues.every((ev) => ev.contractStatus === 'SIGNED'));
-        const canPublishToFeed = allDjContractsSigned && allVenueContractsSigned && !event.publishedOnFeed;
+        const allPrestataireContractsSigned =
+          (event.eventPrestataires?.length === 0) ||
+          (activeEventPrestataires.length > 0 &&
+            activeEventPrestataires.every((ep) => ep.contractStatus === 'SIGNED'));
+        const canPublishToFeed =
+          allDjContractsSigned &&
+          allVenueContractsSigned &&
+          allPrestataireContractsSigned &&
+          !event.publishedOnFeed;
         return {
           id: event.id,
           title: event.title,
@@ -312,6 +406,23 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
               invoiceNumber: eventVenue?.invoiceNumber ?? null,
             },
           } : null,
+          prestataire: eventPrestataireRow
+            ? {
+                id: eventPrestataireRow.prestataire?.id ?? eventPrestataireRow.prestataireId,
+                businessName: eventPrestataireRow.prestataire?.businessName ?? null,
+                serviceType: eventPrestataireRow.prestataire?.serviceType ?? null,
+                profileImage: eventPrestataireRow.prestataire?.profileImage ?? null,
+                eventPrestataireId: eventPrestataireRow.id,
+                prestataireInvitationStatus: eventPrestataireRow.status ?? 'PENDING',
+                payment: {
+                  paymentStatus: resolvePrestatairePaymentStatus(eventPrestataireRow),
+                  paymentAmount: eventPrestataireRow.paymentAmount ?? null,
+                  paymentCurrency: eventPrestataireRow.paymentCurrency ?? 'eur',
+                  paidAt: eventPrestataireRow.paidAt ?? null,
+                  invoiceNumber: eventPrestataireRow.invoiceNumber ?? null,
+                },
+              }
+            : null,
           djIds: activeEventDjs.map((ed) => ed.djId),
           venueNeedsReplacement: !activeEventVenues.length,
           djs: djs.map((dj) => ({
@@ -661,7 +772,7 @@ app.post('/api/booker/events/:eventId/publish-to-feed', authenticateToken, async
 
     const event = await prisma.event.findFirst({
       where: { id: eventId, bookerId: booker.id },
-      include: { eventDjs: true, eventVenues: true },
+      include: { eventDjs: true, eventVenues: true, eventPrestataires: true },
     });
     if (!event) {
       return res.status(404).json({ success: false, message: 'Événement introuvable ou accès refusé.' });
@@ -673,10 +784,13 @@ app.post('/api/booker/events/:eventId/publish-to-feed', authenticateToken, async
 
     const allDjSigned = event.eventDjs.length > 0 && event.eventDjs.every((ed) => ed.contractStatus === 'SIGNED');
     const allVenueSigned = !event.eventVenues?.length || event.eventVenues.every((ev) => ev.contractStatus === 'SIGNED');
-    if (!allDjSigned || !allVenueSigned) {
+    const allPrestataireSigned =
+      !event.eventPrestataires?.length || event.eventPrestataires.every((ep) => ep.contractStatus === 'SIGNED');
+    if (!allDjSigned || !allVenueSigned || !allPrestataireSigned) {
       return res.status(400).json({
         success: false,
-        message: "Tous les contrats (DJ et lieu) doivent être signés avant de publier sur le feed.",
+        message:
+          "Tous les contrats (DJ, lieu et prestataire le cas échéant) doivent être signés avant de publier sur le feed.",
       });
     }
 
@@ -820,6 +934,68 @@ app.put('/api/booker/event-venues/:eventVenueId/payment', authenticateToken, asy
 });
 
 /**
+ * ✅ Mettre à jour le statut de paiement d'un booking prestataire (Booker → Prestataire)
+ * @route PUT /api/booker/event-prestataires/:eventPrestataireId/payment
+ */
+app.put('/api/booker/event-prestataires/:eventPrestataireId/payment', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+    const { status, amount, currency, invoiceNumber } = req.body ?? {};
+
+    const valid = ['UPCOMING', 'PENDING', 'PAID'];
+    if (!status || !valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'status doit être UPCOMING, PENDING ou PAID.' });
+    }
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: {
+        event: { include: { booker: true } },
+      },
+    });
+    if (!ep) return res.status(404).json({ success: false, message: 'Booking (EventPrestataire) introuvable.' });
+
+    const isOwner = ep.event?.booker?.userId === userId;
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const nextInvoiceNumber =
+      (typeof invoiceNumber === 'string' && invoiceNumber.trim())
+        ? invoiceNumber.trim()
+        : (status === 'PAID' && !ep.invoiceNumber)
+          ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
+          : ep.invoiceNumber;
+
+    const next = await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: {
+        paymentStatus: status,
+        paymentAmount: typeof amount === 'number' ? Math.max(0, Math.floor(amount)) : ep.paymentAmount,
+        paymentCurrency: typeof currency === 'string' && currency ? currency.toLowerCase() : ep.paymentCurrency,
+        paidAt: status === 'PAID' ? new Date() : null,
+        invoiceNumber: nextInvoiceNumber,
+      },
+    });
+
+    return res.json({
+      success: true,
+      payment: {
+        paymentStatus: next.paymentStatus,
+        paymentAmount: next.paymentAmount,
+        paymentCurrency: next.paymentCurrency,
+        paidAt: next.paidAt,
+        invoiceNumber: next.invoiceNumber,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur update payment event-prestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * ✅ Contrat booking (MVP) intégré au chat privé Booker <-> DJ
  *
  * Flow:
@@ -854,6 +1030,11 @@ const hashContract = (payload) => {
 const venueContractResponderRole = (ev) => {
   const sentBy = ev.contractSentBy ?? 'BOOKER';
   return sentBy === 'BOOKER' ? 'VENUE' : 'BOOKER';
+};
+
+const prestataireContractResponderRole = (ep) => {
+  const sentBy = ep.contractSentBy ?? 'BOOKER';
+  return sentBy === 'BOOKER' ? 'PRESTATAIRE' : 'BOOKER';
 };
 
 const eventDjResponderRole = (ed) => {
@@ -966,6 +1147,23 @@ const createContractNotificationMessageVenue = async (eventVenueId, senderId, co
     });
   } catch (err) {
     console.error('Erreur création message notification contrat venue:', err);
+  }
+};
+
+const createContractNotificationMessagePrestataire = async (eventPrestataireId, senderId, content) => {
+  try {
+    await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventPrestataireId,
+        senderId,
+        content,
+        read: false,
+        deleted: false,
+      },
+    });
+  } catch (err) {
+    console.error('Erreur création message notification contrat prestataire:', err);
   }
 };
 
@@ -1311,6 +1509,18 @@ const loadEventVenueWithAccess = async (eventVenueId, userId) => {
   return { ev, isBooker, isVenue };
 };
 
+const loadEventPrestataireWithAccess = async (eventPrestataireId, userId) => {
+  const ep = await prisma.eventPrestataire.findUnique({
+    where: { id: eventPrestataireId },
+    include: { event: { include: { booker: true, venue: true } }, prestataire: true },
+  });
+  if (!ep) return { error: { code: 404, message: 'Lien prestataire introuvable.' } };
+  const isBooker = ep.event?.booker?.userId === userId;
+  const isPrestataire = ep.prestataire?.userId === userId;
+  if (!isBooker && !isPrestataire) return { error: { code: 403, message: 'Accès refusé.' } };
+  return { ep, isBooker, isPrestataire };
+};
+
 app.get('/api/contracts/event-venues/:eventVenueId', authenticateToken, async (req, res) => {
   try {
     const { eventVenueId } = req.params;
@@ -1519,6 +1729,221 @@ app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, 
     return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
   } catch (e) {
     console.error('Erreur accept contract venue:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Contrats Organisateur ↔ Prestataire (miroir EventVenue)
+ */
+app.get('/api/contracts/event-prestataires/:eventPrestataireId', authenticateToken, async (req, res) => {
+  try {
+    const { eventPrestataireId } = req.params;
+    const { ep, error } = await loadEventPrestataireWithAccess(eventPrestataireId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    const sentBy = ep.contractSentBy ?? (ep.contractStatus === 'SENT' ? 'BOOKER' : null);
+    return res.json({
+      success: true,
+      contract: {
+        status: ep.contractStatus,
+        version: ep.contractVersion,
+        hash: ep.contractHash,
+        sentAt: ep.contractSentAt,
+        sentBy,
+        bookerAcceptedAt: ep.bookerAcceptedAt,
+        prestataireAcceptedAt: ep.prestataireAcceptedAt,
+        payload: ep.contractPayload,
+      },
+      booking: {
+        eventPrestataireId: ep.id,
+        eventId: ep.eventId,
+        eventTitle: ep.event?.title,
+        eventDate: ep.event?.date,
+        eventTime: ep.event?.time ?? null,
+        durationHours: ep.event?.durationHours ?? null,
+        businessName: ep.prestataire?.businessName,
+        serviceType: ep.prestataire?.serviceType,
+      },
+    });
+  } catch (e) {
+    console.error('Erreur get contract prestataire:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-prestataires/:eventPrestataireId/preview-pdf', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+    const { isBooker, isPrestataire, error } = await loadEventPrestataireWithAccess(eventPrestataireId, userId);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    const full = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { include: { booker: true, venue: true } }, prestataire: true },
+    });
+    if (!full) return res.status(404).json({ success: false, message: 'Introuvable.' });
+    const rawPayload = req.body?.payload;
+    let payloadForPdf = full.contractPayload ?? {};
+    if (rawPayload != null && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+      if (full.contractStatus === 'DRAFT' && isBooker) {
+        payloadForPdf = rawPayload;
+      } else if (full.contractStatus === 'SENT' && (isBooker || isPrestataire)) {
+        payloadForPdf = rawPayload;
+      }
+    }
+    const { buildPrestataireContractPreviewPdf } = require('../utils/contractPreview');
+    const pdfBuffer = await buildPrestataireContractPreviewPdf(prisma, full, payloadForPdf);
+    return res.json({
+      success: true,
+      pdfBase64: pdfBuffer.toString('base64'),
+    });
+  } catch (e) {
+    console.error('Erreur preview PDF contrat prestataire:', e?.message || e, e?.stack);
+    res.status(500).json({ success: false, message: 'Erreur génération PDF' });
+  }
+});
+
+app.put('/api/contracts/event-prestataires/:eventPrestataireId/draft', authenticateToken, async (req, res) => {
+  try {
+    const { eventPrestataireId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ep, isBooker, error } = await loadEventPrestataireWithAccess(eventPrestataireId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut modifier le brouillon.' });
+    if (ep.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+    const next = await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: {
+        contractPayload: payload ?? {},
+        contractHash: null,
+        contractSentAt: null,
+        contractSentBy: null,
+        bookerAcceptedAt: null,
+        prestataireAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    return res.json({ success: true, contract: { status: next.contractStatus, version: next.contractVersion, payload: next.contractPayload } });
+  } catch (e) {
+    console.error('Erreur save contract prestataire:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-prestataires/:eventPrestataireId/send', authenticateToken, async (req, res) => {
+  try {
+    const { eventPrestataireId } = req.params;
+    const { ep, isBooker, error } = await loadEventPrestataireWithAccess(eventPrestataireId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut envoyer le contrat.' });
+    if (ep.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
+    const payload = ep.contractPayload ?? {};
+    const hash = hashContract(payload);
+    await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: {
+        contractStatus: 'SENT',
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: 'BOOKER',
+        bookerAcceptedAt: new Date(),
+        prestataireAcceptedAt: null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    const eventTitle = ep.event?.title ? ` (${ep.event.title})` : '';
+    await createContractNotificationMessagePrestataire(eventPrestataireId, req.user.id, `📋 Nouvelle offre de contrat reçue${eventTitle}`);
+    return res.json({ success: true, contract: { status: 'SENT' } });
+  } catch (e) {
+    console.error('Erreur send contract prestataire:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-prestataires/:eventPrestataireId/counter', authenticateToken, async (req, res) => {
+  try {
+    const { eventPrestataireId } = req.params;
+    const { payload } = req.body ?? {};
+    const { ep, isBooker, isPrestataire, error } = await loadEventPrestataireWithAccess(eventPrestataireId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ep.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucune proposition à modifier.' });
+    const sender = prestataireContractResponderRole(ep);
+    if (sender === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (sender === 'PRESTATAIRE' && !isPrestataire) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const nextPayload = payload ?? {};
+    const hash = hashContract(nextPayload);
+    await prisma.eventPrestataire.update({
+      where: { id: eventPrestataireId },
+      data: {
+        contractStatus: 'SENT',
+        contractPayload: nextPayload,
+        contractHash: hash,
+        contractSentAt: new Date(),
+        contractSentBy: sender,
+        bookerAcceptedAt: sender === 'BOOKER' ? new Date() : null,
+        prestataireAcceptedAt: sender === 'PRESTATAIRE' ? new Date() : null,
+        contractVersion: { increment: 1 },
+      },
+    });
+    const eventTitle = ep.event?.title ? ` (${ep.event.title})` : '';
+    await createContractNotificationMessagePrestataire(eventPrestataireId, req.user.id, `📋 Contre-proposition reçue${eventTitle}`);
+    return res.json({ success: true, contract: { status: 'SENT' } });
+  } catch (e) {
+    console.error('Erreur counter contract prestataire:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/contracts/event-prestataires/:eventPrestataireId/accept', authenticateToken, async (req, res) => {
+  try {
+    const { eventPrestataireId } = req.params;
+    const { ep, isBooker, isPrestataire, error } = await loadEventPrestataireWithAccess(eventPrestataireId, req.user.id);
+    if (error) return res.status(error.code).json({ success: false, message: error.message });
+    if (ep.contractStatus !== 'SENT') return res.status(400).json({ success: false, message: 'Aucun contrat à accepter.' });
+    const role = prestataireContractResponderRole(ep);
+    if (role === 'BOOKER' && !isBooker) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (role === 'PRESTATAIRE' && !isPrestataire) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const payload = ep.contractPayload ?? {};
+    const expectedHash = ep.contractHash ?? '';
+    const actualHash = hashContract(payload);
+    if (!expectedHash || expectedHash !== actualHash) return res.status(400).json({ success: false, message: 'Contrat invalide.' });
+    const now = new Date();
+    const data = {
+      contractSentBy: ep.contractSentBy ?? 'BOOKER',
+      bookerAcceptedAt: role === 'BOOKER' ? now : ep.bookerAcceptedAt,
+      prestataireAcceptedAt: role === 'PRESTATAIRE' ? now : ep.prestataireAcceptedAt,
+    };
+    const updated = await prisma.eventPrestataire.update({ where: { id: eventPrestataireId }, data });
+    const shouldSign = !!updated.bookerAcceptedAt && !!updated.prestataireAcceptedAt;
+    if (shouldSign) {
+      await prisma.eventPrestataire.update({
+        where: { id: eventPrestataireId },
+        data: {
+          contractStatus: 'SIGNED',
+          ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
+        },
+      });
+    }
+    const eventTitle = ep.event?.title ? ` (${ep.event.title})` : '';
+    const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
+    await createContractNotificationMessagePrestataire(eventPrestataireId, req.user.id, notifContent);
+
+    if (shouldSign) {
+      const { sendContractSignedEmailPrestataire } = require('../utils/contractEmail');
+      sendContractSignedEmailPrestataire(eventPrestataireId).catch((err) => console.error('[contract] Email:', err));
+    }
+
+    return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
+  } catch (e) {
+    console.error('Erreur accept contract prestataire:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
@@ -2323,6 +2748,99 @@ app.post('/api/booker/events/:eventId/venues', authenticateToken, async (req, re
     });
   } catch (error) {
     console.error('Erreur ajout lieu à un événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Ajouter un prestataire optionnel à un événement (UserPrestataire.id)
+ * @route POST /api/booker/events/:eventId/prestataires
+ */
+app.post('/api/booker/events/:eventId/prestataires', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventId } = req.params;
+    const { prestataireId } = req.body;
+
+    if (!prestataireId) {
+      return res.status(400).json({ success: false, message: 'Le champ prestataireId est requis.' });
+    }
+
+    const booker = await prisma.userBooker.findFirst({ where: { userId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+    if (event.bookerId !== booker.id) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que vos propres événements.' });
+    }
+
+    const prestataire = await prisma.userPrestataire.findUnique({ where: { id: prestataireId } });
+    if (!prestataire) {
+      return res.status(404).json({ success: false, message: 'Prestataire non trouvé.' });
+    }
+
+    const otherActive = await prisma.eventPrestataire.findFirst({
+      where: {
+        eventId,
+        prestataireId: { not: prestataireId },
+        status: { in: ['PENDING', 'ACCEPTED'] },
+      },
+    });
+    if (otherActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un autre prestataire est déjà invité sur cet événement. Finalisez ou annulez d’abord cette invitation.',
+      });
+    }
+
+    const existing = await prisma.eventPrestataire.findUnique({
+      where: { eventId_prestataireId: { eventId, prestataireId } },
+    });
+    let row;
+    if (existing) {
+      if (existing.status !== 'CANCELLED' && existing.status !== 'REJECTED') {
+        return res.status(400).json({
+          success: false,
+          message: 'Ce prestataire est déjà associé à cet événement.',
+        });
+      }
+      row = await prisma.eventPrestataire.update({
+        where: { id: existing.id },
+        data: { status: 'PENDING', rejectionReason: null },
+      });
+    } else {
+      row = await prisma.eventPrestataire.create({
+        data: { eventId, prestataireId, status: 'PENDING' },
+      });
+    }
+
+    try {
+      await prisma.message.create({
+        data: {
+          type: 'PRIVATE',
+          eventPrestataireId: row.id,
+          senderId: userId,
+          content: `👋 Bonjour ! Vous avez été invité en tant que prestataire pour l'événement "${event.title}".`,
+          read: false,
+          deleted: false,
+        },
+      });
+    } catch (e) {
+      console.error('Erreur message bienvenue EventPrestataire:', e);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Prestataire ajouté à l\'événement.',
+      eventPrestataire: row,
+    });
+  } catch (error) {
+    console.error('Erreur ajout prestataire:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

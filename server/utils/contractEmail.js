@@ -9,6 +9,7 @@ const { sendMail, isConfigured } = require('./mailer');
 const {
   generateDjContractPdf,
   generateVenueContractPdf,
+  generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 } = require('./contractPdf');
 
@@ -44,6 +45,7 @@ h1{color:#FF1744;font-size:20px}
   <div class="detail"><span class="label">${isFr ? 'Date' : 'Date'}:</span> ${eventDate || '-'} ${eventTime ? `à ${eventTime}` : ''}</div>
   ${type === 'dj' ? `<div class="detail"><span class="label">${isFr ? 'DJ' : 'DJ'}:</span> ${partyName || '-'}</div>` : ''}
   ${type === 'venue' ? `<div class="detail"><span class="label">${isFr ? 'Lieu' : 'Venue'}:</span> ${partyName || '-'}</div>` : ''}
+  ${type === 'prestataire' ? `<div class="detail"><span class="label">${isFr ? 'Prestataire' : 'Provider'}:</span> ${partyName || '-'}</div>` : ''}
   <div class="detail"><span class="label">${isFr ? 'Montant' : 'Amount'}:</span> ${amount != null ? `${amount} ${(currency || 'EUR').toUpperCase()}` : '-'}</div>
   ${depositPercent != null ? `<div class="detail"><span class="label">${isFr ? 'Acompte' : 'Deposit'}:</span> ${depositPercent} %</div>` : ''}
   <div class="detail"><span class="label">${isFr ? 'Modalités de paiement' : 'Payment terms'}:</span> ${termsLabel}</div>
@@ -196,7 +198,77 @@ async function sendContractSignedEmailVenue(eventVenueId) {
   }
 }
 
+/**
+ * Envoie le contrat accepté (EventPrestataire) par email
+ */
+async function sendContractSignedEmailPrestataire(eventPrestataireId) {
+  if (!isConfigured()) return;
+  try {
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { include: { booker: true, venue: true } }, prestataire: true },
+    });
+    if (!ep || ep.contractStatus !== 'SIGNED') return;
+
+    const prestUserId = ep.prestataire?.userId;
+    const [bookerUser, prestUser] = await Promise.all([
+      ep.event?.booker?.userId
+        ? prisma.user.findUnique({ where: { id: ep.event.booker.userId }, select: { email: true } })
+        : null,
+      prestUserId ? prisma.user.findUnique({ where: { id: prestUserId }, select: { email: true } }) : null,
+    ]);
+    const name = ep.prestataire?.businessName || 'Prestataire';
+
+    const payload = ep.contractPayload || {};
+    const amount = ep.paymentAmount ?? payload.priceEur ?? payload.amount ?? null;
+    const currency = (ep.paymentCurrency || payload.currency || 'eur').toUpperCase();
+    const depositPercent = payload.depositPercent ?? null;
+    const paymentTerms = payload.paymentTerms ?? null;
+    const eventDate = ep.event?.date ? new Date(ep.event.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
+    const eventTime = ep.event?.time || null;
+
+    const html = formatContractHtml({
+      type: 'prestataire',
+      eventTitle: ep.event?.title,
+      eventDate,
+      eventTime,
+      partyName: name,
+      amount,
+      currency,
+      depositPercent,
+      paymentTerms,
+    });
+
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await generatePrestataireContractPdf({
+        event: ep.event,
+        booker: ep.event?.booker,
+        prestataire: ep.prestataire,
+        eventPrestataire: ep,
+        organizerEmail: bookerUser?.email || null,
+        prestataireEmail: prestUser?.email || null,
+      });
+    } catch (pdfErr) {
+      console.error('[contractEmail] Erreur génération PDF Prestataire:', pdfErr);
+    }
+
+    const subject = `[Nox] Contrat accepté - ${ep.event?.title || 'Événement'} - ${name}`;
+    const emails = [...new Set([bookerUser?.email, prestUser?.email].filter(Boolean))];
+    const attachments = pdfBuffer
+      ? [{ filename: `Contrat_Prestataire_${ep.event?.title || 'evenement'}_${name}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_'), content: pdfBuffer }]
+      : [];
+
+    for (const email of emails) {
+      await sendMail({ to: email, subject, html, attachments });
+    }
+  } catch (err) {
+    console.error('[contractEmail] Erreur envoi contrat Prestataire:', err);
+  }
+}
+
 module.exports = {
   sendContractSignedEmailDj,
   sendContractSignedEmailVenue,
+  sendContractSignedEmailPrestataire,
 };

@@ -78,6 +78,7 @@ model UserPrestataire {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventPrestataires EventPrestataire[]
 
   @@unique([userId])
   @@index([userId])
@@ -350,6 +351,7 @@ model Event {
   venue         UserVenue?    @relation(fields: [venueId], references: [id])
   eventDjs      EventDj[]
   eventVenues   EventVenue[]
+  eventPrestataires EventPrestataire[]
   groupMessages Message[]
   payments      Payment[]
   tickets       Ticket[]
@@ -450,6 +452,38 @@ model EventVenue {
   @@unique([eventId, venueId])
 }
 
+/// Lien optionnel Organisateur ↔ Prestataire (chat privé + contrat), même logique que EventVenue.
+model EventPrestataire {
+  id                    String                   @id @default(uuid())
+  eventId               String
+  prestataireId       String
+  status                InvitationStatus         @default(PENDING)
+  paymentStatus         BookingPaymentStatus     @default(UPCOMING)
+  paymentAmount         Int?
+  paymentCurrency       String                   @default("eur")
+  paidAt                DateTime?
+  invoiceNumber         String?
+  contractStatus        BookingContractStatus    @default(DRAFT)
+  contractVersion       Int                      @default(1)
+  contractPayload       Json?
+  contractHash          String?
+  contractSentAt        DateTime?
+  contractSentBy        ContractPartyPrestataire?
+  bookerAcceptedAt      DateTime?
+  prestataireAcceptedAt DateTime?
+  rejectionReason       String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  event                 Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  prestataire           UserPrestataire          @relation(fields: [prestataireId], references: [id], onDelete: Cascade)
+  messages              Message[]
+
+  @@unique([eventId, prestataireId])
+  @@index([eventId])
+  @@index([prestataireId])
+  @@index([status])
+}
+
 model BookerCommunityFriend {
   id          String              @id @default(uuid())
   bookerId    String
@@ -488,6 +522,7 @@ model Message {
   type        MessageType  @default(PRIVATE)
   eventDjId   String?
   eventVenueId String?
+  eventPrestataireId String?
   eventId     String?
   senderId    String
   content     String
@@ -497,10 +532,12 @@ model Message {
   updatedAt   DateTime     @updatedAt
   eventDj     EventDj?     @relation(fields: [eventDjId], references: [id], onDelete: Cascade)
   eventVenue  EventVenue?  @relation(fields: [eventVenueId], references: [id], onDelete: Cascade)
+  eventPrestataire EventPrestataire? @relation(fields: [eventPrestataireId], references: [id], onDelete: Cascade)
   event       Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventDjId])
   @@index([eventVenueId])
+  @@index([eventPrestataireId])
   @@index([eventId])
   @@index([senderId])
   @@index([type])
@@ -750,6 +787,11 @@ enum ContractParty {
 enum ContractPartyVenue {
   BOOKER
   VENUE
+}
+
+enum ContractPartyPrestataire {
+  BOOKER
+  PRESTATAIRE
 }
 
 enum MessageType {

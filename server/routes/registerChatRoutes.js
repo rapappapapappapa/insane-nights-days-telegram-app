@@ -350,6 +350,124 @@ app.get('/api/chat/event-venue/:eventVenueId/messages', authenticateToken, async
 });
 
 /**
+ * Chat Organisateur ↔ Prestataire
+ * @route POST /api/chat/event-prestataire/:eventPrestataireId/messages
+ */
+app.post('/api/chat/event-prestataire/:eventPrestataireId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, message: 'Le contenu du message est requis.' });
+    }
+    const trimmed = content.trim();
+    if (trimmed.length > MAX_CHAT_MESSAGE_LENGTH) {
+      return res.status(400).json({ success: false, message: `Le message ne doit pas dépasser ${MAX_CHAT_MESSAGE_LENGTH} caractères.` });
+    }
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { include: { booker: true } }, prestataire: true },
+    });
+    if (!ep) return res.status(404).json({ success: false, message: 'Conversation non trouvée.' });
+
+    const isBooker = ep.event?.booker?.userId === userId;
+    const isPrestataire = ep.prestataire?.userId === userId;
+    if (!isBooker && !isPrestataire) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    const message = await prisma.message.create({
+      data: {
+        type: 'PRIVATE',
+        eventPrestataireId,
+        senderId: userId,
+        content: trimmed,
+        read: false,
+        deleted: false,
+      },
+    });
+
+    void chatPush
+      .afterPrestataireMessage({
+        senderId: userId,
+        ep,
+        content: trimmed,
+        eventTitle: ep.event?.title,
+      })
+      .catch((err) => console.error('[chatPush] prestataire:', err));
+
+    res.status(201).json({
+      success: true,
+      message: 'Message envoyé.',
+      data: { id: message.id, content: message.content, senderId: message.senderId, read: message.read, createdAt: message.createdAt },
+    });
+  } catch (error) {
+    console.error('Erreur envoi message EventPrestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @route GET /api/chat/event-prestataire/:eventPrestataireId/messages
+ */
+app.get('/api/chat/event-prestataire/:eventPrestataireId/messages', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { eventPrestataireId } = req.params;
+
+    const ep = await prisma.eventPrestataire.findUnique({
+      where: { id: eventPrestataireId },
+      include: { event: { include: { booker: true } }, prestataire: true },
+    });
+    if (!ep) return res.status(404).json({ success: false, message: 'Conversation non trouvée.' });
+
+    const isBooker = ep.event?.booker?.userId === userId;
+    const isPrestataire = ep.prestataire?.userId === userId;
+    if (!isBooker && !isPrestataire) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+
+    const messages = await prisma.message.findMany({
+      where: { eventPrestataireId, type: 'PRIVATE' },
+      orderBy: { createdAt: 'asc' },
+      include: { eventPrestataire: { include: { event: true, prestataire: true } } },
+    });
+
+    const enrichedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        let senderInfo = null;
+        if (msg.senderId === ep.event?.booker?.userId) {
+          const b = await prisma.userBooker.findFirst({ where: { userId: msg.senderId }, select: { nom: true, prenom: true, profileImage: true } });
+          senderInfo = { type: 'BOOKER', name: b ? `${b.prenom} ${b.nom}` : 'Organisateur', image: b?.profileImage };
+        } else if (msg.senderId === ep.prestataire?.userId) {
+          const pr = await prisma.userPrestataire.findFirst({
+            where: { userId: msg.senderId },
+            select: { businessName: true, profileImage: true },
+          });
+          senderInfo = { type: 'PRESTATAIRE', name: pr?.businessName || 'Prestataire', image: pr?.profileImage };
+        }
+        return {
+          id: msg.id,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderInfo,
+          read: msg.read,
+          deleted: msg.deleted,
+          createdAt: msg.createdAt,
+          isOwn: msg.senderId === userId,
+        };
+      })
+    );
+
+    res.json({ success: true, messages: enrichedMessages });
+  } catch (error) {
+    console.error('Erreur récupération messages EventPrestataire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * Marquer un message comme lu
  * @route PUT /api/chat/messages/:messageId/read
  */
@@ -373,6 +491,12 @@ app.put('/api/chat/messages/:messageId/read', authenticateToken, async (req, res
             venue: true,
           },
         },
+        eventPrestataire: {
+          include: {
+            event: { include: { booker: true } },
+            prestataire: true,
+          },
+        },
       },
     });
 
@@ -392,6 +516,10 @@ app.put('/api/chat/messages/:messageId/read', authenticateToken, async (req, res
       const isBooker = message.eventVenue.event?.booker?.userId === userId;
       const isVenue = message.eventVenue.venue?.userId === userId;
       isAuthorized = isBooker || isVenue;
+    } else if (message.eventPrestataire) {
+      const isBooker = message.eventPrestataire.event?.booker?.userId === userId;
+      const isPrestataire = message.eventPrestataire.prestataire?.userId === userId;
+      isAuthorized = isBooker || isPrestataire;
     }
 
     if (!isAuthorized) {
@@ -582,7 +710,18 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
           },
         },
       });
-      const bookerPrivateUnread = bookerPrivateUnreadDj + bookerPrivateUnreadVenue;
+      const bookerPrivateUnreadPrestataire = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventPrestataire: {
+            event: { bookerId: booker.id },
+          },
+        },
+      });
+      const bookerPrivateUnread = bookerPrivateUnreadDj + bookerPrivateUnreadVenue + bookerPrivateUnreadPrestataire;
 
       const bookerEventIds = await prisma.event.findMany({
         where: { bookerId: booker.id },
@@ -622,6 +761,12 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
                 event: { bookerId: booker.id },
               },
             },
+            {
+              type: 'PRIVATE',
+              eventPrestataire: {
+                event: { bookerId: booker.id },
+              },
+            },
             ...(bookerEventIdList.length
               ? [
                   {
@@ -640,6 +785,11 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
             },
           },
           eventVenue: {
+            include: {
+              event: { select: { id: true, title: true } },
+            },
+          },
+          eventPrestataire: {
             include: {
               event: { select: { id: true, title: true } },
             },
@@ -683,13 +833,48 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
       });
     }
 
-    const totalUnread = djTotalUnread + bookerTotalUnread + venueTotalUnread;
+    // --- PRESTATAIRE side ---
+    const prestataireProfile = await prisma.userPrestataire.findFirst({
+      where: { userId: userId },
+      select: { id: true },
+    });
+    let prestataireTotalUnread = 0;
+    let prestataireLatestUnread = null;
+    if (prestataireProfile) {
+      prestataireTotalUnread = await prisma.message.count({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventPrestataire: { prestataireId: prestataireProfile.id },
+        },
+      });
+      prestataireLatestUnread = await prisma.message.findFirst({
+        where: {
+          type: 'PRIVATE',
+          read: false,
+          deleted: false,
+          senderId: { not: userId },
+          eventPrestataire: { prestataireId: prestataireProfile.id },
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          eventPrestataire: {
+            include: { event: { select: { id: true, title: true } } },
+          },
+        },
+      });
+    }
 
-    const pickLatest = (a, b, c) => {
+    const totalUnread = djTotalUnread + bookerTotalUnread + venueTotalUnread + prestataireTotalUnread;
+
+    const pickLatest = (a, b, c, d) => {
       const items = [
         a && { profileType: 'DJ', msg: a },
         b && { profileType: 'BOOKER', msg: b },
         c && { profileType: 'VENUE', msg: c },
+        d && { profileType: 'PRESTATAIRE', msg: d },
       ].filter(Boolean);
       if (items.length === 0) return null;
       return items.reduce((best, cur) => {
@@ -699,7 +884,7 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
       });
     };
 
-    const latest = pickLatest(djLatestUnread, bookerLatestUnread, venueLatestUnread);
+    const latest = pickLatest(djLatestUnread, bookerLatestUnread, venueLatestUnread, prestataireLatestUnread);
 
     res.json({
       success: true,
@@ -708,6 +893,7 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
         DJ: djTotalUnread,
         BOOKER: bookerTotalUnread,
         VENUE: venueTotalUnread,
+        PRESTATAIRE: prestataireTotalUnread,
       },
       latest: latest
         ? {
@@ -718,11 +904,13 @@ app.get('/api/chat/unread-count', authenticateToken, async (req, res) => {
             createdAt: latest.msg.createdAt,
             eventDjId: latest.msg.eventDjId ?? null,
             eventVenueId: latest.msg.eventVenueId ?? null,
+            eventPrestataireId: latest.msg.eventPrestataireId ?? null,
             eventId: latest.msg.eventId ?? null,
             eventTitle:
               latest.msg.event?.title ??
               latest.msg.eventDj?.event?.title ??
               latest.msg.eventVenue?.event?.title ??
+              latest.msg.eventPrestataire?.event?.title ??
               null,
           }
         : null,
@@ -811,6 +999,18 @@ app.put('/api/chat/mark-all-read', authenticateToken, async (req, res) => {
           },
           data: { read: true },
         });
+        // Messages privés Prestataire
+        await prisma.message.updateMany({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventPrestataire: {
+              event: { bookerId: booker.id },
+            },
+          },
+          data: { read: true },
+        });
 
         // Marquer tous les messages de groupe non lus comme lus pour les événements du booker
         const bookerEventIds = await prisma.event.findMany({
@@ -843,6 +1043,22 @@ app.put('/api/chat/mark-all-read', authenticateToken, async (req, res) => {
             read: false,
             senderId: { not: userId },
             eventVenue: { venueId: venue.id },
+          },
+          data: { read: true },
+        });
+      }
+    } else if (user.activeProfileType === 'PRESTATAIRE') {
+      const prest = await prisma.userPrestataire.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+      if (prest) {
+        await prisma.message.updateMany({
+          where: {
+            type: 'PRIVATE',
+            read: false,
+            senderId: { not: userId },
+            eventPrestataire: { prestataireId: prest.id },
           },
           data: { read: true },
         });

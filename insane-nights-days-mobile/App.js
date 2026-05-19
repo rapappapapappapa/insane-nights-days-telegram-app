@@ -62,6 +62,7 @@ import VenueRatingsPage from './screens/profiles/VenueRatingsPage';
 
 import SelectDjPage from './screens/selection/SelectDjPage';
 import SelectVenuePage from './screens/selection/SelectVenuePage';
+import SelectPrestatairePage from './screens/selection/SelectPrestatairePage';
 
 import SwitchProfilePage from './screens/profile-management/SwitchProfilePage';
 
@@ -104,6 +105,7 @@ const SCREENS = {
   bookerEventDashboard: BookerEventDashboardPage,
   selectDj: SelectDjPage,
   selectVenue: SelectVenuePage,
+  selectPrestataire: SelectPrestatairePage,
   venueProfile: VenueProfilePage,
   switchProfile: SwitchProfilePage,
   profile: ProfilePage,
@@ -192,7 +194,7 @@ function AppContent() {
     if (!user?.isAuthenticated) return;
 
     // ✅ Si on a une notif "latest", on navigue là où il y a à lire (DJ vs BOOKER vs VENUE)
-    if (latest?.profileType === 'DJ' || latest?.profileType === 'BOOKER' || latest?.profileType === 'VENUE') {
+    if (latest?.profileType === 'DJ' || latest?.profileType === 'BOOKER' || latest?.profileType === 'VENUE' || latest?.profileType === 'PRESTATAIRE') {
       const targetProfile = latest.profileType;
 
       // Si on n'est pas sur le bon profil, basculer automatiquement
@@ -212,6 +214,7 @@ function AppContent() {
         openChatType: latest.messageType ?? null,
         openChatEventDjId: latest.eventDjId ?? null,
         openChatEventVenueId: latest.eventVenueId ?? null,
+        openChatEventPrestataireId: latest.eventPrestataireId ?? null,
         openChatEventId: latest.eventId ?? null,
         openChatPreview: latest.preview ?? null,
         openChatEventTitle: latest.eventTitle ?? null,
@@ -221,6 +224,8 @@ function AppContent() {
         navigate('djDashboard', params);
       } else if (targetProfile === 'VENUE') {
         navigate('venueDashboard', params);
+      } else if (targetProfile === 'PRESTATAIRE') {
+        navigate('prestataireDashboard', params);
       } else {
         navigate('bookerDashboard', params);
       }
@@ -247,7 +252,7 @@ function AppContent() {
       if (!data || data.type !== 'CHAT_MESSAGE') return;
       if (!user?.isAuthenticated || !user?.token) return;
       const targetProfile = data.profileType;
-      if (!targetProfile || !['DJ', 'BOOKER', 'VENUE'].includes(targetProfile)) return;
+      if (!targetProfile || !['DJ', 'BOOKER', 'VENUE', 'PRESTATAIRE'].includes(targetProfile)) return;
 
       if (user.activeProfileType && user.activeProfileType !== targetProfile) {
         try {
@@ -265,6 +270,7 @@ function AppContent() {
         openChatType: data.messageType ?? null,
         openChatEventDjId: data.eventDjId ?? null,
         openChatEventVenueId: data.eventVenueId ?? null,
+        openChatEventPrestataireId: data.eventPrestataireId ?? null,
         openChatEventId: data.eventId ?? null,
         openChatPreview: data.preview ?? null,
         openChatEventTitle: data.eventTitle ?? null,
@@ -274,6 +280,8 @@ function AppContent() {
         navigate('djDashboard', params);
       } else if (targetProfile === 'VENUE') {
         navigate('venueDashboard', params);
+      } else if (targetProfile === 'PRESTATAIRE') {
+        navigate('prestataireDashboard', params);
       } else {
         navigate('bookerDashboard', params);
       }

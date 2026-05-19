@@ -330,6 +330,11 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(API_CONFIG.ENDPOINTS.VENUE_BOOKINGS, { noCache: true }, token);
   },
 
+  getPrestataireBookings: async (token) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(API_CONFIG.ENDPOINTS.PRESTATAIRE_BOOKINGS, { noCache: true }, token);
+  },
+
   // Accepter une invitation à un événement
   acceptInvitation: async (token, invitationId) => {
     if (!token) {
@@ -408,6 +413,37 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
     );
   },
 
+  acceptPrestataireInvitation: async (token, eventPrestataireId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.PRESTATAIRE_ACCEPT_INVITATION}/${eventPrestataireId}/accept`,
+      { method: 'PUT' },
+      token
+    );
+  },
+  cancelPrestataireBooking: async (token, eventPrestataireId, reason = null) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.PRESTATAIRE_REJECT_INVITATION}/${eventPrestataireId}/cancel`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
+      },
+      token
+    );
+  },
+  rejectPrestataireInvitation: async (token, eventPrestataireId, reason = null) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.PRESTATAIRE_REJECT_INVITATION}/${eventPrestataireId}/reject`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(reason ? { reason } : {}),
+      },
+      token
+    );
+  },
+
   // Récupérer les DJs disponibles pour un booker
   getAvailableDjs: async (token, date = null) => {
     if (!token) {
@@ -417,6 +453,23 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
       ? `${API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_DJS}?date=${encodeURIComponent(date)}`
       : API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_DJS;
     return apiRequest(url, {}, token);
+  },
+
+  getAvailablePrestataires: async (token, date = null) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    const url = date
+      ? `${API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_PRESTATAIRES}?date=${encodeURIComponent(date)}`
+      : API_CONFIG.ENDPOINTS.BOOKER_AVAILABLE_PRESTATAIRES;
+    return apiRequest(url, {}, token);
+  },
+
+  addPrestataireToEvent: async (token, eventId, prestataireId) => {
+    if (!token || !eventId || !prestataireId) throw new Error('Paramètres requis.');
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_EVENTS}/${eventId}/prestataires`,
+      { method: 'POST', body: JSON.stringify({ prestataireId }) },
+      token
+    );
   },
 
   // Récupérer tous les lieux disponibles

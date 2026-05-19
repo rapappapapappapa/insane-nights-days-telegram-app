@@ -142,6 +142,8 @@ export default function BookerDashboardPage() {
   const [selectedChatEventId, setSelectedChatEventId] = useState(null); // Pour les chats de groupe
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [isVenueChat, setIsVenueChat] = useState(false);
+  const [isPrestataireChat, setIsPrestataireChat] = useState(false);
+  const [selectedChatEventPrestataireId, setSelectedChatEventPrestataireId] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [loadingChatMessages, setLoadingChatMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -759,6 +761,9 @@ export default function BookerDashboardPage() {
     setSelectedChatEventDjId(eventDjId);
     setSelectedChatEventId(null);
     setIsGroupChat(false);
+    setIsVenueChat(false);
+    setIsPrestataireChat(false);
+    setSelectedChatEventPrestataireId(null);
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventDjId, false);
@@ -771,9 +776,11 @@ export default function BookerDashboardPage() {
   const openGroupChat = async (eventId) => {
     setSelectedChatEventDjId(null);
     setSelectedChatEventVenueId(null);
+    setSelectedChatEventPrestataireId(null);
     setSelectedChatEventId(eventId);
     setIsGroupChat(true);
     setIsVenueChat(false);
+    setIsPrestataireChat(false);
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventId, true);
@@ -784,13 +791,30 @@ export default function BookerDashboardPage() {
     setSelectedChatEventDjId(null);
     setSelectedChatEventId(null);
     setSelectedChatEventVenueId(eventVenueId);
+    setSelectedChatEventPrestataireId(null);
     setIsGroupChat(false);
     setIsVenueChat(true);
+    setIsPrestataireChat(false);
     setChatModalVisible(true);
     setChatMessages([]);
     await loadChatMessages(eventVenueId, false, true);
     await markAllAsRead();
     await loadVenueContract(eventVenueId);
+  };
+
+  const openPrestataireChat = async (eventPrestataireId) => {
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(null);
+    setSelectedChatEventVenueId(null);
+    setSelectedChatEventPrestataireId(eventPrestataireId);
+    setIsGroupChat(false);
+    setIsVenueChat(false);
+    setIsPrestataireChat(true);
+    setChatModalVisible(true);
+    setChatMessages([]);
+    await loadChatMessages(eventPrestataireId, false, false, { prestataire: true });
+    await markAllAsRead();
+    await loadPrestataireContract(eventPrestataireId);
   };
 
   const loadContract = async (eventDjId) => {
@@ -815,17 +839,20 @@ export default function BookerDashboardPage() {
 
   const saveContractDraft = async () => {
     if (!user?.token) return false;
-    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isVenueChat ? selectedChatEventVenueId : isPrestataireChat ? selectedChatEventPrestataireId : selectedChatEventDjId;
     if (!id) return false;
     try {
       const payload = isVenueChat ? buildVenueContractPayload(contractDraft) : buildDjContractPayload(contractDraft);
       const res = isVenueChat
         ? await api.saveVenueContractDraft(user.token, selectedChatEventVenueId, payload)
-        : await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
+        : isPrestataireChat
+          ? await api.savePrestataireContractDraft(user.token, selectedChatEventPrestataireId, payload)
+          : await api.saveBookingContractDraft(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat sauvegardé.' : 'Contract saved.');
         closeContractEditorSession();
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else if (isPrestataireChat) await loadPrestataireContract(selectedChatEventPrestataireId);
         else await loadContract(selectedChatEventDjId);
         return true;
       }
@@ -840,15 +867,30 @@ export default function BookerDashboardPage() {
 
   const sendContract = async () => {
     if (!user?.token) return;
-    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isVenueChat ? selectedChatEventVenueId : isPrestataireChat ? selectedChatEventPrestataireId : selectedChatEventDjId;
     if (!id) return;
     try {
       const res = isVenueChat
         ? await api.sendVenueContract(user.token, selectedChatEventVenueId)
-        : await api.sendBookingContract(user.token, selectedChatEventDjId);
+        : isPrestataireChat
+          ? await api.sendPrestataireContract(user.token, selectedChatEventPrestataireId)
+          : await api.sendBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
-        showSuccess(isVenueChat ? (language === 'fr' ? 'Contrat envoyé au lieu.' : 'Contract sent to venue.') : (language === 'fr' ? 'Contrat envoyé au DJ.' : 'Contract sent to DJ.'));
+        showSuccess(
+          isVenueChat
+            ? language === 'fr'
+              ? 'Contrat envoyé au lieu.'
+              : 'Contract sent to venue.'
+            : isPrestataireChat
+              ? language === 'fr'
+                ? 'Contrat envoyé au prestataire.'
+                : 'Contract sent to provider.'
+              : language === 'fr'
+                ? 'Contrat envoyé au DJ.'
+                : 'Contract sent to DJ.'
+        );
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else if (isPrestataireChat) await loadPrestataireContract(selectedChatEventPrestataireId);
         else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -861,15 +903,18 @@ export default function BookerDashboardPage() {
 
   const acceptContract = async () => {
     if (!user?.token) return;
-    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isVenueChat ? selectedChatEventVenueId : isPrestataireChat ? selectedChatEventPrestataireId : selectedChatEventDjId;
     if (!id) return;
     try {
       const res = isVenueChat
         ? await api.acceptVenueContract(user.token, selectedChatEventVenueId)
-        : await api.acceptBookingContract(user.token, selectedChatEventDjId);
+        : isPrestataireChat
+          ? await api.acceptPrestataireContract(user.token, selectedChatEventPrestataireId)
+          : await api.acceptBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else if (isPrestataireChat) await loadPrestataireContract(selectedChatEventPrestataireId);
         else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’accepter.' : 'Unable to accept.'));
@@ -882,17 +927,20 @@ export default function BookerDashboardPage() {
 
   const counterContract = async () => {
     if (!user?.token) return;
-    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isVenueChat ? selectedChatEventVenueId : isPrestataireChat ? selectedChatEventPrestataireId : selectedChatEventDjId;
     if (!id) return;
     try {
       const payload = isVenueChat ? buildVenueContractPayload(contractDraft) : buildDjContractPayload(contractDraft);
       const res = isVenueChat
         ? await api.counterVenueContract(user.token, selectedChatEventVenueId, payload)
-        : await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
+        : isPrestataireChat
+          ? await api.counterPrestataireContract(user.token, selectedChatEventPrestataireId, payload)
+          : await api.counterBookingContract(user.token, selectedChatEventDjId, payload);
       if (res?.success) {
         showSuccess(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         closeContractEditorSession();
         if (isVenueChat) await loadVenueContract(selectedChatEventVenueId);
+        else if (isPrestataireChat) await loadPrestataireContract(selectedChatEventPrestataireId);
         else await loadContract(selectedChatEventDjId);
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’envoyer.' : 'Unable to send.'));
@@ -926,7 +974,7 @@ export default function BookerDashboardPage() {
   };
 
   const openContractPdfPreview = async ({ previewPayload, pendingAction }) => {
-    const id = isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isVenueChat ? selectedChatEventVenueId : isPrestataireChat ? selectedChatEventPrestataireId : selectedChatEventDjId;
     if (!user?.token || !id) return;
     contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
     setContractEditorVisible(false);
@@ -942,7 +990,9 @@ export default function BookerDashboardPage() {
       try {
         const res = isVenueChat
           ? await api.previewVenueContractPdf(user.token, id, previewPayload)
-          : await api.previewBookingContractPdf(user.token, id, previewPayload);
+          : isPrestataireChat
+            ? await api.previewPrestataireContractPdf(user.token, id, previewPayload)
+            : await api.previewBookingContractPdf(user.token, id, previewPayload);
         if (res?.success && res.pdfBase64) {
           setContractPdfPreview((p) => ({ ...p, loading: false, pdfBase64: res.pdfBase64 }));
         } else {
@@ -1020,13 +1070,34 @@ export default function BookerDashboardPage() {
     }
   };
 
+  const loadPrestataireContract = async (eventPrestataireId) => {
+    if (!user?.token || !eventPrestataireId) return;
+    setContractLoading(true);
+    try {
+      const res = await api.getPrestataireContract(user.token, eventPrestataireId);
+      if (res?.success) {
+        setContractData(res.contract || null);
+        setContractBooking(res.booking || null);
+        const p = res.contract?.payload || {};
+        setContractDraft(draftFromPayload(p, 'dj'));
+        setVenueContractGate(null);
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] loadPrestataireContract error:', e);
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
   useEffect(() => {
     setContractAcceptAck(false);
     setContractDraftReadAck(false);
   }, [
     selectedChatEventDjId,
     selectedChatEventVenueId,
+    selectedChatEventPrestataireId,
     isVenueChat,
+    isPrestataireChat,
     contractData?.id,
     contractData?.status,
     contractData?.sentBy,
@@ -1038,6 +1109,7 @@ export default function BookerDashboardPage() {
     const type = routeParams?.openChatType;
     const eventDjId = routeParams?.openChatEventDjId;
     const eventVenueId = routeParams?.openChatEventVenueId;
+    const eventPrestataireId = routeParams?.openChatEventPrestataireId;
     const eventId = routeParams?.openChatEventId;
 
     if (shouldOpenBookings) {
@@ -1048,14 +1120,17 @@ export default function BookerDashboardPage() {
       openChat(eventDjId);
     } else if (type === 'PRIVATE' && eventVenueId) {
       openVenueChat(eventVenueId);
+    } else if (type === 'PRIVATE' && eventPrestataireId) {
+      openPrestataireChat(eventPrestataireId);
     } else if (type === 'GROUP' && eventId) {
       openGroupChat(eventId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventVenueId, routeParams?.openChatEventId]);
+  }, [user?.token, routeParams?.openChatType, routeParams?.openChatEventDjId, routeParams?.openChatEventVenueId, routeParams?.openChatEventPrestataireId, routeParams?.openChatEventId]);
 
   const loadChatMessages = async (id, isGroup = false, isVenue = false, options = {}) => {
     const silent = options.silent === true;
+    const isPrestataire = options.prestataire === true;
     if (!user?.token || !id) return;
 
     if (!silent) setLoadingChatMessages(true);
@@ -1063,6 +1138,8 @@ export default function BookerDashboardPage() {
       let response;
       if (isGroup) {
         response = await api.getGroupMessages(user.token, id);
+      } else if (isPrestataire) {
+        response = await api.getPrestataireMessages(user.token, id);
       } else if (isVenue) {
         response = await api.getVenueMessages(user.token, id);
       } else {
@@ -1104,9 +1181,15 @@ export default function BookerDashboardPage() {
   const pollBookerChatRef = useRef(() => {});
   pollBookerChatRef.current = () => {
     if (!user?.token || !chatModalVisible) return;
-    const id = isGroupChat ? selectedChatEventId : isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId;
+    const id = isGroupChat
+      ? selectedChatEventId
+      : isVenueChat
+        ? selectedChatEventVenueId
+        : isPrestataireChat
+          ? selectedChatEventPrestataireId
+          : selectedChatEventDjId;
     if (!id) return;
-    loadChatMessages(id, isGroupChat, isVenueChat, { silent: true });
+    loadChatMessages(id, isGroupChat, isVenueChat, { silent: true, prestataire: isPrestataireChat });
   };
   useChatPoll({
     active: chatModalVisible && !!user?.token,
@@ -1115,7 +1198,7 @@ export default function BookerDashboardPage() {
 
   const sendMessage = async () => {
     if (!user?.token || !newMessageText.trim() || sendingMessage) return;
-    if (!isGroupChat && !selectedChatEventDjId && !selectedChatEventVenueId) return;
+    if (!isGroupChat && !selectedChatEventDjId && !selectedChatEventVenueId && !selectedChatEventPrestataireId) return;
     if (isGroupChat && !selectedChatEventId) return;
     
     const messageText = newMessageText.trim();
@@ -1126,14 +1209,22 @@ export default function BookerDashboardPage() {
       let response;
       if (isGroupChat) {
         response = await api.sendGroupMessage(user.token, selectedChatEventId, messageText);
+      } else if (isPrestataireChat) {
+        response = await api.sendPrestataireMessage(user.token, selectedChatEventPrestataireId, messageText);
       } else if (isVenueChat) {
         response = await api.sendVenueMessage(user.token, selectedChatEventVenueId, messageText);
       } else {
         response = await api.sendMessage(user.token, selectedChatEventDjId, messageText);
       }
       if (response && response.success) {
-        const id = isGroupChat ? selectedChatEventId : (isVenueChat ? selectedChatEventVenueId : selectedChatEventDjId);
-        await loadChatMessages(id, isGroupChat, isVenueChat);
+        const id = isGroupChat
+          ? selectedChatEventId
+          : isVenueChat
+            ? selectedChatEventVenueId
+            : isPrestataireChat
+              ? selectedChatEventPrestataireId
+              : selectedChatEventDjId;
+        await loadChatMessages(id, isGroupChat, isVenueChat, { prestataire: isPrestataireChat });
       } else {
         showError(response?.message || (language === 'fr' ? 'Impossible d\'envoyer le message.' : 'Unable to send message.'));
         setNewMessageText(messageText);
@@ -1474,6 +1565,7 @@ export default function BookerDashboardPage() {
 
   const djVenueGateBlocks =
     !isVenueChat &&
+    !isPrestataireChat &&
     venueContractGate?.hasVenueOnEvent === true &&
     venueContractGate?.canFinalizeDjContract === false;
 
@@ -1809,6 +1901,39 @@ export default function BookerDashboardPage() {
                       ) : null}
                     </View>
                   )}
+                  <View style={[styles.venueRow, { marginTop: 6 }]}>
+                    <Text style={styles.eventInfo}>
+                      🛠️ {language === 'fr' ? 'Prestataire' : 'Provider'}
+                    </Text>
+                    {event.prestataire?.eventPrestataireId ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                        <Text style={styles.eventInfo}>
+                          {event.prestataire.businessName || '—'}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.chatButtonSmall}
+                          onPress={() => openPrestataireChat(event.prestataire.eventPrestataireId)}
+                        >
+                          <Text style={styles.chatButtonSmallText}>💬</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.addDjButton}
+                        onPress={() =>
+                          navigate('selectPrestataire', {
+                            eventId: event.id,
+                            eventDate: event.date,
+                            returnTo: 'bookerDashboard',
+                          })
+                        }
+                      >
+                        <Text style={styles.addDjButtonText}>
+                          {language === 'fr' ? '+ Prestataire (optionnel)' : '+ Provider (optional)'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   {/* Bouton chat de groupe - placé en premier pour être plus visible */}
                   <TouchableOpacity
                     style={[styles.chatButton, { marginTop: 10, marginBottom: 10 }]}
@@ -2169,6 +2294,8 @@ export default function BookerDashboardPage() {
           setSelectedChatEventId(null);
           setIsGroupChat(false);
           setIsVenueChat(false);
+          setIsPrestataireChat(false);
+          setSelectedChatEventPrestataireId(null);
           setChatMessages([]);
           setNewMessageText('');
           setContractEditorVisible(false);
@@ -2236,8 +2363,8 @@ export default function BookerDashboardPage() {
             </View>
             </View>
 
-            {/* ✅ Contrat (chat privé DJ ou Lieu) */}
-            {!isGroupChat && (selectedChatEventDjId || selectedChatEventVenueId) ? (
+            {/* ✅ Contrat (chat privé DJ, lieu ou prestataire) */}
+            {!isGroupChat && (selectedChatEventDjId || selectedChatEventVenueId || selectedChatEventPrestataireId) ? (
               <View style={styles.contractCard}>
               {/* iOS : pas de Pressable parent sur les boutons — évite les touches « fantômes » (animation sans action) */}
               <TouchableOpacity
@@ -2248,7 +2375,7 @@ export default function BookerDashboardPage() {
                   if (contractData.status === 'DRAFT') openContractEditorFromChat();
                   else if (
                     contractData.status === 'SENT' &&
-                    (isVenueChat ? contractData.sentBy === 'VENUE' : contractData.sentBy === 'DJ')
+                    (isVenueChat ? contractData.sentBy === 'VENUE' : isPrestataireChat ? contractData.sentBy === 'PRESTATAIRE' : contractData.sentBy === 'DJ')
                   ) {
                     openContractEditorFromChat();
                   }
@@ -2259,7 +2386,9 @@ export default function BookerDashboardPage() {
                   <Text style={styles.contractTitle}>
                     🧾 {isVenueChat
                       ? (language === 'fr' ? 'Contrat lieu' : 'Venue contract')
-                      : (language === 'fr' ? 'Contrat de booking' : 'Booking contract')}
+                      : isPrestataireChat
+                        ? (language === 'fr' ? 'Contrat prestataire' : 'Provider contract')
+                        : (language === 'fr' ? 'Contrat de booking' : 'Booking contract')}
                   </Text>
                   {contractLoading ? (
                     <ActivityIndicator size="small" color={Colors.primary} />
@@ -2357,7 +2486,7 @@ export default function BookerDashboardPage() {
                 ) : null}
 
                 {contractData?.status === 'SENT' &&
-                (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
+                (isVenueChat ? contractData?.sentBy === 'VENUE' : isPrestataireChat ? contractData?.sentBy === 'PRESTATAIRE' : contractData?.sentBy === 'DJ') ? (
                   <TouchableOpacity
                     style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
                     onPress={() =>
@@ -2377,7 +2506,7 @@ export default function BookerDashboardPage() {
                 ) : null}
 
                 {contractData?.status === 'SENT' &&
-                (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
+                (isVenueChat ? contractData?.sentBy === 'VENUE' : isPrestataireChat ? contractData?.sentBy === 'PRESTATAIRE' : contractData?.sentBy === 'DJ') ? (
                   <View style={styles.contractAckRow}>
                     <TouchableOpacity
                       style={[
@@ -2430,7 +2559,7 @@ export default function BookerDashboardPage() {
                       </TouchableOpacity>
                     </>
                   ) : contractData?.status === 'SENT' ? (
-                    (isVenueChat ? contractData?.sentBy === 'VENUE' : contractData?.sentBy === 'DJ') ? (
+                    (isVenueChat ? contractData?.sentBy === 'VENUE' : isPrestataireChat ? contractData?.sentBy === 'PRESTATAIRE' : contractData?.sentBy === 'DJ') ? (
                       <>
                         <TouchableOpacity
                           style={[styles.contractButton, styles.contractButtonSecondary]}

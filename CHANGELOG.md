@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 19 au 22 mai 2026 (lun. – jeu.)
+## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
 ### Ajouté (serveur + mobile — profil Prestataire, MVP)
 - **Modèle Prisma `UserPrestataire`** (nom commercial, type de prestation, téléphone pro, champs optionnels ville / pays / bio / visuels) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).

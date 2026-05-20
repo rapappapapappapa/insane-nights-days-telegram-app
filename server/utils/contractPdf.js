@@ -374,7 +374,11 @@ async function generatePrestataireContractPdf({
 
     titleLine(doc, '2 — Prestataire', 11);
     p(doc, `Raison sociale / Nom : ${prestataire?.businessName || '—'}`);
-    p(doc, `Type de prestation : ${prestataire?.serviceType || '—'}`);
+    const genresLine =
+      Array.isArray(prestataire?.prestationGenres) && prestataire.prestationGenres.length > 0
+        ? prestataire.prestationGenres.join(', ')
+        : '—';
+    p(doc, `Genres / prestations : ${genresLine}`);
     p(doc, `Ville : ${formatAddr([prestataire?.city, prestataire?.country])}`);
     p(doc, `Téléphone pro : ${prestataire?.phonePro || '—'}`);
     p(doc, `Email : ${prestataireEmail || '—'}`);

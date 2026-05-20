@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Colors from '../../constants/colors';
@@ -28,6 +29,9 @@ import {
 import ContractDraftEditorFields from '../../components/ContractDraftEditorFields';
 import CancellationPolicyPickerModal from '../../components/CancellationPolicyPickerModal';
 import EventEndTimePickerModal from '../../components/EventEndTimePickerModal';
+import PrestataireGenreAndAvailabilityFields, {
+  DEFAULT_AVAILABLE_DAYS,
+} from '../../components/PrestataireGenreAndAvailabilityFields';
 
 /**
  * Dashboard prestataire : réservations (EventPrestataire), chat privé et contrat (logique proche du lieu / DJ).
@@ -68,6 +72,18 @@ export default function PrestataireDashboardPage() {
   const [showCancellationModal, setShowCancellationModal] = useState(false);
   const [showEventEndModal, setShowEventEndModal] = useState(false);
 
+  const [profBusinessName, setProfBusinessName] = useState('');
+  const [profPhonePro, setProfPhonePro] = useState('');
+  const [profCity, setProfCity] = useState('');
+  const [profCountry, setProfCountry] = useState('');
+  const [profBio, setProfBio] = useState('');
+  const [profGenres, setProfGenres] = useState([]);
+  const [profDays, setProfDays] = useState(() => ({ ...DEFAULT_AVAILABLE_DAYS }));
+  const [profAvailableStatus, setProfAvailableStatus] = useState(true);
+  const [profCustomGenre, setProfCustomGenre] = useState('');
+  const [profLoading, setProfLoading] = useState(true);
+  const [profSaving, setProfSaving] = useState(false);
+
   const contractEventEndOptions = useMemo(
     () => buildEventEndTimeOptions(contractBooking?.eventTime, contractBooking?.durationHours, 30),
     [contractBooking?.eventTime, contractBooking?.durationHours]
@@ -97,6 +113,97 @@ export default function PrestataireDashboardPage() {
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
+
+  useEffect(() => {
+    if (!user?.token) return;
+    let cancelled = false;
+    (async () => {
+      setProfLoading(true);
+      try {
+        const res = await api.getUserProfiles(user.token);
+        const p = res?.profiles?.prestataire?.[0];
+        if (!cancelled && p) {
+          setProfBusinessName(p.businessName || '');
+          setProfPhonePro(p.phonePro || '');
+          setProfCity(p.city || '');
+          setProfCountry(p.country || '');
+          setProfBio(p.bio || '');
+          setProfGenres(Array.isArray(p.prestationGenres) ? [...p.prestationGenres] : []);
+          setProfAvailableStatus(p.availableStatus !== false);
+          let days = { ...DEFAULT_AVAILABLE_DAYS };
+          if (p.availableDays) {
+            try {
+              const parsed = typeof p.availableDays === 'string' ? JSON.parse(p.availableDays) : p.availableDays;
+              days = { ...DEFAULT_AVAILABLE_DAYS, ...parsed };
+            } catch (_) {
+              /* ignore */
+            }
+          }
+          setProfDays(days);
+        }
+      } catch (e) {
+        console.error('[PrestataireDashboard] load profile', e);
+      } finally {
+        if (!cancelled) setProfLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.token]);
+
+  const addProfCustomGenre = () => {
+    const t = profCustomGenre.trim();
+    if (!t) return;
+    const low = t.toLowerCase();
+    if (profGenres.some((g) => String(g).trim().toLowerCase() === low)) {
+      setProfCustomGenre('');
+      return;
+    }
+    setProfGenres([...profGenres, t]);
+    setProfCustomGenre('');
+  };
+
+  const savePrestataireProfile = async () => {
+    if (!user?.token) return;
+    if (!profBusinessName.trim() || !profPhonePro.trim()) {
+      Alert.alert(
+        language === 'fr' ? 'Champs requis' : 'Required fields',
+        language === 'fr' ? 'Nom d’activité et téléphone pro sont obligatoires.' : 'Business name and phone are required.'
+      );
+      return;
+    }
+    if (profGenres.length === 0) {
+      Alert.alert(
+        language === 'fr' ? 'Genres' : 'Genres',
+        language === 'fr' ? 'Ajoutez au moins un genre de prestation.' : 'Add at least one service type.'
+      );
+      return;
+    }
+    setProfSaving(true);
+    try {
+      const res = await api.updatePrestataireProfile(user.token, {
+        businessName: profBusinessName.trim(),
+        phonePro: profPhonePro.trim(),
+        prestationGenres: profGenres,
+        city: profCity.trim() || undefined,
+        country: profCountry.trim() || undefined,
+        bio: profBio.trim() || undefined,
+        availableDays: profDays,
+        availableStatus: profAvailableStatus,
+      });
+      if (res?.success) {
+        Alert.alert(language === 'fr' ? 'Enregistré' : 'Saved', language === 'fr' ? 'Profil mis à jour.' : 'Profile updated.');
+      } else {
+        Alert.alert(language === 'fr' ? 'Erreur' : 'Error', res?.message || '');
+      }
+    } catch (e) {
+      console.error('[PrestataireDashboard] save profile', e);
+      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', String(e?.message || e));
+    } finally {
+      setProfSaving(false);
+    }
+  };
 
   const loadChatMessages = async (eventPrestataireId, options = {}) => {
     const silent = options.silent === true;
@@ -210,6 +317,82 @@ export default function PrestataireDashboardPage() {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.profileSection}>
+          <Text style={styles.profileSectionTitle}>
+            {language === 'fr' ? 'Mon profil prestataire' : 'My provider profile'}
+          </Text>
+          {profLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} />
+          ) : (
+            <>
+              <Text style={styles.fieldLabel}>{language === 'fr' ? 'Nom d’activité' : 'Business name'}</Text>
+              <TextInput
+                style={styles.profileInput}
+                value={profBusinessName}
+                onChangeText={setProfBusinessName}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+              <Text style={styles.fieldLabel}>{language === 'fr' ? 'Téléphone pro' : 'Business phone'}</Text>
+              <TextInput
+                style={styles.profileInput}
+                value={profPhonePro}
+                onChangeText={setProfPhonePro}
+                keyboardType="phone-pad"
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+              <Text style={styles.fieldLabel}>{language === 'fr' ? 'Ville' : 'City'}</Text>
+              <TextInput
+                style={styles.profileInput}
+                value={profCity}
+                onChangeText={setProfCity}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+              <Text style={styles.fieldLabel}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
+              <TextInput
+                style={styles.profileInput}
+                value={profCountry}
+                onChangeText={setProfCountry}
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+              <Text style={styles.fieldLabel}>{language === 'fr' ? 'Bio' : 'Bio'}</Text>
+              <TextInput
+                style={[styles.profileInput, styles.profileBio]}
+                value={profBio}
+                onChangeText={setProfBio}
+                multiline
+                placeholderTextColor="rgba(255,255,255,0.4)"
+              />
+              <PrestataireGenreAndAvailabilityFields
+                language={language}
+                prestationGenres={profGenres}
+                onChangePrestationGenres={setProfGenres}
+                availableDays={profDays}
+                onChangeAvailableDays={setProfDays}
+                availableStatus={profAvailableStatus}
+                onChangeAvailableStatus={setProfAvailableStatus}
+                customGenreInput={profCustomGenre}
+                onChangeCustomGenreInput={setProfCustomGenre}
+                onAddCustomGenre={addProfCustomGenre}
+              />
+              <TouchableOpacity
+                style={[styles.saveProfileBtn, profSaving && styles.saveProfileBtnDisabled]}
+                onPress={savePrestataireProfile}
+                disabled={profSaving}
+              >
+                <Text style={styles.saveProfileBtnText}>
+                  {profSaving
+                    ? language === 'fr'
+                      ? 'Enregistrement…'
+                      : 'Saving…'
+                    : language === 'fr'
+                      ? 'Enregistrer le profil'
+                      : 'Save profile'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
         <Text style={styles.title}>
           {language === 'fr' ? 'Mes prestations' : 'My bookings'}
         </Text>
@@ -443,6 +626,46 @@ const styles = StyleSheet.create({
   backBtn: { alignSelf: 'flex-start', paddingVertical: 8 },
   backText: { color: Colors.primary, fontSize: 16, fontWeight: '600' },
   content: { padding: 24 },
+  profileSection: {
+    marginBottom: 28,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  profileSectionTitle: {
+    color: Colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  fieldLabel: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  profileInput: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: Colors.text,
+    fontSize: 15,
+  },
+  profileBio: { minHeight: 72, textAlignVertical: 'top' },
+  saveProfileBtn: {
+    marginTop: 16,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveProfileBtnDisabled: { opacity: 0.6 },
+  saveProfileBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   title: {
     color: Colors.text,
     fontSize: 22,

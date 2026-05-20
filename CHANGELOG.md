@@ -7,16 +7,37 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
 ### Ajouté (serveur + mobile — profil Prestataire, MVP)
-- **Modèle Prisma `UserPrestataire`** (nom commercial, type de prestation, téléphone pro, champs optionnels ville / pays / bio / visuels) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).
+- **Modèle Prisma `UserPrestataire`** (nom commercial, téléphone pro, champs optionnels ville / pays / bio / visuels, **genres multiples**, **disponibilités**) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).
 - **API** : **`POST /api/profile/prestataire`** (création), **`PUT /api/prestataire/profile`** (mise à jour) ; **`GET /api/user/profiles`** et **`POST /api/user/switch-profile`** prennent en charge le type **`PRESTATAIRE`**.
 - **Signalement** : valeur d’énumération **`PRESTATAIRE_PROFILE`** pour les cibles de signalement.
 - **Mobile** : écran d’inscription **`RegisterPrestatairePage`**, entrée **Prestataire** sur **choix du type de compte**, section **Profil** + menu latéral (libellé + accès tableau de bord), méthodes **`api.createPrestataireProfile`** / **`api.updatePrestataireProfile`** ; voir aussi le flux **booking + chat + contrat** dans la sous-section ci-dessous.
+
+### Ajouté (serveur + mobile — événement : location de matériel, catalogue NOX + inventaire booker)
+- **Objectif** : à la création d’événement booker, proposer une **liste indicative** de matériel en location — **catalogue NOX par défaut (presets)** + **matériel personnel réutilisable** (inventaire booker persisté), avec sélection pour **cet événement** (presets, lignes organisateur, notes). **Aucune facturation / paiement en ligne** associé à ce bloc dans l’app (modalités hors plateforme, contrats, lieu, prestataires).
+- **Prisma** :
+  - **`Event.equipmentRental`** (`Json` optionnel) : snapshot après normalisation côté serveur, du type **`{ enabled, presetIds, organizerLines, notes?, snapshotAt }`** (structure exacte alignée sur **`normalizeEquipmentRentalForStorage`**).
+  - **`UserBooker.rentalEquipmentInventory`** (`Json` optionnel) : liste d’articles **`{ id?, label, qty }`** pour le catalogue perso du booker.
+  - **Migration** : **`20260519200000_event_equipment_rental`** — à appliquer avec **`prisma migrate deploy`** puis **`prisma generate`** selon la politique du projet.
+- **Serveur** :
+  - Utilitaire **`server/utils/rentalEquipment.js`** : presets serveur (**`PRESET_ITEMS`**), exposition API par langue, **`normalizeEquipmentRentalForStorage`**, **`normalizeBookerRentalInventory`**.
+  - Dans **`server/routes/registerBookerOrganizerRoutes.js`** : **`GET /api/booker/rental-equipment-presets`** (query **`lang`** `fr` | `en`) ; **`PUT /api/booker/profile/rental-inventory`** (corps **`{ items }`**) ; **`POST /api/booker/events`** : accepte **`equipmentRental`**, normalise et persiste si non vide ; **`PUT /api/booker/events/:eventId`** : si la clé **`equipmentRental`** est présente dans le body, mise à jour ou **`null`** pour effacer ; **`GET /api/booker/events`** : chaque événement enrichi inclut **`equipmentRental`**.
+  - **`GET /api/user/profiles`** ( **`server/controllers/userController.js`** ) : le profil booker expose **`rentalEquipmentInventory`** pour préremplir l’app.
+- **Mobile booker** :
+  - **`insane-nights-days-mobile/api/endpointsConfig.js`** : constantes **`BOOKER_RENTAL_PRESETS`**, **`BOOKER_RENTAL_INVENTORY`**.
+  - **`insane-nights-days-mobile/api/methods/bookerEvents.js`** : **`getRentalEquipmentPresets`**, **`saveBookerRentalInventory`**.
+  - **`insane-nights-days-mobile/contexts/EventFormContext.js`** : champs **`equipmentRentalEnabled`**, **`equipmentRentalPresetIds`**, **`equipmentRentalOrganizerLines`**, **`equipmentRentalNotes`** (+ reset avec le formulaire).
+  - **`insane-nights-days-mobile/screens/dashboard/BookerEventDashboardPage.js`** : chargement presets + inventaire après levée du brouillon (**`draftGate`**) ; **étape détails** — toggle activation, puces presets NOX, édition du catalogue perso + bouton enregistrer le profil, chips pour inclure le matériel sur l’événement, lignes ponctuelles « cet événement seulement », notes ; **`handleCreateEvent`** envoie **`equipmentRental`** lorsque activé ; **étape récap** : section « Location de matériel » texte via **`summarizeEquipmentRentalBlurb`** + rappel non contractuel ; styles dédiés (toggle, puces, catalogue).
 
 ### Ajouté (serveur + mobile — événement : prestataire optionnel, chat, contrat)
 - **Prisma** : lien **`EventPrestataire`** (comme lieu / DJ) ; messages et contrats dédiés ; migration **`20260519140000_event_prestataire_chat_contract`** (à appliquer avec **`prisma migrate deploy`** / politique du projet).
 - **API** : sélection **`GET /api/booker/available-prestataires`**, rattachement à l’événement, **chat** `event-prestataire`, **contrat** (brouillon, envoi, contre-proposition, acceptation, PDF / e-mail) et côté prestataire **bookings** + **invitations**.
 - **Mobile booker** : flux type DJ (**`SelectPrestatairePage`** optionnel, ligne sur la carte événement, chat + contrat dans **`BookerDashboardPage`**).
 - **Mobile prestataire** : **`PrestataireDashboardPage`** — liste des bookings, modal **chat & contrat**, contre-proposition avec les mêmes champs **`ContractDraftEditorFields`** (mode DJ) + modales modalités de paiement / annulation / fin de prestation.
+
+### Modifié (profil Prestataire — genres multiples & disponibilités type DJ)
+- **Schéma** : **`prestationGenres`** (`String[]`, au moins une valeur côté API), **`availableDays`** (JSON comme DJ), **`availableStatus`** ; suppression du champ texte unique **`serviceType`** après migration **`20260519180000_prestataire_genres_availability`**.
+- **API** : **`GET /api/booker/available-prestataires`** filtre **`availableStatus === true`** ; invitation **`POST …/prestataires`** refusée si le prestataire est **indisponible** ; rétrocompat corps **`serviceType`** (une chaîne) acceptée comme **un seul** genre.
+- **Mobile** : composant **`PrestataireGenreAndAvailabilityFields`** ; inscription + édition depuis **`PrestataireDashboardPage`** ; PDF contrat : ligne **« Genres / prestations »**.
 
 ---
 

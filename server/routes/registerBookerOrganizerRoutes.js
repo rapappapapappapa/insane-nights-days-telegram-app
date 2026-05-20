@@ -5,6 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const prisma = require('../lib/prisma');
 const SERVER_ROOT = path.join(__dirname, '..');
+const {
+  presetsForApi,
+  normalizeEquipmentRentalForStorage,
+  normalizeBookerRentalInventory,
+} = require('../utils/rentalEquipment');
 
 module.exports = function registerBookerOrganizerRoutes(app, deps) {
   const {
@@ -125,6 +130,7 @@ app.get('/api/booker/available-prestataires', authenticateToken, async (req, res
     const { date } = req.query;
 
     let prestataires = await prisma.userPrestataire.findMany({
+      where: { availableStatus: true },
       include: {
         user: {
           select: { id: true, username: true, email: true },
@@ -173,16 +179,62 @@ app.get('/api/booker/available-prestataires', authenticateToken, async (req, res
       id: p.id,
       userId: p.userId,
       businessName: p.businessName,
-      serviceType: p.serviceType,
+      prestationGenres: Array.isArray(p.prestationGenres) ? p.prestationGenres : [],
       city: p.city,
       country: p.country,
       profileImage: p.profileImage,
+      availableDays: p.availableDays,
+      availableStatus: p.availableStatus,
     }));
 
     res.json({ success: true, prestataires: formatted });
   } catch (error) {
     console.error('Erreur récupération prestataires disponibles:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Presets matériel NOX pour location (création événement).
+ * @route GET /api/booker/rental-equipment-presets?lang=fr|en
+ */
+app.get('/api/booker/rental-equipment-presets', authenticateToken, (req, res) => {
+  try {
+    const lang = req.query?.lang === 'en' ? 'en' : 'fr';
+    res.json({ success: true, presets: presetsForApi(lang) });
+  } catch (error) {
+    console.error('Erreur presets location:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Catalogue personnel du booker (articles réutilisables en location).
+ * @route PUT /api/booker/profile/rental-inventory  body: { items: [{ id?, label, qty }] }
+ */
+app.put('/api/booker/profile/rental-inventory', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const booker = await prisma.userBooker.findFirst({ where: { userId } });
+    if (!booker) {
+      return res.status(404).json({ success: false, message: 'Profil Booker non trouvé.' });
+    }
+    const normalized = normalizeBookerRentalInventory(req.body?.items);
+    if (normalized === null) {
+      return res.status(400).json({ success: false, message: 'Format du catalogue invalide.' });
+    }
+    const updated = await prisma.userBooker.update({
+      where: { id: booker.id },
+      data: { rentalEquipmentInventory: normalized },
+    });
+    const inv = updated.rentalEquipmentInventory;
+    return res.json({
+      success: true,
+      rentalEquipmentInventory: Array.isArray(inv) ? inv : normalized,
+    });
+  } catch (error) {
+    console.error('Erreur mise à jour catalogue location booker:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -264,7 +316,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
         },
         eventPrestataires: {
           include: {
-            prestataire: { select: { id: true, businessName: true, serviceType: true, profileImage: true } },
+            prestataire: { select: { id: true, businessName: true, prestationGenres: true, profileImage: true } },
           },
         },
       },
@@ -391,6 +443,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           genre: event.genre,
           description: event.description,
           image: event.image,
+          equipmentRental: event.equipmentRental ?? null,
           status: event.status,
           venue: eventVenue ? {
             id: eventVenue.venue?.id ?? eventVenue.venueId,
@@ -410,7 +463,9 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
             ? {
                 id: eventPrestataireRow.prestataire?.id ?? eventPrestataireRow.prestataireId,
                 businessName: eventPrestataireRow.prestataire?.businessName ?? null,
-                serviceType: eventPrestataireRow.prestataire?.serviceType ?? null,
+                prestationGenres: Array.isArray(eventPrestataireRow.prestataire?.prestationGenres)
+                  ? eventPrestataireRow.prestataire.prestationGenres
+                  : [],
                 profileImage: eventPrestataireRow.prestataire?.profileImage ?? null,
                 eventPrestataireId: eventPrestataireRow.id,
                 prestataireInvitationStatus: eventPrestataireRow.status ?? 'PENDING',
@@ -1762,7 +1817,7 @@ app.get('/api/contracts/event-prestataires/:eventPrestataireId', authenticateTok
         eventTime: ep.event?.time ?? null,
         durationHours: ep.event?.durationHours ?? null,
         businessName: ep.prestataire?.businessName,
-        serviceType: ep.prestataire?.serviceType,
+        prestationGenres: Array.isArray(ep.prestataire?.prestationGenres) ? ep.prestataire.prestationGenres : [],
       },
     });
   } catch (e) {
@@ -2070,6 +2125,13 @@ app.put('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
       }
     }
 
+    if ('equipmentRental' in (req.body ?? {})) {
+      data.equipmentRental =
+        req.body.equipmentRental === null
+          ? null
+          : normalizeEquipmentRentalForStorage(req.body.equipmentRental);
+    }
+
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ success: false, message: 'Aucun champ à modifier.' });
     }
@@ -2187,6 +2249,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       description,
       image,
       durationHours,
+      equipmentRental,
     } = req.body;
 
     // Validation des champs requis
@@ -2421,6 +2484,8 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
+    const equipmentRentalStored = normalizeEquipmentRentalForStorage(equipmentRental);
+
     // Créer l'événement
     const event = await prisma.event.create({
       data: {
@@ -2440,6 +2505,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         genre: genre ? genre.trim() : 'Mixed',
         description: description ? description.trim() : null,
         image: image || null,
+        ...(equipmentRentalStored ? { equipmentRental: equipmentRentalStored } : {}),
         venueId: venueId,
         bookerId: booker.id,
         status: 'UPCOMING',
@@ -2782,6 +2848,12 @@ app.post('/api/booker/events/:eventId/prestataires', authenticateToken, async (r
     const prestataire = await prisma.userPrestataire.findUnique({ where: { id: prestataireId } });
     if (!prestataire) {
       return res.status(404).json({ success: false, message: 'Prestataire non trouvé.' });
+    }
+    if (!prestataire.availableStatus) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce prestataire est marqué comme indisponible.',
+      });
     }
 
     const otherActive = await prisma.eventPrestataire.findFirst({

@@ -174,8 +174,13 @@ export default function SwitchProfilePage() {
         return `${profileData.prenom} ${profileData.nom}`;
       case 'VENUE':
         return profileData.venueName;
-      case 'PRESTATAIRE':
-        return profileData.businessName || profileData.serviceType || '';
+      case 'PRESTATAIRE': {
+        const genres =
+          profileData.prestationGenres && profileData.prestationGenres.length > 0
+            ? profileData.prestationGenres.join(', ')
+            : '';
+        return [profileData.businessName, genres].filter(Boolean).join(' · ');
+      }
       default:
         return '';
     }

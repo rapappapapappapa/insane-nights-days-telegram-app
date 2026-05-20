@@ -15,6 +15,11 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 
+function prestationGenresLabel(p) {
+  if (!Array.isArray(p?.prestationGenres) || p.prestationGenres.length === 0) return '';
+  return p.prestationGenres.join(' · ');
+}
+
 /**
  * Sélection optionnelle d’un prestataire (profil UserPrestataire) pour un événement existant.
  */
@@ -54,7 +59,8 @@ export default function SelectPrestatairePage() {
     const q = searchQuery.trim().toLowerCase();
     return list.filter((p) => {
       if (!q) return true;
-      const name = `${p.businessName || ''} ${p.serviceType || ''} ${p.city || ''}`.toLowerCase();
+      const genres = prestationGenresLabel(p);
+      const name = `${p.businessName || ''} ${genres} ${p.city || ''}`.toLowerCase();
       return name.includes(q);
     });
   }, [list, searchQuery]);
@@ -118,7 +124,7 @@ export default function SelectPrestatairePage() {
               disabled={!!submittingId}
             >
               <Text style={styles.cardTitle}>{p.businessName || '—'}</Text>
-              <Text style={styles.cardSub}>{p.serviceType || ''}</Text>
+              <Text style={styles.cardSub}>{prestationGenresLabel(p)}</Text>
               {(p.city || p.country) && (
                 <Text style={styles.cardSub}>
                   📍 {[p.city, p.country].filter(Boolean).join(', ')}

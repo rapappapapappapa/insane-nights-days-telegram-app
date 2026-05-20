@@ -752,7 +752,9 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                         >
                           <Text style={styles.profileItemText} numberOfLines={2}>
                             {profile.businessName}
-                            {profile.serviceType ? ` · ${profile.serviceType}` : ''}
+                            {Array.isArray(profile.prestationGenres) && profile.prestationGenres.length > 0
+                              ? ` · ${profile.prestationGenres.join(', ')}`
+                              : ''}
                           </Text>
                           {profiles.activeProfileType === 'PRESTATAIRE' && (
                             <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>

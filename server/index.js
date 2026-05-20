@@ -36,6 +36,17 @@ const {
 const { JWT_SECRET } = require('./utils/jwtConfig');
 const { parseTicketQuantity } = require('./utils/validation');
 const { djSlotFitsEventWindow } = require('./utils/djSlotWindow');
+const { normalizeGenreStrings, normalizeAvailableDays } = require('./utils/prestataireProfile');
+
+const DEFAULT_PRESTATAIRE_AVAILABLE_DAYS_JSON = JSON.stringify({
+  M: true,
+  Ma: true,
+  Me: true,
+  J: true,
+  V: true,
+  S: false,
+  D: false,
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -1069,12 +1080,23 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
 app.post('/api/profile/prestataire', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { businessName, serviceType, phonePro, city, country, bio } = req.body ?? {};
+    const { businessName, phonePro, city, country, bio, prestationGenres, serviceType } = req.body ?? {};
 
-    if (!businessName?.trim() || !serviceType?.trim() || !phonePro?.trim()) {
+    let genres = normalizeGenreStrings(prestationGenres);
+    if (genres.length === 0 && typeof serviceType === 'string' && serviceType.trim()) {
+      genres = normalizeGenreStrings([serviceType.trim()]);
+    }
+
+    if (!businessName?.trim() || !phonePro?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Champs requis : businessName, serviceType, phonePro.',
+        message: 'Champs requis : businessName, phonePro.',
+      });
+    }
+    if (genres.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Au moins un genre de prestation est requis (prestationGenres).',
       });
     }
 
@@ -1091,14 +1113,20 @@ app.post('/api/profile/prestataire', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé.' });
     }
 
+    const daysStored = normalizeAvailableDays(req.body.availableDays) ?? DEFAULT_PRESTATAIRE_AVAILABLE_DAYS_JSON;
+    const availableStatus =
+      req.body.availableStatus !== undefined ? Boolean(req.body.availableStatus) : true;
+
     const data = {
       userId,
       businessName: businessName.trim(),
-      serviceType: serviceType.trim(),
+      prestationGenres: genres,
       phonePro: phonePro.trim(),
       city: city != null ? String(city).trim() || null : null,
       country: country != null ? String(country).trim() || null : null,
       bio: bio != null ? String(bio).trim() || null : null,
+      availableDays: daysStored,
+      availableStatus,
     };
 
     const profile = await prisma.userPrestataire.create({ data });
@@ -1117,8 +1145,10 @@ app.post('/api/profile/prestataire', authenticateToken, async (req, res) => {
       profile: {
         id: profile.id,
         businessName: profile.businessName,
-        serviceType: profile.serviceType,
+        prestationGenres: profile.prestationGenres,
         phonePro: profile.phonePro,
+        availableDays: profile.availableDays,
+        availableStatus: profile.availableStatus,
       },
     });
   } catch (error) {
@@ -1133,12 +1163,23 @@ app.post('/api/profile/prestataire', authenticateToken, async (req, res) => {
 app.put('/api/prestataire/profile', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { businessName, serviceType, phonePro, city, country, bio } = req.body ?? {};
+    const { businessName, phonePro, city, country, bio, prestationGenres, serviceType } = req.body ?? {};
 
-    if (!businessName?.trim() || !serviceType?.trim() || !phonePro?.trim()) {
+    let genres = normalizeGenreStrings(prestationGenres);
+    if (genres.length === 0 && typeof serviceType === 'string' && serviceType.trim()) {
+      genres = normalizeGenreStrings([serviceType.trim()]);
+    }
+
+    if (!businessName?.trim() || !phonePro?.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Champs requis : businessName, serviceType, phonePro.',
+        message: 'Champs requis : businessName, phonePro.',
+      });
+    }
+    if (genres.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Au moins un genre de prestation est requis (prestationGenres).',
       });
     }
 
@@ -1147,15 +1188,23 @@ app.put('/api/prestataire/profile', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Profil Prestataire non trouvé.' });
     }
 
+    const parsedDays = normalizeAvailableDays(req.body.availableDays);
+    const daysStored = parsedDays !== undefined ? parsedDays : row.availableDays;
+
+    const availableStatus =
+      req.body.availableStatus !== undefined ? Boolean(req.body.availableStatus) : row.availableStatus;
+
     const updated = await prisma.userPrestataire.update({
       where: { id: row.id },
       data: {
         businessName: businessName.trim(),
-        serviceType: serviceType.trim(),
+        prestationGenres: genres,
         phonePro: phonePro.trim(),
         city: city != null ? String(city).trim() || null : null,
         country: country != null ? String(country).trim() || null : null,
         bio: bio != null ? String(bio).trim() || null : null,
+        availableDays: daysStored,
+        availableStatus,
       },
     });
 
@@ -1165,13 +1214,15 @@ app.put('/api/prestataire/profile', authenticateToken, async (req, res) => {
       profile: {
         id: updated.id,
         businessName: updated.businessName,
-        serviceType: updated.serviceType,
+        prestationGenres: updated.prestationGenres,
         phonePro: updated.phonePro,
         city: updated.city,
         country: updated.country,
         bio: updated.bio,
         profileImage: updated.profileImage,
         bannerImage: updated.bannerImage,
+        availableDays: updated.availableDays,
+        availableStatus: updated.availableStatus,
       },
     });
   } catch (error) {

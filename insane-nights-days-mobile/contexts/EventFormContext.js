@@ -26,6 +26,10 @@ export function EventFormProvider({ children }) {
     capacity: '',
     genre: '',
     description: '',
+    equipmentRentalEnabled: false,
+    equipmentRentalPresetIds: [],
+    equipmentRentalOrganizerLines: [],
+    equipmentRentalNotes: '',
   });
 
   const [eventDateTime, setEventDateTime] = useState(new Date());
@@ -81,6 +85,10 @@ export function EventFormProvider({ children }) {
       capacity: '',
       genre: '',
       description: '',
+      equipmentRentalEnabled: false,
+      equipmentRentalPresetIds: [],
+      equipmentRentalOrganizerLines: [],
+      equipmentRentalNotes: '',
     });
     setEventDateTime(new Date());
   }, []);

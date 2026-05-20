@@ -52,6 +52,8 @@ export const API_CONFIG = {
     BOOKER_AVAILABLE_DJS: '/api/booker/available-djs',
     BOOKER_AVAILABLE_PRESTATAIRES: '/api/booker/available-prestataires',
     BOOKER_VENUES: '/api/booker/venues',
+    BOOKER_RENTAL_PRESETS: '/api/booker/rental-equipment-presets',
+    BOOKER_RENTAL_INVENTORY: '/api/booker/profile/rental-inventory',
     BOOKER_EVENTS: '/api/booker/events',
     BOOKER_CREATE_EVENT: '/api/booker/events',
     BOOKER_DELETE_EVENT: '/api/booker/events',

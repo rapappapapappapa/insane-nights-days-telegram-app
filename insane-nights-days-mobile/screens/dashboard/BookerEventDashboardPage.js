@@ -203,6 +203,30 @@ function slotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationH) {
   return s >= evS && e <= evE && e > s;
 }
 
+/** Résumé texte location matériel (récap wizard). */
+function summarizeEquipmentRentalBlurb(formData, rentalPresets, language) {
+  if (!formData?.equipmentRentalEnabled) return null;
+  const parts = [];
+  (formData.equipmentRentalPresetIds || []).forEach((id) => {
+    const p = rentalPresets.find((x) => x.id === id);
+    if (p?.label) parts.push(p.label);
+  });
+  (formData.equipmentRentalOrganizerLines || []).forEach((l) => {
+    if (l?.label) parts.push(`${l.label} ×${l.qty || 1}`);
+  });
+  const notes = (formData.equipmentRentalNotes || '').trim();
+  if (parts.length === 0 && !notes) {
+    return language === 'fr'
+      ? 'Option activée — ajoute des articles NOX ou ton matériel.'
+      : 'Enabled — add NOX presets or your gear.';
+  }
+  let s = parts.join(' · ');
+  if (notes) {
+    s += (s ? ' — ' : '') + (language === 'fr' ? `Note : ${notes}` : `Note: ${notes}`);
+  }
+  return s;
+}
+
 export default function BookerEventDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
@@ -251,6 +275,14 @@ export default function BookerEventDashboardPage() {
   const [tempTime, setTempTime] = useState(eventDateTime || new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [rentalPresets, setRentalPresets] = useState([]);
+  const [rentalCatalogItems, setRentalCatalogItems] = useState([]);
+  const [rentalCatalogLabel, setRentalCatalogLabel] = useState('');
+  const [rentalCatalogQty, setRentalCatalogQty] = useState('1');
+  const [eventRentalExtraLabel, setEventRentalExtraLabel] = useState('');
+  const [eventRentalExtraQty, setEventRentalExtraQty] = useState('1');
+  const [savingRentalCatalog, setSavingRentalCatalog] = useState(false);
   
   // Gérer les sélections depuis routeParams
   const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, slotIndex: null });
@@ -529,6 +561,87 @@ export default function BookerEventDashboardPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const toggleEquipmentPreset = (id) => {
+    setFormData((prev) => {
+      const cur = prev.equipmentRentalPresetIds || [];
+      const has = cur.includes(id);
+      return {
+        ...prev,
+        equipmentRentalPresetIds: has ? cur.filter((x) => x !== id) : [...cur, id],
+      };
+    });
+  };
+
+  const toggleOrganizerLineFromCatalog = (item) => {
+    const label = item.label;
+    const qty = item.qty || 1;
+    setFormData((prev) => {
+      const lines = [...(prev.equipmentRentalOrganizerLines || [])];
+      const idx = lines.findIndex(
+        (l) =>
+          String(l.label).trim() === String(label).trim() &&
+          Number(l.qty || 1) === Number(qty)
+      );
+      if (idx >= 0) lines.splice(idx, 1);
+      else lines.push({ label: String(label).trim(), qty: Number(qty) || 1 });
+      return { ...prev, equipmentRentalOrganizerLines: lines };
+    });
+  };
+
+  const addEventOnlyEquipmentLine = () => {
+    const label = eventRentalExtraLabel.trim();
+    if (!label) return;
+    let qty = parseInt(eventRentalExtraQty, 10);
+    if (!Number.isFinite(qty) || qty < 1) qty = 1;
+    setFormData((prev) => ({
+      ...prev,
+      equipmentRentalOrganizerLines: [...(prev.equipmentRentalOrganizerLines || []), { label, qty }],
+    }));
+    setEventRentalExtraLabel('');
+    setEventRentalExtraQty('1');
+  };
+
+  const removeOrganizerLineAt = (index) => {
+    setFormData((prev) => {
+      const lines = [...(prev.equipmentRentalOrganizerLines || [])];
+      lines.splice(index, 1);
+      return { ...prev, equipmentRentalOrganizerLines: lines };
+    });
+  };
+
+  const addCatalogRow = () => {
+    const label = rentalCatalogLabel.trim();
+    if (!label) return;
+    let qty = parseInt(rentalCatalogQty, 10);
+    if (!Number.isFinite(qty) || qty < 1) qty = 1;
+    const id = `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    setRentalCatalogItems((prev) => [...prev, { id, label, qty }]);
+    setRentalCatalogLabel('');
+    setRentalCatalogQty('1');
+  };
+
+  const removeCatalogRow = (rid) => {
+    setRentalCatalogItems((prev) => prev.filter((x) => x.id !== rid));
+  };
+
+  const saveRentalCatalogToProfile = async () => {
+    if (!user?.token || savingRentalCatalog) return;
+    setSavingRentalCatalog(true);
+    try {
+      const res = await api.saveBookerRentalInventory(user.token, rentalCatalogItems);
+      if (res?.success) {
+        showSuccess(language === 'fr' ? 'Catalogue matériel enregistré.' : 'Equipment catalog saved.');
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Erreur sauvegarde.' : 'Save failed.'));
+      }
+    } catch (e) {
+      console.error(e);
+      showError(language === 'fr' ? 'Erreur réseau.' : 'Network error.');
+    } finally {
+      setSavingRentalCatalog(false);
+    }
+  };
+
   /** Après chargement du brouillon : ramener la date au minimum légal si besoin. */
   useEffect(() => {
     if (draftGate) return;
@@ -664,6 +777,33 @@ export default function BookerEventDashboardPage() {
     const t = setTimeout(persistDraft, 700);
     return () => clearTimeout(t);
   }, [draftGate, persistDraft]);
+
+  useEffect(() => {
+    if (!user?.token || draftGate) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const lang = language === 'fr' ? 'fr' : 'en';
+        const [pres, prof] = await Promise.all([
+          api.getRentalEquipmentPresets(user.token, lang),
+          api.getUserProfiles(user.token),
+        ]);
+        if (cancelled) return;
+        if (pres?.success && Array.isArray(pres.presets)) setRentalPresets(pres.presets);
+        const b = prof?.profiles?.booker?.[0];
+        if (b?.rentalEquipmentInventory && Array.isArray(b.rentalEquipmentInventory)) {
+          setRentalCatalogItems(b.rentalEquipmentInventory);
+        } else {
+          setRentalCatalogItems([]);
+        }
+      } catch (e) {
+        console.warn('[BookerEventDashboard] rental presets/catalog', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.token, draftGate, language]);
 
   const pickCoverImage = async () => {
     try {
@@ -892,6 +1032,16 @@ export default function BookerEventDashboardPage() {
         capacity: formData.capacity ? parseInt(formData.capacity) : 100,
         genre: formData.genre ? formData.genre.trim() : 'Mixed',
         description: formData.description ? formData.description.trim() : null,
+        ...(formData.equipmentRentalEnabled
+          ? {
+              equipmentRental: {
+                enabled: true,
+                presetIds: formData.equipmentRentalPresetIds || [],
+                organizerLines: formData.equipmentRentalOrganizerLines || [],
+                notes: (formData.equipmentRentalNotes || '').trim() || undefined,
+              },
+            }
+          : {}),
       };
 
       const response = await api.createEvent(user.token, eventData);
@@ -1467,6 +1617,193 @@ export default function BookerEventDashboardPage() {
                 )}
               </View>
 
+              <Text style={[styles.sectionTitle, { marginTop: 22 }]}>
+                {language === 'fr' ? 'Location de matériel (optionnel)' : 'Equipment rental (optional)'}
+              </Text>
+              <Text style={styles.helperText}>
+                {language === 'fr'
+                  ? 'Catalogue NOX + ton matériel enregistré. Rien n’est facturé automatiquement ici — à préciser avec les prestataires / lieu.'
+                  : 'NOX catalog + your saved gear. Nothing is billed here — clarify with vendors / venue.'}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.equipToggleRow}
+                onPress={() =>
+                  handleChange('equipmentRentalEnabled', !formData.equipmentRentalEnabled)
+                }
+                activeOpacity={0.85}
+              >
+                <View style={[styles.toggle, formData.equipmentRentalEnabled && styles.toggleActive]}>
+                  <View
+                    style={[
+                      styles.toggleThumb,
+                      formData.equipmentRentalEnabled && styles.toggleThumbActive,
+                    ]}
+                  />
+                </View>
+                <Text style={styles.equipToggleLabel}>
+                  {formData.equipmentRentalEnabled
+                    ? language === 'fr'
+                      ? 'Location proposée sur cette fête'
+                      : 'Rental offered for this event'
+                    : language === 'fr'
+                      ? 'Pas de location listée'
+                      : 'No rental listed'}
+                </Text>
+              </TouchableOpacity>
+
+              {formData.equipmentRentalEnabled ? (
+                <>
+                  <Text style={styles.subsectionLabel}>
+                    {language === 'fr' ? 'Matériel NOX (présélection)' : 'NOX preset packages'}
+                  </Text>
+                  <View style={styles.equipChipWrap}>
+                    {rentalPresets.map((p) => {
+                      const active = (formData.equipmentRentalPresetIds || []).includes(p.id);
+                      return (
+                        <TouchableOpacity
+                          key={p.id}
+                          style={[styles.equipChip, active && styles.equipChipActive]}
+                          onPress={() => toggleEquipmentPreset(p.id)}
+                        >
+                          <Text style={[styles.equipChipText, active && styles.equipChipTextActive]}>
+                            {p.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={styles.subsectionLabel}>
+                    {language === 'fr' ? 'Mon catalogue (réutilisable)' : 'My reusable catalog'}
+                  </Text>
+                  <View style={styles.equipRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder={language === 'fr' ? 'Article…' : 'Item…'}
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={rentalCatalogLabel}
+                      onChangeText={setRentalCatalogLabel}
+                    />
+                    <TextInput
+                      style={[styles.input, { width: 56, marginLeft: 8 }]}
+                      placeholder="×1"
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      keyboardType="numeric"
+                      value={rentalCatalogQty}
+                      onChangeText={setRentalCatalogQty}
+                    />
+                    <TouchableOpacity style={styles.equipMiniBtn} onPress={addCatalogRow}>
+                      <Text style={styles.equipMiniBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {rentalCatalogItems.map((it) => (
+                    <View key={it.id} style={styles.equipCatalogRow}>
+                      <Text style={styles.equipCatalogText}>
+                        {it.label} ×{it.qty}
+                      </Text>
+                      <TouchableOpacity onPress={() => removeCatalogRow(it.id)}>
+                        <Text style={styles.equipRemoveText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={[styles.saveCatalogBtn, savingRentalCatalog && { opacity: 0.6 }]}
+                    onPress={saveRentalCatalogToProfile}
+                    disabled={savingRentalCatalog}
+                  >
+                    <Text style={styles.saveCatalogBtnText}>
+                      {savingRentalCatalog
+                        ? language === 'fr'
+                          ? 'Enregistrement…'
+                          : 'Saving…'
+                        : language === 'fr'
+                          ? 'Enregistrer mon catalogue sur le profil'
+                          : 'Save catalog to profile'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.subsectionLabel}>
+                    {language === 'fr'
+                      ? 'Inclure du matériel pour cet événement'
+                      : 'Include gear for this event'}
+                  </Text>
+                  <View style={styles.equipChipWrap}>
+                    {rentalCatalogItems.map((it) => {
+                      const lines = formData.equipmentRentalOrganizerLines || [];
+                      const active = lines.some(
+                        (l) =>
+                          String(l.label).trim() === String(it.label).trim() &&
+                          Number(l.qty || 1) === Number(it.qty || 1)
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={it.id}
+                          style={[styles.equipChip, active && styles.equipChipActive]}
+                          onPress={() => toggleOrganizerLineFromCatalog(it)}
+                        >
+                          <Text style={[styles.equipChipText, active && styles.equipChipTextActive]}>
+                            {it.label} ×{it.qty}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={styles.subsectionLabel}>
+                    {language === 'fr' ? 'Ligne ponctuelle (seulement cet événement)' : 'One-off line (this event only)'}
+                  </Text>
+                  <View style={styles.equipRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder={language === 'fr' ? 'Ex. projecteur…' : 'e.g. projector…'}
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={eventRentalExtraLabel}
+                      onChangeText={setEventRentalExtraLabel}
+                    />
+                    <TextInput
+                      style={[styles.input, { width: 56, marginLeft: 8 }]}
+                      placeholder="×1"
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      keyboardType="numeric"
+                      value={eventRentalExtraQty}
+                      onChangeText={setEventRentalExtraQty}
+                    />
+                    <TouchableOpacity style={styles.equipMiniBtn} onPress={addEventOnlyEquipmentLine}>
+                      <Text style={styles.equipMiniBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {(formData.equipmentRentalOrganizerLines || []).length > 0 ? (
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={styles.subsectionLabel}>
+                        {language === 'fr' ? 'Sélection événement' : 'Event selection'}
+                      </Text>
+                      {(formData.equipmentRentalOrganizerLines || []).map((l, idx) => (
+                        <View key={`${l.label}-${idx}`} style={styles.equipCatalogRow}>
+                          <Text style={styles.equipCatalogText}>
+                            {l.label} ×{l.qty || 1}
+                          </Text>
+                          <TouchableOpacity onPress={() => removeOrganizerLineAt(idx)}>
+                            <Text style={styles.equipRemoveText}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.subsectionLabel}>{language === 'fr' ? 'Notes' : 'Notes'}</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder={language === 'fr' ? 'Modalités, retrait, caution…' : 'Terms, pickup, deposit…'}
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    multiline
+                    value={formData.equipmentRentalNotes}
+                    onChangeText={(v) => handleChange('equipmentRentalNotes', v)}
+                  />
+                </>
+              ) : null}
+
               <View style={styles.stepButtons}>
                 <TouchableOpacity
                   style={styles.backButtonStep}
@@ -1570,6 +1907,21 @@ export default function BookerEventDashboardPage() {
                     })}
                   </View>
                 )}
+
+                <View style={styles.summarySection}>
+                  <Text style={styles.summaryLabel}>
+                    {language === 'fr' ? 'Location de matériel' : 'Equipment rental'}
+                  </Text>
+                  <Text style={styles.summaryValue}>
+                    {summarizeEquipmentRentalBlurb(formData, rentalPresets, language) ||
+                      (language === 'fr' ? 'Non proposée sur cette fête.' : 'Not offered for this event.')}
+                  </Text>
+                  <Text style={styles.summarySubValue}>
+                    {language === 'fr'
+                      ? 'Indicatif uniquement — pas de paiement en ligne pour la location ici.'
+                      : 'Indicative only — no online rental payment here.'}
+                  </Text>
+                </View>
 
                 <View style={styles.costBreakdown}>
                   <Text style={styles.costTitle}>
@@ -2481,5 +2833,130 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
+  },
+  subsectionLabel: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 14,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  equipToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleActive: {
+    backgroundColor: 'rgba(255,23,68,0.55)',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  equipToggleLabel: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 12,
+    flex: 1,
+  },
+  equipChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  equipChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  equipChipActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(255,23,68,0.18)',
+  },
+  equipChipText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  equipChipTextActive: {
+    color: '#fff',
+  },
+  equipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  equipMiniBtn: {
+    width: 44,
+    height: 44,
+    marginLeft: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,23,68,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  equipMiniBtnText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  equipCatalogRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  equipCatalogText: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
+  },
+  equipRemoveText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+  },
+  saveCatalogBtn: {
+    marginTop: 10,
+    marginBottom: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.35)',
+    alignItems: 'center',
+  },
+  saveCatalogBtnText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

@@ -18,6 +18,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import PrestataireGenreAndAvailabilityFields, {
+  DEFAULT_AVAILABLE_DAYS,
+} from '../../components/PrestataireGenreAndAvailabilityFields';
 
 export default function RegisterPrestatairePage() {
   const { language } = useLanguage();
@@ -26,20 +29,43 @@ export default function RegisterPrestatairePage() {
   const { toast, showError, showSuccess, hideToast } = useToast();
 
   const [businessName, setBusinessName] = useState('');
-  const [serviceType, setServiceType] = useState('');
   const [phonePro, setPhonePro] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [bio, setBio] = useState('');
+  const [prestationGenres, setPrestationGenres] = useState([]);
+  const [availableDays, setAvailableDays] = useState(() => ({ ...DEFAULT_AVAILABLE_DAYS }));
+  const [availableStatus, setAvailableStatus] = useState(true);
+  const [customGenreInput, setCustomGenreInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const addCustomGenre = () => {
+    const t = customGenreInput.trim();
+    if (!t) return;
+    const low = t.toLowerCase();
+    if (prestationGenres.some((g) => String(g).trim().toLowerCase() === low)) {
+      setCustomGenreInput('');
+      return;
+    }
+    setPrestationGenres([...prestationGenres, t]);
+    setCustomGenreInput('');
+  };
 
   const handleSubmit = async () => {
     if (loading) return;
-    if (!businessName.trim() || !serviceType.trim() || !phonePro.trim()) {
+    if (!businessName.trim() || !phonePro.trim()) {
       showError(
         language === 'fr'
-          ? 'Nom d’activité, type de prestation et téléphone pro sont requis.'
-          : 'Business name, service type and professional phone are required.'
+          ? 'Nom d’activité et téléphone pro sont requis.'
+          : 'Business name and professional phone are required.'
+      );
+      return;
+    }
+    if (prestationGenres.length === 0) {
+      showError(
+        language === 'fr'
+          ? 'Ajoutez au moins un genre de prestation (photo, vidéo, VJ…).'
+          : 'Add at least one service type (photo, video, VJ…).'
       );
       return;
     }
@@ -53,11 +79,13 @@ export default function RegisterPrestatairePage() {
       const response = await api.createPrestataireProfile({
         token: user.token,
         businessName: businessName.trim(),
-        serviceType: serviceType.trim(),
         phonePro: phonePro.trim(),
+        prestationGenres,
         city: city.trim() || undefined,
         country: country.trim() || undefined,
         bio: bio.trim() || undefined,
+        availableDays,
+        availableStatus,
       });
 
       if (!response?.success) {
@@ -121,8 +149,8 @@ export default function RegisterPrestatairePage() {
         </Text>
         <Text style={styles.subtitle}>
           {language === 'fr'
-            ? 'Photo, vidéo, son, lumière, etc. — MVP, champs évolutifs ensuite.'
-            : 'Photo, video, sound, lights, etc. — MVP; more fields later.'}
+            ? 'Indiquez vos spécialités (plusieurs possibles) et vos disponibilités.'
+            : 'List your specialties (multiple allowed) and your availability.'}
         </Text>
 
         <Text style={styles.label}>{language === 'fr' ? 'Nom d’activité' : 'Business name'}</Text>
@@ -134,13 +162,17 @@ export default function RegisterPrestatairePage() {
           placeholderTextColor="rgba(255,255,255,0.4)"
         />
 
-        <Text style={styles.label}>{language === 'fr' ? 'Type de prestation' : 'Service type'}</Text>
-        <TextInput
-          style={styles.input}
-          value={serviceType}
-          onChangeText={setServiceType}
-          placeholder={language === 'fr' ? 'Ex. photo, vidéo, VDJ' : 'e.g. photo, video, VDJ'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
+        <PrestataireGenreAndAvailabilityFields
+          language={language}
+          prestationGenres={prestationGenres}
+          onChangePrestationGenres={setPrestationGenres}
+          availableDays={availableDays}
+          onChangeAvailableDays={setAvailableDays}
+          availableStatus={availableStatus}
+          onChangeAvailableStatus={setAvailableStatus}
+          customGenreInput={customGenreInput}
+          onChangeCustomGenreInput={setCustomGenreInput}
+          onAddCustomGenre={addCustomGenre}
         />
 
         <Text style={styles.label}>{language === 'fr' ? 'Téléphone pro' : 'Business phone'}</Text>

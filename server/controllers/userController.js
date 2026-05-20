@@ -78,7 +78,7 @@ const getUserProfiles = async (req, res) => {
         city: b.city,
         country: b.country,
         siret: b.siret,
-      })),
+        rentalEquipmentInventory: Array.isArray(b.rentalEquipmentInventory) ? b.rentalEquipmentInventory : [],
       venue: user.venues.map((v) => ({
         id: v.id,
         type: 'VENUE',
@@ -97,13 +97,15 @@ const getUserProfiles = async (req, res) => {
         id: p.id,
         type: 'PRESTATAIRE',
         businessName: p.businessName,
-        serviceType: p.serviceType,
+        prestationGenres: Array.isArray(p.prestationGenres) ? p.prestationGenres : [],
         phonePro: p.phonePro,
         city: p.city,
         country: p.country,
         bio: p.bio,
         profileImage: p.profileImage,
         bannerImage: p.bannerImage,
+        availableDays: p.availableDays,
+        availableStatus: p.availableStatus,
       })),
     };
 

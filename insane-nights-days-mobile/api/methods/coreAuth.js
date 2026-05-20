@@ -115,18 +115,30 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
   },
 
   // Créer un profil Prestataire
-  createPrestataireProfile: async ({ token, businessName, serviceType, phonePro, city, country, bio }) => {
+  createPrestataireProfile: async ({
+    token,
+    businessName,
+    phonePro,
+    prestationGenres,
+    city,
+    country,
+    bio,
+    availableDays,
+    availableStatus,
+  }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
     const body = {
       businessName: businessName?.trim(),
-      serviceType: serviceType?.trim(),
       phonePro: phonePro?.trim(),
+      prestationGenres: Array.isArray(prestationGenres) ? prestationGenres : [],
     };
     if (city != null) body.city = city;
     if (country != null) body.country = country;
     if (bio != null) body.bio = bio;
+    if (availableDays != null) body.availableDays = availableDays;
+    if (availableStatus !== undefined) body.availableStatus = availableStatus;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PROFILE_PRESTATAIRE,
       { method: 'POST', body: JSON.stringify(body) },

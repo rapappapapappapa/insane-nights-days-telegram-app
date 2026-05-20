@@ -154,5 +154,22 @@ export function createBookerEventsApiMethods({ apiRequest, getMimeType, getFileN
       token
     );
   },
+
+  /** Presets matériel NOX (location) — lang: 'fr' | 'en' */
+  getRentalEquipmentPresets: async (token, lang = 'fr') => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    const l = lang === 'en' ? 'en' : 'fr';
+    return apiRequest(`${API_CONFIG.ENDPOINTS.BOOKER_RENTAL_PRESETS}?lang=${l}`, {}, token);
+  },
+
+  /** Catalogue matériel réutilisable du booker */
+  saveBookerRentalInventory: async (token, items) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.BOOKER_RENTAL_INVENTORY,
+      { method: 'PUT', body: JSON.stringify({ items: Array.isArray(items) ? items : [] }) },
+      token
+    );
+  },
   };
 }

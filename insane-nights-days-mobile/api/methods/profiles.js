@@ -89,21 +89,13 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
     );
   },
 
-  updatePrestataireProfile: async (token, businessName, serviceType, phonePro, extra = {}) => {
+  updatePrestataireProfile: async (token, fields) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    const body = {
-      businessName,
-      serviceType,
-      phonePro,
-    };
-    if (extra.city !== undefined) body.city = extra.city;
-    if (extra.country !== undefined) body.country = extra.country;
-    if (extra.bio !== undefined) body.bio = extra.bio;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PRESTATAIRE_PROFILE,
-      { method: 'PUT', body: JSON.stringify(body) },
+      { method: 'PUT', body: JSON.stringify(fields || {}) },
       token
     );
   },

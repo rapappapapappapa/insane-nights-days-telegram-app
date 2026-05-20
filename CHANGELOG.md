@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
+### Corrigé (mobile — bascule de profil : Lieu à nouveau proposé)
+- **`SwitchProfilePage`** : la liste des types incluait **Prestataire** mais plus **Lieu (VENUE)** — impossible de repasser sur le profil lieu depuis cet écran. **Lieu** est réintégré **en plus** de Prestataire (ordre : … Organisateur → Lieu → Prestataire).
+
 ### Corrigé (serveur — démarrage `userController`)
 - **`getUserProfiles`** : accolade / parenthèses manquantes après le champ **`rentalEquipmentInventory`** du profil booker — le fichier ne se chargeait plus (**`SyntaxError: Unexpected token ';'`**), bloquant tout chargement de **`userRoutes`**.
 

@@ -45,6 +45,15 @@ const profileTypes = [
     registerScreen: 'registerBooker',
   },
   {
+    type: 'VENUE',
+    emoji: '🏢',
+    titleFr: 'Lieu',
+    titleEn: 'Venue',
+    descriptionFr: 'Gérer ton établissement et les réservations',
+    descriptionEn: 'Manage your venue and bookings',
+    registerScreen: 'registerVenue',
+  },
+  {
     type: 'PRESTATAIRE',
     emoji: '🛠️',
     titleFr: 'Prestataire',

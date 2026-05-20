@@ -242,6 +242,10 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                 } else if (activeType === 'VENUE' && profiles.profiles.venue?.[0]) {
                   imageUrl = profiles.profiles.venue[0].profileImage;
                   initial = profiles.profiles.venue[0].venueName?.charAt(0)?.toUpperCase() || initial;
+                } else if (activeType === 'PRESTATAIRE' && profiles.profiles.prestataire?.[0]) {
+                  imageUrl = profiles.profiles.prestataire[0].profileImage;
+                  initial =
+                    profiles.profiles.prestataire[0].businessName?.charAt(0)?.toUpperCase() || initial;
                 }
               }
               if (imageUrl) {

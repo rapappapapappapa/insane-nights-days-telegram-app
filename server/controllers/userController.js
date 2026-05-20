@@ -79,6 +79,7 @@ const getUserProfiles = async (req, res) => {
         country: b.country,
         siret: b.siret,
         rentalEquipmentInventory: Array.isArray(b.rentalEquipmentInventory) ? b.rentalEquipmentInventory : [],
+      })),
       venue: user.venues.map((v) => ({
         id: v.id,
         type: 'VENUE',

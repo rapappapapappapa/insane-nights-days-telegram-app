@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
+### Corrigé (serveur — démarrage `userController`)
+- **`getUserProfiles`** : accolade / parenthèses manquantes après le champ **`rentalEquipmentInventory`** du profil booker — le fichier ne se chargeait plus (**`SyntaxError: Unexpected token ';'`**), bloquant tout chargement de **`userRoutes`**.
+
 ### Ajouté (serveur + mobile — profil Prestataire, MVP)
 - **Modèle Prisma `UserPrestataire`** (nom commercial, téléphone pro, champs optionnels ville / pays / bio / visuels, **genres multiples**, **disponibilités**) ; **un seul profil prestataire par utilisateur** (`@@unique([userId])`).
 - **API** : **`POST /api/profile/prestataire`** (création), **`PUT /api/prestataire/profile`** (mise à jour) ; **`GET /api/user/profiles`** et **`POST /api/user/switch-profile`** prennent en charge le type **`PRESTATAIRE`**.

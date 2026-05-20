@@ -174,7 +174,7 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     if (!token) throw new Error('Token requis.');
     return apiRequest('/api/user/venue/profile', {}, token);
   },
-  updateVenueProfile: async (token, { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret }) => {
+  updateVenueProfile: async (token, { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret, maxCapacity }) => {
     if (!token) throw new Error('Token requis.');
     const body = { venueName: venueName?.trim() || null, address: address?.trim() || null };
     if (companyName !== undefined) body.companyName = companyName;
@@ -183,6 +183,7 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     if (city !== undefined) body.city = city;
     if (country !== undefined) body.country = country;
     if (siret !== undefined) body.siret = siret;
+    if (maxCapacity !== undefined) body.maxCapacity = maxCapacity;
     return apiRequest('/api/user/venue/profile', { method: 'PUT', body: JSON.stringify(body) }, token);
   },
   uploadVenueProfileImage: async (token, imageUri, type = 'profile') => {

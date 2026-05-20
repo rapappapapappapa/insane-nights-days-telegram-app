@@ -4,6 +4,7 @@
 const path = require('path');
 const fs = require('fs');
 const prisma = require('../lib/prisma');
+const { parseTicketTiersFromDb } = require('../utils/ticketTiers');
 const SERVER_ROOT = path.join(__dirname, '..');
 
 module.exports = function registerFeedRoutes(app, deps) {
@@ -641,21 +642,25 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       return formattedPost;
     });
 
-    const formattedEvents = upcomingEvents.map((event) => ({
-      type: 'event',
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      time: event.time,
-      location: event.location,
-      price: event.price,
-      genre: event.genre,
-      image: normalizeImageUrl(event.image),
-      venue: event.venue ? { name: event.venue.venueName, address: event.venue.address } : null,
-      booker: event.booker ? { name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}` } : null,
-      createdAt: event.createdAt,
-    }));
+    const formattedEvents = upcomingEvents.map((event) => {
+      const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
+      return {
+        type: 'event',
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        price: event.price,
+        hasMultipleTicketPrices: Array.isArray(rawTiers) && rawTiers.length > 1,
+        genre: event.genre,
+        image: normalizeImageUrl(event.image),
+        venue: event.venue ? { name: event.venue.venueName, address: event.venue.address } : null,
+        booker: event.booker ? { name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}` } : null,
+        createdAt: event.createdAt,
+      };
+    });
 
     const feedItems = [...formattedPosts, ...formattedEvents].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -886,30 +891,34 @@ app.get('/api/feed', async (req, res) => {
     });
 
     // Formater les événements comme annonces
-    const formattedEvents = upcomingEvents.map((event) => ({
-      type: 'event',
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      time: event.time,
-      location: event.location,
-      price: event.price,
-      genre: event.genre,
-      image: normalizeImageUrl(event.image), // ✅ CORRECTION: Normaliser l'URL de l'image de l'événement
-      venue: event.venue
-        ? {
-            name: event.venue.venueName,
-            address: event.venue.address,
-          }
-        : null,
-      booker: event.booker
-        ? {
-            name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}`,
-          }
-        : null,
-      createdAt: event.createdAt,
-    }));
+    const formattedEvents = upcomingEvents.map((event) => {
+      const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
+      return {
+        type: 'event',
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        price: event.price,
+        hasMultipleTicketPrices: Array.isArray(rawTiers) && rawTiers.length > 1,
+        genre: event.genre,
+        image: normalizeImageUrl(event.image), // ✅ CORRECTION: Normaliser l'URL de l'image de l'événement
+        venue: event.venue
+          ? {
+              name: event.venue.venueName,
+              address: event.venue.address,
+            }
+          : null,
+        booker: event.booker
+          ? {
+              name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}`,
+            }
+          : null,
+        createdAt: event.createdAt,
+      };
+    });
 
     // Combiner et trier par date décroissante
     const feedItems = [...formattedPosts, ...formattedEvents].sort(

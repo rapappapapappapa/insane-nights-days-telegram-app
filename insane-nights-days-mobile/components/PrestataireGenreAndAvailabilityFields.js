@@ -123,8 +123,8 @@ export default function PrestataireGenreAndAvailabilityFields({
       </Text>
       <Text style={styles.hint}>
         {language === 'fr'
-          ? 'Comme pour un DJ : jours où vous êtes ouverts aux bookings.'
-          : 'Same idea as DJs: days when you accept bookings.'}
+          ? 'Choisissez les jours où vous acceptez les demandes de réservation.'
+          : 'Choose the days when you accept booking requests.'}
       </Text>
       <View style={styles.daysContainer}>
         {DAY_KEYS.map((day) => (

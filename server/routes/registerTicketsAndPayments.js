@@ -2,6 +2,10 @@
  * Billets (achat classique), Stripe (webhook, intents, confirmation), liste paiements / tickets.
  */
 const prisma = require('../lib/prisma');
+const {
+  parseTicketTiersFromDb,
+  resolvePurchaseTier,
+} = require('../utils/ticketTiers');
 
 module.exports = function registerTicketsAndPaymentsRoutes(app, deps) {
   const {
@@ -17,7 +21,7 @@ module.exports = function registerTicketsAndPaymentsRoutes(app, deps) {
 
 app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
   try {
-    const { eventId, quantity: quantityRaw = 1 } = req.body;
+    const { eventId, quantity: quantityRaw = 1, tierId: tierIdBody } = req.body;
     const userId = req.user.id;
 
     if (!eventId) {
@@ -80,13 +84,53 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       });
     }
 
+    const tierRes = resolvePurchaseTier(event, tierIdBody);
+    if (tierRes.error === 'TIER_REQUIRED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Choisis un tarif (tierId) pour cet événement.',
+        code: 'TIER_REQUIRED',
+      });
+    }
+    if (tierRes.error === 'INVALID_TIER') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tarif inconnu ou invalide.',
+        code: 'INVALID_TIER',
+      });
+    }
+    if (tierRes.error === 'PRICE_INVALID' || tierRes.error === 'TIER_PRICE_INVALID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Prix billet invalide pour cet événement.',
+      });
+    }
+
+    const tiers = parseTicketTiersFromDb(event.ticketTiers);
+    if (tierRes.tierId && tiers) {
+      const def = tiers.find((t) => t.id === tierRes.tierId);
+      if (def?.maxSold != null) {
+        const soldTier = await prisma.ticket.count({
+          where: { eventId, tierId: tierRes.tierId, status: 'valid' },
+        });
+        if (soldTier + quantity > def.maxSold) {
+          return res.status(400).json({
+            success: false,
+            message: 'Quota atteint pour ce tarif.',
+            code: 'TIER_QUOTA',
+          });
+        }
+      }
+    }
+
     const newTickets = [];
     for (let i = 0; i < quantity; i++) {
       const ticket = await prisma.ticket.create({
         data: {
           userId,
           eventId,
-          price: event.price,
+          tierId: tierRes.tierId,
+          price: tierRes.unitEuros,
           status: 'valid',
           qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
         },
@@ -204,6 +248,38 @@ app.post('/api/webhooks/stripe', async (req, res) => {
         if (event.status !== 'UPCOMING') throw new Error('Événement non éligible (pas UPCOMING)');
         if (event.sold + freshPayment.quantity > event.capacity) throw new Error('Pas assez de places disponibles');
 
+        const tierResolved = resolvePurchaseTier(event, freshPayment.tierId);
+        if (tierResolved.error) throw new Error(`Tarif invalide (${tierResolved.error})`);
+        const unitCents = eurosToCents(tierResolved.unitEuros);
+        if (unitCents === null) throw new Error('Prix unitaire invalide');
+        const expectedTotal = unitCents * freshPayment.quantity;
+        if (expectedTotal !== freshPayment.amount) {
+          console.warn('[STRIPE WEBHOOK] amount vs tier mismatch', {
+            paymentIntentId,
+            expectedTotal,
+            paymentAmount: freshPayment.amount,
+            unitEuros: tierResolved.unitEuros,
+          });
+          throw new Error('Montant incompatible avec le tarif sélectionné');
+        }
+
+        const tiers = parseTicketTiersFromDb(event.ticketTiers);
+        if (tierResolved.tierId && tiers) {
+          const def = tiers.find((t) => t.id === tierResolved.tierId);
+          if (def?.maxSold != null) {
+            const soldTier = await tx.ticket.count({
+              where: {
+                eventId: freshPayment.eventId,
+                tierId: tierResolved.tierId,
+                status: 'valid',
+              },
+            });
+            if (soldTier + freshPayment.quantity > def.maxSold) {
+              throw new Error('Quota atteint pour ce tarif');
+            }
+          }
+        }
+
         // Status trace (optionnel)
         await tx.payment.update({ where: { paymentIntentId }, data: { status: 'succeeded' } });
 
@@ -213,7 +289,8 @@ app.post('/api/webhooks/stripe', async (req, res) => {
               userId: freshPayment.userId,
               eventId: freshPayment.eventId,
               paymentIntentId,
-              price: event.price,
+              tierId: tierResolved.tierId,
+              price: tierResolved.unitEuros,
               status: 'valid',
               qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
             },
@@ -265,7 +342,7 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
       return res.status(500).json({ success: false, message: 'STRIPE_PUBLISHABLE_KEY manquante côté serveur.' });
     }
 
-    const { eventId, quantity: quantityRaw = 1 } = req.body ?? {};
+    const { eventId, quantity: quantityRaw = 1, tierId: tierIdBody } = req.body ?? {};
     const userId = req.user.id;
 
     if (!eventId) {
@@ -304,7 +381,43 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
       return res.status(400).json({ success: false, message: 'Pas assez de places disponibles' });
     }
 
-    const unitAmount = eurosToCents(event.price);
+    const tierRes = resolvePurchaseTier(event, tierIdBody);
+    if (tierRes.error === 'TIER_REQUIRED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Choisis un tarif (tierId) pour cet événement.',
+        code: 'TIER_REQUIRED',
+      });
+    }
+    if (tierRes.error === 'INVALID_TIER') {
+      return res.status(400).json({
+        success: false,
+        message: 'Tarif inconnu ou invalide.',
+        code: 'INVALID_TIER',
+      });
+    }
+    if (tierRes.error === 'PRICE_INVALID' || tierRes.error === 'TIER_PRICE_INVALID') {
+      return res.status(400).json({ success: false, message: 'Prix billet invalide pour cet événement.' });
+    }
+
+    const tiers = parseTicketTiersFromDb(event.ticketTiers);
+    if (tierRes.tierId && tiers) {
+      const def = tiers.find((t) => t.id === tierRes.tierId);
+      if (def?.maxSold != null) {
+        const soldTier = await prisma.ticket.count({
+          where: { eventId, tierId: tierRes.tierId, status: 'valid' },
+        });
+        if (soldTier + quantity > def.maxSold) {
+          return res.status(400).json({
+            success: false,
+            message: 'Quota atteint pour ce tarif.',
+            code: 'TIER_QUOTA',
+          });
+        }
+      }
+    }
+
+    const unitAmount = eurosToCents(tierRes.unitEuros);
     if (unitAmount === null) return res.status(500).json({ success: false, message: 'Prix événement invalide.' });
     const amount = unitAmount * quantity;
     if (amount < 50) return res.status(400).json({ success: false, message: 'Montant trop faible pour Stripe.' });
@@ -313,7 +426,12 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
       amount,
       currency: 'eur',
       automatic_payment_methods: { enabled: true },
-      metadata: { userId, eventId, quantity: String(quantity) },
+      metadata: {
+        userId,
+        eventId,
+        quantity: String(quantity),
+        ...(tierRes.tierId ? { tierId: tierRes.tierId } : {}),
+      },
     });
 
     await prisma.payment.create({
@@ -324,6 +442,7 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
         amount,
         currency: 'eur',
         quantity,
+        tierId: tierRes.tierId,
         status: 'created',
       },
     });
@@ -424,6 +543,39 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
         throw httpError(400, 'Pas assez de places disponibles');
       }
 
+      if (intent.metadata?.tierId != null && payment.tierId != null && intent.metadata.tierId !== payment.tierId) {
+        throw httpError(400, 'Paiement invalide (tarif incompatible).');
+      }
+
+      const tierResolved = resolvePurchaseTier(event, payment.tierId);
+      if (tierResolved.error) {
+        throw httpError(400, `Tarif invalide (${tierResolved.error}).`);
+      }
+      const unitCentsExpected = eurosToCents(tierResolved.unitEuros);
+      if (unitCentsExpected === null) {
+        throw httpError(400, 'Prix unitaire invalide.');
+      }
+      if (unitCentsExpected * payment.quantity !== payment.amount) {
+        throw httpError(400, 'Montant incompatible avec le tarif.');
+      }
+
+      const tiers = parseTicketTiersFromDb(event.ticketTiers);
+      if (tierResolved.tierId && tiers) {
+        const def = tiers.find((t) => t.id === tierResolved.tierId);
+        if (def?.maxSold != null) {
+          const soldTier = await tx.ticket.count({
+            where: {
+              eventId: payment.eventId,
+              tierId: tierResolved.tierId,
+              status: 'valid',
+            },
+          });
+          if (soldTier + payment.quantity > def.maxSold) {
+            throw httpError(400, 'Quota atteint pour ce tarif.');
+          }
+        }
+      }
+
       // Marquer "succeeded" côté DB (trace) avant délivrance
       await tx.payment.update({ where: { paymentIntentId }, data: { status: 'succeeded' } });
 
@@ -434,7 +586,8 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
             userId,
             eventId: payment.eventId,
             paymentIntentId,
-            price: event.price,
+            tierId: tierResolved.tierId,
+            price: tierResolved.unitEuros,
             status: 'valid',
             qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
           },

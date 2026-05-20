@@ -30,6 +30,7 @@ export function EventFormProvider({ children }) {
     equipmentRentalPresetIds: [],
     equipmentRentalOrganizerLines: [],
     equipmentRentalNotes: '',
+    extraTicketTiers: [],
   });
 
   const [eventDateTime, setEventDateTime] = useState(new Date());
@@ -89,6 +90,7 @@ export function EventFormProvider({ children }) {
       equipmentRentalPresetIds: [],
       equipmentRentalOrganizerLines: [],
       equipmentRentalNotes: '',
+      extraTicketTiers: [],
     });
     setEventDateTime(new Date());
   }, []);

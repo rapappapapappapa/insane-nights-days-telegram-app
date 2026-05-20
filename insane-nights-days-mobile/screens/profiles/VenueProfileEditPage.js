@@ -46,6 +46,7 @@ export default function VenueProfileEditPage() {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [siret, setSiret] = useState('');
+  const [maxCapacityStr, setMaxCapacityStr] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
 
@@ -68,6 +69,11 @@ export default function VenueProfileEditPage() {
         setCity(res.profile.city || '');
         setCountry(res.profile.country || '');
         setSiret(res.profile.siret || '');
+        setMaxCapacityStr(
+          res.profile.maxCapacity != null && res.profile.maxCapacity !== ''
+            ? String(res.profile.maxCapacity)
+            : ''
+        );
         setProfileImage(res.profile.profileImage);
         setBannerImage(res.profile.bannerImage);
       } else {
@@ -124,6 +130,17 @@ export default function VenueProfileEditPage() {
     setSaving(true);
     try {
       const payload = { venueName, address };
+      if (maxCapacityStr.trim() === '') {
+        payload.maxCapacity = null;
+      } else {
+        const n = parseInt(maxCapacityStr.replace(/\s/g, ''), 10);
+        if (!Number.isFinite(n) || n < 1) {
+          showError(language === 'fr' ? 'Capacité max : nombre entier ≥ 1 ou vide.' : 'Max capacity: integer ≥ 1 or leave empty.');
+          setSaving(false);
+          return;
+        }
+        payload.maxCapacity = n;
+      }
       const legalEditable = !(profile?.companyName || profile?.legalRepresentative || profile?.postalCode || profile?.city || profile?.country || profile?.siret);
       if (legalEditable) {
         payload.companyName = companyName?.trim() || null;
@@ -239,6 +256,21 @@ export default function VenueProfileEditPage() {
           onChangeText={setAddress}
           placeholder={fr ? 'Ex: 123 Rue de la Nuit, Paris' : 'e.g. 123 Rue de la Nuit, Paris'}
           placeholderTextColor="rgba(255,255,255,0.4)"
+        />
+
+        <Text style={styles.label}>{fr ? 'Capacité max. (places)' : 'Max capacity (guests)'}</Text>
+        <Text style={styles.legalHint}>
+          {fr
+            ? 'Optionnel — plafond pour la création d’événements à ce lieu. Laisse vide pour ne pas limiter.'
+            : 'Optional — caps event ticket capacity here. Leave empty for no ceiling.'}
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={maxCapacityStr}
+          onChangeText={setMaxCapacityStr}
+          placeholder={fr ? 'Ex: 350' : 'e.g. 350'}
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          keyboardType="numeric"
         />
 
         <Text style={[styles.label, styles.legalSectionTitle]}>{fr ? 'Infos légales (pour les contrats)' : 'Legal info (for contracts)'}</Text>

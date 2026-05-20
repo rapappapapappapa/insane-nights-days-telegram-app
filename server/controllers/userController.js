@@ -93,6 +93,7 @@ const getUserProfiles = async (req, res) => {
         city: v.city,
         country: v.country,
         siret: v.siret,
+        maxCapacity: v.maxCapacity ?? null,
       })),
       prestataire: user.prestataires.map((p) => ({
         id: p.id,
@@ -1186,6 +1187,7 @@ const getVenueProfile = async (req, res) => {
         city: venue.city,
         country: venue.country,
         siret: venue.siret,
+        maxCapacity: venue.maxCapacity ?? null,
       },
     });
   } catch (error) {
@@ -1199,7 +1201,8 @@ const getVenueProfile = async (req, res) => {
 const updateVenueProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret } = req.body ?? {};
+    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret, maxCapacity } =
+      req.body ?? {};
     const venue = await prisma.userVenue.findFirst({
       where: { userId },
     });
@@ -1209,7 +1212,17 @@ const updateVenueProfile = async (req, res) => {
     const updateData = {};
     if (venueName !== undefined && String(venueName).trim()) updateData.venueName = String(venueName).trim();
     if (address !== undefined && String(address).trim()) updateData.address = String(address).trim();
-    // Infos légales : modifiables une seule fois, uniquement quand vides
+    if (maxCapacity !== undefined) {
+      if (maxCapacity === null || maxCapacity === '' || String(maxCapacity).trim() === '') {
+        updateData.maxCapacity = null;
+      } else {
+        const mc = parseInt(String(maxCapacity).replace(/\s/g, ''), 10);
+        if (!Number.isFinite(mc) || mc < 1) {
+          return sendError(res, 'maxCapacity doit être un entier positif (≥ 1) ou être vide.', 400);
+        }
+        updateData.maxCapacity = mc;
+      }
+    }
     const venueLegalFields = ['companyName', 'legalRepresentative', 'postalCode', 'city', 'country', 'siret'];
     const venueLegalValues = { companyName, legalRepresentative, postalCode, city, country, siret };
     for (const field of venueLegalFields) {
@@ -1238,6 +1251,7 @@ const updateVenueProfile = async (req, res) => {
         city: updated.city,
         country: updated.country,
         siret: updated.siret,
+        maxCapacity: updated.maxCapacity ?? null,
       },
     });
   } catch (error) {
@@ -1612,6 +1626,7 @@ const exportUserData = async (req, res) => {
         id: v.id,
         venueName: v.venueName,
         address: v.address,
+        maxCapacity: v.maxCapacity ?? null,
         createdAt: v.createdAt,
       })),
       tickets: user.tickets.map((t) => ({

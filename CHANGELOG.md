@@ -6,6 +6,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
+### Ajouté (billetterie — multi‑tarifs, produit visible)
+- **Serveur** (déjà en place dans cette phase) : `Event.ticketTiers`, achat Stripe / démo avec **`tierId`**, quotas par palier **`maxSold`** (voir **`server/utils/ticketTiers.js`**, **`registerTicketsAndPayments`**, **`GET /api/events/:id`** avec **`ticketTiers`** enrichi et **`hasMultipleTicketPrices`**).
+- **Mobile organisateur** : wizard **`BookerEventDashboardPage`** — étape 4 : autres paliers (`label`, prix, quota optionnel), envoi **`ticketTiers`** à **`POST /api/booker/events`**, bloc récap étape 5.
+- **Mobile public** : **`EventDetailPage`** — pastille prix « **dès X €** » si plusieurs tarifs, choix du palier, **`buyTicket`** / **`createTicketPaymentIntent`** avec le bon **`tierId`** ; **`FeedPage`** — préfixe **dès / from** sur les cartes événement quand **`hasMultipleTicketPrices`**.
+
+### Ajouté (Phase 2 produit — capacité événement plafonnée par le lieu)
+- **Prisma** : **`UserVenue.maxCapacity`** (`Int?`, optionnel) — capacité d’accueil max déclarée par le propriétaire du lieu ; **migration** **`20260520103000_user_venue_max_capacity`** (`prisma migrate deploy` / `prisma generate`).
+- **Serveur** : **`POST /api/profile/venue`** et **`GET` / **`PUT`** `/api/user/venue/profile`** exposent **`maxCapacity`** ; export RGPD utilisateur enrichi ; **`GET /api/booker/venues`** renvoie **`maxCapacity`** ; **`POST /api/booker/events`** refuse la création si la capacité de l’événement (**`capacity`**, défaut 100 si absent) **`>`** au **`maxCapacity`** du lieu (HTTP **400**, code **`EVENT_CAPACITY_EXCEEDS_VENUE`**).
+- **Mobile** : inscription **`RegisterVenuePage`**, édition **`VenueProfileEditPage`** (`maxCapacity`), API **`createVenueProfile`** / **`updateVenueProfile`** ; wizard organisateur (**`BookerEventDashboardPage`**) — texte d’aide sous le champ capacité, préremplissage si le champ est vide et que le lieu a un plafond, validation avant envoi alignée avec l’API.
+
+### Modifié (mobile — profil Prestataire, texte disponibilités)
+- **Disponibilités** (`PrestataireGenreAndAvailabilityFields`) : aide sans référence « comme un DJ », formulation centrée prestataire / réservations.
+
 ### Corrigé (mobile — bascule de profil : Lieu à nouveau proposé)
 - **`SwitchProfilePage`** : la liste des types incluait **Prestataire** mais plus **Lieu (VENUE)** — impossible de repasser sur le profil lieu depuis cet écran. **Lieu** est réintégré **en plus** de Prestataire (ordre : … Organisateur → Lieu → Prestataire).
 

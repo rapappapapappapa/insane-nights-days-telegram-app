@@ -36,6 +36,7 @@ const {
 const { JWT_SECRET } = require('./utils/jwtConfig');
 const { parseTicketQuantity } = require('./utils/validation');
 const { djSlotFitsEventWindow } = require('./utils/djSlotWindow');
+const { parseTicketTiersFromDb, enrichTiersWithSold } = require('./utils/ticketTiers');
 const { normalizeGenreStrings, normalizeAvailableDays } = require('./utils/prestataireProfile');
 
 const DEFAULT_PRESTATAIRE_AVAILABLE_DAYS_JSON = JSON.stringify({
@@ -1015,7 +1016,8 @@ app.post(
 // Endpoint pour créer un profil Venue (Lieu)
 app.post('/api/profile/venue', authenticateToken, async (req, res) => {
   try {
-    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret } = req.body ?? {};
+    const { venueName, address, companyName, legalRepresentative, postalCode, city, country, siret, maxCapacity } =
+      req.body ?? {};
     const userId = req.user.id;
 
     if (!venueName || !address) {
@@ -1044,6 +1046,16 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
     if (city != null) venueData.city = String(city).trim() || null;
     if (country != null) venueData.country = String(country).trim() || null;
     if (siret != null) venueData.siret = String(siret).trim() || null;
+    if (maxCapacity !== undefined && maxCapacity !== null && String(maxCapacity).trim() !== '') {
+      const mc = parseInt(String(maxCapacity).replace(/\s/g, ''), 10);
+      if (!Number.isFinite(mc) || mc < 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'maxCapacity doit être un entier positif (≥ 1) ou être omis.',
+        });
+      }
+      venueData.maxCapacity = mc;
+    }
 
     const venueProfile = await prisma.userVenue.create({
       data: venueData,
@@ -1065,6 +1077,7 @@ app.post('/api/profile/venue', authenticateToken, async (req, res) => {
         id: venueProfile.id,
         venueName: venueProfile.venueName,
         address: venueProfile.address,
+        maxCapacity: venueProfile.maxCapacity ?? null,
       },
     });
   } catch (error) {
@@ -1381,6 +1394,14 @@ app.get('/api/events/:eventId', async (req, res) => {
     }) : [];
     const djMap = new Map(userDjs.map((udj) => [udj.userId, udj]));
 
+    const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
+    let ticketTiers = null;
+    let hasMultipleTicketPrices = false;
+    if (rawTiers && rawTiers.length > 0) {
+      ticketTiers = await enrichTiersWithSold(event.id, prisma, rawTiers);
+      hasMultipleTicketPrices = rawTiers.length > 1;
+    }
+
     const formattedEvent = {
       id: event.id,
       title: event.title,
@@ -1389,6 +1410,8 @@ app.get('/api/events/:eventId', async (req, res) => {
       durationHours: event.durationHours ?? null,
       location: event.location,
       price: event.price,
+      ticketTiers,
+      hasMultipleTicketPrices,
       capacity: event.capacity,
       sold: event.sold,
       genre: event.genre,

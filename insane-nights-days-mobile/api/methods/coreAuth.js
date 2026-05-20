@@ -96,7 +96,20 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
   },
 
   // Créer un profil Venue (nécessite un token JWT)
-  createVenueProfile: async ({ token, pseudo, venueName, email, address, companyName, legalRepresentative, postalCode, city, country, siret }) => {
+  createVenueProfile: async ({
+    token,
+    pseudo,
+    venueName,
+    email,
+    address,
+    companyName,
+    legalRepresentative,
+    postalCode,
+    city,
+    country,
+    siret,
+    maxCapacity,
+  }) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour créer un profil.');
     }
@@ -107,6 +120,10 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     if (city != null) body.city = city;
     if (country != null) body.country = country;
     if (siret != null) body.siret = siret;
+    if (maxCapacity != null && maxCapacity !== '' && String(maxCapacity).trim() !== '') {
+      const n = parseInt(String(maxCapacity).replace(/\s/g, ''), 10);
+      if (Number.isFinite(n) && n >= 1) body.maxCapacity = n;
+    }
     return apiRequest(
       API_CONFIG.ENDPOINTS.PROFILE_VENUE,
       { method: 'POST', body: JSON.stringify(body) },
@@ -176,30 +193,34 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
   },
 
   // Acheter un ticket (nécessite un token JWT)
-  buyTicket: async (token, eventId, quantity = 1) => {
+  buyTicket: async (token, eventId, quantity = 1, tierId = null) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour acheter un ticket.');
     }
+    const body = { eventId, quantity };
+    if (tierId) body.tierId = tierId;
     return apiRequest(
       API_CONFIG.ENDPOINTS.TICKETS_BUY,
       {
         method: 'POST',
-        body: JSON.stringify({ eventId, quantity }),
+        body: JSON.stringify(body),
       },
       token
     );
   },
 
   // ✅ Stripe: créer un PaymentIntent pour acheter des tickets
-  createTicketPaymentIntent: async (token, eventId, quantity = 1) => {
+  createTicketPaymentIntent: async (token, eventId, quantity = 1, tierId = null) => {
     if (!token) {
       throw new Error('Token d\'authentification requis pour payer un ticket.');
     }
+    const body = { eventId, quantity };
+    if (tierId) body.tierId = tierId;
     return apiRequest(
       API_CONFIG.ENDPOINTS.PAYMENTS_CREATE_TICKET_INTENT,
       {
         method: 'POST',
-        body: JSON.stringify({ eventId, quantity }),
+        body: JSON.stringify(body),
       },
       token
     );

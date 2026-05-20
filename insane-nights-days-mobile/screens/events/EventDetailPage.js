@@ -28,6 +28,13 @@ import {
   isDeviceCalendarExportSupported,
 } from '../../utils/addNoxEventToCalendar';
 
+function isTicketTierSelectable(t) {
+  if (!t) return false;
+  if (t.maxSold == null || t.maxSold === '') return true;
+  if (t.remaining == null || t.remaining === undefined) return true;
+  return Number(t.remaining) > 0;
+}
+
 const mockEvents = [
   {
     id: '1',
@@ -107,6 +114,63 @@ export default function EventDetailPage() {
   const [inviting, setInviting] = useState(false);
   const [acceptedCgv, setAcceptedCgv] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
+  const [selectedTierId, setSelectedTierId] = useState(null);
+
+  const ticketTiersForPurchase = useMemo(() => {
+    const t = event?.ticketTiers;
+    return Array.isArray(t) && t.length > 0 ? t : null;
+  }, [event?.ticketTiers]);
+
+  const hasMultipleTicketTiers = !!(ticketTiersForPurchase && ticketTiersForPurchase.length > 1);
+
+  useEffect(() => {
+    if (!ticketTiersForPurchase?.length) {
+      setSelectedTierId(null);
+      return;
+    }
+    setSelectedTierId((prev) => {
+      const prevStillOk = ticketTiersForPurchase.some((x) => x.id === prev && isTicketTierSelectable(x));
+      if (prevStillOk) return prev;
+      const firstOk = ticketTiersForPurchase.find((x) => isTicketTierSelectable(x));
+      return (firstOk || ticketTiersForPurchase[0])?.id ?? null;
+    });
+  }, [event?.id, ticketTiersForPurchase]);
+
+  const selectedTier =
+    ticketTiersForPurchase && selectedTierId
+      ? ticketTiersForPurchase.find((x) => x.id === selectedTierId)
+      : null;
+
+  const tierIdForApi = useMemo(() => {
+    if (!ticketTiersForPurchase?.length) return null;
+    if (ticketTiersForPurchase.length === 1) return ticketTiersForPurchase[0].id;
+    return selectedTierId;
+  }, [ticketTiersForPurchase, selectedTierId]);
+
+  const unitPriceForPurchase = useMemo(() => {
+    if (selectedTier != null && Number.isFinite(Number(selectedTier.price))) {
+      return Number(selectedTier.price);
+    }
+    const p = Number(event?.price);
+    return Number.isFinite(p) ? p : 0;
+  }, [selectedTier, event?.price]);
+
+  const canProceedPurchaseTier = useMemo(() => {
+    if (!ticketTiersForPurchase?.length) return true;
+    if (ticketTiersForPurchase.length === 1) {
+      return isTicketTierSelectable(ticketTiersForPurchase[0]);
+    }
+    return selectedTier != null && isTicketTierSelectable(selectedTier);
+  }, [ticketTiersForPurchase, selectedTier]);
+
+  const priceBadgeLabel = useMemo(() => {
+    const p = event?.price;
+    if (p == null || p === '') return '—';
+    if (event?.hasMultipleTicketPrices || hasMultipleTicketTiers) {
+      return language === 'fr' ? `dès ${p} €` : `from ${p} €`;
+    }
+    return `${p}€`;
+  }, [event?.price, event?.hasMultipleTicketPrices, hasMultipleTicketTiers, language]);
 
   const API_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   useEffect(() => {
@@ -179,7 +243,7 @@ export default function EventDetailPage() {
             {
               text: language === 'fr' ? 'Continuer' : 'Continue',
               onPress: async () => {
-                const response = await api.buyTicket(user.token, eventId, 1);
+                const response = await api.buyTicket(user.token, eventId, 1, tierIdForApi);
                 if (response && response.success) {
                   showSuccess(response.message || (language === 'fr' ? 'Ticket acheté (mode test).' : 'Ticket bought (test mode).'));
                   fetchEvent();
@@ -189,7 +253,7 @@ export default function EventDetailPage() {
                       eventId,
                       eventTitle: event?.title,
                       quantity: 1,
-                      amount: event?.price,
+                      amount: unitPriceForPurchase,
                     });
                   }, 600);
                 } else {
@@ -203,7 +267,7 @@ export default function EventDetailPage() {
       }
 
       // 1) Créer PaymentIntent côté backend (uniquement si Stripe est dispo)
-      const intentRes = await api.createTicketPaymentIntent(user.token, eventId, 1);
+      const intentRes = await api.createTicketPaymentIntent(user.token, eventId, 1, tierIdForApi);
       if (!intentRes?.success || !intentRes?.paymentIntentClientSecret || !intentRes?.paymentIntentId) {
         showError(intentRes?.message || (language === 'fr' ? 'Impossible de démarrer le paiement.' : 'Unable to start payment.'));
         return;
@@ -253,7 +317,7 @@ export default function EventDetailPage() {
             eventId,
             eventTitle: event?.title,
             quantity: 1,
-            amount: event?.price,
+            amount: unitPriceForPurchase,
           });
         }, 600);
       } else {
@@ -555,7 +619,7 @@ export default function EventDetailPage() {
         <View style={styles.imageContainer}>
           <Image source={{ uri: event.image }} style={styles.image} />
           <View style={styles.priceBadge}>
-            <Text style={styles.priceText}>{event.price}€</Text>
+            <Text style={styles.priceText}>{priceBadgeLabel}</Text>
           </View>
           <View style={styles.genreBadge}>
             <Text style={styles.genreText}>{event.genre}</Text>
@@ -769,6 +833,55 @@ export default function EventDetailPage() {
               </View>
             ) : (
               <>
+                {!canProceedPurchaseTier && hasMultipleTicketTiers ? (
+                  <Text style={[styles.helperTextTier, { marginBottom: 10 }]}>
+                    {language === 'fr'
+                      ? 'Aucun tarif disponible pour le moment (quotas épuisés).'
+                      : 'No tiers available right now (sold out).'}
+                  </Text>
+                ) : null}
+                {hasMultipleTicketTiers && ticketTiersForPurchase?.length ? (
+                  <View style={styles.tierSection}>
+                    <Text style={styles.tierSectionTitle}>
+                      {language === 'fr' ? 'Choix du tarif' : 'Ticket type'}
+                    </Text>
+                    {ticketTiersForPurchase.map((t) => {
+                      const sel = t.id === selectedTierId;
+                      const ok = isTicketTierSelectable(t);
+                      const soldHint =
+                        t.maxSold != null && t.maxSold !== '' && t.remaining != null
+                          ? language === 'fr'
+                            ? ` (${t.remaining} restant(s))`
+                            : ` (${t.remaining} left)`
+                          : '';
+                      return (
+                        <TouchableOpacity
+                          key={t.id}
+                          style={[
+                            styles.tierChip,
+                            sel && styles.tierChipSelected,
+                            !ok && styles.tierChipDisabled,
+                          ]}
+                          onPress={() => ok && setSelectedTierId(t.id)}
+                          disabled={!ok}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: sel, disabled: !ok }}
+                          accessibilityLabel={`${t.label} ${t.price}€${soldHint}`}
+                        >
+                          <Text
+                            style={[
+                              styles.tierChipLabel,
+                              sel && styles.tierChipLabelSelected,
+                              !ok && styles.tierChipLabelDisabled,
+                            ]}
+                          >
+                            {t.label} · {t.price}€{soldHint}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
                 <View style={styles.cgvRow}>
                   <TouchableOpacity
                     style={[styles.cgvCheckbox, acceptedCgv && styles.cgvCheckboxChecked]}
@@ -803,21 +916,29 @@ export default function EventDetailPage() {
                   </View>
                 </View>
                 <TouchableOpacity
-                  style={[styles.buyButton, (buyingTicket || !acceptedCgv) && styles.buyButtonDisabled]}
+                  style={[
+                    styles.buyButton,
+                    (buyingTicket || !acceptedCgv || !canProceedPurchaseTier) && styles.buyButtonDisabled,
+                  ]}
                   onPress={handleBuyTicket}
-                  disabled={buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
+                  disabled={
+                    buyingTicket ||
+                    !acceptedCgv ||
+                    !canProceedPurchaseTier ||
+                    (user?.isAuthenticated && !hasActiveCommunityProfile())
+                  }
                   accessibilityRole="button"
                   accessibilityLabel={
                     language === 'fr'
-                      ? `Acheter un ticket pour ${event.price} euros`
-                      : `Buy ticket for ${event.price} euros`
+                      ? `Acheter un ticket pour ${unitPriceForPurchase} euros`
+                      : `Buy ticket for ${unitPriceForPurchase} euros`
                   }
                 >
                   {buyingTicket ? (
                     <ActivityIndicator color={Colors.background} />
                   ) : (
                     <Text style={styles.buyButtonText}>
-                      {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({event.price}€)
+                      {language === 'fr' ? 'Acheter un ticket' : 'Buy ticket'} ({unitPriceForPurchase}€)
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -1405,5 +1526,47 @@ const styles = StyleSheet.create({
     color: Colors.background,
     fontSize: 15,
     fontWeight: '800',
+  },
+  tierSection: {
+    marginBottom: 16,
+  },
+  tierSectionTitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  tierChip: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  tierChipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(255,23,68,0.22)',
+  },
+  tierChipDisabled: {
+    opacity: 0.45,
+  },
+  tierChipLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tierChipLabelSelected: {
+    color: '#fff',
+  },
+  tierChipLabelDisabled: {
+    color: 'rgba(255,255,255,0.55)',
+  },
+  helperTextTier: {
+    color: '#fbbf24',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

@@ -624,6 +624,28 @@ export default function BookerEventDashboardPage() {
     setRentalCatalogItems((prev) => prev.filter((x) => x.id !== rid));
   };
 
+  const updateExtraTicketTier = (index, field, value) => {
+    setFormData((prev) => {
+      const rows = [...(prev.extraTicketTiers || [])];
+      rows[index] = { ...(rows[index] || {}), [field]: value };
+      return { ...prev, extraTicketTiers: rows };
+    });
+  };
+
+  const addExtraTicketTier = () => {
+    setFormData((prev) => ({
+      ...prev,
+      extraTicketTiers: [...(prev.extraTicketTiers || []), { label: '', price: '', maxSold: '' }],
+    }));
+  };
+
+  const removeExtraTicketTier = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      extraTicketTiers: (prev.extraTicketTiers || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const saveRentalCatalogToProfile = async () => {
     if (!user?.token || savingRentalCatalog) return;
     setSavingRentalCatalog(true);
@@ -777,6 +799,16 @@ export default function BookerEventDashboardPage() {
     const t = setTimeout(persistDraft, 700);
     return () => clearTimeout(t);
   }, [draftGate, persistDraft]);
+
+  /** Si le lieu a une capacité max déclarée, pré-remplir le champ événement quand il est encore vide */
+  useEffect(() => {
+    if (!formData.venueId || !venues.length) return;
+    const v = venues.find((x) => x.id === formData.venueId);
+    if (!v || v.maxCapacity == null) return;
+    const cur = String(formData.capacity ?? '').trim();
+    if (cur !== '') return;
+    setFormData((prev) => ({ ...prev, capacity: String(v.maxCapacity) }));
+  }, [formData.venueId, venues, setFormData]);
 
   useEffect(() => {
     if (!user?.token || draftGate) return;
@@ -967,6 +999,23 @@ export default function BookerEventDashboardPage() {
       }
     }
 
+    const selectedVenForCap = venues.find((v) => v.id === formData.venueId);
+    const capRaw = formData.capacity
+      ? parseInt(String(formData.capacity).replace(/\s/g, ''), 10)
+      : NaN;
+    const eventCap = Number.isFinite(capRaw) && capRaw > 0 ? capRaw : 100;
+    if (
+      selectedVenForCap?.maxCapacity != null &&
+      eventCap > selectedVenForCap.maxCapacity
+    ) {
+      showError(
+        language === 'fr'
+          ? `La capacité (${eventCap}) dépasse le plafond du lieu (${selectedVenForCap.maxCapacity} places). Réduis-la ou change de lieu.`
+          : `Capacity (${eventCap}) exceeds this venue (${selectedVenForCap.maxCapacity} guests). Reduce it or pick another venue.`
+      );
+      return;
+    }
+
     try {
       const eventDateObj = eventDateTime || (formData.date ? new Date(formData.date) : null);
       if (eventDateObj && !isNaN(eventDateObj.getTime())) {
@@ -1000,6 +1049,63 @@ export default function BookerEventDashboardPage() {
       }
     } catch (e) {
       console.warn('Erreur vérification date passée côté app:', e);
+    }
+
+    const extras = formData.extraTicketTiers || [];
+    let ticketTiersPayload = null;
+    if (extras.length > 0) {
+      const basePriceNum = parseFloat(String(formData.price || '').replace(',', '.'));
+      if (!Number.isFinite(basePriceNum) || basePriceNum <= 0) {
+        showError(
+          language === 'fr'
+            ? 'Indique un « prix de la place » valide avant d\'ajouter d\'autres tarifs.'
+            : 'Enter a valid ticket price before adding other tiers.'
+        );
+        return;
+      }
+      ticketTiersPayload = [
+        {
+          id: 'general',
+          label: language === 'fr' ? 'Tarif standard' : 'General admission',
+          price: basePriceNum,
+        },
+      ];
+      const usedIds = new Set(['general']);
+      for (let i = 0; i < extras.length; i++) {
+        const row = extras[i] || {};
+        const label = String(row.label || '').trim();
+        const pNum = parseFloat(String(row.price || '').replace(',', '.'));
+        let tid = String(row.id || '')
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, '')
+          .slice(0, 32);
+        if (!tid) tid = `tier_${i + 1}`;
+        while (usedIds.has(tid)) tid = `${tid}_x`;
+        usedIds.add(tid);
+        if (!label || !Number.isFinite(pNum) || pNum <= 0) {
+          showError(
+            language === 'fr'
+              ? `Autre tarif ${i + 1} : libellé et prix (nombre positif) requis.`
+              : `Extra tier ${i + 1}: label and positive price required.`
+          );
+          return;
+        }
+        const entry = { id: tid, label: label.slice(0, 96), price: pNum };
+        const maxStr = String(row.maxSold || '').trim();
+        if (maxStr) {
+          const mx = parseInt(maxStr, 10);
+          if (!Number.isFinite(mx) || mx < 1) {
+            showError(
+              language === 'fr'
+                ? `Quota (places max) ligne ${i + 1} : entier positif ou laisser vide.`
+                : `Row ${i + 1} max quota: positive integer or leave empty.`
+            );
+            return;
+          }
+          entry.maxSold = mx;
+        }
+        ticketTiersPayload.push(entry);
+      }
     }
 
     setCreating(true);
@@ -1042,6 +1148,7 @@ export default function BookerEventDashboardPage() {
               },
             }
           : {}),
+        ...(ticketTiersPayload ? { ticketTiers: ticketTiersPayload } : {}),
       };
 
       const response = await api.createEvent(user.token, eventData);
@@ -1545,9 +1652,70 @@ export default function BookerEventDashboardPage() {
                 />
                 <Text style={styles.helperText}>
                   {language === 'fr'
-                    ? 'Le prix DJ sera fixé via un contrat (chat privé).'
-                    : 'DJ price will be set via a contract (private chat).'}
+                    ? 'Le prix DJ sera fixé via un contrat (chat privé). Tu peux proposer plusieurs tarifs entrée : le montant ci‑dessus est le palier standard (« general ») ; ajoute les autres sous « autres tarifs ».'
+                    : 'DJ fee is set via contract (private chat). You can offer several admission tiers: the amount above is the standard (« general ») tier; add more under « other tiers ».'}
                 </Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.subsectionLabel}>
+                  {language === 'fr' ? 'Autres tarifs (optionnel)' : 'Other ticket tiers (optional)'}
+                </Text>
+                <Text style={styles.helperText}>
+                  {language === 'fr'
+                    ? 'Pour chaque ligne : nom du billet (ex. early bird), prix en euros, quota max optionnel.'
+                    : 'Per row: tier name (e.g. early bird), price in EUR, optional max tickets.'}
+                </Text>
+                {(formData.extraTicketTiers || []).map((row, idx) => (
+                  <View key={`extratier-${idx}`} style={{ marginBottom: 12 }}>
+                    <View style={[styles.equipRow, { marginBottom: 0 }]}>
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        placeholder={
+                          language === 'fr'
+                            ? 'Libellé (ex. early bird)'
+                            : 'Label (e.g. early bird)'
+                        }
+                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        value={row.label || ''}
+                        onChangeText={(v) => updateExtraTicketTier(idx, 'label', v)}
+                      />
+                      <TextInput
+                        style={[styles.input, { width: 72, marginLeft: 8 }]}
+                        placeholder="€"
+                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        keyboardType="numeric"
+                        value={String(row.price ?? '')}
+                        onChangeText={(v) => updateExtraTicketTier(idx, 'price', v)}
+                      />
+                      <TouchableOpacity
+                        style={styles.equipMiniBtn}
+                        onPress={() => removeExtraTicketTier(idx)}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          language === 'fr' ? `Supprimer le tarif ${idx + 1}` : `Remove tier ${idx + 1}`
+                        }
+                      >
+                        <Text style={styles.equipMiniBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TextInput
+                      style={[styles.input, { marginTop: 8 }]}
+                      placeholder={
+                        language === 'fr' ? 'Quota max pour ce tarif (vide = illimité)' : 'Max tickets for this tier (empty = unlimited)'
+                      }
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      keyboardType="numeric"
+                      value={String(row.maxSold ?? '')}
+                      onChangeText={(v) => updateExtraTicketTier(idx, 'maxSold', v)}
+                    />
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.saveCatalogBtn} onPress={addExtraTicketTier}>
+                  <Text style={styles.saveCatalogBtnText}>
+                    {language === 'fr' ? '+ Ajouter un tarif' : '+ Add ticket tier'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
@@ -1562,6 +1730,13 @@ export default function BookerEventDashboardPage() {
                   value={formData.capacity}
                   onChangeText={(value) => handleChange('capacity', value)}
                 />
+                {selectedVenue?.maxCapacity != null ? (
+                  <Text style={styles.helperText}>
+                    {language === 'fr'
+                      ? `Plafond indiqué par le lieu : ${selectedVenue.maxCapacity} places (la création sera refusée au-delà).`
+                      : `Venue limit: ${selectedVenue.maxCapacity} guests (creation will be blocked above that).`}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={styles.inputGroup}>
@@ -1877,6 +2052,26 @@ export default function BookerEventDashboardPage() {
                     {formData.durationHours} {language === 'fr' ? 'heures' : 'hours'}
                   </Text>
                 </View>
+
+                {(formData.extraTicketTiers || []).some((x) => String(x?.label || '').trim()) ? (
+                  <View style={styles.summarySection}>
+                    <Text style={styles.summaryLabel}>
+                      {language === 'fr' ? 'Tarifs entrée (billets)' : 'Admission tiers'}
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      • {language === 'fr' ? 'Standard : ' : 'Standard: '}{formData.price ? `${formData.price} €` : '—'}
+                    </Text>
+                    {(formData.extraTicketTiers || []).map((row, idx) =>
+                      row?.label?.trim() ? (
+                        <Text key={`su-${idx}`} style={styles.summaryValue}>
+                          • {row.label}
+                          {row.price ? ` · ${row.price} €` : ''}
+                          {row.maxSold ? ` (max ${row.maxSold})` : ''}
+                        </Text>
+                      ) : null
+                    )}
+                  </View>
+                ) : null}
 
                 {selectedVenue && (
                   <View style={styles.summarySection}>

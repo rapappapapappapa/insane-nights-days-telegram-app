@@ -815,7 +815,11 @@ export default function FeedPage() {
                   onPress={() => handleEventPress(item.id)}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    `${item.title || 'Événement'}. ${item.price != null ? `${item.price} €. ` : ''}` +
+                    `${item.title || 'Événement'}. ${
+                      item.price != null
+                        ? `${item.hasMultipleTicketPrices ? (language === 'fr' ? 'dès ' : 'from ') : ''}${item.price} €. `
+                        : ''
+                    }` +
                     (language === 'fr' ? 'Ouvrir le détail' : 'Open details')
                   }
                 >
@@ -860,7 +864,8 @@ export default function FeedPage() {
                     <View style={styles.eventInfoRow}>
                       <Ionicons name="cash" size={16} color="rgba(255,255,255,0.6)" />
                       <Text style={styles.eventInfoText}>
-                        {item.price}€
+                        {(item.hasMultipleTicketPrices ? (language === 'fr' ? 'dès ' : 'from ') : '') +
+                          (item.price != null ? `${item.price}€` : '')}
                       </Text>
                     </View>
                   </View>

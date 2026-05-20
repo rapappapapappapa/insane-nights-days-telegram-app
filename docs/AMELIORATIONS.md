@@ -18,7 +18,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] *(option, **rebuild** seulement si natif)* **Lecteurs / SDK média natifs** — **uniquement si** tu abandonnes l’embed pour un **SDK** (contrôle OS, fond d’écran, etc.) ; **YouTube** idem (**WebView** = OTA).
 
-- [x] **Profil « prestataire » (MVP)** — modèle **`UserPrestataire`**, API création / update, switch **`PRESTATAIRE`**, inscription + dashboard placeholder mobile ; rattachement wizard événements **à suivre**.
+- [x] **Profil « prestataire » (MVP)** — modèle **`UserPrestataire`**, API, switch **`PRESTATAIRE`**, inscription + dashboard, **wizard booker / chat / contrat** en place ; périmètre métier élargi **à trancher** (devis détaillés, etc.).
 
 - [ ] **`[à trancher]`** **Profil « prestataire » — périmètre métier complet** (rôles, devis, chat dédié, etc.) ; la base données + routes permettent d’itérer en **OTA** sans rebuild.
 
@@ -42,7 +42,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] Places **hors Nox** sans décompte stock interne.
 
-- [ ] **Capacité** max = **capacité du lieu**.
+- [x] **Capacité** événement **plafonnée** par **`UserVenue.maxCapacity`** lorsque le lieu la renseigne (API **`POST /api/booker/events`**, wizard organisateur).
 
 - [ ] **Plusieurs DJs** + **correctif bug** actuel.
 
@@ -64,7 +64,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] **Récap final** + **modalités** chronologiques / prestations / prix.
 
-- [ ] **Location matériel** (cases, stock, réservation).
+- [ ] **Location matériel** — avancé (cases, stock) ; **MVP wizard + snapshot événement** déjà livré (voir CHANGELOG).
 
 - [ ] **Agenda matériel** (dispo / créneaux).
 
@@ -84,7 +84,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ## Dette technique
 
-- [ ] Billetterie — tests multi-phases, TTC / commission, capacité vs lieu.
+- [ ] Billetterie — tests multi-phases, TTC / commission, capacité vs lieu. *(Multi‑tarifs MVP : paliers + quotas + mobile booker / détail / feed — à durcir par tests.)*
 
 - [ ] Multi-DJs — tests + migrations **n-n** si nécessaire.
 
@@ -92,7 +92,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ## UX / accessibilité
 
-- [ ] Wizard : clarté infos vs tarifs, **TTC / commission**, erreur **capacité > lieu**.
+- [ ] Wizard : clarté infos vs tarifs, **TTC / commission**, message explicite **capacité > lieu** ✓ *(refus API + aide sous le champ ; à compléter avec billetterie)*.
 
 - [ ] Lieu secret : visibilité de l’adresse ; états accessibles.
 
@@ -106,4 +106,4 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ---
 
-*Dernière mise à jour : 19 mai 2026 — profil Prestataire (MVP) démarré ; ordre rebuild / OTA inchangé.*
+*Dernière mise à jour : 20 mai 2026 — plafond capacité lieu / événement (Phase 2), multi‑tarifs billetterie (MVP visible) ; backlog Phase 3 rafraîchi.*

@@ -30,6 +30,7 @@ export default function RegisterVenuePage() {
     venueName: '',
     email: user?.email || '',
     address: '',
+    maxCapacity: '',
     companyName: '',
     legalRepresentative: '',
     postalCode: '',
@@ -227,6 +228,18 @@ export default function RegisterVenuePage() {
       return;
     }
 
+    if (formData.maxCapacity != null && String(formData.maxCapacity).trim() !== '') {
+      const mc = parseInt(String(formData.maxCapacity).replace(/\s/g, ''), 10);
+      if (!Number.isFinite(mc) || mc < 1) {
+        showError(
+          language === 'fr'
+            ? 'Capacité du lieu : entre un nombre entier positif ou laisse vide.'
+            : 'Venue capacity: enter a positive whole number or leave empty.'
+        );
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -258,6 +271,7 @@ export default function RegisterVenuePage() {
         city: formData.city?.trim() || undefined,
         country: formData.country?.trim() || undefined,
         siret: formData.siret?.trim() || undefined,
+        maxCapacity: formData.maxCapacity?.trim() || undefined,
       });
 
       if (!response) {
@@ -422,6 +436,25 @@ export default function RegisterVenuePage() {
               ))}
             </View>
           )}
+
+          <Text style={styles.label}>
+            {language === 'fr'
+              ? 'Capacité max. du lieu (places, optionnel)'
+              : 'Max venue capacity (guests, optional)'}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder={language === 'fr' ? 'Ex: 350' : 'e.g. 350'}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            keyboardType="numeric"
+            value={formData.maxCapacity}
+            onChangeText={(value) => handleChange('maxCapacity', value)}
+          />
+          <Text style={styles.optionalHint}>
+            {language === 'fr'
+              ? 'Sert à plafonner la capacité des événements qui se déroulent chez vous. Tu pourras la modifier plus tard.'
+              : 'Caps event capacity for events at your venue. You can change it later.'}
+          </Text>
 
           <Text style={[styles.label, styles.legalSectionTitle]}>
             {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
@@ -617,5 +650,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
     marginBottom: 12,
+  },
+  optionalHint: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 16,
+    lineHeight: 18,
   },
 });

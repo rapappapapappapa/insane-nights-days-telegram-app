@@ -10,6 +10,7 @@ const {
   normalizeEquipmentRentalForStorage,
   normalizeBookerRentalInventory,
 } = require('../utils/rentalEquipment');
+const { normalizeTicketTiersInput, minTierPriceEUR } = require('../utils/ticketTiers');
 
 module.exports = function registerBookerOrganizerRoutes(app, deps) {
   const {
@@ -263,6 +264,7 @@ app.get('/api/booker/venues', authenticateToken, async (req, res) => {
       venueName: venue.venueName,
       address: venue.address,
       averageRatingGlobal: venue.averageRatingGlobal,
+      maxCapacity: venue.maxCapacity ?? null,
     }));
 
     res.json({
@@ -2250,6 +2252,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       image,
       durationHours,
       equipmentRental,
+      ticketTiers: ticketTiersBody,
     } = req.body;
 
     // Validation des champs requis
@@ -2280,6 +2283,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         venueName: true,
         address: true,
         averageRatingGlobal: true,
+        maxCapacity: true,
       },
     });
 
@@ -2352,6 +2356,21 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
 
     // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
     const calculatedPrice = price ? parseFloat(price) : 0;
+
+    let ticketTiersStored = null;
+    let priceForEvent = calculatedPrice;
+    if (ticketTiersBody != null && ticketTiersBody !== '') {
+      try {
+        ticketTiersStored = normalizeTicketTiersInput(ticketTiersBody);
+        const minP = minTierPriceEUR(ticketTiersStored);
+        if (minP != null) priceForEvent = minP;
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: e?.message || 'ticketTiers invalide.',
+        });
+      }
+    }
 
     // Vérifier les conflits de date/lieu
     // Convertir la date en DateTime
@@ -2486,6 +2505,21 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
 
     const equipmentRentalStored = normalizeEquipmentRentalForStorage(equipmentRental);
 
+    const eventCapacityParsed =
+      capacity != null && String(capacity).trim() !== ''
+        ? parseInt(String(capacity).replace(/\s/g, ''), 10)
+        : 100;
+    const eventCapacityFinal =
+      Number.isFinite(eventCapacityParsed) && eventCapacityParsed > 0 ? eventCapacityParsed : 100;
+
+    if (venue.maxCapacity != null && eventCapacityFinal > venue.maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `La capacité de l'événement (${eventCapacityFinal}) dépasse le maximum déclaré pour ce lieu (${venue.maxCapacity}).`,
+        code: 'EVENT_CAPACITY_EXCEEDS_VENUE',
+      });
+    }
+
     // Créer l'événement
     const event = await prisma.event.create({
       data: {
@@ -2500,11 +2534,12 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
               })()
             : null,
         location: venue.address,
-        price: calculatedPrice,
-        capacity: capacity ? parseInt(capacity) : 100,
+        price: priceForEvent,
+        capacity: eventCapacityFinal,
         genre: genre ? genre.trim() : 'Mixed',
         description: description ? description.trim() : null,
         image: image || null,
+        ...(ticketTiersStored ? { ticketTiers: ticketTiersStored } : {}),
         ...(equipmentRentalStored ? { equipmentRental: equipmentRentalStored } : {}),
         venueId: venueId,
         bookerId: booker.id,

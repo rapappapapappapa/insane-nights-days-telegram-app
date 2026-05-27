@@ -1,3 +1,4 @@
+const { tierLabelForTicket } = require('../utils/ticketTierDisplay');
 /**
  * Billets (achat classique), Stripe (webhook, intents, confirmation), liste paiements / tickets.
  */
@@ -732,6 +733,8 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       status: ticket.status,
       qrCode: ticket.qrCode,
       purchaseDate: ticket.purchaseDate.toISOString(),
+      tierId: ticket.tierId ?? null,
+      tierLabel: tierLabelForTicket(ticket.event.ticketTiers, ticket.tierId),
     }));
 
     res.json({ success: true, tickets: formattedTickets });
@@ -786,6 +789,8 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
       status: ticket.status,
       qrCode: ticket.qrCode,
       purchaseDate: ticket.purchaseDate.toISOString(),
+      tierId: ticket.tierId ?? null,
+      tierLabel: tierLabelForTicket(ticket.event.ticketTiers, ticket.tierId),
     }));
 
     res.json({ success: true, tickets: formattedTickets });

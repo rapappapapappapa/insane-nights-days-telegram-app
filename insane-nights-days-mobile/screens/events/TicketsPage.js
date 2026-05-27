@@ -243,6 +243,12 @@ export default function TicketsPage() {
                     </View>
                     <View style={styles.ticketPriceWrapper}>
                       <Text style={styles.ticketPrice}>{ticket.price}€</Text>
+                      {ticket.tierLabel ? (
+                        <Text style={styles.ticketTierHint}>
+                          {language === 'fr' ? 'Tarif : ' : 'Tier: '}
+                          {ticket.tierLabel}
+                        </Text>
+                      ) : null}
                       <Text style={styles.ticketStatus}>{ticket.status ?? 'valid'}</Text>
                     </View>
                   </View>
@@ -511,6 +517,14 @@ const styles = StyleSheet.create({
     textShadowColor: Colors.glow,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
+  },
+  ticketTierHint: {
+    marginTop: 2,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '500',
+    textAlign: 'right',
+    maxWidth: 160,
   },
   ticketStatus: {
     color: '#10b981',

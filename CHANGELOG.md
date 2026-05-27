@@ -4,6 +4,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 26 au 29 mai 2026 (mar. – ven.)
+
+### Ajouté (billetterie — palier visible sur Mes tickets)
+- **Serveur** : utilitaire **`tierLabelForTicket`** (`server/utils/ticketTierDisplay.js`, basé sur **`parseTicketTiersFromDb`**) ; **`GET /api/user/me/tickets`** et **`GET /api/user/:userId/tickets`** renvoient **`tierId`** et **`tierLabel`** pour chaque billet.
+- **Mobile** : **`TicketsPage`** — affichage du libellé de tarif (**`ticket.tierLabel`**) sous le prix lorsqu’il est disponible.
+
+### Documentation
+- **`docs/STACK.md`** — description de la stack (Expo, serveur, Prisma, Railway, intégrations).
+
+---
+
 ## Semaine du 19 au 22 mai 2026 (mar. – ven.)
 
 ### Ajouté (billetterie — multi‑tarifs, produit visible)

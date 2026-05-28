@@ -13,6 +13,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **API** : **`GET /api/user/me/tickets`** et **`GET /api/user/:userId/tickets`** enrichissent chaque billet avec **`tierId`** et **`tierLabel`** (null si billet legacy ou palier inconnu).
 - **Mobile** : **`TicketsPage`** — ligne **« Tarif : … »** / **« Tier: … »** sous le prix lorsque **`tierLabel`** est présent ; style **`ticketTierHint`**.
 
+### Corrigé (mobile — Mes profils, scroll Android)
+- **`ProfilePage`** et **`SwitchProfilePage`** : **`paddingBottom`** du scroll basé sur **`useSafeAreaInsets`** (barre de navigation Android / edge-to-edge) pour atteindre le dernier profil (**Prestataire**, etc.) sans contenu masqué en bas.
+
 ### Documentation
 - **`docs/STACK.md`** — référentiel stack (Expo/RN, Express, Prisma/PostgreSQL, Stripe, R2, Railway, variables d’env., client web CRA).
 - **`docs/guides/WORKSHOP_PALIER_SUR_MES_TICKETS.md`** (+ corrigé **`*_SOLUTION`**) — parcours pas à pas pour la feature Mes tickets (fichiers de travail, hors CHANGELOG détaillé).

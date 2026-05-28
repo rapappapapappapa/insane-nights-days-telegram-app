@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
@@ -68,6 +69,7 @@ export default function SwitchProfilePage() {
   const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser, refreshCurrentUser } = useAuth();
+  const insets = useSafeAreaInsets();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
   const [profiles, setProfiles] = useState(null);
@@ -199,7 +201,7 @@ export default function SwitchProfilePage() {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
           <TouchableOpacity style={styles.backButton} onPress={goBack}>
             <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
           </TouchableOpacity>
@@ -216,13 +218,21 @@ export default function SwitchProfilePage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
         <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 20) + 56 },
+        ]}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>
             {language === 'fr' ? 'Changer de profil' : 'Switch Profile'}
@@ -319,7 +329,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   topBar: {
-    paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
   },

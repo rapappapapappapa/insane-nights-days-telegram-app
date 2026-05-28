@@ -26,6 +26,7 @@ import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
@@ -40,6 +41,7 @@ import { useToast } from '../../hooks/useToast';
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser, logout } = useAuth();
   const { navigate } = useNavigation();
+  const insets = useSafeAreaInsets();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
   // Utiliser authUser du contexte au lieu des props user (source de vérité)
@@ -210,7 +212,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
         <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
           <Text style={styles.backButtonTopText}>← Retour</Text>
         </TouchableOpacity>
@@ -218,10 +220,14 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, 20) + 56 },
+        ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
       >
         <View style={styles.header}>
           <View style={styles.avatar}>
@@ -741,7 +747,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
 
                 {/* Profils Prestataire */}
                 {profiles.profiles?.prestataire && profiles.profiles.prestataire.length > 0 && (
-                  <View style={styles.profileSection}>
+                  <View style={[styles.profileSection, styles.profileSectionLast]}>
                     <Text style={styles.profileSectionTitle}>🛠️ Prestataire</Text>
                     {profiles.profiles.prestataire.map((profile) => (
                       <View key={profile.id} style={styles.profileItemRow}>
@@ -839,7 +845,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 10,
     backgroundColor: Colors.background,
@@ -1149,6 +1154,10 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     marginBottom: 20,
+  },
+  profileSectionLast: {
+    marginBottom: 4,
+    paddingBottom: 4,
   },
   profileSectionTitle: {
     color: '#ffffff',

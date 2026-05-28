@@ -6,12 +6,20 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 26 au 29 mai 2026 (mar. – ven.)
 
-### Ajouté (billetterie — palier visible sur Mes tickets)
-- **Serveur** : utilitaire **`tierLabelForTicket`** (`server/utils/ticketTierDisplay.js`, basé sur **`parseTicketTiersFromDb`**) ; **`GET /api/user/me/tickets`** et **`GET /api/user/:userId/tickets`** renvoient **`tierId`** et **`tierLabel`** pour chaque billet.
-- **Mobile** : **`TicketsPage`** — affichage du libellé de tarif (**`ticket.tierLabel`**) sous le prix lorsqu’il est disponible.
+*Suite de la billetterie multi‑tarifs (création, achat, feed — voir semaine **19–22**) ; entrées ci‑dessous = livraisons **de cette semaine** uniquement.*
+
+### Ajouté (billetterie — palier lisible sur Mes tickets)
+- **Serveur** : **`server/utils/ticketTierDisplay.js`** — **`tierLabelForTicket`** (résolution **`tierId` → libellé** via **`parseTicketTiersFromDb`** sur **`Event.ticketTiers`**).
+- **API** : **`GET /api/user/me/tickets`** et **`GET /api/user/:userId/tickets`** enrichissent chaque billet avec **`tierId`** et **`tierLabel`** (null si billet legacy ou palier inconnu).
+- **Mobile** : **`TicketsPage`** — ligne **« Tarif : … »** / **« Tier: … »** sous le prix lorsque **`tierLabel`** est présent ; style **`ticketTierHint`**.
 
 ### Documentation
-- **`docs/STACK.md`** — description de la stack (Expo, serveur, Prisma, Railway, intégrations).
+- **`docs/STACK.md`** — référentiel stack (Expo/RN, Express, Prisma/PostgreSQL, Stripe, R2, Railway, variables d’env., client web CRA).
+- **`docs/guides/WORKSHOP_PALIER_SUR_MES_TICKETS.md`** (+ corrigé **`*_SOLUTION`**) — parcours pas à pas pour la feature Mes tickets (fichiers de travail, hors CHANGELOG détaillé).
+
+### Ops (base PostgreSQL Railway)
+- **`prisma migrate deploy`** : application des migrations **`20260520103000_user_venue_max_capacity`** et **`20260520120000_event_ticket_tiers`**.
+- **Dérive corrigée** : migration **`20260519200000_event_equipment_rental`** déjà appliquée en base (colonne **`equipmentRental`** existante) — marquée **`migrate resolve --applied`** puis enchaînement des migrations suivantes ; **`prisma generate`** côté serveur.
 
 ---
 

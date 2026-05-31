@@ -180,15 +180,8 @@ export default function DjMediasSection(props) {
                 
                 let finalVideoUrl = videoUrl;
                 if (isLocalFile) {
-                  try {
-                    if (videoUrl.includes('gogg') || videoUrl.includes('tracer') || 
-                        (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
-                      finalVideoUrl = require('../../assets/videos/gogg-tracer.mp4');
-                    }
-                  } catch (e) {
-                    console.error('Erreur chargement vidéo locale:', e);
-                    finalVideoUrl = videoUrl;
-                  }
+                  // Vidéos locales : pas de require statique (asset absent du repo) — URL normalisée ou ignorée
+                  finalVideoUrl = normalizeMediaUrl(videoUrl) || videoUrl;
                 } else {
                   // Pour les URLs HTTP/HTTPS, s'assurer qu'elles sont complètes
                   if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {

@@ -575,14 +575,7 @@ export default function DjProfilePage() {
                       if (isLocalFileUri) {
                         isUnavailable = true;
                       } else if (isLocalAsset) {
-                        try {
-                          if (videoUrl.includes('gogg') || videoUrl.includes('tracer') ||
-                              (videoTitle && typeof videoTitle === 'string' && videoTitle.toLowerCase().includes('tracer'))) {
-                            finalVideoUrl = require('../../assets/videos/gogg-tracer.mp4');
-                          }
-                        } catch {
-                          finalVideoUrl = videoUrl;
-                        }
+                        finalVideoUrl = normalizeMediaUrl(videoUrl) || videoUrl;
                       } else {
                         finalVideoUrl = normalizeMediaUrl(videoUrl);
                       }

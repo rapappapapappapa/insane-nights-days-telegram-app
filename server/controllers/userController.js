@@ -3,11 +3,9 @@
  */
 
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { validatePassword } = require('../utils/validation');
 const { handleError, sendError, sendSuccess } = require('../utils/helpers');
-
-const prisma = new PrismaClient();
 const DEBUG_LOGS = process.env.DEBUG_LOGS === 'true';
 const dlog = (...args) => {
   if (DEBUG_LOGS) console.log(...args);

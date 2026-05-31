@@ -4,7 +4,7 @@
  * Génère un PDF formaté et l'attache à l'email.
  */
 
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { sendMail, isConfigured } = require('./mailer');
 const {
   generateDjContractPdf,
@@ -12,8 +12,6 @@ const {
   generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 } = require('./contractPdf');
-
-const prisma = new PrismaClient();
 
 const PAYMENT_TERMS_LABELS = {
   jour_booking: { fr: 'Jour booking', en: 'Booking day' },

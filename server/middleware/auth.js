@@ -3,10 +3,8 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { JWT_SECRET } = require('../utils/jwtConfig');
-
-const prisma = new PrismaClient();
 
 /**
  * Middleware pour vérifier le token JWT dans les requêtes

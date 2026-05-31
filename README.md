@@ -1,6 +1,9 @@
-# 🎉 Insane Nights & Days - App Telegram
+# 🎉 Insane Nights & Days — Nox
 
-**Plateforme d'événements musique révolutionnaire avec blockchain TON**
+**Plateforme événementielle (app mobile Nox, API Railway, client web Telegram)**
+
+> **Doc à jour :** voir [`docs/STACK.md`](docs/STACK.md), [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) et [`CHANGELOG.md`](CHANGELOG.md).  
+> Ce README racine est partiellement obsolète (SQLite, port 5000 local, etc.) — la prod tourne sur **PostgreSQL + Railway**.
 
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22.2.0-green.svg)](https://nodejs.org/)

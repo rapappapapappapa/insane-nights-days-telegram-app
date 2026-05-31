@@ -4,7 +4,7 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const {
   validateRegistration,
   validateLogin,
@@ -19,7 +19,6 @@ const { verifyGoogleIdToken } = require('../utils/googleIdTokenVerify');
 const { verifyAppleIdentityToken } = require('../utils/appleIdTokenVerify');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
-const prisma = new PrismaClient();
 const { JWT_SECRET, JWT_EXPIRES_IN } = require('../utils/jwtConfig');
 
 /**

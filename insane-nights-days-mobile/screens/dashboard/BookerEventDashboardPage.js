@@ -94,6 +94,36 @@ function stepRequirementsHint(step, lang) {
 
 const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
 
+/** Reconstruit les créneaux depuis le contexte (survit au démontage navigation selectDj → profil DJ). */
+function buildDjSlotsFromFormData(fd) {
+  const ids = fd?.djIds || [];
+  if (!ids.length) return [emptyDjSlot()];
+  const assigns = fd?.djSlotAssignments || [];
+  return [
+    ...ids.map((id, i) => ({
+      djId: id,
+      slotStart: assigns[i]?.slotStart || '',
+      slotEnd: assigns[i]?.slotEnd || '',
+    })),
+    emptyDjSlot(),
+  ];
+}
+
+/** Évite d'écraser les DJs déjà choisis quand le state local repart à vide au remontage. */
+function mergeDjSlotsWithForm(prev, fd) {
+  const formIds = fd?.djIds || [];
+  if (!formIds.length) {
+    return prev.length ? prev : [emptyDjSlot()];
+  }
+  const prevFilled = prev.filter((s) => s.djId).map((s) => s.djId);
+  const aligned =
+    formIds.length === prevFilled.length && formIds.every((id, i) => prevFilled[i] === id);
+  if (aligned && prev.length >= formIds.length) {
+    return prev.map((s) => ({ ...s }));
+  }
+  return buildDjSlotsFromFormData(fd);
+}
+
 /**
  * Premier rendu du wizard : si on revient depuis la sélection lieu/DJ, éviter l’étape 1
  * (state local repart à 1 au remontage de l’écran ; le brouillon « Reprendre » peut aussi
@@ -266,7 +296,7 @@ export default function BookerEventDashboardPage() {
   }, [currentStep, setBookerEventWizardStep]);
 
   // Slots DJ pour la création d'événement (créneau horaire par ligne)
-  const [djSlots, setDjSlots] = useState([emptyDjSlot()]);
+  const [djSlots, setDjSlots] = useState(() => buildDjSlotsFromFormData(formData));
   const [slotTimePicker, setSlotTimePicker] = useState(null);
   const [tempSlotTime, setTempSlotTime] = useState(() => new Date());
   
@@ -399,15 +429,7 @@ export default function BookerEventDashboardPage() {
       return;
     }
     if (formData.djIds.length > 0) {
-      const assigns = formData.djSlotAssignments || [];
-      setDjSlots([
-        ...formData.djIds.map((id, i) => ({
-          djId: id,
-          slotStart: assigns[i]?.slotStart || '',
-          slotEnd: assigns[i]?.slotEnd || '',
-        })),
-        emptyDjSlot(),
-      ]);
+      setDjSlots(buildDjSlotsFromFormData(formData));
     }
     hasInitializedSlots.current = true;
   }, [currentStep, formData.djIds, formData.djSlotAssignments, routeParams]);
@@ -449,7 +471,7 @@ export default function BookerEventDashboardPage() {
       const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
       if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
         setDjSlots((prev) => {
-          const newSlots = [...prev];
+          const newSlots = mergeDjSlotsWithForm(prev, formData);
           while (newSlots.length <= safeSlotIndex) {
             newSlots.push(emptyDjSlot());
           }
@@ -464,7 +486,7 @@ export default function BookerEventDashboardPage() {
         }
       } else if (currentStep >= 3) {
         setDjSlots((prev) => {
-          const newSlots = [...prev];
+          const newSlots = mergeDjSlotsWithForm(prev, formData);
           const emptyIndex = newSlots.findIndex((s) => !s.djId);
           if (emptyIndex !== -1) {
             newSlots[emptyIndex] = { ...newSlots[emptyIndex], djId: currentDjId };
@@ -495,8 +517,10 @@ export default function BookerEventDashboardPage() {
       const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
       if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
         setDjSlots((prev) => {
-          const newSlots = [...prev];
-          newSlots[safeSlotIndex] = emptyDjSlot();
+          const newSlots = mergeDjSlotsWithForm(prev, formData);
+          if (newSlots[safeSlotIndex]) {
+            newSlots[safeSlotIndex] = emptyDjSlot();
+          }
           const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
           syncSlotsToForm(timed);
           return timed;
@@ -719,15 +743,7 @@ export default function BookerEventDashboardPage() {
         setDjSlots(d.djSlots);
         hasInitializedSlots.current = true;
       } else if (d.formData?.djIds?.length) {
-        const assigns = d.formData.djSlotAssignments || [];
-        setDjSlots([
-          ...d.formData.djIds.map((id, i) => ({
-            djId: id,
-            slotStart: assigns[i]?.slotStart || '',
-            slotEnd: assigns[i]?.slotEnd || '',
-          })),
-          emptyDjSlot(),
-        ]);
+        setDjSlots(buildDjSlotsFromFormData(d.formData));
         hasInitializedSlots.current = true;
       }
     },

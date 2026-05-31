@@ -92,6 +92,7 @@ const SCREENS = {
   tickets: TicketsPage,
   purchases: PurchasesPage,
   djRatings: DjRatingsPage,
+  ranking: RankingPage,
   venueRatings: VenueRatingsPage,
   rateEvent: RateEventPage,
   djList: DjListPage,

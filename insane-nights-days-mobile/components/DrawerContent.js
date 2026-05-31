@@ -51,7 +51,7 @@ const MENU_DEF = [
     descEn: 'Discover DJs',
   },
   {
-    id: 'djRatings',
+    id: 'ranking',
     icon: 'trophy-outline',
     titleFr: 'Classement DJs',
     titleEn: 'DJ ranking',

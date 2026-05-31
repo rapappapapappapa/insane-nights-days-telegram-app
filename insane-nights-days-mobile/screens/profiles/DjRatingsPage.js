@@ -28,6 +28,8 @@ export default function DjRatingsPage() {
   useEffect(() => {
     if (djId) {
       fetchRatings();
+    } else {
+      setLoading(false);
     }
   }, [djId]);
 

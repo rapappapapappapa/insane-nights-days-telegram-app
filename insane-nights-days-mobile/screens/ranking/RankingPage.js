@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -10,54 +10,40 @@ import {
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useNavigation } from '../../contexts/NavigationContext';
 import { api } from '../../api/config';
 
-const mockDjs = [
-  {
-    id: 'dj-1',
-    name: 'DJ Neon',
-    genre: 'Electro',
-    currentRank: 1,
-    score: 982,
-    followers: 18420,
-    lastEvent: 'Insane Night - Soirée Electro',
-    wins: 8,
-    losses: 1,
-    trend: '+3',
-  },
-  {
-    id: 'dj-2',
-    name: 'Mixmaster Nova',
-    genre: 'Techno',
-    currentRank: 2,
-    score: 951,
-    followers: 16540,
-    lastEvent: 'Techno Underground Session',
-    wins: 6,
-    losses: 2,
-    trend: '+1',
-  },
-  {
-    id: 'dj-3',
-    name: 'Bass Storm',
-    genre: 'Drum & Bass',
-    currentRank: 3,
-    score: 917,
-    followers: 15210,
-    lastEvent: 'Bass Revolution - Drum & Bass',
-    wins: 7,
-    losses: 3,
-    trend: '-1',
-  },
-];
+function normalizeRankingDj(dj, index) {
+  const totalRatings =
+    dj.totalRatings ??
+    (Number(dj.totalRatingsCommunity || 0) +
+      Number(dj.totalRatingsBooker || 0) +
+      Number(dj.totalRatingsVenue || 0));
 
-export default function RankingPage({ onNavigate }) {
-  const [ranking, setRanking] = useState(mockDjs);
+  return {
+    id: dj.id || dj.userId || `dj-${index}`,
+    userId: dj.userId,
+    name: dj.artistName || dj.name || dj.username || 'DJ',
+    genre: dj.genre || '—',
+    currentRank: dj.currentRank ?? index + 1,
+    score: dj.score ?? Math.round(Number(dj.averageRatingGlobal || 0) * 100),
+    followers: Number(dj.followers ?? totalRatings ?? 0),
+    lastEvent: dj.lastEvent || dj.city || '—',
+    wins: Number(dj.wins ?? 0),
+    losses: Number(dj.losses ?? 0),
+    trend: typeof dj.trend === 'string' ? dj.trend : '—',
+  };
+}
+
+export default function RankingPage() {
+  const { language } = useLanguage();
+  const { goBack, navigate } = useNavigation();
+  const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchRanking = async (isRefresh = false) => {
+  const fetchRanking = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -67,33 +53,46 @@ export default function RankingPage({ onNavigate }) {
     try {
       const data = await api.getDjRanking();
       if (data?.success && Array.isArray(data.djs)) {
-        setRanking(data.djs);
+        setRanking(data.djs.map(normalizeRankingDj));
       } else {
-        setRanking(mockDjs);
+        setRanking([]);
       }
     } catch (error) {
-      setRanking(mockDjs);
+      console.error('Erreur classement DJs:', error);
+      setRanking([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRanking();
-  }, []);
+  }, [fetchRanking]);
 
   const topThree = useMemo(() => ranking.slice(0, 3), [ranking]);
   const others = useMemo(() => ranking.slice(3), [ranking]);
 
-  if (loading && ranking.length === 0) {
+  const handleDjPress = (dj) => {
+    navigate('djProfile', {
+      djId: dj.id,
+      djUserId: dj.userId,
+      djName: dj.name,
+    });
+  };
+
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar style="light" />
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Chargement du classement...</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => onNavigate('menu')}>
-          <Text style={styles.backButtonText}>← Retour</Text>
+        <Text style={styles.loadingText}>
+          {language === 'fr' ? 'Chargement du classement...' : 'Loading ranking...'}
+        </Text>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
+          <Text style={styles.backButtonText}>
+            ← {language === 'fr' ? 'Retour' : 'Back'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -103,8 +102,10 @@ export default function RankingPage({ onNavigate }) {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => onNavigate('menu')}>
-          <Text style={styles.backButtonTopText}>← Retour</Text>
+        <TouchableOpacity style={styles.backButtonTop} onPress={goBack}>
+          <Text style={styles.backButtonTopText}>
+            ← {language === 'fr' ? 'Retour' : 'Back'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -117,42 +118,84 @@ export default function RankingPage({ onNavigate }) {
       >
         <View style={styles.header}>
           <Text style={styles.headerEmoji}>🏆</Text>
-          <Text style={styles.headerTitle}>Classement des DJs</Text>
-          <Text style={styles.headerSubtitle}>Découvrez les artistes les plus chauds du moment</Text>
+          <Text style={styles.headerTitle}>
+            {language === 'fr' ? 'Classement des DJs' : 'DJ Ranking'}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {language === 'fr'
+              ? 'Découvrez les artistes les plus chauds du moment'
+              : 'Discover the hottest artists right now'}
+          </Text>
         </View>
 
-        <View style={styles.podium}>
-          {topThree.map((dj, index) => (
-            <View key={dj.id} style={[styles.podiumStep, styles[`podiumStep${index + 1}`]]}>
-              <Text style={styles.podiumRank}>#{dj.currentRank}</Text>
-              <Text style={styles.podiumName}>{dj.name}</Text>
-              <Text style={styles.podiumGenre}>{dj.genre}</Text>
-              <Text style={styles.podiumScore}>{dj.score} pts</Text>
-              <Text style={styles.podiumFollowers}>{dj.followers.toLocaleString()} fans</Text>
-              <Text style={styles.podiumTrend}>{dj.trend}</Text>
-            </View>
-          ))}
-        </View>
+        {ranking.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              {language === 'fr' ? 'Aucun DJ classé pour le moment.' : 'No ranked DJs yet.'}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {topThree.length > 0 && (
+              <View style={styles.podium}>
+                {topThree.map((dj, index) => (
+                  <TouchableOpacity
+                    key={dj.id}
+                    style={[styles.podiumStep, styles[`podiumStep${index + 1}`]]}
+                    onPress={() => handleDjPress(dj)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.podiumRank}>#{dj.currentRank}</Text>
+                    <Text style={styles.podiumName}>{dj.name}</Text>
+                    <Text style={styles.podiumGenre}>{dj.genre}</Text>
+                    <Text style={styles.podiumScore}>{dj.score} pts</Text>
+                    <Text style={styles.podiumFollowers}>
+                      {dj.followers.toLocaleString()} {language === 'fr' ? 'avis' : 'reviews'}
+                    </Text>
+                    {dj.trend !== '—' ? <Text style={styles.podiumTrend}>{dj.trend}</Text> : null}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
-        <View style={styles.list}>
-          {others.map((dj) => (
-            <View key={dj.id} style={styles.listItem}>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankBadgeText}>#{dj.currentRank}</Text>
+            {others.length > 0 && (
+              <View style={styles.list}>
+                {others.map((dj) => (
+                  <TouchableOpacity
+                    key={dj.id}
+                    style={styles.listItem}
+                    onPress={() => handleDjPress(dj)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.rankBadge}>
+                      <Text style={styles.rankBadgeText}>#{dj.currentRank}</Text>
+                    </View>
+                    <View style={styles.listContent}>
+                      <Text style={styles.listName}>{dj.name}</Text>
+                      <Text style={styles.listMeta}>
+                        {dj.genre} • {dj.followers.toLocaleString()}{' '}
+                        {language === 'fr' ? 'avis' : 'reviews'} • {dj.score} pts
+                      </Text>
+                      <Text style={styles.listEvent}>
+                        {language === 'fr' ? 'Ville' : 'City'} : {dj.lastEvent}
+                      </Text>
+                    </View>
+                    {dj.trend !== '—' ? (
+                      <Text
+                        style={[
+                          styles.listTrend,
+                          dj.trend.startsWith('-') ? styles.trendDown : styles.trendUp,
+                        ]}
+                      >
+                        {dj.trend}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
               </View>
-              <View style={styles.listContent}>
-                <Text style={styles.listName}>{dj.name}</Text>
-                <Text style={styles.listMeta}>
-                  {dj.genre} • {dj.followers.toLocaleString()} fans • {dj.wins} victoires / {dj.losses} défaites
-                </Text>
-                <Text style={styles.listEvent}>Dernier événement : {dj.lastEvent}</Text>
-              </View>
-              <Text style={[styles.listTrend, dj.trend.startsWith('-') ? styles.trendDown : styles.trendUp]}>
-                {dj.trend}
-              </Text>
-            </View>
-          ))}
-        </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -226,6 +269,15 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
+    textAlign: 'center',
+  },
+  emptyState: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 15,
     textAlign: 'center',
   },
   podium: {
@@ -339,4 +391,3 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
 });
-

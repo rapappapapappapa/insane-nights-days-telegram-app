@@ -38,15 +38,19 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ## Phase 2 — Priorité produit forte (`[souvent OTA]`)
 
-- [ ] Billetterie **multi-tarifs** / **phases** — infos vs grille de prix ; libellés ; total ; **TTC ~20 %** ; **commission Nox** ; phases répétables.
+- [x] Billetterie **multi-tarifs (MVP)** — paliers à la création événement, achat avec **`tierId`**, feed / détail « dès X € », **`tierLabel`** sur Mes tickets. *Reste : phases répétables, **TTC ~20 %**, **commission Nox**, édition des tarifs après création.*
+
+- [ ] Billetterie **phases** de vente (early bird → regular → last minute, etc.).
 
 - [ ] Places **hors Nox** sans décompte stock interne.
 
 - [x] **Capacité** événement **plafonnée** par **`UserVenue.maxCapacity`** lorsque le lieu la renseigne (API **`POST /api/booker/events`**, wizard organisateur).
 
-- [ ] **Plusieurs DJs** + **correctif bug** actuel.
+- [x] **Plusieurs DJs** à la création + **fix** réhydratation **`djSlots`** au retour du sélecteur DJ. *Reste : modèle **n-n** / tests de bout en bout si besoin.*
 
 - [ ] **Lieu secret** — révélation adresse **à partir d’une date**.
+
+- [ ] **`EventsPage`** : affichage **« dès X € »** aligné sur le feed (multi-tarifs).
 
 ---
 
@@ -84,9 +88,23 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ## Dette technique
 
-- [ ] Billetterie — tests multi-phases, TTC / commission, capacité vs lieu. *(Multi‑tarifs MVP : paliers + quotas + mobile booker / détail / feed — à durcir par tests.)*
+- [x] **Serveur modularisé** — routes booker / feed / chat / media découpées ; **`index.js`** allégé ; **`prisma migrate deploy`** au démarrage Railway (plus de **`db push --accept-data-loss`**).
 
-- [ ] Multi-DJs — tests + migrations **n-n** si nécessaire.
+- [x] **Dashboard DJ** — sections extraites (`components/djDashboard/sections/`) + styles dédiés ; fix bundle EAS.
+
+- [ ] **Dashboard booker** — **`BookerDashboardPage.js`** (~4 600 lignes) : **priorité n°1** même pattern que DJ (sections / onglets).
+
+- [ ] **Wizard événement** — **`BookerEventDashboardPage.js`** (~3 200 lignes) : étapes en composants.
+
+- [ ] **Dashboard lieu** — **`VenueDashboardPage.js`** (~2 300 lignes) : sections.
+
+- [x] **Tests serveur (base)** — **`npm test`** : validation, **`ticketTiers`**, **`contractHelpers`**, **`ratingCalculations`** (17 tests) ; **CI GitHub Actions** sur push/PR.
+
+- [ ] Billetterie — tests **phases / TTC / commission** ; édition **`ticketTiers`** après création.
+
+- [ ] Multi-DJs — tests E2E + migrations **n-n** si le produit l’exige.
+
+- [ ] **Scroll safe area** — généraliser **`useSafeAreaInsets`** sur les longs **`ScrollView`** (dashboards, wizards) comme **Mes profils**.
 
 ---
 
@@ -106,4 +124,4 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ---
 
-*Dernière mise à jour : 20 mai 2026 — plafond capacité lieu / événement (Phase 2), multi‑tarifs billetterie (MVP visible) ; backlog Phase 3 rafraîchi.*
+*Dernière mise à jour : 5 juin 2026 — modularisation serveur + DJ, multi-tarifs MVP, multi-DJ fix, CI tests ; prochain gros chantier dette : **BookerDashboardPage**.*

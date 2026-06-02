@@ -4,6 +4,46 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 2 au 5 juin 2026 (lun. – jeu.)
+
+### Refactorisé (serveur — routes et `index.js` allégés)
+- **`server/index.js`** : point d’entrée réduit ; enregistrement des routes via modules dédiés (**`registerEventPublicRoutes`**, **`registerDjPublicRoutes`**, **`registerProfileRoutes`**, **`registerRatingRoutes`**, **`registerMiscRoutes`**, etc.).
+- **Booker** découpé sous **`server/routes/booker/`** : contrats, CRUD événements, paiements, ressources (DJs / lieux / prestataires), staff / scan.
+- **Feed** sous **`server/routes/feed/`** : liste, posts, engagement (likes / commentaires), follow.
+- **Chat** sous **`server/routes/chat/`** : conversations, privé, groupes, non-lus.
+- **Médias / bookings** sous **`server/routes/media/`** : upload, public, invitations, listes bookings.
+- **Utilitaires** extraits : **`contractHelpers.js`**, **`ratingCalculations.js`** ; **`server/lib/prisma.js`** (singleton Prisma partagé).
+- **Scripts** d’extraction / découpage (`split-index-routes.js`, `split-booker-routes.js`, etc.) pour maintenance du découpage.
+
+### Refactorisé (mobile — dashboard DJ)
+- **`DjDashboardPage`** : logique éclatée en **7 sections** (`components/djDashboard/sections/` : profil, tarifs, médias, matériel, bookings, paiements, avis) + **`DjDashboardPage.styles.js`** + **`utils/djDashboardUtils.js`**.
+
+### Ajouté (serveur — tests unitaires)
+- **`npm test`** (`node --test`) : **`tests/validation.test.js`**, **`ticketTiers.test.js`**, **`contractHelpers.test.js`**, **`ratingCalculations.test.js`**.
+
+### Ajouté (qualité — CI GitHub Actions)
+- **`.github/workflows/ci.yml`** : sur push/PR **`railway-phase1`** / **`main`** — **`npm ci`** + **`npm test`** + **`node --check index.js`** dans **`server/`**.
+
+### Documentation
+- **`docs/AMELIORATIONS.md`** : backlog aligné sur l’état réel (multi-tarifs MVP, multi-DJ, modularisation, dette restante **BookerDashboard** en priorité).
+
+### Corrigé (mobile — classement DJs)
+- **Menu** : entrée classement pointe vers l’écran **`ranking`** (page dédiée) au lieu d’un mauvais routage.
+- **`RankingPage`** : données branchées sur **`GET /api/djs/ranking`** avec mapping API cohérent.
+- **`DjRatingsPage`** : plus de chargement infini lorsqu’aucun **`djId`** n’est fourni.
+
+### Corrigé (mobile — build dashboard DJ / EAS)
+- Suppression de **JSX orphelin** après extraction des sections DJ (bundle Metro / export EAS).
+- Retrait d’un **`require`** vidéo locale absente (**`gogg-tracer.mp4`**) qui cassait le bundling.
+
+### Corrigé (mobile — création événement booker, multi-DJs)
+- **`BookerEventDashboardPage`** : au retour du sélecteur DJ, **réhydratation de `djSlots`** depuis **`formData`** pour ne plus perdre les DJs / créneaux déjà choisis (remontage d’écran).
+
+### Modifié (déploiement Railway)
+- **`server/railway.json`** : démarrage avec **`npx prisma migrate deploy`** (au lieu de **`db push --accept-data-loss`**) avant **`npm start`**.
+
+---
+
 ## Semaine du 26 au 29 mai 2026 (mar. – ven.)
 
 *Suite de la billetterie multi‑tarifs (création, achat, feed — voir semaine **19–22**) ; entrées ci‑dessous = livraisons **de cette semaine** uniquement.*
@@ -17,7 +57,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`ProfilePage`** et **`SwitchProfilePage`** : **`paddingBottom`** du scroll basé sur **`useSafeAreaInsets`** (barre de navigation Android / edge-to-edge) pour atteindre le dernier profil (**Prestataire**, etc.) sans contenu masqué en bas.
 
 ### Documentation
-- **`docs/STACK.md`** — référentiel stack (Expo/RN, Express, Prisma/PostgreSQL, Stripe, R2, Railway, variables d’env., client web CRA).
+- **`docs/STACK.md`** — référentiel stack (Expo/RN, Express, Prisma/PostgreSQL, Stripe, R2, Railway, variables d’env.,  client web CRA).
 - **`docs/guides/WORKSHOP_PALIER_SUR_MES_TICKETS.md`** (+ corrigé **`*_SOLUTION`**) — parcours pas à pas pour la feature Mes tickets (fichiers de travail, hors CHANGELOG détaillé).
 
 ### Ops (base PostgreSQL Railway)

@@ -46,6 +46,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 26 au 29 mai 2026 (mar. – ven.)
 
+### Refactoré (mobile — dashboards organisateur & lieu)
+- **`BookerDashboardPage.js`** (~4 500 → ~500 lignes) : styles → **`BookerDashboardPage.styles.js`** ; UI → **`components/bookerDashboard/`** ; logique → hooks **`useBookerProfile`**, **`useBookerEvents`**, **`useBookerMessaging`**, **`useBookerDjVenueRoute`** + **`utils/bookerDashboardUtils.js`**.
+- **`BookerEventDashboardPage.js`** (~3 000 → ~200 lignes) : wizard création événement découpé en **`useBookerEventWizard`**, **`utils/bookerEventWizardUtils.js`**, 5 étapes sous **`components/bookerEventWizard/sections/`**, modales pickers + succès.
+- **`VenueDashboardPage.js`** (~2 260 → ~185 lignes) : styles → **`VenueDashboardPage.styles.js`** ; onglets Infos / Médias / Avis / Réservations → **`components/venueDashboard/sections/`** ; chat & contrats → **`VenueChatModal`**, **`VenueContractModals`** ; logique → **`useVenueDashboard`** + **`utils/venueDashboardUtils.js`**.
+
 *Suite de la billetterie multi‑tarifs (création, achat, feed — voir semaine **19–22**) ; entrées ci‑dessous = livraisons **de cette semaine** uniquement.*
 
 ### Ajouté (billetterie — palier lisible sur Mes tickets)

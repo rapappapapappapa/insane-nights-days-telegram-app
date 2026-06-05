@@ -12,17 +12,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { normalizeMediaUrl } from '../../../api/config';
+import { normalizeMediaUrl } from '../../api/config';
 import {
   buildVenueContractPayload,
   buildDjContractPayload,
   contractAcceptAckLabel,
   contractReadBeforeSendLabel,
   dealTypeLabel,
-} from '../../../constants/contractPayload';
-import ContractDraftEditorFields from '../../ContractDraftEditorFields';
-import Colors from '../../../constants/colors';
-import { PAYMENT_TERMS_OPTIONS, cleanText } from '../../../utils/bookerDashboardUtils';
+} from '../../constants/contractPayload';
+import ContractDraftEditorFields from '../ContractDraftEditorFields';
+import Colors from '../../constants/colors';
+import { PAYMENT_TERMS_OPTIONS, cleanText } from '../../utils/bookerDashboardUtils';
 
 /** Modal chat + contrat inline (dashboard organisateur). */
 export default function BookerChatModal(props) {

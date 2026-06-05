@@ -36,6 +36,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Suppression de **JSX orphelin** après extraction des sections DJ (bundle Metro / export EAS).
 - Retrait d’un **`require`** vidéo locale absente (**`gogg-tracer.mp4`**) qui cassait le bundling.
 
+### Corrigé (mobile — bundle dashboards booker & lieu / EAS)
+- **`VenueChatModal`**, **`BookerEditEventModal`** : commentaires JSX orphelins avant **`<Modal>`** (échec export Metro).
+- **`useBookerProfile`** : **`useEffect`** dupliqué / **`try`** incomplet après extraction du hook.
+- **`BookerChatModal`**, **`BookerContractModals`**, **`BookerEditEventModal`** : chemins d’import corrigés (`../` / `../../` depuis **`components/bookerDashboard/`**).
+
+### Déployé (mobile — EAS Update OTA)
+- **`npm run update:both`** : publication sur canaux **preview** (Android) et **production** (iOS) — message *Refactor dashboards booker, wizard et lieu* ; runtime **1.0.0**.
+
 ### Corrigé (mobile — création événement booker, multi-DJs)
 - **`BookerEventDashboardPage`** : au retour du sélecteur DJ, **réhydratation de `djSlots`** depuis **`formData`** pour ne plus perdre les DJs / créneaux déjà choisis (remontage d’écran).
 

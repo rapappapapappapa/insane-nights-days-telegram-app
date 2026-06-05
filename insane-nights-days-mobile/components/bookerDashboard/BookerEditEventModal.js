@@ -11,8 +11,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Colors from '../../../constants/colors';
-import { normalizeMediaUrl } from '../../../api/config';
+import Colors from '../../constants/colors';
+import { normalizeMediaUrl } from '../../api/config';
 
 /** Modal édition événement (dashboard organisateur). */
 export default function BookerEditEventModal(props) {
@@ -30,8 +30,7 @@ export default function BookerEditEventModal(props) {
   } = props;
 
   return (
-          {/* ✅ Modal édition événement */}
-          <Modal
+    <Modal
             visible={editEventVisible}
             transparent={true}
             animationType="fade"

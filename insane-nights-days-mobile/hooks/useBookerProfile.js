@@ -129,11 +129,6 @@ export function useBookerProfile({ user, language, showError, showSuccess }) {
         }
       }
     };
-  
-    useEffect(() => {
-      if (!user?.token) return;
-      (async () => {
-        try {
 
   useEffect(() => {
     if (!user?.token) return;

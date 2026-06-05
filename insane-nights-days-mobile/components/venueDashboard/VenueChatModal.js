@@ -20,8 +20,7 @@ export default function VenueChatModal(props) {
     PAYMENT_TERMS_OPTIONS,
   } = props;
   return (
-          {/* Modal de chat Organisateur ↔ Lieu */}
-          <Modal
+    <Modal
             visible={chatModalVisible}
             transparent={true}
             animationType="slide"

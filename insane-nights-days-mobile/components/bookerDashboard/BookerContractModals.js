@@ -9,15 +9,15 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import ContractDraftEditorFields from '../../ContractDraftEditorFields';
-import DealTypePickerModal from '../../DealTypePickerModal';
-import CancellationPolicyPickerModal from '../../CancellationPolicyPickerModal';
-import EventEndTimePickerModal from '../../EventEndTimePickerModal';
-import ContractPdfPreviewModal from '../../ContractPdfPreviewModal';
+import ContractDraftEditorFields from '../ContractDraftEditorFields';
+import DealTypePickerModal from '../DealTypePickerModal';
+import CancellationPolicyPickerModal from '../CancellationPolicyPickerModal';
+import EventEndTimePickerModal from '../EventEndTimePickerModal';
+import ContractPdfPreviewModal from '../ContractPdfPreviewModal';
 import {
   buildVenueContractPayload,
   buildDjContractPayload,
-} from '../../../constants/contractPayload';
+} from '../../constants/contractPayload';
 
 /** Modals contrat hors chat (dashboard organisateur). */
 export default function BookerContractModals(props) {

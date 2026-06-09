@@ -20,6 +20,8 @@ import {
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
 } from '../utils/bookerEventWizardUtils';
+import { useBookerEventWizardDraft } from './useBookerEventWizardDraft';
+import { useBookerEventWizardRental } from './useBookerEventWizardRental';
 
 export function useBookerEventWizard({
   user,
@@ -47,8 +49,6 @@ export function useBookerEventWizard({
     const [loadingDjs, setLoadingDjs] = useState(false);
     const [loadingVenues, setLoadingVenues] = useState(false);
     const [creating, setCreating] = useState(false);
-    /** Bloque la persistance auto jusqu’à la lecture AsyncStorage (évite d’écraser le brouillon au premier rendu). */
-    const [draftGate, setDraftGate] = useState(true);
     const [postCreateModal, setPostCreateModal] = useState(null);
   
     // Étape actuelle du formulaire (1: Date/Durée, 2: Lieu, 3: DJs, 4: Détails, 5: Récapitulatif)
@@ -70,14 +70,6 @@ export function useBookerEventWizard({
     const [tempTime, setTempTime] = useState(eventDateTime || new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-  
-    const [rentalPresets, setRentalPresets] = useState([]);
-    const [rentalCatalogItems, setRentalCatalogItems] = useState([]);
-    const [rentalCatalogLabel, setRentalCatalogLabel] = useState('');
-    const [rentalCatalogQty, setRentalCatalogQty] = useState('1');
-    const [eventRentalExtraLabel, setEventRentalExtraLabel] = useState('');
-    const [eventRentalExtraQty, setEventRentalExtraQty] = useState('1');
-    const [savingRentalCatalog, setSavingRentalCatalog] = useState(false);
     
     // Gérer les sélections depuis routeParams
     const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, slotIndex: null });
@@ -94,6 +86,36 @@ export function useBookerEventWizard({
         : Number.isFinite(Number(rawSlot)) && Number(rawSlot) >= 0
           ? Math.floor(Number(rawSlot))
           : undefined;
+
+    const { draftGate, clearDraftAndRestartWizard } = useBookerEventWizardDraft({
+      language,
+      showSuccess,
+      routeParams,
+      formData,
+      setFormData,
+      eventDateTime,
+      setEventDateTime,
+      currentStep,
+      setCurrentStep,
+      djSlots,
+      setDjSlots,
+      coverImageUri,
+      setCoverImageUri,
+      hasInitializedSlots,
+      creating,
+      resetForm,
+      setTempDate,
+      setTempTime,
+    });
+
+    const rental = useBookerEventWizardRental({
+      user,
+      language,
+      showError,
+      showSuccess,
+      setFormData,
+      draftGate,
+    });
   
     // Ouvrir le sélecteur de date
     const openDatePicker = () => {
@@ -350,237 +372,6 @@ export function useBookerEventWizard({
       setFormData((prev) => ({ ...prev, [field]: value }));
     };
   
-    const toggleEquipmentPreset = (id) => {
-      setFormData((prev) => {
-        const cur = prev.equipmentRentalPresetIds || [];
-        const has = cur.includes(id);
-        return {
-          ...prev,
-          equipmentRentalPresetIds: has ? cur.filter((x) => x !== id) : [...cur, id],
-        };
-      });
-    };
-  
-    const toggleOrganizerLineFromCatalog = (item) => {
-      const label = item.label;
-      const qty = item.qty || 1;
-      setFormData((prev) => {
-        const lines = [...(prev.equipmentRentalOrganizerLines || [])];
-        const idx = lines.findIndex(
-          (l) =>
-            String(l.label).trim() === String(label).trim() &&
-            Number(l.qty || 1) === Number(qty)
-        );
-        if (idx >= 0) lines.splice(idx, 1);
-        else lines.push({ label: String(label).trim(), qty: Number(qty) || 1 });
-        return { ...prev, equipmentRentalOrganizerLines: lines };
-      });
-    };
-  
-    const addEventOnlyEquipmentLine = () => {
-      const label = eventRentalExtraLabel.trim();
-      if (!label) return;
-      let qty = parseInt(eventRentalExtraQty, 10);
-      if (!Number.isFinite(qty) || qty < 1) qty = 1;
-      setFormData((prev) => ({
-        ...prev,
-        equipmentRentalOrganizerLines: [...(prev.equipmentRentalOrganizerLines || []), { label, qty }],
-      }));
-      setEventRentalExtraLabel('');
-      setEventRentalExtraQty('1');
-    };
-  
-    const removeOrganizerLineAt = (index) => {
-      setFormData((prev) => {
-        const lines = [...(prev.equipmentRentalOrganizerLines || [])];
-        lines.splice(index, 1);
-        return { ...prev, equipmentRentalOrganizerLines: lines };
-      });
-    };
-  
-    const addCatalogRow = () => {
-      const label = rentalCatalogLabel.trim();
-      if (!label) return;
-      let qty = parseInt(rentalCatalogQty, 10);
-      if (!Number.isFinite(qty) || qty < 1) qty = 1;
-      const id = `inv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-      setRentalCatalogItems((prev) => [...prev, { id, label, qty }]);
-      setRentalCatalogLabel('');
-      setRentalCatalogQty('1');
-    };
-  
-    const removeCatalogRow = (rid) => {
-      setRentalCatalogItems((prev) => prev.filter((x) => x.id !== rid));
-    };
-  
-    const updateExtraTicketTier = (index, field, value) => {
-      setFormData((prev) => {
-        const rows = [...(prev.extraTicketTiers || [])];
-        rows[index] = { ...(rows[index] || {}), [field]: value };
-        return { ...prev, extraTicketTiers: rows };
-      });
-    };
-  
-    const addExtraTicketTier = () => {
-      setFormData((prev) => ({
-        ...prev,
-        extraTicketTiers: [...(prev.extraTicketTiers || []), { label: '', price: '', maxSold: '' }],
-      }));
-    };
-  
-    const removeExtraTicketTier = (index) => {
-      setFormData((prev) => ({
-        ...prev,
-        extraTicketTiers: (prev.extraTicketTiers || []).filter((_, i) => i !== index),
-      }));
-    };
-  
-    const saveRentalCatalogToProfile = async () => {
-      if (!user?.token || savingRentalCatalog) return;
-      setSavingRentalCatalog(true);
-      try {
-        const res = await api.saveBookerRentalInventory(user.token, rentalCatalogItems);
-        if (res?.success) {
-          showSuccess(language === 'fr' ? 'Catalogue matériel enregistré.' : 'Equipment catalog saved.');
-        } else {
-          showError(res?.message || (language === 'fr' ? 'Erreur sauvegarde.' : 'Save failed.'));
-        }
-      } catch (e) {
-        console.error(e);
-        showError(language === 'fr' ? 'Erreur réseau.' : 'Network error.');
-      } finally {
-        setSavingRentalCatalog(false);
-      }
-    };
-  
-    /** Après chargement du brouillon : ramener la date au minimum légal si besoin. */
-    useEffect(() => {
-      if (draftGate) return;
-      const leadDays = getEventMinLeadDaysFromEnv();
-      if (leadDays <= 0) return;
-      setEventDateTime((prev) => {
-        if (!prev || isNaN(prev.getTime())) return prev;
-        const min = getMinEventCalendarDate(leadDays);
-        const prevDay = new Date(prev.getFullYear(), prev.getMonth(), prev.getDate());
-        if (prevDay < min) {
-          const n = new Date(min);
-          n.setHours(prev.getHours());
-          n.setMinutes(prev.getMinutes());
-          queueMicrotask(() => setFormData((fd) => ({ ...fd, date: n.toISOString() })));
-          return n;
-        }
-        return prev;
-      });
-    }, [draftGate, setEventDateTime, setFormData]);
-  
-    const applyEventDraft = useCallback(
-      (d) => {
-        if (!d?.formData) return;
-        const rp = routeParams;
-        const resumeVenue =
-          rp?.selectedVenueId &&
-          (rp?.action === 'select' || rp?.action === 'replaceVenue');
-        const resumeDj =
-          rp?.selectedDjId && (rp?.action === 'add' || rp?.action === 'remove');
-        const shouldResumeFromSelection = resumeVenue || resumeDj;
-  
-        setFormData((prev) => {
-          const merged = { ...d.formData };
-          if (resumeVenue && rp?.selectedVenueId) {
-            merged.venueId = rp.selectedVenueId;
-          } else if (prev?.venueId && !merged.venueId) {
-            merged.venueId = prev.venueId;
-          }
-          return merged;
-        });
-        const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
-        if (!isNaN(ed.getTime())) {
-          setEventDateTime(ed);
-          setTempDate(ed);
-          setTempTime(ed);
-        }
-        if (!shouldResumeFromSelection) {
-          setCurrentStep(Math.min(5, Math.max(1, d.currentStep || 1)));
-        }
-        if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
-        else setCoverImageUri(null);
-        if (Array.isArray(d.djSlots) && d.djSlots.length > 0) {
-          setDjSlots(d.djSlots);
-          hasInitializedSlots.current = true;
-        } else if (d.formData?.djIds?.length) {
-          setDjSlots(buildDjSlotsFromFormData(d.formData));
-          hasInitializedSlots.current = true;
-        }
-      },
-      [setFormData, setEventDateTime, setCoverImageUri, routeParams]
-    );
-  
-    /** Brouillon : restauration silencieuse depuis AsyncStorage (pas d’alerte). */
-    useEffect(() => {
-      let cancelled = false;
-      (async () => {
-        try {
-          const raw = await AsyncStorage.getItem(EVENT_CREATION_DRAFT_KEY);
-          if (cancelled) return;
-          if (!raw) {
-            setDraftGate(false);
-            return;
-          }
-          const d = JSON.parse(raw);
-          if (!d || d.version !== DRAFT_VERSION || !d.formData) {
-            setDraftGate(false);
-            return;
-          }
-          // Retour liste / profil lieu ou DJ : le contexte + routeParams sont la source de vérité (évite d’écraser les slots).
-          if (!isReturnFromVenueOrDjPicker(routeParams)) {
-            applyEventDraft(d);
-          }
-          if (!cancelled) setDraftGate(false);
-        } catch (e) {
-          console.warn('[EventDraft] load', e);
-          if (!cancelled) setDraftGate(false);
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [routeParams, applyEventDraft]);
-  
-    const persistDraft = useCallback(async () => {
-      try {
-        const empty =
-          !formData?.title?.trim() &&
-          !formData?.date &&
-          !formData?.venueId &&
-          (!formData?.djIds || formData.djIds.length === 0) &&
-          currentStep <= 1;
-        if (empty) {
-          await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
-          return;
-        }
-        const payload = {
-          version: DRAFT_VERSION,
-          formData,
-          eventDateTime:
-            eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
-              ? eventDateTime.toISOString()
-              : new Date().toISOString(),
-          currentStep,
-          djSlots,
-          coverImageUri: coverImageUri || null,
-        };
-        await AsyncStorage.setItem(EVENT_CREATION_DRAFT_KEY, JSON.stringify(payload));
-      } catch (e) {
-        console.warn('[EventDraft] persist', e);
-      }
-    }, [formData, eventDateTime, currentStep, djSlots, coverImageUri]);
-  
-    useEffect(() => {
-      if (draftGate) return;
-      const t = setTimeout(persistDraft, 700);
-      return () => clearTimeout(t);
-    }, [draftGate, persistDraft]);
-  
     /** Si le lieu a une capacité max déclarée, pré-remplir le champ événement quand il est encore vide */
     useEffect(() => {
       if (!formData.venueId || !venues.length) return;
@@ -590,33 +381,6 @@ export function useBookerEventWizard({
       if (cur !== '') return;
       setFormData((prev) => ({ ...prev, capacity: String(v.maxCapacity) }));
     }, [formData.venueId, venues, setFormData]);
-  
-    useEffect(() => {
-      if (!user?.token || draftGate) return;
-      let cancelled = false;
-      (async () => {
-        try {
-          const lang = language === 'fr' ? 'fr' : 'en';
-          const [pres, prof] = await Promise.all([
-            api.getRentalEquipmentPresets(user.token, lang),
-            api.getUserProfiles(user.token),
-          ]);
-          if (cancelled) return;
-          if (pres?.success && Array.isArray(pres.presets)) setRentalPresets(pres.presets);
-          const b = prof?.profiles?.booker?.[0];
-          if (b?.rentalEquipmentInventory && Array.isArray(b.rentalEquipmentInventory)) {
-            setRentalCatalogItems(b.rentalEquipmentInventory);
-          } else {
-            setRentalCatalogItems([]);
-          }
-        } catch (e) {
-          console.warn('[BookerEventDashboard] rental presets/catalog', e);
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [user?.token, draftGate, language]);
   
     const pickCoverImage = async () => {
       try {
@@ -712,28 +476,6 @@ export function useBookerEventWizard({
       setTempSlotTime(d);
       setSlotTimePicker({ index: slotIndex, field });
     };
-  
-    /** Formulaire vierge + suppression du brouillon local (sans alerte). */
-    const clearDraftAndRestartWizard = useCallback(async () => {
-      if (creating) return;
-      try {
-        await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
-      } catch (e) {
-        /* ignore */
-      }
-      resetForm();
-      setCurrentStep(1);
-      setDjSlots([emptyDjSlot()]);
-      hasInitializedSlots.current = false;
-      const now = new Date();
-      setTempDate(now);
-      setTempTime(now);
-      showSuccess(
-        language === 'fr'
-          ? 'Brouillon effacé. Tu peux créer un nouvel événement.'
-          : 'Draft cleared. You can create a new event.'
-      );
-    }, [creating, resetForm, language, showSuccess]);
   
     const handleCreateEvent = async () => {
       if (creating) return;
@@ -1015,32 +757,12 @@ export function useBookerEventWizard({
     setShowDatePicker,
     showTimePicker,
     setShowTimePicker,
-    rentalPresets,
-    rentalCatalogItems,
-    rentalCatalogLabel,
-    setRentalCatalogLabel,
-    rentalCatalogQty,
-    setRentalCatalogQty,
-    eventRentalExtraLabel,
-    setEventRentalExtraLabel,
-    eventRentalExtraQty,
-    setEventRentalExtraQty,
-    savingRentalCatalog,
+    ...rental,
     openDatePicker,
     openTimePicker,
     openSlotTimeField,
     updateSlotTimeFromPicker,
     handleChange,
-    toggleEquipmentPreset,
-    toggleOrganizerLineFromCatalog,
-    addEventOnlyEquipmentLine,
-    removeOrganizerLineAt,
-    addCatalogRow,
-    removeCatalogRow,
-    updateExtraTicketTier,
-    addExtraTicketTier,
-    removeExtraTicketTier,
-    saveRentalCatalogToProfile,
     pickCoverImage,
     clearDraftAndRestartWizard,
     handleCreateEvent,

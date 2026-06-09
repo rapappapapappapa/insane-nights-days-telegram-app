@@ -52,6 +52,10 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] **`EventsPage`** : affichage **« dès X € »** aligné sur le feed (multi-tarifs).
 
+- [x] **`EventDetailPage`** — hooks achat + groupes, styles extraits (~770 lignes page).
+
+- [x] **`FeedPage`** — hooks liste / engagement / signalement, cartes feed, styles extraits (~280 lignes page).
+
 ---
 
 ## Phase 3 — Priorité moyenne (`[souvent OTA]`)
@@ -90,13 +94,17 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [x] **Serveur modularisé** — routes booker / feed / chat / media découpées ; **`index.js`** allégé ; **`prisma migrate deploy`** au démarrage Railway (plus de **`db push --accept-data-loss`**).
 
-- [x] **Dashboard DJ** — sections extraites (`components/djDashboard/sections/`) + styles dédiés ; fix bundle EAS.
+- [x] **Dashboard DJ** — sections + hooks (`useDjProfile`, `useDjBookings`, `useDjMessaging`) + modales (`DjChatModal`, `DjContractModals`, `DjMediaModals`) ; page **~545** lignes ; fix bundle EAS.
 
-- [ ] **Dashboard booker** — **`BookerDashboardPage.js`** (~4 600 lignes) : **priorité n°1** même pattern que DJ (sections / onglets).
+- [x] **Dashboard booker** — **`BookerDashboardPage.js`** (~500 lignes) : hooks + **`components/bookerDashboard/`** + styles dédiés.
 
-- [ ] **Wizard événement** — **`BookerEventDashboardPage.js`** (~3 200 lignes) : étapes en composants.
+- [x] **Wizard événement** — **`BookerEventDashboardPage.js`** (~210 lignes) : **`useBookerEventWizard`** (+ **`useBookerEventWizardDraft`**, **`useBookerEventWizardRental`**) + 5 étapes **`bookerEventWizard/sections/`**.
 
-- [ ] **Dashboard lieu** — **`VenueDashboardPage.js`** (~2 300 lignes) : sections.
+- [x] **Dashboard prestataire** — **`PrestataireDashboardPage.js`** (~170 lignes) : hooks + **`components/prestataireDashboard/`**.
+
+- [x] **Dashboard lieu** — **`VenueDashboardPage.js`** (~185 lignes) : onglets **`venueDashboard/sections/`** + **`useVenueDashboard`**.
+
+- [x] **Feed mobile** — **`FeedPage.js`** (~280 lignes) : **`useFeedList`**, **`useFeedPostEngagement`**, **`useFeedReport`** + **`components/feed/`**.
 
 - [x] **Tests serveur (base)** — **`npm test`** : validation, **`ticketTiers`**, **`contractHelpers`**, **`ratingCalculations`** (17 tests) ; **CI GitHub Actions** sur push/PR.
 
@@ -124,4 +132,4 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ---
 
-*Dernière mise à jour : 5 juin 2026 — modularisation serveur + DJ, multi-tarifs MVP, multi-DJ fix, CI tests ; prochain gros chantier dette : **BookerDashboardPage**.*
+*Dernière mise à jour : 5 juin 2026 — modularisation serveur + dashboards (DJ, booker, wizard, lieu), multi-tarifs MVP, CI tests.*

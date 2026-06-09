@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+const path = require('path');
+
+const dest = path.join(__dirname, '../screens/dashboard/DjDashboardPage.js');
+
+const thin = `import React, { useState } from 'react';
 import {
   Text,
   View,
@@ -542,3 +547,7 @@ export default function DjDashboardPage() {
     </View>
   );
 }
+`;
+
+fs.writeFileSync(dest, thin);
+console.log('Wrote thin DjDashboardPage.js, lines:', thin.split('\n').length);

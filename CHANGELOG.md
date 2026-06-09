@@ -4,6 +4,29 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 9 au 12 juin 2026 (mar. – ven.)
+
+### Refactorisé (mobile — dashboard DJ, fin du découpage)
+- **`DjDashboardPage.js`** (~2 380 → **~545** lignes) : logique → hooks **`useDjProfile`**, **`useDjBookings`**, **`useDjMessaging`** ; modales → **`DjChatModal`**, **`DjContractModals`**, **`DjMediaModals`** ; **`PAYMENT_TERMS_OPTIONS`** dans **`utils/djDashboardUtils.js`**.
+- **Scripts** de maintenance : **`extract-dj-hooks.js`**, **`extract-dj-modals.js`**, **`build-dj-dashboard-thin.js`**.
+
+### Refactorisé (mobile — dashboard prestataire)
+- **`PrestataireDashboardPage.js`** (~860 → **~170** lignes) : hooks **`usePrestataireProfile`**, **`usePrestataireBookings`**, **`usePrestataireMessaging`** ; sections + modales sous **`components/prestataireDashboard/`** ; styles **`PrestataireDashboardPage.styles.js`**.
+
+### Refactorisé (mobile — wizard événement booker)
+- **`useBookerEventWizard.js`** (~1 060 → **~780** lignes) : brouillon AsyncStorage → **`useBookerEventWizardDraft`** ; matériel / paliers extra → **`useBookerEventWizardRental`**.
+
+### Refactorisé (mobile — chat / contrats booker)
+- **`useBookerMessaging.js`** (~740 → **~310** lignes) : éditeur iOS → **`useBookerContractEditor`** ; flux contrats DJ / lieu / prestataire → **`useBookerContractFlows`**.
+
+### Refactorisé (mobile — page détail événement)
+- **`EventDetailPage.js`** (~1 570 → **~770** lignes) : styles → **`EventDetailPage.styles.js`** ; achat billet / paliers → **`useEventDetailPurchase`** ; groupes amis → **`useEventDetailGroups`** ; mocks → **`utils/eventDetailPageUtils.js`**.
+
+### Refactorisé (mobile — feed d’actualité)
+- **`FeedPage.js`** (~1 400 → **~280** lignes) : styles → **`FeedPage.styles.js`** ; reducer / dates → **`utils/feedPageUtils.js`** ; chargement onglets → **`useFeedList`** ; likes / commentaires → **`useFeedPostEngagement`** ; signalement → **`useFeedReport`** ; cartes → **`FeedPostCard`**, **`FeedEventCard`**, **`FeedReportModal`**.
+
+---
+
 ## Semaine du 2 au 5 juin 2026 (lun. – jeu.)
 
 ### Refactorisé (serveur — routes et `index.js` allégés)
@@ -18,6 +41,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Refactorisé (mobile — dashboard DJ)
 - **`DjDashboardPage`** : logique éclatée en **7 sections** (`components/djDashboard/sections/` : profil, tarifs, médias, matériel, bookings, paiements, avis) + **`DjDashboardPage.styles.js`** + **`utils/djDashboardUtils.js`**.
 
+### Refactorisé (mobile — dashboards organisateur, wizard événement & lieu)
+- **`BookerDashboardPage.js`** (~4 500 → **~500** lignes) : styles → **`BookerDashboardPage.styles.js`** ; UI → **`components/bookerDashboard/`** ; logique → hooks **`useBookerProfile`**, **`useBookerEvents`**, **`useBookerMessaging`**, **`useBookerDjVenueRoute`** + **`utils/bookerDashboardUtils.js`**.
+- **`BookerEventDashboardPage.js`** (~3 000 → **~210** lignes) : wizard → **`useBookerEventWizard`**, **5 étapes** sous **`components/bookerEventWizard/sections/`**.
+- **`VenueDashboardPage.js`** (~2 260 → **~185** lignes) : onglets **`components/venueDashboard/sections/`** ; **`useVenueDashboard`** + **`utils/venueDashboardUtils.js`**.
+
+### Corrigé (mobile — bundle dashboards booker & lieu / EAS)
+- **`VenueChatModal`**, **`BookerEditEventModal`** : commentaires JSX orphelins avant **`<Modal>`** (échec export Metro).
+- **`useBookerProfile`** : **`useEffect`** dupliqué / **`try`** incomplet après extraction du hook.
+- **`BookerChatModal`**, **`BookerContractModals`**, **`BookerEditEventModal`** : chemins d’import corrigés depuis **`components/bookerDashboard/`**.
+
+### Déployé (mobile — EAS Update OTA)
+- **`npm run update:both`** : canaux **preview** (Android) et **production** (iOS) — *Refactor dashboards booker, wizard et lieu* ; runtime **1.0.0**.
+
 ### Ajouté (serveur — tests unitaires)
 - **`npm test`** (`node --test`) : **`tests/validation.test.js`**, **`ticketTiers.test.js`**, **`contractHelpers.test.js`**, **`ratingCalculations.test.js`**.
 
@@ -25,7 +61,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`.github/workflows/ci.yml`** : sur push/PR **`railway-phase1`** / **`main`** — **`npm ci`** + **`npm test`** + **`node --check index.js`** dans **`server/`**.
 
 ### Documentation
-- **`docs/AMELIORATIONS.md`** : backlog aligné sur l’état réel (multi-tarifs MVP, multi-DJ, modularisation, dette restante **BookerDashboard** en priorité).
+- **`docs/AMELIORATIONS.md`** : backlog aligné sur l’état réel (multi-tarifs MVP, multi-DJ, modularisation serveur + DJ) ; **CI** tests serveur.
 
 ### Corrigé (mobile — classement DJs)
 - **Menu** : entrée classement pointe vers l’écran **`ranking`** (page dédiée) au lieu d’un mauvais routage.
@@ -36,14 +72,6 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Suppression de **JSX orphelin** après extraction des sections DJ (bundle Metro / export EAS).
 - Retrait d’un **`require`** vidéo locale absente (**`gogg-tracer.mp4`**) qui cassait le bundling.
 
-### Corrigé (mobile — bundle dashboards booker & lieu / EAS)
-- **`VenueChatModal`**, **`BookerEditEventModal`** : commentaires JSX orphelins avant **`<Modal>`** (échec export Metro).
-- **`useBookerProfile`** : **`useEffect`** dupliqué / **`try`** incomplet après extraction du hook.
-- **`BookerChatModal`**, **`BookerContractModals`**, **`BookerEditEventModal`** : chemins d’import corrigés (`../` / `../../` depuis **`components/bookerDashboard/`**).
-
-### Déployé (mobile — EAS Update OTA)
-- **`npm run update:both`** : publication sur canaux **preview** (Android) et **production** (iOS) — message *Refactor dashboards booker, wizard et lieu* ; runtime **1.0.0**.
-
 ### Corrigé (mobile — création événement booker, multi-DJs)
 - **`BookerEventDashboardPage`** : au retour du sélecteur DJ, **réhydratation de `djSlots`** depuis **`formData`** pour ne plus perdre les DJs / créneaux déjà choisis (remontage d’écran).
 
@@ -53,11 +81,6 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ---
 
 ## Semaine du 26 au 29 mai 2026 (mar. – ven.)
-
-### Refactoré (mobile — dashboards organisateur & lieu)
-- **`BookerDashboardPage.js`** (~4 500 → ~500 lignes) : styles → **`BookerDashboardPage.styles.js`** ; UI → **`components/bookerDashboard/`** ; logique → hooks **`useBookerProfile`**, **`useBookerEvents`**, **`useBookerMessaging`**, **`useBookerDjVenueRoute`** + **`utils/bookerDashboardUtils.js`**.
-- **`BookerEventDashboardPage.js`** (~3 000 → ~200 lignes) : wizard création événement découpé en **`useBookerEventWizard`**, **`utils/bookerEventWizardUtils.js`**, 5 étapes sous **`components/bookerEventWizard/sections/`**, modales pickers + succès.
-- **`VenueDashboardPage.js`** (~2 260 → ~185 lignes) : styles → **`VenueDashboardPage.styles.js`** ; onglets Infos / Médias / Avis / Réservations → **`components/venueDashboard/sections/`** ; chat & contrats → **`VenueChatModal`**, **`VenueContractModals`** ; logique → **`useVenueDashboard`** + **`utils/venueDashboardUtils.js`**.
 
 *Suite de la billetterie multi‑tarifs (création, achat, feed — voir semaine **19–22**) ; entrées ci‑dessous = livraisons **de cette semaine** uniquement.*
 

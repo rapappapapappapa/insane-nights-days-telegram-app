@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -22,63 +21,14 @@ import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import * as Stripe from '../../utils/stripe';
 import {
   addNoxEventToDeviceCalendar,
   isDeviceCalendarExportSupported,
 } from '../../utils/addNoxEventToCalendar';
-
-function isTicketTierSelectable(t) {
-  if (!t) return false;
-  if (t.maxSold == null || t.maxSold === '') return true;
-  if (t.remaining == null || t.remaining === undefined) return true;
-  return Number(t.remaining) > 0;
-}
-
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Insane Night - Soirée Electro',
-    date: '15 Janvier 2024',
-    time: '22:00',
-    location: 'Club Insane, Paris',
-    price: 25,
-    capacity: 200,
-    sold: 45,
-    genre: 'Electro',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-    djs: ['DJ Neon', 'Mixmaster Nova'],
-    description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
-  },
-  {
-    id: '2',
-    title: 'Bass Revolution - Drum & Bass',
-    date: '20 Janvier 2024',
-    time: '21:00',
-    location: 'Warehouse Underground, Lyon',
-    price: 30,
-    capacity: 150,
-    sold: 78,
-    genre: 'Drum & Bass',
-    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['Bass Storm', 'DJ Cyber'],
-    description: 'Une révolution sonore avec les meilleurs artistes drum & bass',
-  },
-  {
-    id: '3',
-    title: 'Techno Underground Session',
-    date: '25 Janvier 2024',
-    time: '23:00',
-    location: 'Le Bunker, Marseille',
-    price: 20,
-    capacity: 300,
-    sold: 120,
-    genre: 'Techno',
-    image: 'https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=400&h=300&fit=crop',
-    djs: ['Techno Master', 'DJ Neon'],
-    description: 'Session techno underground dans un lieu unique',
-  },
-];
+import { API_DATE_RE, EVENT_DETAIL_MOCK_EVENTS, isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
+import { useEventDetailPurchase } from '../../hooks/useEventDetailPurchase';
+import { useEventDetailGroups } from '../../hooks/useEventDetailGroups';
+import { styles } from './EventDetailPage.styles';
 
 export default function EventDetailPage() {
   const { language } = useLanguage();
@@ -90,89 +40,21 @@ export default function EventDetailPage() {
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   
   const eventId = useMemo(
-    () => routeParams?.eventId ?? mockEvents[0].id,
+    () => routeParams?.eventId ?? EVENT_DETAIL_MOCK_EVENTS[0].id,
     [routeParams?.eventId],
   );
 
   const defaultEvent = useMemo(
-    () => mockEvents.find((item) => item.id === eventId) ?? mockEvents[0],
+    () => EVENT_DETAIL_MOCK_EVENTS.find((item) => item.id === eventId) ?? EVENT_DETAIL_MOCK_EVENTS[0],
     [eventId],
   );
 
   const [event, setEvent] = useState(defaultEvent);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [buyingTicket, setBuyingTicket] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [eventGroups, setEventGroups] = useState([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
-  const [creatingGroup, setCreatingGroup] = useState(false);
-  const [inviteModalVisible, setInviteModalVisible] = useState(false);
-  const [invitingGroupId, setInvitingGroupId] = useState(null);
-  const [friends, setFriends] = useState([]);
-  const [selectedFriends, setSelectedFriends] = useState([]);
-  const [inviting, setInviting] = useState(false);
-  const [acceptedCgv, setAcceptedCgv] = useState(false);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
-  const [selectedTierId, setSelectedTierId] = useState(null);
 
-  const ticketTiersForPurchase = useMemo(() => {
-    const t = event?.ticketTiers;
-    return Array.isArray(t) && t.length > 0 ? t : null;
-  }, [event?.ticketTiers]);
-
-  const hasMultipleTicketTiers = !!(ticketTiersForPurchase && ticketTiersForPurchase.length > 1);
-
-  useEffect(() => {
-    if (!ticketTiersForPurchase?.length) {
-      setSelectedTierId(null);
-      return;
-    }
-    setSelectedTierId((prev) => {
-      const prevStillOk = ticketTiersForPurchase.some((x) => x.id === prev && isTicketTierSelectable(x));
-      if (prevStillOk) return prev;
-      const firstOk = ticketTiersForPurchase.find((x) => isTicketTierSelectable(x));
-      return (firstOk || ticketTiersForPurchase[0])?.id ?? null;
-    });
-  }, [event?.id, ticketTiersForPurchase]);
-
-  const selectedTier =
-    ticketTiersForPurchase && selectedTierId
-      ? ticketTiersForPurchase.find((x) => x.id === selectedTierId)
-      : null;
-
-  const tierIdForApi = useMemo(() => {
-    if (!ticketTiersForPurchase?.length) return null;
-    if (ticketTiersForPurchase.length === 1) return ticketTiersForPurchase[0].id;
-    return selectedTierId;
-  }, [ticketTiersForPurchase, selectedTierId]);
-
-  const unitPriceForPurchase = useMemo(() => {
-    if (selectedTier != null && Number.isFinite(Number(selectedTier.price))) {
-      return Number(selectedTier.price);
-    }
-    const p = Number(event?.price);
-    return Number.isFinite(p) ? p : 0;
-  }, [selectedTier, event?.price]);
-
-  const canProceedPurchaseTier = useMemo(() => {
-    if (!ticketTiersForPurchase?.length) return true;
-    if (ticketTiersForPurchase.length === 1) {
-      return isTicketTierSelectable(ticketTiersForPurchase[0]);
-    }
-    return selectedTier != null && isTicketTierSelectable(selectedTier);
-  }, [ticketTiersForPurchase, selectedTier]);
-
-  const priceBadgeLabel = useMemo(() => {
-    const p = event?.price;
-    if (p == null || p === '') return '—';
-    if (event?.hasMultipleTicketPrices || hasMultipleTicketTiers) {
-      return language === 'fr' ? `dès ${p} €` : `from ${p} €`;
-    }
-    return `${p}€`;
-  }, [event?.price, event?.hasMultipleTicketPrices, hasMultipleTicketTiers, language]);
-
-  const API_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   useEffect(() => {
     if (!user?.isAuthenticated) {
       navigate('home');
@@ -211,123 +93,6 @@ export default function EventDetailPage() {
         return '#6b7280'; // Gris
       default:
         return '#6b7280';
-    }
-  };
-
-  const handleBuyTicket = async () => {
-    if (!user?.isAuthenticated) {
-      showError(language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.');
-      return;
-    }
-    if (!acceptedCgv) {
-      showError(language === 'fr' ? 'Vous devez accepter les CGV avant d\'acheter.' : 'You must accept the Terms of Sale before purchasing.');
-      return;
-    }
-
-    if (!user?.token) {
-      showError(language === 'fr' ? 'Token d\'authentification manquant.' : 'Authentication token missing.');
-      return;
-    }
-
-    setBuyingTicket(true);
-    try {
-      // ✅ Web: Stripe natif indisponible -> fallback mode test
-      if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
-        showConfirm(
-          language === 'fr' ? 'Paiement Stripe indisponible (Web)' : 'Stripe unavailable (Web)',
-          language === 'fr'
-            ? 'Stripe natif n’est pas disponible sur la version web. Voulez-vous continuer en mode démo (achat ticket sans paiement) ?'
-            : 'Native Stripe is not available on web. Continue in demo mode (buy ticket without payment)?',
-          [
-            { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-            {
-              text: language === 'fr' ? 'Continuer' : 'Continue',
-              onPress: async () => {
-                const response = await api.buyTicket(user.token, eventId, 1, tierIdForApi);
-                if (response && response.success) {
-                  showSuccess(response.message || (language === 'fr' ? 'Ticket acheté (mode test).' : 'Ticket bought (test mode).'));
-                  fetchEvent();
-                  // ✅ Écran succès
-                  setTimeout(() => {
-                    navigate('purchaseSuccess', {
-                      eventId,
-                      eventTitle: event?.title,
-                      quantity: 1,
-                      amount: unitPriceForPurchase,
-                    });
-                  }, 600);
-                } else {
-                  showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'achat.' : 'Error purchasing ticket.'));
-                }
-              },
-            },
-          ]
-        );
-        return;
-      }
-
-      // 1) Créer PaymentIntent côté backend (uniquement si Stripe est dispo)
-      const intentRes = await api.createTicketPaymentIntent(user.token, eventId, 1, tierIdForApi);
-      if (!intentRes?.success || !intentRes?.paymentIntentClientSecret || !intentRes?.paymentIntentId) {
-        showError(intentRes?.message || (language === 'fr' ? 'Impossible de démarrer le paiement.' : 'Unable to start payment.'));
-        return;
-      }
-
-      // 2) Initialiser Stripe (nécessaire même si on n'utilise pas StripeProvider)
-      try {
-        await Stripe.initStripe({
-          publishableKey: intentRes.publishableKey,
-          urlScheme: 'insane-nights-days-mobile',
-        });
-      } catch (e) {
-        showError(
-          e?.message ||
-            (language === 'fr'
-              ? 'Erreur initialisation Stripe.'
-              : 'Stripe initialization error.')
-        );
-        return;
-      }
-
-      const init = await Stripe.initPaymentSheet({
-        merchantDisplayName: 'Nox',
-        paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
-        allowsDelayedPaymentMethods: true,
-        returnURL: 'insane-nights-days-mobile://stripe-redirect',
-      });
-      if (init?.error) {
-        showError(init.error.message || (language === 'fr' ? 'Erreur initialisation paiement.' : 'Payment init error.'));
-        return;
-      }
-
-      const presented = await Stripe.presentPaymentSheet();
-      if (presented?.error) {
-        showError(presented.error.message || (language === 'fr' ? 'Paiement annulé.' : 'Payment cancelled.'));
-        return;
-      }
-
-      // 3) Confirmer côté backend et délivrer les tickets (idempotent)
-      const confirmRes = await api.confirmTicketPurchase(user.token, intentRes.paymentIntentId);
-      if (confirmRes?.success) {
-        showSuccess(confirmRes.message || (language === 'fr' ? 'Paiement validé, ticket créé !' : 'Payment succeeded, ticket created!'));
-        fetchEvent();
-        // ✅ Écran succès
-        setTimeout(() => {
-          navigate('purchaseSuccess', {
-            eventId,
-            eventTitle: event?.title,
-            quantity: 1,
-            amount: unitPriceForPurchase,
-          });
-        }, 600);
-      } else {
-        showError(confirmRes?.message || (language === 'fr' ? 'Paiement validé, mais erreur lors de la délivrance du ticket.' : 'Payment succeeded but ticket delivery failed.'));
-      }
-    } catch (error) {
-      console.error('Erreur paiement ticket:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors du paiement.' : 'Payment error.'));
-    } finally {
-      setBuyingTicket(false);
     }
   };
 
@@ -445,102 +210,55 @@ export default function EventDetailPage() {
     }
   }, [user?.isAuthenticated, user?.token]);
 
-  const fetchEventGroups = useCallback(async () => {
-    if (!user?.token || !eventId) return;
-    setLoadingGroups(true);
-    try {
-      const res = await api.getEventGroups(user.token, eventId);
-      if (res?.success && res.groups) setEventGroups(res.groups);
-    } catch (e) {
-      setEventGroups([]);
-    } finally {
-      setLoadingGroups(false);
-    }
-  }, [user?.token, eventId]);
-
-  useEffect(() => {
-    if (user?.token && eventId && userProfiles?.activeProfileType === 'COMMUNITY' && userProfiles?.profiles?.community?.length) {
-      fetchEventGroups();
-    }
-  }, [user?.token, eventId, userProfiles?.activeProfileType, userProfiles?.profiles?.community, fetchEventGroups]);
-
-  const normalizeGroup = (g) => ({
-    id: g.id,
-    name: g.name,
-    creator: g.creator,
-    members: (g.members || []).map((m) => ({
-      id: m.id,
-      communityId: m.communityId || m.community?.id,
-      pseudo: m.pseudo ?? m.community?.pseudo ?? 'Anonyme',
-      profileImage: m.profileImage ?? m.community?.profileImage,
-      status: m.status,
-    })),
+  const purchase = useEventDetailPurchase({
+    event,
+    eventId,
+    language,
+    user,
+    navigate,
+    showError,
+    showSuccess,
+    showConfirm,
+    fetchEvent,
   });
 
-  const handleCreateOrOpenGroup = async () => {
-    if (!user?.token || !hasActiveCommunityProfile()) {
-      showError(language === 'fr' ? 'Profil Communauté requis.' : 'Community profile required.');
-      return;
-    }
-    setCreatingGroup(true);
-    try {
-      const res = await api.createEventGroup(user.token, eventId);
-      if (res?.success && res.group) {
-        const normalized = normalizeGroup(res.group);
-        setEventGroups((prev) => {
-          const exists = prev.some((g) => g.id === normalized.id);
-          if (exists) return prev;
-          return [...prev, normalized];
-        });
-        setInvitingGroupId(normalized.id);
-        setSelectedFriends([]);
-        const friendsRes = await api.getCommunityFriends(user.token);
-        if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
-        setInviteModalVisible(true);
-      } else {
-        showError(res?.message || 'Erreur');
-      }
-    } catch (e) {
-      showError(e?.message || 'Erreur');
-    } finally {
-      setCreatingGroup(false);
-    }
-  };
+  const {
+    buyingTicket,
+    acceptedCgv,
+    setAcceptedCgv,
+    selectedTierId,
+    setSelectedTierId,
+    ticketTiersForPurchase,
+    hasMultipleTicketTiers,
+    canProceedPurchaseTier,
+    priceBadgeLabel,
+    handleBuyTicket,
+  } = purchase;
 
-  const handleInviteFriends = async () => {
-    if (!invitingGroupId || selectedFriends.length === 0) return;
-    setInviting(true);
-    try {
-      const res = await api.inviteToEventGroup(
-        user.token,
-        eventId,
-        invitingGroupId,
-        selectedFriends.map((f) => f.communityId)
-      );
-      if (res?.success) {
-        showSuccess(language === 'fr' ? `${res.invited || 0} ami(s) invité(s)` : `${res.invited || 0} friend(s) invited`);
-        setInviteModalVisible(false);
-        setInvitingGroupId(null);
-        setSelectedFriends([]);
-        fetchEventGroups();
-      } else {
-        showError(res?.message || 'Erreur');
-      }
-    } catch (e) {
-      showError(e?.message || 'Erreur');
-    } finally {
-      setInviting(false);
-    }
-  };
+  const groups = useEventDetailGroups({
+    user,
+    eventId,
+    userProfiles,
+    language,
+    showError,
+    showSuccess,
+  });
 
-  const openInviteModal = (groupId) => {
-    setInvitingGroupId(groupId);
-    setSelectedFriends([]);
-    api.getCommunityFriends(user.token).then((friendsRes) => {
-      if (friendsRes?.success && friendsRes.friends) setFriends(friendsRes.friends);
-    });
-    setInviteModalVisible(true);
-  };
+  const {
+    eventGroups,
+    loadingGroups,
+    creatingGroup,
+    inviteModalVisible,
+    setInviteModalVisible,
+    friends,
+    selectedFriends,
+    setSelectedFriends,
+    inviting,
+    hasActiveCommunityProfile,
+    handleCreateOrOpenGroup,
+    handleInviteFriends,
+    openInviteModal,
+  } = groups;
 
   const loadUserProfiles = async () => {
     if (!user?.token) return;
@@ -555,12 +273,6 @@ export default function EventDetailPage() {
     } finally {
       setLoadingProfiles(false);
     }
-  };
-
-  const hasActiveCommunityProfile = () => {
-    return userProfiles?.activeProfileType === 'COMMUNITY' && 
-           userProfiles?.profiles?.community && 
-           userProfiles.profiles.community.length > 0;
   };
 
   if (loading) {
@@ -1054,519 +766,3 @@ export default function EventDetailPage() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    backgroundColor: Colors.background,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  reportChip: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-  },
-  reportChipDisabled: {
-    opacity: 0.6,
-  },
-  reportChipText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '900',
-    fontSize: 12,
-  },
-  backButtonTop: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  loadingText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 15,
-  },
-  backButton: {
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.4)',
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  imageContainer: {
-    position: 'relative',
-    height: 280,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  priceBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 24,
-  },
-  priceText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  genreBadge: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    backgroundColor: 'rgba(11,11,14,0.85)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-  },
-  genreText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  content: {
-    padding: 20,
-    gap: 20,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  description: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  errorText: {
-    color: '#f97316',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  infoSection: {
-    gap: 14,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    width: 26,
-  },
-  infoText: {
-    color: '#fff',
-    fontSize: 16,
-    flex: 1,
-  },
-  linkText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  djList: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 6,
-  },
-  djChip: {
-    paddingVertical: 2,
-  },
-  calendarOutlineButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    marginBottom: -6,
-  },
-  calendarOutlineButtonDisabled: {
-    opacity: 0.58,
-  },
-  calendarOutlineButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  cgvRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-    marginTop: 4,
-  },
-  cgvCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(255,23,68,0.6)',
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cgvCheckboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  cgvCheckmark: {
-    color: Colors.background,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  cgvTextWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-  },
-  cgvText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 13,
-  },
-  cgvLink: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  buyButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  buyButtonDisabled: {
-    opacity: 0.6,
-  },
-  buyButtonText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  pastEventSection: {
-    gap: 16,
-  },
-  pastEventText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  rateButton: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  rateButtonText: {
-    color: Colors.primary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  dateEditor: {
-    marginTop: 16,
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-    borderRadius: 12,
-    padding: 16,
-  },
-  dateEditorLabel: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  dateEditorInput: {
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  dateEditorButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  dateEditorButtonText: {
-    color: Colors.background,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  warningCard: {
-    backgroundColor: 'rgba(250,204,21,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.4)',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-  },
-  warningText: {
-    color: '#facc15',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  profileButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  profileButtonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  friendsSection: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: 'rgba(255,23,68,0.08)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
-  },
-  friendsSectionTitle: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  friendsSectionHint: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  friendsButton: {
-    backgroundColor: 'rgba(255,23,68,0.3)',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  friendsButtonDisabled: {
-    opacity: 0.6,
-  },
-  friendsButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  groupCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  groupName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  inviteMoreBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,23,68,0.3)',
-    borderRadius: 8,
-  },
-  inviteMoreBtnText: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  groupMembers: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  memberChip: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  memberChipText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-    backgroundColor: '#141419',
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-  },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  modalHint: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  friendsList: {
-    maxHeight: 220,
-    marginBottom: 16,
-  },
-  friendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  friendItemSelected: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
-  },
-  friendItemText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  friendItemCheck: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  modalInviteBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-  },
-  modalInviteBtnDisabled: {
-    opacity: 0.5,
-  },
-  modalInviteText: {
-    color: Colors.background,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  tierSection: {
-    marginBottom: 16,
-  },
-  tierSectionTitle: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  tierChip: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  tierChipSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.22)',
-  },
-  tierChipDisabled: {
-    opacity: 0.45,
-  },
-  tierChipLabel: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tierChipLabelSelected: {
-    color: '#fff',
-  },
-  tierChipLabelDisabled: {
-    color: 'rgba(255,255,255,0.55)',
-  },
-  helperTextTier: {
-    color: '#fbbf24',
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-});

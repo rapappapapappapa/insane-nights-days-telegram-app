@@ -146,7 +146,7 @@ const EventsPage = () => {
                   </div>
                 )}
                 <div className="absolute top-2 right-2 bg-insane-orange text-insane-black px-2 py-1 rounded-full text-sm font-bold">
-                  {event.price ?? 0}€
+                  {event.hasMultipleTicketPrices ? `dès ${event.price ?? 0}€` : `${event.price ?? 0}€`}
                 </div>
                 {event.genre && (
                   <div className="absolute bottom-2 left-2 bg-insane-black/80 text-insane-white px-2 py-1 rounded-full text-xs">

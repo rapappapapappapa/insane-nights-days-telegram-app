@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import { summarizeEquipmentRentalBlurb } from '../../../utils/bookerEventWizardUtils';
+import { ticketPricingBreakdown, NOX_COMMISSION_RATE, TVA_RATE } from '../../../utils/ticketPricingUtils';
 
 export default function BookerEventStep5Summary(props) {
     const {
@@ -132,11 +133,57 @@ export default function BookerEventStep5Summary(props) {
                               • {row.label}
                               {row.price ? ` · ${row.price} €` : ''}
                               {row.maxSold ? ` (max ${row.maxSold})` : ''}
+                              {String(row.saleStart || '').trim()
+                                ? language === 'fr'
+                                  ? ` · dès le ${String(row.saleStart).trim()}`
+                                  : ` · from ${String(row.saleStart).trim()}`
+                                : ''}
+                              {String(row.saleEnd || '').trim()
+                                ? language === 'fr'
+                                  ? ` · jusqu'au ${String(row.saleEnd).trim()}`
+                                  : ` · until ${String(row.saleEnd).trim()}`
+                                : ''}
                             </Text>
                           ) : null
                         )}
                       </View>
                     ) : null}
+
+                    {(() => {
+                      const b = ticketPricingBreakdown(formData.price);
+                      if (!b) return null;
+                      const tvaPct = Math.round(TVA_RATE * 100);
+                      const comPct = Math.round(NOX_COMMISSION_RATE * 100);
+                      return (
+                        <View style={styles.summarySection}>
+                          <Text style={styles.summaryLabel}>
+                            {language === 'fr'
+                              ? `TVA & commission Nox (indicatif, billet standard)`
+                              : `VAT & Nox fee (indicative, standard ticket)`}
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {language === 'fr'
+                              ? `Prix public TTC : ${b.ttc} € (HT ${b.ht} € + TVA ${tvaPct} % ${b.tva} €)`
+                              : `Public price incl. VAT: ${b.ttc} € (excl. ${b.ht} € + VAT ${tvaPct}% ${b.tva} €)`}
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {language === 'fr'
+                              ? `Commission Nox ${comPct} % : −${b.commission} € / billet`
+                              : `Nox fee ${comPct}%: −${b.commission} € / ticket`}
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {language === 'fr'
+                              ? `Reversement estimé : ${b.netOrganizer} € / billet`
+                              : `Estimated payout: ${b.netOrganizer} € / ticket`}
+                          </Text>
+                          <Text style={styles.summarySubValue}>
+                            {language === 'fr'
+                              ? 'La commission est déduite du reversement organisateur — le prix payé par l\'acheteur ne change pas.'
+                              : 'The fee is deducted from the organizer payout — the buyer price does not change.'}
+                          </Text>
+                        </View>
+                      );
+                    })()}
     
                     {selectedVenue && (
                       <View style={styles.summarySection}>

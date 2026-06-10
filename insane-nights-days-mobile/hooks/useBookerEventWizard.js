@@ -22,6 +22,7 @@ import {
 } from '../utils/bookerEventWizardUtils';
 import { useBookerEventWizardDraft } from './useBookerEventWizardDraft';
 import { useBookerEventWizardRental } from './useBookerEventWizardRental';
+import { parseSaleDateInput } from '../utils/ticketPricingUtils';
 
 export function useBookerEventWizard({
   user,
@@ -627,6 +628,35 @@ export function useBookerEventWizard({
             }
             entry.maxSold = mx;
           }
+          // Phases de vente : fenêtre optionnelle par tarif (JJ/MM/AAAA)
+          const saleStartIso = parseSaleDateInput(row.saleStart);
+          if (saleStartIso === undefined) {
+            showError(
+              language === 'fr'
+                ? `Tarif ${i + 1} : date de début de vente invalide (format JJ/MM/AAAA).`
+                : `Tier ${i + 1}: invalid sale start date (DD/MM/YYYY).`
+            );
+            return;
+          }
+          const saleEndIso = parseSaleDateInput(row.saleEnd, { endOfDay: true });
+          if (saleEndIso === undefined) {
+            showError(
+              language === 'fr'
+                ? `Tarif ${i + 1} : date de fin de vente invalide (format JJ/MM/AAAA).`
+                : `Tier ${i + 1}: invalid sale end date (DD/MM/YYYY).`
+            );
+            return;
+          }
+          if (saleStartIso && saleEndIso && saleStartIso >= saleEndIso) {
+            showError(
+              language === 'fr'
+                ? `Tarif ${i + 1} : la fin de vente doit être après le début.`
+                : `Tier ${i + 1}: sale end must be after sale start.`
+            );
+            return;
+          }
+          if (saleStartIso) entry.saleStart = saleStartIso;
+          if (saleEndIso) entry.saleEnd = saleEndIso;
           ticketTiersPayload.push(entry);
         }
       }

@@ -26,6 +26,7 @@ import {
   isDeviceCalendarExportSupported,
 } from '../../utils/addNoxEventToCalendar';
 import { API_DATE_RE, EVENT_DETAIL_MOCK_EVENTS, isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
+import { tierSaleWindowHint } from '../../utils/ticketPricingUtils';
 import { useEventDetailPurchase } from '../../hooks/useEventDetailPurchase';
 import { useEventDetailGroups } from '../../hooks/useEventDetailGroups';
 import { styles } from './EventDetailPage.styles';
@@ -548,8 +549,8 @@ export default function EventDetailPage() {
                 {!canProceedPurchaseTier && hasMultipleTicketTiers ? (
                   <Text style={[styles.helperTextTier, { marginBottom: 10 }]}>
                     {language === 'fr'
-                      ? 'Aucun tarif disponible pour le moment (quotas épuisés).'
-                      : 'No tiers available right now (sold out).'}
+                      ? 'Aucun tarif disponible pour le moment (quotas épuisés ou vente non ouverte).'
+                      : 'No tiers available right now (sold out or sale not open).'}
                   </Text>
                 ) : null}
                 {hasMultipleTicketTiers && ticketTiersForPurchase?.length ? (
@@ -566,6 +567,7 @@ export default function EventDetailPage() {
                             ? ` (${t.remaining} restant(s))`
                             : ` (${t.remaining} left)`
                           : '';
+                      const windowHint = tierSaleWindowHint(t, language);
                       return (
                         <TouchableOpacity
                           key={t.id}
@@ -578,7 +580,7 @@ export default function EventDetailPage() {
                           disabled={!ok}
                           accessibilityRole="button"
                           accessibilityState={{ selected: sel, disabled: !ok }}
-                          accessibilityLabel={`${t.label} ${t.price}€${soldHint}`}
+                          accessibilityLabel={`${t.label} ${t.price}€${soldHint}${windowHint ? ` · ${windowHint}` : ''}`}
                         >
                           <Text
                             style={[
@@ -588,6 +590,7 @@ export default function EventDetailPage() {
                             ]}
                           >
                             {t.label} · {t.price}€{soldHint}
+                            {windowHint ? ` · ${windowHint}` : ''}
                           </Text>
                         </TouchableOpacity>
                       );

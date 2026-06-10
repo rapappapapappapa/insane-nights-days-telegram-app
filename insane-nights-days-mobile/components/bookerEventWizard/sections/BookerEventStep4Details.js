@@ -107,8 +107,8 @@ export default function BookerEventStep4Details(props) {
                     />
                     <Text style={styles.helperText}>
                       {language === 'fr'
-                        ? 'Le prix DJ sera fixé via un contrat (chat privé). Tu peux proposer plusieurs tarifs entrée : le montant ci‑dessus est le palier standard (« general ») ; ajoute les autres sous « autres tarifs ».'
-                        : 'DJ fee is set via contract (private chat). You can offer several admission tiers: the amount above is the standard (« general ») tier; add more under « other tiers ».'}
+                        ? 'Prix TTC (TVA incluse). Le prix DJ sera fixé via un contrat (chat privé). Tu peux proposer plusieurs tarifs entrée : le montant ci‑dessus est le palier standard (« general ») ; ajoute les autres sous « autres tarifs ».'
+                        : 'Price incl. VAT. DJ fee is set via contract (private chat). You can offer several admission tiers: the amount above is the standard (« general ») tier; add more under « other tiers ».'}
                     </Text>
                   </View>
     
@@ -118,8 +118,8 @@ export default function BookerEventStep4Details(props) {
                     </Text>
                     <Text style={styles.helperText}>
                       {language === 'fr'
-                        ? 'Pour chaque ligne : nom du billet (ex. early bird), prix en euros, quota max optionnel.'
-                        : 'Per row: tier name (e.g. early bird), price in EUR, optional max tickets.'}
+                        ? 'Pour chaque ligne : nom du billet (ex. early bird), prix TTC en euros, quota max optionnel, et fenêtre de vente optionnelle (phases : early bird → standard → last minute).'
+                        : 'Per row: tier name (e.g. early bird), price incl. VAT, optional max tickets, optional sale window (phases: early bird → standard → last minute).'}
                     </Text>
                     {(formData.extraTicketTiers || []).map((row, idx) => (
                       <View key={`extratier-${idx}`} style={{ marginBottom: 12 }}>
@@ -164,6 +164,36 @@ export default function BookerEventStep4Details(props) {
                           value={String(row.maxSold ?? '')}
                           onChangeText={(v) => updateExtraTicketTier(idx, 'maxSold', v)}
                         />
+                        <View style={[styles.equipRow, { marginTop: 8, marginBottom: 0 }]}>
+                          <TextInput
+                            style={[styles.input, { flex: 1 }]}
+                            placeholder={
+                              language === 'fr' ? 'Début vente (JJ/MM/AAAA)' : 'Sale start (DD/MM/YYYY)'
+                            }
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            value={String(row.saleStart ?? '')}
+                            onChangeText={(v) => updateExtraTicketTier(idx, 'saleStart', v)}
+                            accessibilityLabel={
+                              language === 'fr'
+                                ? `Début de vente du tarif ${idx + 1}`
+                                : `Sale start for tier ${idx + 1}`
+                            }
+                          />
+                          <TextInput
+                            style={[styles.input, { flex: 1, marginLeft: 8 }]}
+                            placeholder={
+                              language === 'fr' ? 'Fin vente (JJ/MM/AAAA)' : 'Sale end (DD/MM/YYYY)'
+                            }
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            value={String(row.saleEnd ?? '')}
+                            onChangeText={(v) => updateExtraTicketTier(idx, 'saleEnd', v)}
+                            accessibilityLabel={
+                              language === 'fr'
+                                ? `Fin de vente du tarif ${idx + 1}`
+                                : `Sale end for tier ${idx + 1}`
+                            }
+                          />
+                        </View>
                       </View>
                     ))}
                     <TouchableOpacity style={styles.saveCatalogBtn} onPress={addExtraTicketTier}>

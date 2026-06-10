@@ -100,6 +100,13 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
         code: 'INVALID_TIER',
       });
     }
+    if (tierRes.error === 'TIER_NOT_ON_SALE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce tarif n\'est pas en vente actuellement (phase de vente fermée).',
+        code: 'TIER_NOT_ON_SALE',
+      });
+    }
     if (tierRes.error === 'PRICE_INVALID' || tierRes.error === 'TIER_PRICE_INVALID') {
       return res.status(400).json({
         success: false,
@@ -395,6 +402,13 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
         success: false,
         message: 'Tarif inconnu ou invalide.',
         code: 'INVALID_TIER',
+      });
+    }
+    if (tierRes.error === 'TIER_NOT_ON_SALE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce tarif n\'est pas en vente actuellement (phase de vente fermée).',
+        code: 'TIER_NOT_ON_SALE',
       });
     }
     if (tierRes.error === 'PRICE_INVALID' || tierRes.error === 'TIER_PRICE_INVALID') {

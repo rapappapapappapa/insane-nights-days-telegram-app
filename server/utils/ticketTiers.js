@@ -1,9 +1,20 @@
 /**
  * Multi-tarifs billetterie (JSON sur Event.ticketTiers).
- * Une entrée : { id, label, price, maxSold? } ; maxSold limite les ventes pour ce tarif (en plus du cap global event.capacity).
+ * Une entrée : { id, label, price, maxSold?, saleStart?, saleEnd? }.
+ * - maxSold limite les ventes pour ce tarif (en plus du cap global event.capacity).
+ * - saleStart / saleEnd (ISO) : fenêtre de vente (phases early bird → regular → last minute).
  */
 
 const MAX_TIERS = 8;
+
+function parseSaleDate(raw, field, label) {
+  if (raw == null || raw === '') return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) {
+    throw new Error(`${field} invalide pour "${label}" (date attendue).`);
+  }
+  return d.toISOString();
+}
 
 function sanitizeId(raw, fallback) {
   const s = String(raw || '')
@@ -54,11 +65,19 @@ function normalizeTicketTiersInput(input) {
       maxSold = m;
     }
 
+    const saleStart = parseSaleDate(row.saleStart, 'saleStart', label);
+    const saleEnd = parseSaleDate(row.saleEnd, 'saleEnd', label);
+    if (saleStart && saleEnd && saleStart >= saleEnd) {
+      throw new Error(`Fenêtre de vente invalide pour "${label}" : la fin doit être après le début.`);
+    }
+
     out.push({
       id,
       label: label.slice(0, 96),
       price: Math.round(price * 100) / 100,
       ...(maxSold != null ? { maxSold } : {}),
+      ...(saleStart ? { saleStart } : {}),
+      ...(saleEnd ? { saleEnd } : {}),
     });
   });
 
@@ -81,6 +100,20 @@ function parseTicketTiersFromDb(dbValue) {
   } catch {
     return null;
   }
+}
+
+/** Fenêtre de vente du tarif (phases). Sans dates = toujours en vente. */
+function isTierOnSale(tier, now = new Date()) {
+  if (!tier) return false;
+  if (tier.saleStart) {
+    const s = new Date(tier.saleStart);
+    if (!Number.isNaN(s.getTime()) && now < s) return false;
+  }
+  if (tier.saleEnd) {
+    const e = new Date(tier.saleEnd);
+    if (!Number.isNaN(e.getTime()) && now > e) return false;
+  }
+  return true;
 }
 
 /**
@@ -110,6 +143,10 @@ function resolvePurchaseTier(event, tierIdRequested) {
     return { error: 'INVALID_TIER', unitEuros: 0, tierId: null };
   }
 
+  if (!isTierOnSale(tier)) {
+    return { error: 'TIER_NOT_ON_SALE', unitEuros: 0, tierId: null };
+  }
+
   const unit = Number(tier.price);
   if (!Number.isFinite(unit) || unit <= 0) return { error: 'TIER_PRICE_INVALID', unitEuros: 0, tierId: null };
 
@@ -131,14 +168,20 @@ function enrichTiersWithSold(eventId, prismaOrTx, tiers) {
         price: t.price,
         sold,
         ...(maxSold != null ? { maxSold, remaining: Math.max(0, maxSold - sold) } : {}),
+        ...(t.saleStart ? { saleStart: t.saleStart } : {}),
+        ...(t.saleEnd ? { saleEnd: t.saleEnd } : {}),
+        onSale: isTierOnSale(t),
       };
     }),
   );
 }
 
-function minTierPriceEUR(tiers) {
+function minTierPriceEUR(tiers, opts = {}) {
   if (!tiers?.length) return null;
-  return Math.min(...tiers.map((t) => Number(t.price)).filter((x) => Number.isFinite(x) && x > 0));
+  const pool = opts.onlyOnSale ? tiers.filter((t) => isTierOnSale(t)) : tiers;
+  const prices = pool.map((t) => Number(t.price)).filter((x) => Number.isFinite(x) && x > 0);
+  if (prices.length === 0) return null;
+  return Math.min(...prices);
 }
 
 module.exports = {
@@ -147,4 +190,5 @@ module.exports = {
   resolvePurchaseTier,
   enrichTiersWithSold,
   minTierPriceEUR,
+  isTierOnSale,
 };

@@ -15,63 +15,36 @@ import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/config';
 import { useDebounce } from '../../hooks/useDebounce';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import EventCard from '../../components/EventCard';
+import { EVENT_DETAIL_MOCK_EVENTS as mockEvents } from '../../utils/eventDetailPageUtils';
 
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Insane Night - Soirée Electro',
-    date: '15 Janvier 2024',
-    time: '22:00',
-    location: 'Club Insane, Paris',
-    price: 25,
-    capacity: 200,
-    sold: 45,
-    genre: 'Electro',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop',
-    djs: ['DJ Neon', 'Mixmaster Nova'],
-    description: 'Une soirée électro explosive avec les meilleurs DJs de la scène underground',
-  },
-  {
-    id: '2',
-    title: 'Bass Revolution - Drum & Bass',
-    date: '20 Janvier 2024',
-    time: '21:00',
-    location: 'Warehouse Underground, Lyon',
-    price: 30,
-    capacity: 150,
-    sold: 78,
-    genre: 'Drum & Bass',
-    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['Bass Storm', 'DJ Cyber'],
-    description: 'Une révolution sonore avec les meilleurs artistes drum & bass',
-  },
-  {
-    id: '3',
-    title: 'Techno Underground Session',
-    date: '25 Janvier 2024',
-    time: '23:00',
-    location: 'Le Bunker, Marseille',
-    price: 20,
-    capacity: 300,
-    sold: 120,
-    genre: 'Techno',
-    image: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
-    djs: ['DJ Dark', 'Techno Master'],
-    description: 'Session techno underground dans un lieu unique',
-  },
-];
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function parseEventDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 export default function EventsPage() {
   const { navigate } = useNavigation();
   const { user } = useAuth();
+  const { language } = useLanguage();
   const [events, setEvents] = useState(mockEvents);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
+  const [dateFilter, setDateFilter] = useState('upcoming');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -96,7 +69,6 @@ export default function EventsPage() {
         setEvents(mockEvents);
       }
     } catch (error) {
-      console.log('⚠️ Backend non accessible, utilisation des données locales');
       setEvents(mockEvents);
     } finally {
       setLoading(false);
@@ -113,21 +85,23 @@ export default function EventsPage() {
   }, [events]);
 
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+    const today = startOfToday();
+    return events.filter((event) => {
       const matchesGenre = selectedGenre === 'all' || event.genre === selectedGenre;
       const matchesSearch =
         event.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
         event.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-      return matchesGenre && matchesSearch;
-    });
-  }, [events, selectedGenre, debouncedSearchTerm]);
 
-  const getAvailabilityColor = (sold, capacity) => {
-    const percentage = (sold / capacity) * 100;
-    if (percentage >= 90) return '#ef4444';
-    if (percentage >= 70) return '#f59e0b';
-    return '#10b981';
-  };
+      const eventDate = parseEventDate(event.date);
+      let matchesDate = true;
+      if (dateFilter !== 'all' && eventDate) {
+        if (dateFilter === 'upcoming') matchesDate = eventDate >= today;
+        if (dateFilter === 'past') matchesDate = eventDate < today;
+      }
+
+      return matchesGenre && matchesSearch && matchesDate;
+    });
+  }, [events, selectedGenre, debouncedSearchTerm, dateFilter]);
 
   if (loading && events.length === 0) {
     return (
@@ -205,6 +179,26 @@ export default function EventsPage() {
           />
         </View>
 
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateFiltersContainer}>
+          {[
+            { id: 'upcoming', label: language === 'fr' ? 'À venir' : 'Upcoming' },
+            { id: 'past', label: language === 'fr' ? 'Passés' : 'Past' },
+            { id: 'all', label: language === 'fr' ? 'Tous' : 'All' },
+          ].map((opt) => (
+            <TouchableOpacity
+              key={opt.id}
+              style={[styles.filterButton, dateFilter === opt.id && styles.filterButtonActive]}
+              onPress={() => setDateFilter(opt.id)}
+            >
+              <Text
+                style={[styles.filterText, dateFilter === opt.id && styles.filterTextActive]}
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
           {genres.map(genre => (
             <TouchableOpacity
@@ -231,6 +225,7 @@ export default function EventsPage() {
           <EventCard
             key={event.id}
             event={event}
+            language={language}
             onPress={(eventId) => navigate('eventDetail', { eventId })}
           />
         ))}
@@ -253,17 +248,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 16,
-    fontSize: 14,
   },
   eventsTopBar: {
     paddingTop: 50,
@@ -324,6 +308,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  dateFiltersContainer: {
+    marginBottom: 12,
+  },
   filtersContainer: {
     marginBottom: 20,
   },
@@ -348,6 +335,7 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: Colors.background,
   },
+  // eventCard sert encore au squelette de chargement
   eventCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
@@ -355,143 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',
-  },
-  eventImageContainer: {
-    position: 'relative',
-    height: 200,
-  },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  priceBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  priceText: {
-    color: Colors.background,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  genreBadge: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    backgroundColor: 'rgba(11,11,14,0.8)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  genreText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  eventContent: {
     padding: 16,
-  },
-  eventTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  eventDescription: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  eventInfo: {
-    marginBottom: 16,
-  },
-  eventInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  eventInfoIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  eventInfoText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    flex: 1,
-  },
-  availabilityContainer: {
-    marginBottom: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,23,68,0.3)',
-  },
-  availabilityHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  availabilityLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  availabilityCount: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  detailsButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  detailsButtonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  reserveButton: {
-    marginTop: 12,
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  reserveButtonText: {
-    color: '#fefce8',
-    fontSize: 16,
-    fontWeight: '700',
   },
   emptyContainer: {
     alignItems: 'center',

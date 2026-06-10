@@ -6,8 +6,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import Colors from '../constants/colors';
+import { formatEventPriceBadge } from '../utils/eventPriceUtils';
 
-const EventCard = React.memo(({ event, onPress }) => {
+const EventCard = React.memo(({ event, onPress, language = 'fr' }) => {
   const getAvailabilityColor = (sold, capacity) => {
     const percentage = (sold / capacity) * 100;
     if (percentage >= 90) return '#ef4444';
@@ -138,7 +139,10 @@ const EventCard = React.memo(({ event, onPress }) => {
     prevProps.event.id === nextProps.event.id &&
     prevProps.event.sold === nextProps.event.sold &&
     prevProps.event.status === nextProps.event.status &&
-    prevProps.onPress === nextProps.onPress
+    prevProps.event.price === nextProps.event.price &&
+    prevProps.event.hasMultipleTicketPrices === nextProps.event.hasMultipleTicketPrices &&
+    prevProps.onPress === nextProps.onPress &&
+    prevProps.language === nextProps.language
   );
 });
 

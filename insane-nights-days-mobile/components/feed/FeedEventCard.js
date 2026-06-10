@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
+import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
 import { styles } from '../../screens/feed/FeedPage.styles';
 
 export default function FeedEventCard({ item, language, onEventPress }) {
@@ -53,10 +54,7 @@ export default function FeedEventCard({ item, language, onEventPress }) {
         </View>
         <View style={styles.eventInfoRow}>
           <Ionicons name="cash" size={16} color="rgba(255,255,255,0.6)" />
-          <Text style={styles.eventInfoText}>
-            {(item.hasMultipleTicketPrices ? (language === 'fr' ? 'dès ' : 'from ') : '') +
-              (item.price != null ? `${item.price}€` : '')}
-          </Text>
+          <Text style={styles.eventInfoText}>{formatEventPriceBadge(item, language)}</Text>
         </View>
       </View>
     </TouchableOpacity>

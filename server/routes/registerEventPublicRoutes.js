@@ -2,7 +2,7 @@
  * Liste / détail événements publics + groupes (délégation userController).
  */
 const prisma = require('../lib/prisma');
-const { parseTicketTiersFromDb, enrichTiersWithSold } = require('../utils/ticketTiers');
+const { parseTicketTiersFromDb, enrichTiersWithSold, minTierPriceEUR } = require('../utils/ticketTiers');
 
 module.exports = function registerEventPublicRoutes(app, deps) {
   const { authenticateToken, userController } = deps;
@@ -87,29 +87,38 @@ app.get('/api/events', async (req, res) => {
     const djMap = new Map(userDjs.map(udj => [udj.userId, udj]));
 
     // Formater les événements pour correspondre au format attendu par le frontend
-    const formattedEvents = dbEvents.map((event) => ({
-      id: event.id,
-      title: event.title,
-      date: event.date.toISOString().split('T')[0],
-      time: event.time,
-      location: event.location,
-      price: event.price,
-      capacity: event.capacity,
-      sold: event.sold,
-      genre: event.genre,
-      image: event.image,
-      description: event.description,
-      status: event.status || 'UPCOMING', // Statut de l'événement (UPCOMING, ONGOING, FINISHED)
-      djs: event.eventDjs.map((ed) => {
-        // Récupérer le nom du DJ depuis UserDj
-        const userDj = djMap.get(ed.djId);
-        const djName = userDj?.artistName || userDj?.user?.username || `DJ ${ed.djId.slice(0, 8)}`;
-        return djName;
-      }),
-      djIds: event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
-      venueId: event.venueId, 
-      venueName: event.venue?.venueName,
-    }));
+    const formattedEvents = dbEvents.map((event) => {
+      const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
+      const hasMultipleTicketPrices = Array.isArray(rawTiers) && rawTiers.length > 1;
+      // Prix « dès X € » : priorité aux tarifs en vente (phases), repli sur tous les paliers
+      const minPrice = hasMultipleTicketPrices
+        ? minTierPriceEUR(rawTiers, { onlyOnSale: true }) ?? minTierPriceEUR(rawTiers)
+        : null;
+      const displayPrice = minPrice != null ? minPrice : event.price;
+
+      return {
+        id: event.id,
+        title: event.title,
+        date: event.date.toISOString().split('T')[0],
+        time: event.time,
+        location: event.location,
+        price: displayPrice,
+        hasMultipleTicketPrices,
+        capacity: event.capacity,
+        sold: event.sold,
+        genre: event.genre,
+        image: event.image,
+        description: event.description,
+        status: event.status || 'UPCOMING',
+        djs: event.eventDjs.map((ed) => {
+          const userDj = djMap.get(ed.djId);
+          return userDj?.artistName || userDj?.user?.username || `DJ ${ed.djId.slice(0, 8)}`;
+        }),
+        djIds: event.eventDjs.map((ed) => ed.djId),
+        venueId: event.venueId,
+        venueName: event.venue?.venueName,
+      };
+    });
 
     res.json({ success: true, events: formattedEvents });
   } catch (error) {

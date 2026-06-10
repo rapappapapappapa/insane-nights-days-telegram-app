@@ -63,13 +63,7 @@ export default function TicketsPage() {
     try {
       const response = await api.getMyTickets(user.token);
       if (response && response.success && Array.isArray(response.tickets)) {
-        console.log('[TicketsPage] Tickets reçus:', response.tickets.length);
         if (response.tickets.length > 0) {
-          console.log('[TicketsPage] Premier ticket:', {
-            id: response.tickets[0].id,
-            purchaseDate: response.tickets[0].purchaseDate,
-            qrCode: response.tickets[0].qrCode,
-          });
         }
         setTickets(response.tickets);
       }

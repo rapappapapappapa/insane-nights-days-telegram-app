@@ -286,7 +286,6 @@ export default function DjMediasSection(props) {
               <TouchableOpacity 
                 style={styles.addVideoButton} 
                 onPress={() => {
-                  console.log('[Bouton] Add video pressé');
                   pickVideo();
                 }}
                 activeOpacity={0.7}

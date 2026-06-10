@@ -35,12 +35,6 @@ export default function RateEventPage() {
 
   // Debug: afficher les djIds reçus
   useEffect(() => {
-    console.log('[RATE EVENT PAGE] Route params:', {
-      eventId,
-      djIds,
-      djIdsType: Array.isArray(djIds) ? 'array' : typeof djIds,
-      djIdsLength: Array.isArray(djIds) ? djIds.length : 'N/A',
-    });
   }, [eventId, djIds]);
 
   // Récupérer les noms des DJs depuis leurs IDs
@@ -112,11 +106,6 @@ export default function RateEventPage() {
       return;
     }
 
-    console.log('[RATE DJ] Envoi notation:', {
-      djUserId: ratingDjModal.djUserId,
-      eventId: eventId,
-      rating: rating,
-    });
 
     setLoading(true);
     try {

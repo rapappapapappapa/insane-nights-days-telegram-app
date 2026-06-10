@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 import { usePrestataireProfile } from '../../hooks/usePrestataireProfile';
 import { usePrestataireBookings } from '../../hooks/usePrestataireBookings';
 import { usePrestataireMessaging } from '../../hooks/usePrestataireMessaging';
@@ -22,8 +24,9 @@ export default function PrestataireDashboardPage() {
   const { user } = useAuth();
   const { height: windowH } = useWindowDimensions();
   const contractEditorModalCardHeight = Math.round(windowH * 0.88);
+  const { toast, showError, showSuccess, hideToast } = useToast();
 
-  const profile = usePrestataireProfile({ user, language });
+  const profile = usePrestataireProfile({ user, language, showError, showSuccess });
   const bookingsHook = usePrestataireBookings({ user });
   const messaging = usePrestataireMessaging({ user, language, routeParams });
 
@@ -165,6 +168,8 @@ export default function PrestataireDashboardPage() {
         setShowEventEndModal={setShowEventEndModal}
         counterContract={counterContract}
       />
+
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
     </View>
   );
 }

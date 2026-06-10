@@ -21,6 +21,7 @@ export default function FeedPostCard({
   onDjPress,
   onBookerPress,
   onReportPost,
+  onDeletePost,
   onToggleLike,
   onToggleComments,
   onCreateComment,
@@ -107,6 +108,18 @@ export default function FeedPostCard({
             </View>
           </View>
         </TouchableOpacity>
+
+        {isAuthor && onDeletePost && (
+          <TouchableOpacity
+            style={styles.reportIconBtn}
+            onPress={() => onDeletePost(item.id)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Supprimer ce post' : 'Delete this post'}
+          >
+            <Ionicons name="trash-outline" size={18} color="rgba(255,255,255,0.65)" />
+          </TouchableOpacity>
+        )}
 
         {!isAuthor && (
           <TouchableOpacity

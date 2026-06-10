@@ -3,6 +3,7 @@ import { api } from '../api/config';
 
 /**
  * Likes et commentaires sur les posts du feed.
+ * @param onAuthError optionnel — retourne true si l'erreur (token expiré) est gérée par l'appelant.
  */
 export function useFeedPostEngagement({
   user,
@@ -12,6 +13,7 @@ export function useFeedPostEngagement({
   dispatchPostState,
   showError,
   refreshFeedNotifications,
+  onAuthError,
 }) {
   const toggledLikeRef = useRef({});
   const { likedPosts, postLikesCount, postComments, expandedComments, commentInputs, brokenPostImages } =
@@ -39,6 +41,7 @@ export function useFeedPostEngagement({
           }
         } catch (error) {
           console.error(`Erreur vérification like pour post ${postId}:`, error);
+          if (onAuthError && onAuthError(error)) break;
         }
       }
 
@@ -71,6 +74,7 @@ export function useFeedPostEngagement({
       }
     } catch (error) {
       console.error('Erreur like/unlike:', error);
+      if (onAuthError && onAuthError(error)) return;
       showError(error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
     }
   };
@@ -118,6 +122,7 @@ export function useFeedPostEngagement({
       }
     } catch (error) {
       console.error('Erreur création commentaire:', error);
+      if (onAuthError && onAuthError(error)) return;
       showError(error.message || (language === 'fr' ? 'Une erreur est survenue' : 'An error occurred'));
     }
   };

@@ -44,26 +44,18 @@ export function useNotifications() {
         const nextLatest = response?.latest ?? null;
         const previousCount = previousCountRef.current;
         if (previousCount !== null && newCount !== previousCount) {
-          console.log('[Notifications] unread changed:', {
-            prev: previousCount,
-            next: newCount,
-            byProfileType: nextByType,
-            latest: nextLatest ? { profileType: nextLatest.profileType, messageType: nextLatest.messageType, eventTitle: nextLatest.eventTitle } : null,
-          });
         }
 
         // ✅ CORRECTION: Détecter si un nouveau message est arrivé
         // On détecte si le compteur augmente ET que ce n'est pas le premier chargement
         // Cela évite d'afficher une notification au démarrage de l'app si l'utilisateur a déjà des messages non lus
         if (!isInitialLoadRef.current && previousCount !== null && newCount > previousCount) {
-          console.log(`🔔 Nouveau message détecté! ${previousCount} -> ${newCount}`);
           setHasNewMessage(true);
         }
 
         // ✅ Marquer que le premier chargement est terminé
         if (isInitialLoadRef.current) {
           isInitialLoadRef.current = false;
-          console.log(`📬 Compteur initial de messages non lus: ${newCount}`);
         }
 
         setUnreadCount(newCount);

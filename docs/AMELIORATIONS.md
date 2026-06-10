@@ -38,9 +38,11 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 ## Phase 2 — Priorité produit forte (`[souvent OTA]`)
 
-- [x] Billetterie **multi-tarifs (MVP)** — paliers à la création événement, achat avec **`tierId`**, feed / détail « dès X € », **`tierLabel`** sur Mes tickets. *Reste : phases répétables, **TTC ~20 %**, **commission Nox**, édition des tarifs après création.*
+- [x] Billetterie **multi-tarifs (MVP)** — paliers à la création événement, achat avec **`tierId`**, feed / détail « dès X € », **`tierLabel`** sur Mes tickets. *Reste : édition des tarifs après création.*
 
-- [ ] Billetterie **phases** de vente (early bird → regular → last minute, etc.).
+- [x] Billetterie **phases** de vente (early bird → regular → last minute) — **`saleStart` / `saleEnd`** par palier, refus achat hors fenêtre (**`TIER_NOT_ON_SALE`**), wizard + détail événement.
+
+- [x] **TTC / commission Nox** (indicatif) — prix saisis TTC, récap wizard **HT / TVA 20 % / commission 10 %** déduite du reversement (**`ticketPricingUtils.js`**).
 
 - [ ] Places **hors Nox** sans décompte stock interne.
 
@@ -50,7 +52,7 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [ ] **Lieu secret** — révélation adresse **à partir d’une date**.
 
-- [ ] **`EventsPage`** : affichage **« dès X € »** aligné sur le feed (multi-tarifs).
+- [x] **`EventsPage`** : affichage **« dès X € »** aligné sur le feed (multi-tarifs) + filtre **À venir / Passés / Tous** (mobile).
 
 - [x] **`EventDetailPage`** — hooks achat + groupes, styles extraits (~770 lignes page).
 
@@ -106,9 +108,11 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [x] **Feed mobile** — **`FeedPage.js`** (~280 lignes) : **`useFeedList`**, **`useFeedPostEngagement`**, **`useFeedReport`** + **`components/feed/`**.
 
+- [x] **Assainissement post-audit** — **`HomePage.js`** (~715 lignes, hooks feed partagés) ; styles extraits (`DjProfilePage`, `WelcomePage`, `ProfilePage`, `LoginPage`) ; **`userController.js`** découpé en 5 domaines (`controllers/user/`) ; `console.log` de debug supprimés ; `Alert` informatifs → Toast ; mocks / `formatDate` dédupliqués.
+
 - [x] **Tests serveur (base)** — **`npm test`** : validation, **`ticketTiers`**, **`contractHelpers`**, **`ratingCalculations`** (17 tests) ; **CI GitHub Actions** sur push/PR.
 
-- [ ] Billetterie — tests **phases / TTC / commission** ; édition **`ticketTiers`** après création.
+- [x] Billetterie — tests **phases** (fenêtres de vente, 22 tests serveur). *Reste : édition **`ticketTiers`** après création ; reversement réel avec commission (quand payout organisateur).* 
 
 - [ ] Multi-DJs — tests E2E + migrations **n-n** si le produit l’exige.
 

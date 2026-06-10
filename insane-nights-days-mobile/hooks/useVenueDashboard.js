@@ -581,7 +581,6 @@ export function useVenueDashboard({
         if (Platform.OS === 'ios' && mediaType === 'video') {
           // Vérifier d'abord l'état actuel
           const { status: existingStatus, canAskAgain, accessPrivileges } = await ImagePicker.getMediaLibraryPermissionsAsync();
-          console.log('[pickMedia] État permissions iOS:', { existingStatus, canAskAgain, accessPrivileges });
           
           let finalStatus = existingStatus;
           let finalAccessPrivileges = accessPrivileges;
@@ -591,7 +590,6 @@ export function useVenueDashboard({
             const response = await ImagePicker.requestMediaLibraryPermissionsAsync();
             finalStatus = response.status;
             finalAccessPrivileges = response.accessPrivileges;
-            console.log('[pickMedia] Nouveau statut après demande:', { status: finalStatus, accessPrivileges: finalAccessPrivileges });
           }
   
           // Vérifier si l'accès est limité (seulement photos sélectionnées)

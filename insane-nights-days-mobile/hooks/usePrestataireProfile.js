@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { api } from '../api/config';
 import { DEFAULT_AVAILABLE_DAYS } from '../components/PrestataireGenreAndAvailabilityFields';
 
 /**
  * Profil prestataire (dashboard prestataire).
  */
-export function usePrestataireProfile({ user, language }) {
+export function usePrestataireProfile({ user, language, showError, showSuccess }) {
   const [profBusinessName, setProfBusinessName] = useState('');
   const [profPhonePro, setProfPhonePro] = useState('');
   const [profCity, setProfCity] = useState('');
@@ -72,15 +71,13 @@ export function usePrestataireProfile({ user, language }) {
   const savePrestataireProfile = async () => {
     if (!user?.token) return;
     if (!profBusinessName.trim() || !profPhonePro.trim()) {
-      Alert.alert(
-        language === 'fr' ? 'Champs requis' : 'Required fields',
+      showError(
         language === 'fr' ? 'Nom d’activité et téléphone pro sont obligatoires.' : 'Business name and phone are required.'
       );
       return;
     }
     if (profGenres.length === 0) {
-      Alert.alert(
-        language === 'fr' ? 'Genres' : 'Genres',
+      showError(
         language === 'fr' ? 'Ajoutez au moins un genre de prestation.' : 'Add at least one service type.'
       );
       return;
@@ -98,13 +95,13 @@ export function usePrestataireProfile({ user, language }) {
         availableStatus: profAvailableStatus,
       });
       if (res?.success) {
-        Alert.alert(language === 'fr' ? 'Enregistré' : 'Saved', language === 'fr' ? 'Profil mis à jour.' : 'Profile updated.');
+        showSuccess(language === 'fr' ? 'Profil mis à jour.' : 'Profile updated.');
       } else {
-        Alert.alert(language === 'fr' ? 'Erreur' : 'Error', res?.message || '');
+        showError(res?.message || (language === 'fr' ? 'Erreur' : 'Error'));
       }
     } catch (e) {
       console.error('[PrestataireDashboard] save profile', e);
-      Alert.alert(language === 'fr' ? 'Erreur' : 'Error', String(e?.message || e));
+      showError(String(e?.message || e));
     } finally {
       setProfSaving(false);
     }

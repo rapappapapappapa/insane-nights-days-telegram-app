@@ -1,14 +1,24 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api/config';
 
 /**
  * Chargement du fil (pour tous / abonnements).
+ * @param onAuthError optionnel — retourne true si l'erreur (token expiré) est gérée par l'appelant.
  */
-export function useFeedList({ user, feedTab, dispatchPostState }) {
+export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthError }) {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedError, setFeedError] = useState(null);
   const [feedAvatarBust, setFeedAvatarBust] = useState(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const fetchFeed = useCallback(
     async (isRefresh = false) => {
@@ -17,6 +27,7 @@ export function useFeedList({ user, feedTab, dispatchPostState }) {
       } else {
         setLoading(true);
       }
+      setFeedError(null);
 
       const isFollowing = feedTab === 'following';
 
@@ -33,6 +44,7 @@ export function useFeedList({ user, feedTab, dispatchPostState }) {
           response = await api.getFeed(50, 0);
         }
 
+        if (!mountedRef.current) return;
         if (response && response.success && Array.isArray(response.feed)) {
           setFeed(response.feed);
           const likesCountState = {};
@@ -47,20 +59,28 @@ export function useFeedList({ user, feedTab, dispatchPostState }) {
           setFeed([]);
         }
       } catch (error) {
+        if (!mountedRef.current) return;
         console.error('Erreur récupération feed:', error);
         setFeed([]);
+        if (!(onAuthError && onAuthError(error))) {
+          setFeedError(error?.message || null);
+        }
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (mountedRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [feedTab, user?.token, dispatchPostState]
+    [feedTab, user?.token, dispatchPostState, onAuthError]
   );
 
   return {
     feed,
+    setFeed,
     loading,
     refreshing,
+    feedError,
     feedAvatarBust,
     fetchFeed,
   };

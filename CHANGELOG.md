@@ -25,6 +25,22 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Refactorisé (mobile — feed d’actualité)
 - **`FeedPage.js`** (~1 400 → **~280** lignes) : styles → **`FeedPage.styles.js`** ; reducer / dates → **`utils/feedPageUtils.js`** ; chargement onglets → **`useFeedList`** ; likes / commentaires → **`useFeedPostEngagement`** ; signalement → **`useFeedReport`** ; cartes → **`FeedPostCard`**, **`FeedEventCard`**, **`FeedReportModal`**.
 
+### Complété (billetterie multi-tarifs — liste événements)
+- **`GET /api/events`** : **`hasMultipleTicketPrices`** + prix minimum des paliers (aligné feed / détail).
+- **`EventCard`**, **`EventsPage`** (mobile + web) : badge **« dès X € »** via **`utils/eventPriceUtils.js`** ; filtre date **À venir / Passés / Tous** sur la liste mobile.
+
+### Refactorisé (assainissement post-audit — mobile + serveur)
+- **`HomePage.js`** (~1 600 → **~715** lignes) : duplication feed supprimée — branche les hooks partagés **`useFeedList`** (+ état d'erreur / annulation au démontage), **`useFeedPostEngagement`**, **`useFeedReport`** et les composants **`FeedPostCard`** (+ prop `onDeletePost` auteur), **`FeedEventCard`**, **`FeedReportModal`** ; garde-fou chargement > 20 s conservé.
+- **`EventsPage.js`** (mobile) : ~150 lignes de styles morts supprimées (rendu déjà dans `EventCard`), `getAvailabilityColor` dupliqué retiré, mocks dédupliqués via **`EVENT_DETAIL_MOCK_EVENTS`**.
+- **Extraction styles** : **`DjProfilePage`** (~1 605 → ~860), **`WelcomePage`** (~1 485 → ~995), **`ProfilePage`** (~1 345 → ~840), **`LoginPage`** (~835 → ~575) → fichiers `*.styles.js` (script **`extract-screen-styles.js`**).
+- **`userController.js`** (serveur, ~1 700 lignes) → agrégateur + 5 contrôleurs par domaine sous **`controllers/user/`** (account, djProfile, community, venue, eventGroup) ; API `require` inchangée.
+- **Nettoyage** : 29 `console.log` de debug supprimés (script **`strip-console-logs.js`**) ; `Alert.alert` informatifs → **Toast** dans `usePrestataireProfile` / dashboard prestataire ; `formatDate` dupliqué de `WelcomePage` → **`formatFeedRelativeDate`**.
+
+### Ajouté (billetterie — phases de vente + TTC / commission)
+- **Phases de vente** par palier : champs optionnels **`saleStart` / `saleEnd`** sur **`ticketTiers`** (early bird → standard → last minute) ; serveur (**`isTierOnSale`**, code **`TIER_NOT_ON_SALE`** à l'achat Stripe / démo, **`onSale`** exposé sur le détail, « dès X € » basé sur les paliers **en vente**) ; wizard booker (dates **JJ/MM/AAAA** par tarif, validation) ; **`EventDetailPage`** (paliers hors fenêtre désactivés + hint « dès le… / jusqu'au… / vente terminée »).
+- **TTC / commission Nox** : prix saisis **TTC** ; récap wizard avec détail **HT / TVA 20 %**, **commission Nox 10 %** déduite du reversement organisateur et **reversement estimé** par billet (**`utils/ticketPricingUtils.js`**) — indicatif, le prix acheteur ne change pas.
+- **Tests serveur** : 5 nouveaux tests phases (`normalizeTicketTiersInput`, `isTierOnSale`, `resolvePurchaseTier`, `minTierPriceEUR onlyOnSale`) — 22 au total.
+
 ---
 
 ## Semaine du 2 au 5 juin 2026 (lun. – jeu.)

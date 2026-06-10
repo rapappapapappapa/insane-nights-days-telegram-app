@@ -29,7 +29,6 @@ export default function PushNotification({ visible, message, onPress, onClose })
 
   useEffect(() => {
     if (visible) {
-      console.log('🔔 PushNotification: Affichage de la notification');
       setIsAnimating(true);
       
       // Animation d'entrée

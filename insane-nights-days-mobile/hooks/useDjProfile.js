@@ -208,13 +208,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
           additionalData.vatNumber = vatNumber?.trim() || null;
         }
   
-        console.log('[handleSave] Données à envoyer:', {
-          bio: additionalData.bio?.substring(0, 50),
-          genre: additionalData.genre,
-          mainCity: additionalData.mainCity,
-          languages: additionalData.languages,
-          allKeys: Object.keys(additionalData),
-        });
   
         // On envoie les valeurs originales pour les champs non-éditables (requis pour validation)
         // et les valeurs modifiées pour les champs éditables
@@ -227,7 +220,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
           additionalData
         );
   
-        console.log('[handleSave] Réponse du serveur:', response);
   
         if (response && response.success) {
           // Ne pas mettre à jour les champs locaux - garder ce que l'utilisateur a tapé
@@ -309,7 +301,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
       }
       
       try {
-        console.log('[saveMedia] Upload média:', { djId, type, title, url: url.substring(0, 50) + '...' });
         
         // Vérifier si c'est une URL locale (file:// ou content://) ou une URL HTTP
         const isLocalFile = url.startsWith('file://') || url.startsWith('content://') || (!url.startsWith('http://') && !url.startsWith('https://'));
@@ -317,7 +308,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
         let response;
         if (isLocalFile) {
           // Uploader le fichier sur le serveur
-          console.log('[saveMedia] Upload fichier local vers serveur...');
           try {
             response = await api.uploadDjMediaFile(user.token, djId, url, type, title);
           } catch (uploadError) {
@@ -333,12 +323,10 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
           }
         } else {
           // C'est déjà une URL HTTP, utiliser l'ancienne méthode
-          console.log('[saveMedia] Utilisation URL HTTP existante...');
           response = await api.uploadDjMedia(user.token, djId, type, url, title);
         }
         
         if (response && response.success) {
-          console.log('[saveMedia] Média sauvegardé avec succès:', response.media?.url);
           // Recharger les médias après l'upload réussi
           if (djId) {
             try {
@@ -486,7 +474,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
         if (Platform.OS === 'ios') {
           // Vérifier d'abord l'état actuel
           const { status: existingStatus, canAskAgain, accessPrivileges } = await ImagePicker.getMediaLibraryPermissionsAsync();
-          console.log('[pickVideo] État permissions iOS:', { existingStatus, canAskAgain, accessPrivileges });
           
           let finalStatus = existingStatus;
           let finalAccessPrivileges = accessPrivileges;
@@ -496,7 +483,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
             const response = await ImagePicker.requestMediaLibraryPermissionsAsync();
             finalStatus = response.status;
             finalAccessPrivileges = response.accessPrivileges;
-            console.log('[pickVideo] Nouveau statut après demande:', { status: finalStatus, accessPrivileges: finalAccessPrivileges });
           }
   
           // Vérifier si l'accès est limité (seulement photos sélectionnées)
@@ -516,11 +502,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
           }
           
           // Log pour déboguer
-          console.log('[pickVideo] Permissions finales:', { 
-            status: finalStatus, 
-            accessPrivileges: finalAccessPrivileges,
-            canAskAgain 
-          });
   
           if (finalStatus !== 'granted') {
             showConfirm(
@@ -544,7 +525,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
           }
         }
   
-        console.log('[pickVideo] Permissions OK, ouverture de la galerie Photos...');
         
         // Utiliser ImagePicker en priorité pour accéder à la galerie Photos (comportement natif iOS)
         let result;
@@ -617,7 +597,6 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
   
               if (!docResult.canceled && docResult.assets && docResult.assets.length > 0) {
                 const videoUri = docResult.assets[0].uri;
-                console.log('[pickVideo] Vidéo sélectionnée via DocumentPicker:', videoUri.substring(0, 50) + '...');
                 
                 try {
                   const response = await saveMedia('video', videoUri);
@@ -644,24 +623,19 @@ export function useDjProfile({ user, language, showError, showSuccess, showConfi
         
         // Traiter le résultat ImagePicker (galerie Photos)
         if (!result || result.canceled) {
-          console.log('[pickVideo] Sélection annulée');
           return;
         }
         
-        console.log('[pickVideo] Résultat galerie Photos:', result.canceled ? 'Annulé' : 'Sélectionné');
   
         if (!result.canceled && result.assets && result.assets.length > 0) {
-          console.log('[pickVideo] Vidéos sélectionnées depuis la galerie:', result.assets.length);
           
           // Sauvegarder chaque vidéo et récupérer l'ID
           for (const asset of result.assets) {
             try {
-              console.log('[pickVideo] Sauvegarde vidéo:', asset.uri.substring(0, 50) + '...');
               const response = await saveMedia('video', asset.uri);
               if (response && response.success && response.media) {
                 // Utiliser l'URL retournée par le serveur (URL publique)
                 setVideos([...videos, { id: response.media.id, url: response.media.url, title: response.media.title }]);
-                console.log('[pickVideo] Vidéo sauvegardée avec succès');
               } else {
                 setVideos([...videos, { id: null, url: asset.uri }]);
               }

@@ -59,12 +59,6 @@ export default function SelectDjPage() {
 
   const handleDjPress = (dj) => {
     // Naviguer vers le profil DJ en mode sélection
-    console.log('[SelectDj] Navigation vers djProfile:', { 
-      djId: dj.id, 
-      slotIndex, 
-      isSlotMode,
-      selectedDjIds 
-    });
     navigate('djProfile', {
       djId: dj.id,
       djUserId: dj.userId,

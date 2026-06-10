@@ -100,11 +100,11 @@ const adminBootstrapLimiter = rateLimit({
 app.use('/api/admin/bootstrap', adminBootstrapLimiter);
 app.use('/api/admin/seed-demo', adminBootstrapLimiter);
 
-// Note: Stripe webhooks ont besoin du body brut pour vérifier la signature.
+// Note: les webhooks (Stripe, Yousign) ont besoin du body brut pour vérifier la signature.
 app.use(express.json({
   limit: '50mb',
   verify: (req, res, buf) => {
-    if (req.originalUrl && req.originalUrl.startsWith('/api/webhooks/stripe')) {
+    if (req.originalUrl && req.originalUrl.startsWith('/api/webhooks/')) {
       req.rawBody = buf;
     }
   },
@@ -329,6 +329,7 @@ require('./routes/registerRatingRoutes')(app, { authenticateToken });
 require('./routes/registerDjPublicRoutes')(app, {});
 require('./routes/registerMediaBookingsRoutes')(app, profileDeps);
 require('./routes/registerMiscRoutes')(app, { authenticateToken });
+require('./routes/registerYousignWebhook')(app);
 
 // Mettre à jour les statuts au démarrage (désactivable en prod)
 const ENABLE_EVENT_STATUS_CRON = (process.env.ENABLE_EVENT_STATUS_CRON ?? 'true').toLowerCase() === 'true';

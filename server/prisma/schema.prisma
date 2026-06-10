@@ -419,6 +419,8 @@ model EventDj {
   contractSentBy   ContractParty?
   bookerAcceptedAt DateTime?
   djAcceptedAt     DateTime?
+  /// ID de la demande de signature Yousign (statut PENDING_SIGNATURE)
+  yousignSignatureRequestId String?
   rejectionReason  String?
   /// Créneau de passage du DJ (heure locale « HH:mm »), dans la fenêtre date + durée événement
   slotStart        String?
@@ -432,6 +434,7 @@ model EventDj {
   @@index([eventId])
   @@index([djId])
   @@index([status])
+  @@index([yousignSignatureRequestId])
 }
 
 model EventVenue {
@@ -452,6 +455,8 @@ model EventVenue {
   contractSentBy    ContractPartyVenue?
   bookerAcceptedAt  DateTime?
   venueAcceptedAt   DateTime?
+  /// ID de la demande de signature Yousign (statut PENDING_SIGNATURE)
+  yousignSignatureRequestId String?
   rejectionReason   String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
@@ -460,6 +465,7 @@ model EventVenue {
   messages          Message[]
 
   @@unique([eventId, venueId])
+  @@index([yousignSignatureRequestId])
 }
 
 /// Lien optionnel Organisateur ↔ Prestataire (chat privé + contrat), même logique que EventVenue.
@@ -481,6 +487,8 @@ model EventPrestataire {
   contractSentBy        ContractPartyPrestataire?
   bookerAcceptedAt      DateTime?
   prestataireAcceptedAt DateTime?
+  /// ID de la demande de signature Yousign (statut PENDING_SIGNATURE)
+  yousignSignatureRequestId String?
   rejectionReason       String?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
@@ -492,6 +500,7 @@ model EventPrestataire {
   @@index([eventId])
   @@index([prestataireId])
   @@index([status])
+  @@index([yousignSignatureRequestId])
 }
 
 model BookerCommunityFriend {
@@ -791,6 +800,8 @@ enum BookingPaymentStatus {
 enum BookingContractStatus {
   DRAFT
   SENT
+  /// Les deux parties ont accepté sur Nox ; signature électronique Yousign en cours
+  PENDING_SIGNATURE
   SIGNED
 }
 

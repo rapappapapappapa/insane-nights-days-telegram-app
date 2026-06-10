@@ -122,6 +122,23 @@ function amountNum(row, payload) {
 }
 
 /**
+ * Ligne « Signature … » avec smart anchor Yousign optionnel.
+ * L'ancre {{sN|signature|w|h}} est écrite en blanc (invisible à la lecture) et détectée
+ * par Yousign (parse_anchors) pour positionner le champ de signature du signataire N.
+ * L'espace du libellé + champ (70 px) est réservé d'un bloc pour éviter qu'un saut
+ * de page sépare la ligne de son champ.
+ */
+function signatureLine(doc, label, signerIndex, withAnchor) {
+  if (withAnchor) space(doc, 105);
+  p(doc, label);
+  if (withAnchor) {
+    doc.fontSize(9).font('Helvetica').fillColor('white').text(`{{s${signerIndex}|signature|180|70}}`);
+    doc.moveDown(6.5);
+    doc.fillColor('black');
+  }
+}
+
+/**
  * Contrat DJ — aligné modèle « Contrat de Booking Nox - DJ / Organisateur »
  */
 async function generateDjContractPdf({
@@ -132,6 +149,7 @@ async function generateDjContractPdf({
   venue,
   organizerEmail,
   djEmail,
+  signatureAnchors = false,
 }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
@@ -300,8 +318,18 @@ async function generateDjContractPdf({
         : formatDate(new Date());
     p(doc, `Date : ${signDate}`);
     p(doc, '');
-    p(doc, `Signature Organisateur${eventDj?.bookerAcceptedAt ? ` — accepté le ${formatDate(eventDj.bookerAcceptedAt)}` : ''}`);
-    p(doc, `Signature Artiste${eventDj?.djAcceptedAt ? ` — accepté le ${formatDate(eventDj.djAcceptedAt)}` : ''}`);
+    signatureLine(
+      doc,
+      `Signature Organisateur${eventDj?.bookerAcceptedAt ? ` — accepté le ${formatDate(eventDj.bookerAcceptedAt)}` : ''}`,
+      1,
+      signatureAnchors
+    );
+    signatureLine(
+      doc,
+      `Signature Artiste${eventDj?.djAcceptedAt ? ` — accepté le ${formatDate(eventDj.djAcceptedAt)}` : ''}`,
+      2,
+      signatureAnchors
+    );
 
     doc.end();
   });
@@ -317,6 +345,7 @@ async function generatePrestataireContractPdf({
   eventPrestataire,
   organizerEmail,
   prestataireEmail,
+  signatureAnchors = false,
 }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
@@ -425,13 +454,17 @@ async function generatePrestataireContractPdf({
         : formatDate(new Date());
     p(doc, `Date : ${signDate}`);
     p(doc, '');
-    p(
+    signatureLine(
       doc,
-      `Signature Organisateur${eventPrestataire?.bookerAcceptedAt ? ` — ${formatDate(eventPrestataire.bookerAcceptedAt)}` : ''}`
+      `Signature Organisateur${eventPrestataire?.bookerAcceptedAt ? ` — ${formatDate(eventPrestataire.bookerAcceptedAt)}` : ''}`,
+      1,
+      signatureAnchors
     );
-    p(
+    signatureLine(
       doc,
-      `Signature Prestataire${eventPrestataire?.prestataireAcceptedAt ? ` — ${formatDate(eventPrestataire.prestataireAcceptedAt)}` : ''}`
+      `Signature Prestataire${eventPrestataire?.prestataireAcceptedAt ? ` — ${formatDate(eventPrestataire.prestataireAcceptedAt)}` : ''}`,
+      2,
+      signatureAnchors
     );
 
     doc.end();
@@ -474,6 +507,7 @@ async function generateVenueContractPdf({
   eventVenue,
   organizerEmail,
   venueEmail,
+  signatureAnchors = false,
 }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
@@ -725,11 +759,18 @@ async function generateVenueContractPdf({
         : formatDate(new Date());
     p(doc, `Date : ${signDate}`);
     p(doc, '');
-    p(
+    signatureLine(
       doc,
-      `Signature Organisateur${eventVenue?.bookerAcceptedAt ? ` — ${formatDate(eventVenue.bookerAcceptedAt)}` : ''}`
+      `Signature Organisateur${eventVenue?.bookerAcceptedAt ? ` — ${formatDate(eventVenue.bookerAcceptedAt)}` : ''}`,
+      1,
+      signatureAnchors
     );
-    p(doc, `Signature Lieu${eventVenue?.venueAcceptedAt ? ` — ${formatDate(eventVenue.venueAcceptedAt)}` : ''}`);
+    signatureLine(
+      doc,
+      `Signature Lieu${eventVenue?.venueAcceptedAt ? ` — ${formatDate(eventVenue.venueAcceptedAt)}` : ''}`,
+      2,
+      signatureAnchors
+    );
 
     doc.end();
   });

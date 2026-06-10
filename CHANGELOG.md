@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 9 au 12 juin 2026 (mar. – ven.)
 
+### Ajouté (contrats — signature électronique Yousign)
+- **Signature électronique** des contrats (DJ / lieu / prestataire) via **Yousign** : quand les **deux parties acceptent** sur Nox, le contrat passe en **`PENDING_SIGNATURE`** et chacune reçoit un **email Yousign** pour signer le PDF ; le webhook **`signature_request.done`** finalise en **`SIGNED`** (+ paiement `PENDING`, notif chat, email PDF) ; refus / expiration → retour à `SENT`. **Sans `YOUSIGN_API_KEY`, flux historique inchangé** (acceptation = signature) — fallback aussi en cas d'erreur Yousign.
+- **Serveur** : client API v3 **`utils/yousign.js`** (sandbox par défaut, multipart natif, HMAC webhook), orchestration **`utils/contractSignature.js`**, webhook **`POST /api/webhooks/yousign`** (body brut + vérif `x-yousign-signature-256`), **smart anchors** `{{s1/s2|signature}}` (texte blanc) dans les PDF pdfkit (option `signatureAnchors`, preview / email inchangés).
+- **Prisma** : statut **`PENDING_SIGNATURE`** + champ **`yousignSignatureRequestId`** (+ index) sur `EventDj` / `EventVenue` / `EventPrestataire` (migration `20260610170000`).
+- **Mobile** : statut « Signature en cours » + hint explicatif dans les 4 modales chat ; toast « signature électronique envoyée par email » à l'acceptation.
+- **Config** : `YOUSIGN_API_KEY`, `YOUSIGN_API_BASE_URL`, `YOUSIGN_WEBHOOK_SECRET` documentées dans `env.example.txt`. **5 nouveaux tests** (27 au total).
+
 ### Refactorisé (mobile — dashboard DJ, fin du découpage)
 - **`DjDashboardPage.js`** (~2 380 → **~545** lignes) : logique → hooks **`useDjProfile`**, **`useDjBookings`**, **`useDjMessaging`** ; modales → **`DjChatModal`**, **`DjContractModals`**, **`DjMediaModals`** ; **`PAYMENT_TERMS_OPTIONS`** dans **`utils/djDashboardUtils.js`**.
 - **Scripts** de maintenance : **`extract-dj-hooks.js`**, **`extract-dj-modals.js`**, **`build-dj-dashboard-thin.js`**.

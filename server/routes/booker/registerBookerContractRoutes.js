@@ -301,8 +301,28 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
     });
 
     const shouldSign = !!updated.bookerAcceptedAt && !!updated.djAcceptedAt;
-    const next = shouldSign
-      ? await prisma.eventDj.update({
+
+    // Les deux parties ont accepté : signature électronique Yousign si configurée,
+    // sinon signature directe (flux historique).
+    let next = updated;
+    let pendingSignature = false;
+    if (shouldSign) {
+      const { isYousignConfigured } = require('../../utils/yousign');
+      if (isYousignConfigured()) {
+        try {
+          const { startDjContractSignature } = require('../../utils/contractSignature');
+          const requestId = await startDjContractSignature(eventDjId);
+          next = await prisma.eventDj.update({
+            where: { id: eventDjId },
+            data: { contractStatus: 'PENDING_SIGNATURE', yousignSignatureRequestId: requestId },
+          });
+          pendingSignature = true;
+        } catch (e) {
+          console.error('[contract] Yousign indisponible, signature directe (fallback):', e?.message || e);
+        }
+      }
+      if (!pendingSignature) {
+        next = await prisma.eventDj.update({
           where: { id: eventDjId },
           data: {
             contractStatus: 'SIGNED',
@@ -311,18 +331,21 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
               ? { paymentStatus: 'PENDING' }
               : {}),
           },
-        })
-      : updated;
+        });
+      }
+    }
 
-    // Notification à l'autre partie : contrat accepté ou signé
+    // Notification à l'autre partie : contrat accepté / signé / en attente de signature
     const eventTitle = ed.event?.title ? ` (${ed.event.title})` : '';
-    const notifContent = shouldSign
-      ? `📋 Contrat signé !${eventTitle}`
-      : `📋 Contrat accepté${eventTitle}`;
+    const notifContent = pendingSignature
+      ? `✍️ Contrat accepté — signature électronique envoyée par email${eventTitle}`
+      : shouldSign
+        ? `📋 Contrat signé !${eventTitle}`
+        : `📋 Contrat accepté${eventTitle}`;
     await createContractNotificationMessage(eventDjId, userId, notifContent);
 
-    // Envoi du contrat par email aux deux parties une fois signé
-    if (shouldSign) {
+    // Envoi du contrat par email aux deux parties une fois signé (signature directe uniquement)
+    if (shouldSign && !pendingSignature) {
       const { sendContractSignedEmailDj } = require('../../utils/contractEmail');
       sendContractSignedEmailDj(eventDjId).catch((err) => console.error('[contract] Email:', err));
     }
@@ -558,26 +581,50 @@ app.post('/api/contracts/event-venues/:eventVenueId/accept', authenticateToken, 
     };
     const updated = await prisma.eventVenue.update({ where: { id: eventVenueId }, data });
     const shouldSign = !!updated.bookerAcceptedAt && !!updated.venueAcceptedAt;
+    let pendingSignature = false;
     if (shouldSign) {
-      await prisma.eventVenue.update({
-        where: { id: eventVenueId },
-        data: {
-          contractStatus: 'SIGNED',
-          ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
-        },
-      });
+      const { isYousignConfigured } = require('../../utils/yousign');
+      if (isYousignConfigured()) {
+        try {
+          const { startVenueContractSignature } = require('../../utils/contractSignature');
+          const requestId = await startVenueContractSignature(eventVenueId);
+          await prisma.eventVenue.update({
+            where: { id: eventVenueId },
+            data: { contractStatus: 'PENDING_SIGNATURE', yousignSignatureRequestId: requestId },
+          });
+          pendingSignature = true;
+        } catch (e) {
+          console.error('[contract] Yousign indisponible, signature directe (fallback):', e?.message || e);
+        }
+      }
+      if (!pendingSignature) {
+        await prisma.eventVenue.update({
+          where: { id: eventVenueId },
+          data: {
+            contractStatus: 'SIGNED',
+            ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
+          },
+        });
+      }
     }
     const eventTitle = ev.event?.title ? ` (${ev.event.title})` : '';
-    const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
+    const notifContent = pendingSignature
+      ? `✍️ Contrat accepté — signature électronique envoyée par email${eventTitle}`
+      : shouldSign
+        ? `📋 Contrat signé !${eventTitle}`
+        : `📋 Contrat accepté${eventTitle}`;
     await createContractNotificationMessageVenue(eventVenueId, req.user.id, notifContent);
 
-    // Envoi du contrat par email aux deux parties une fois signé
-    if (shouldSign) {
+    // Envoi du contrat par email aux deux parties une fois signé (signature directe uniquement)
+    if (shouldSign && !pendingSignature) {
       const { sendContractSignedEmailVenue } = require('../../utils/contractEmail');
       sendContractSignedEmailVenue(eventVenueId).catch((err) => console.error('[contract] Email:', err));
     }
 
-    return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
+    return res.json({
+      success: true,
+      contract: { status: pendingSignature ? 'PENDING_SIGNATURE' : shouldSign ? 'SIGNED' : 'SENT' },
+    });
   } catch (e) {
     console.error('Erreur accept contract venue:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -774,25 +821,49 @@ app.post('/api/contracts/event-prestataires/:eventPrestataireId/accept', authent
     };
     const updated = await prisma.eventPrestataire.update({ where: { id: eventPrestataireId }, data });
     const shouldSign = !!updated.bookerAcceptedAt && !!updated.prestataireAcceptedAt;
+    let pendingSignature = false;
     if (shouldSign) {
-      await prisma.eventPrestataire.update({
-        where: { id: eventPrestataireId },
-        data: {
-          contractStatus: 'SIGNED',
-          ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
-        },
-      });
+      const { isYousignConfigured } = require('../../utils/yousign');
+      if (isYousignConfigured()) {
+        try {
+          const { startPrestataireContractSignature } = require('../../utils/contractSignature');
+          const requestId = await startPrestataireContractSignature(eventPrestataireId);
+          await prisma.eventPrestataire.update({
+            where: { id: eventPrestataireId },
+            data: { contractStatus: 'PENDING_SIGNATURE', yousignSignatureRequestId: requestId },
+          });
+          pendingSignature = true;
+        } catch (e) {
+          console.error('[contract] Yousign indisponible, signature directe (fallback):', e?.message || e);
+        }
+      }
+      if (!pendingSignature) {
+        await prisma.eventPrestataire.update({
+          where: { id: eventPrestataireId },
+          data: {
+            contractStatus: 'SIGNED',
+            ...(updated.paymentStatus !== 'PAID' && !updated.paidAt ? { paymentStatus: 'PENDING' } : {}),
+          },
+        });
+      }
     }
     const eventTitle = ep.event?.title ? ` (${ep.event.title})` : '';
-    const notifContent = shouldSign ? `📋 Contrat signé !${eventTitle}` : `📋 Contrat accepté${eventTitle}`;
+    const notifContent = pendingSignature
+      ? `✍️ Contrat accepté — signature électronique envoyée par email${eventTitle}`
+      : shouldSign
+        ? `📋 Contrat signé !${eventTitle}`
+        : `📋 Contrat accepté${eventTitle}`;
     await createContractNotificationMessagePrestataire(eventPrestataireId, req.user.id, notifContent);
 
-    if (shouldSign) {
+    if (shouldSign && !pendingSignature) {
       const { sendContractSignedEmailPrestataire } = require('../../utils/contractEmail');
       sendContractSignedEmailPrestataire(eventPrestataireId).catch((err) => console.error('[contract] Email:', err));
     }
 
-    return res.json({ success: true, contract: { status: shouldSign ? 'SIGNED' : 'SENT' } });
+    return res.json({
+      success: true,
+      contract: { status: pendingSignature ? 'PENDING_SIGNATURE' : shouldSign ? 'SIGNED' : 'SENT' },
+    });
   } catch (e) {
     console.error('Erreur accept contract prestataire:', e);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

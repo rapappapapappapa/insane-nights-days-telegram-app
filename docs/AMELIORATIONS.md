@@ -114,6 +114,8 @@ Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via
 
 - [x] Billetterie — tests **phases** (fenêtres de vente, 22 tests serveur). *Reste : édition **`ticketTiers`** après création ; reversement réel avec commission (quand payout organisateur).* 
 
+- [x] **Signature électronique des contrats (Yousign)** — acceptation des deux parties → `PENDING_SIGNATURE` + emails Yousign, webhook `signature_request.done` → `SIGNED` ; fallback flux historique sans `YOUSIGN_API_KEY`. *Reste : créer le compte sandbox (trial 40 j), renseigner la clé + le webhook, tester de bout en bout.*
+
 - [ ] Multi-DJs — tests E2E + migrations **n-n** si le produit l’exige.
 
 - [ ] **Scroll safe area** — généraliser **`useSafeAreaInsets`** sur les longs **`ScrollView`** (dashboards, wizards) comme **Mes profils**.

@@ -380,7 +380,13 @@ export function useVenueDashboard({
       try {
         const res = await api.acceptVenueContract(user.token, selectedChatEventVenueId);
         if (res?.success) {
-          showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
+          showSuccess(
+            res?.contract?.status === 'PENDING_SIGNATURE'
+              ? (language === 'fr'
+                  ? 'Contrat accepté — signature électronique envoyée par email.'
+                  : 'Contract accepted — e-signature sent by email.')
+              : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
+          );
           await loadVenueContract(selectedChatEventVenueId);
         } else {
           showError(res?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));

@@ -72,8 +72,24 @@ export default function PrestataireChatModal({
             ) : (
               <>
                 <Text style={styles.cardMeta}>
-                  {language === 'fr' ? 'Statut' : 'Status'}: {contractData?.status || '—'}
+                  {language === 'fr' ? 'Statut' : 'Status'}:{' '}
+                  {contractData?.status === 'SIGNED'
+                    ? (language === 'fr' ? 'Signé' : 'Signed')
+                    : contractData?.status === 'PENDING_SIGNATURE'
+                      ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
+                      : contractData?.status === 'SENT'
+                        ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                        : contractData?.status === 'DRAFT'
+                          ? (language === 'fr' ? 'Brouillon' : 'Draft')
+                          : contractData?.status || '—'}
                 </Text>
+                {contractData?.status === 'PENDING_SIGNATURE' ? (
+                  <Text style={styles.cardMeta}>
+                    {language === 'fr'
+                      ? '✍️ Signature électronique envoyée par email (Yousign).'
+                      : '✍️ Electronic signature sent by email (Yousign).'}
+                  </Text>
+                ) : null}
                 {canCounter && (
                   <>
                     <TouchableOpacity

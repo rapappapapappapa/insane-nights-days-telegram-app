@@ -181,7 +181,13 @@ export function useBookerContractFlows({
           ? await api.acceptPrestataireContract(user.token, selectedChatEventPrestataireId)
           : await api.acceptBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
-        showSuccess(language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.');
+        showSuccess(
+          res?.contract?.status === 'PENDING_SIGNATURE'
+            ? (language === 'fr'
+                ? 'Contrat accepté — signature électronique envoyée par email.'
+                : 'Contract accepted — e-signature sent by email.')
+            : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
+        );
         await reloadActiveContract();
       } else {
         showError(res?.message || (language === 'fr' ? 'Impossible d’accepter.' : 'Unable to accept.'));

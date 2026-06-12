@@ -79,6 +79,8 @@ export function useBookerEventWizard({
     const currentDjId = routeParams?.selectedDjId;
     const currentVenueId = routeParams?.selectedVenueId;
     const currentAction = routeParams?.action;
+    /** DJ que le créneau visé contenait au moment du tap (remplacement par identité, pas par index). */
+    const currentReplaceDjId = routeParams?.replaceDjId ?? null;
     /** Android / bridge : slotIndex peut arriver en string ; 0 doit rester 0 (sinon 2e DJ écrase le 1er). */
     const rawSlot = routeParams?.slotIndex;
     const safeSlotIndex =
@@ -260,11 +262,24 @@ export function useBookerEventWizard({
         if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
           setDjSlots((prev) => {
             const newSlots = mergeDjSlotsWithForm(prev, formData);
-            while (newSlots.length <= safeSlotIndex) {
-              newSlots.push(emptyDjSlot());
+            // Ne pas dupliquer si le DJ choisi est déjà dans un créneau.
+            if (!newSlots.some((s) => s.djId === currentDjId)) {
+              // Cible par identité d'abord : l'écran est démonté pendant la sélection et
+              // les slots reconstruits compactent les DJs au début — l'index peut se décaler
+              // et pointer sur un autre DJ (qui serait écrasé / perdu).
+              let targetIdx = currentReplaceDjId
+                ? newSlots.findIndex((s) => s.djId === currentReplaceDjId)
+                : -1;
+              if (targetIdx === -1 && safeSlotIndex < newSlots.length && !newSlots[safeSlotIndex]?.djId) {
+                targetIdx = safeSlotIndex;
+              }
+              if (targetIdx === -1) targetIdx = newSlots.findIndex((s) => !s.djId);
+              if (targetIdx === -1) {
+                newSlots.push(emptyDjSlot());
+                targetIdx = newSlots.length - 1;
+              }
+              newSlots[targetIdx] = { ...newSlots[targetIdx], djId: currentDjId };
             }
-            const cur = newSlots[safeSlotIndex] || emptyDjSlot();
-            newSlots[safeSlotIndex] = { ...cur, djId: currentDjId };
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
             syncSlotsToForm(timed);
             return timed;
@@ -275,11 +290,13 @@ export function useBookerEventWizard({
         } else if (currentStep >= 3) {
           setDjSlots((prev) => {
             const newSlots = mergeDjSlotsWithForm(prev, formData);
-            const emptyIndex = newSlots.findIndex((s) => !s.djId);
-            if (emptyIndex !== -1) {
-              newSlots[emptyIndex] = { ...newSlots[emptyIndex], djId: currentDjId };
-            } else {
-              newSlots.push({ ...emptyDjSlot(), djId: currentDjId });
+            if (!newSlots.some((s) => s.djId === currentDjId)) {
+              const emptyIndex = newSlots.findIndex((s) => !s.djId);
+              if (emptyIndex !== -1) {
+                newSlots[emptyIndex] = { ...newSlots[emptyIndex], djId: currentDjId };
+              } else {
+                newSlots.push({ ...emptyDjSlot(), djId: currentDjId });
+              }
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
             syncSlotsToForm(timed);
@@ -306,7 +323,11 @@ export function useBookerEventWizard({
         if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
           setDjSlots((prev) => {
             const newSlots = mergeDjSlotsWithForm(prev, formData);
-            if (newSlots[safeSlotIndex]) {
+            // Retrait par identité (l'index peut s'être décalé au remontage de l'écran).
+            const idx = newSlots.findIndex((s) => s.djId === currentDjId);
+            if (idx !== -1) {
+              newSlots[idx] = emptyDjSlot();
+            } else if (newSlots[safeSlotIndex]) {
               newSlots[safeSlotIndex] = emptyDjSlot();
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
@@ -334,7 +355,7 @@ export function useBookerEventWizard({
       } else if (currentVenueId && currentAction === 'remove') {
         setVenue('');
       }
-    }, [currentDjId, currentVenueId, currentAction, safeSlotIndex, formData.time, formData.durationHours]);
+    }, [currentDjId, currentVenueId, currentAction, currentReplaceDjId, safeSlotIndex, formData.time, formData.durationHours]);
   
     const fetchAvailableDjs = async () => {
       if (!user?.token || loadingDjs) return;

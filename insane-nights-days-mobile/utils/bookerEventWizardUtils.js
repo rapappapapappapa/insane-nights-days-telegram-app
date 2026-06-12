@@ -82,19 +82,32 @@ export function buildDjSlotsFromFormData(fd) {
   ];
 }
 
-/** Évite d'écraser les DJs déjà choisis quand le state local repart à vide au remontage. */
+/**
+ * Évite d'écraser les DJs déjà choisis quand le state local repart à vide au remontage.
+ * Union : on part des slots locaux et on ré-injecte tout DJ du formulaire absent
+ * (le state local est perdu à chaque navigation vers la sélection DJ — écran démonté).
+ * Un DJ présent dans formData ne peut donc jamais disparaître lors d'une fusion,
+ * même si les deux sources sont désynchronisées (slot vide ajouté, ordre différent…).
+ */
 export function mergeDjSlotsWithForm(prev, fd) {
   const formIds = fd?.djIds || [];
-  if (!formIds.length) {
-    return prev.length ? prev : [emptyDjSlot()];
-  }
-  const prevFilled = prev.filter((s) => s.djId).map((s) => s.djId);
-  const aligned =
-    formIds.length === prevFilled.length && formIds.every((id, i) => prevFilled[i] === id);
-  if (aligned && prev.length >= formIds.length) {
-    return prev.map((s) => ({ ...s }));
-  }
-  return buildDjSlotsFromFormData(fd);
+  const assigns = fd?.djSlotAssignments || [];
+  const result = (Array.isArray(prev) ? prev : []).map((s) => ({ ...s }));
+  if (!result.length) result.push(emptyDjSlot());
+  const knownIds = new Set(result.filter((s) => s.djId).map((s) => s.djId));
+  formIds.forEach((id, i) => {
+    if (!id || knownIds.has(id)) return;
+    const slot = {
+      djId: id,
+      slotStart: assigns[i]?.slotStart || '',
+      slotEnd: assigns[i]?.slotEnd || '',
+    };
+    const emptyIdx = result.findIndex((s) => !s.djId);
+    if (emptyIdx !== -1) result[emptyIdx] = slot;
+    else result.push(slot);
+    knownIds.add(id);
+  });
+  return result;
 }
 
 /**

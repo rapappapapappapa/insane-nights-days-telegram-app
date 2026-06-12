@@ -155,6 +155,9 @@ export default function BookerEventStep3Djs(props) {
                             navigate('selectDj', {
                               selectedDjIds: otherSelectedDjIds,
                               slotIndex: index,
+                              // DJ actuel du créneau : permet le remplacement par identité au retour
+                              // (les index peuvent se décaler, l'écran étant démonté pendant la sélection)
+                              replaceDjId: currentSlotDjId || null,
                               isSlotMode: true,
                               returnTo: 'bookerEventDashboard',
                             });

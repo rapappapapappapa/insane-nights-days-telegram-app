@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 9 au 12 juin 2026 (mar. – ven.)
 
+### Corrigé (wizard événement booker — créneaux DJ multiples)
+- **Ajouter plusieurs DJs ne supprime plus le précédent** : la fusion des créneaux (`mergeDjSlotsWithForm`) est désormais une **union** state local + formulaire — un DJ présent dans le formulaire ne peut plus disparaître quand l'écran est remonté pendant la navigation vers la sélection (slot vide ajouté, ordre décalé…).
+- **Sélection par identité** plutôt que par index : `replaceDjId` (DJ actuel du créneau visé) est propagé `Step3 → SelectDjPage → DjProfilePage → wizard` ; au retour, le remplacement cible ce DJ et l'ajout va dans un créneau vide — un index décalé n'écrase plus un autre DJ. Retrait d'un créneau aussi par identité ; re-sélection d'un DJ déjà choisi ne crée plus de doublon.
+
 ### Ajouté (contrats — signature électronique Yousign)
 - **Signature électronique** des contrats (DJ / lieu / prestataire) via **Yousign** : quand les **deux parties acceptent** sur Nox, le contrat passe en **`PENDING_SIGNATURE`** et chacune reçoit un **email Yousign** pour signer le PDF ; le webhook **`signature_request.done`** finalise en **`SIGNED`** (+ paiement `PENDING`, notif chat, email PDF) ; refus / expiration → retour à `SENT`. **Sans `YOUSIGN_API_KEY`, flux historique inchangé** (acceptation = signature) — fallback aussi en cas d'erreur Yousign.
 - **Serveur** : client API v3 **`utils/yousign.js`** (sandbox par défaut, multipart natif, HMAC webhook), orchestration **`utils/contractSignature.js`**, webhook **`POST /api/webhooks/yousign`** (body brut + vérif `x-yousign-signature-256`), **smart anchors** `{{s1/s2|signature}}` (texte blanc) dans les PDF pdfkit (option `signatureAnchors`, preview / email inchangés).

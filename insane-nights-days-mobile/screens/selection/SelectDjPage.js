@@ -25,6 +25,7 @@ export default function SelectDjPage() {
     selectedDjIds = [],
     eventId = null,
     slotIndex = null,
+    replaceDjId = null,
     isSlotMode = false,
     returnTo,
   } = routeParams || {}; // returnTo : écran après sélection (ex. bookerEventDashboard)
@@ -68,6 +69,7 @@ export default function SelectDjPage() {
       returnTo: returnTo || 'bookerDashboard', // Même logique que lieu (VenueProfilePage)
       eventId: eventId || undefined, // Propager l'eventId si présent
       slotIndex: slotIndex, // Passer l'index du slot si en mode slot
+      replaceDjId: replaceDjId, // DJ actuel du créneau (remplacement par identité)
       isSlotMode: isSlotMode, // Indiquer qu'on est en mode slot
     });
   };

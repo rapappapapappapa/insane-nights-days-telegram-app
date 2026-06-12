@@ -66,7 +66,7 @@ export default function DjProfilePage() {
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, isSlotMode = false } = routeParams || {};
+  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, replaceDjId = null, isSlotMode = false } = routeParams || {};
   
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
@@ -388,6 +388,7 @@ export default function DjProfilePage() {
                   action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
                   eventId: eventId || undefined,
                   slotIndex: slotIndexToPass, // Toujours passer slotIndex s'il est défini
+                  replaceDjId: replaceDjId || undefined, // DJ actuel du créneau visé (remplacement par identité)
                   ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
                 });
               }}

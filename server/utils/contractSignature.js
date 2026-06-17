@@ -236,9 +236,18 @@ async function fulfillContractPaymentAndStartSignature(kind, bookingId, { paymen
     invoiceNumber: row.invoiceNumber || makeInvoiceNumber(),
     ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
   };
+  const wasAlreadyPaid = row.paymentStatus === 'PAID' || !!row.paidAt;
 
   const eventTitle = row.event?.title ? ` (${row.event.title})` : '';
   const senderId = row.event?.booker?.userId;
+
+  const sendInvoiceIfNewPayment = () => {
+    if (wasAlreadyPaid) return;
+    const { sendContractPaymentInvoiceEmail } = require('./contractInvoiceEmail');
+    sendContractPaymentInvoiceEmail(kind, bookingId).catch((err) =>
+      console.error('[contractSignature] Email facture:', err)
+    );
+  };
 
   if (isYousignConfigured()) {
     try {
@@ -252,6 +261,7 @@ async function fulfillContractPaymentAndStartSignature(kind, bookingId, { paymen
         contractStatus: 'PENDING_SIGNATURE',
         yousignSignatureRequestId: requestId,
       });
+      sendInvoiceIfNewPayment();
       if (senderId) {
         await notifyContract(
           kind,
@@ -267,6 +277,7 @@ async function fulfillContractPaymentAndStartSignature(kind, bookingId, { paymen
   }
 
   await updateBookingByKind(kind, bookingId, { ...paidData, contractStatus: 'SIGNED' });
+  sendInvoiceIfNewPayment();
   if (senderId) {
     await notifyContract(kind, bookingId, senderId, `📋 Contrat signé !${eventTitle}`);
   }

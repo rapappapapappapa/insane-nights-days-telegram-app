@@ -8,6 +8,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Modifié (contrats — paiement Stripe avant signature Yousign)
 - **Nouveau flux** : les deux parties acceptent → statut **`PENDING_PAYMENT`** → le **booker paie via Stripe** → envoi **Yousign** (`PENDING_SIGNATURE`) → webhook → **`SIGNED`**. Plus d’envoi Yousign tant que le paiement n’est pas reçu.
+- **Facture par email** : dès le paiement Stripe enregistré, envoi d’une **facture / reçu PDF** (`contractInvoicePdf.js` + `contractInvoiceEmail.js`) à l’organisateur et au prestataire (DJ / lieu / prestataire) — distinct de l’email **contrat signé** (après Yousign).
 - **Serveur** : statut Prisma **`PENDING_PAYMENT`**, champ **`stripePaymentIntentId`** (3 modèles, migration `20260612160000`), util **`contractPayment.js`**, orchestration dans **`contractSignature.js`** (`afterBothPartiesAccepted`, `fulfillContractPaymentAndStartSignature`, retry signature si refus après paiement).
 - **API Stripe** : `POST /api/payments/create-contract-intent`, `POST /api/payments/confirm-contract-payment`, webhook Stripe `metadata.type=contract`, routes **`retry-signature`** (booker). Fallback sans Yousign : paiement → **`SIGNED`** direct.
 - **Mobile** : bouton **« Payer avec Stripe »** dans le chat booker (`PENDING_PAYMENT`), relance signature si paiement déjà reçu ; libellés **« En attente paiement »** côté DJ / lieu / prestataire.

@@ -100,6 +100,13 @@ app.put('/api/booker/event-djs/:eventDjId/payment', authenticateToken, async (re
       },
     });
 
+    if (status === 'PAID' && ed.contractStatus === 'PENDING_PAYMENT') {
+      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
+      await fulfillContractPaymentAndStartSignature('dj', eventDjId, {
+        paymentIntentId: ed.stripePaymentIntentId || undefined,
+      });
+    }
+
     return res.json({
       success: true,
       payment: {
@@ -163,6 +170,13 @@ app.put('/api/booker/event-venues/:eventVenueId/payment', authenticateToken, asy
       },
     });
 
+    if (status === 'PAID' && ev.contractStatus === 'PENDING_PAYMENT') {
+      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
+      await fulfillContractPaymentAndStartSignature('venue', eventVenueId, {
+        paymentIntentId: ev.stripePaymentIntentId || undefined,
+      });
+    }
+
     return res.json({
       success: true,
       payment: {
@@ -224,6 +238,13 @@ app.put('/api/booker/event-prestataires/:eventPrestataireId/payment', authentica
         invoiceNumber: nextInvoiceNumber,
       },
     });
+
+    if (status === 'PAID' && ep.contractStatus === 'PENDING_PAYMENT') {
+      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
+      await fulfillContractPaymentAndStartSignature('prestataire', eventPrestataireId, {
+        paymentIntentId: ep.stripePaymentIntentId || undefined,
+      });
+    }
 
     return res.json({
       success: true,

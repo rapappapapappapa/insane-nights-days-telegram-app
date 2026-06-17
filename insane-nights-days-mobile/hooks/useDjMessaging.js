@@ -193,11 +193,15 @@ export function useDjMessaging({
         const res = await api.acceptBookingContract(user.token, selectedChatEventDjId);
         if (res?.success) {
           showSuccess(
-            res?.contract?.status === 'PENDING_SIGNATURE'
+            res?.contract?.status === 'PENDING_PAYMENT'
               ? (language === 'fr'
-                  ? 'Contrat accepté — signature électronique envoyée par email.'
-                  : 'Contract accepted — e-signature sent by email.')
-              : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
+                  ? 'Contrat accepté — en attente du paiement de l’organisateur.'
+                  : 'Contract accepted — waiting for organizer payment.')
+              : res?.contract?.status === 'PENDING_SIGNATURE'
+                ? (language === 'fr'
+                    ? 'Contrat accepté — signature électronique envoyée par email.'
+                    : 'Contract accepted — e-signature sent by email.')
+                : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
           );
           await loadContract(selectedChatEventDjId);
         } else {

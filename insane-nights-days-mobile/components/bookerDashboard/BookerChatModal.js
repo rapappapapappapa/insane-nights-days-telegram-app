@@ -73,6 +73,11 @@ export default function BookerChatModal(props) {
     openContractEditorFromChat,
     openContractPdfPreview,
     djVenueGateBlocks,
+    contractBooking,
+    payingContract,
+    payContractWithStripe,
+    retryingSignature,
+    retryContractSignature,
     loadingChatMessages,
     chatMessages,
     handleDeleteMessage,
@@ -209,9 +214,11 @@ export default function BookerChatModal(props) {
                             ? (language === 'fr' ? 'Signé' : 'Signed')
                             : contractData?.status === 'PENDING_SIGNATURE'
                               ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
-                              : contractData?.status === 'SENT'
-                                ? (language === 'fr' ? 'Envoyé' : 'Sent')
-                                : (language === 'fr' ? 'Brouillon' : 'Draft')}
+                              : contractData?.status === 'PENDING_PAYMENT'
+                                ? (language === 'fr' ? 'En attente de paiement' : 'Awaiting payment')
+                                : contractData?.status === 'SENT'
+                                  ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                                  : (language === 'fr' ? 'Brouillon' : 'Draft')}
                         </Text>
                       )}
                     </View>
@@ -409,6 +416,50 @@ export default function BookerChatModal(props) {
                               ? (language === 'fr' ? "En attente de l’acceptation du lieu." : 'Waiting for venue acceptance.')
                               : (language === 'fr' ? "En attente de l’acceptation du DJ." : 'Waiting for DJ acceptance.')}
                           </Text>
+                        )
+                      ) : contractData?.status === 'PENDING_PAYMENT' ? (
+                        contractBooking?.paymentStatus === 'PAID' ? (
+                          <>
+                            <Text style={styles.contractHint}>
+                              {language === 'fr'
+                                ? 'Paiement reçu — la signature électronique doit être relancée.'
+                                : 'Payment received — e-signature must be resent.'}
+                            </Text>
+                            <TouchableOpacity
+                              style={[styles.contractButton, styles.contractButtonPrimary]}
+                              onPress={retryContractSignature}
+                              disabled={retryingSignature}
+                            >
+                              {retryingSignature ? (
+                                <ActivityIndicator size="small" color={Colors.background} />
+                              ) : (
+                                <Text style={styles.contractButtonTextDark}>
+                                  {language === 'fr' ? 'Relancer la signature' : 'Resend for signature'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.contractHint}>
+                              {language === 'fr'
+                                ? 'Les deux parties ont accepté. Paie le contrat via Stripe pour lancer la signature électronique.'
+                                : 'Both parties accepted. Pay via Stripe to start the e-signature.'}
+                            </Text>
+                            <TouchableOpacity
+                              style={[styles.contractButton, styles.contractButtonPrimary]}
+                              onPress={payContractWithStripe}
+                              disabled={payingContract}
+                            >
+                              {payingContract ? (
+                                <ActivityIndicator size="small" color={Colors.background} />
+                              ) : (
+                                <Text style={styles.contractButtonTextDark}>
+                                  {language === 'fr' ? 'Payer avec Stripe' : 'Pay with Stripe'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          </>
                         )
                       ) : contractData?.status === 'PENDING_SIGNATURE' ? (
                         <Text style={styles.contractHint}>

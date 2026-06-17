@@ -1,16 +1,16 @@
 /**
  * Signature électronique des contrats via Yousign.
  *
- * Déclenchée quand les deux parties ont accepté le contrat sur Nox :
- * le contrat passe en PENDING_SIGNATURE, chaque partie reçoit un email Yousign
- * pour signer le PDF. Le webhook `signature_request.done` finalise en SIGNED.
- * Refus / expiration → retour à SENT (état post-envoi).
+ * Flux : les deux parties acceptent → PENDING_PAYMENT (booker paie via Stripe)
+ * → paiement reçu → PENDING_SIGNATURE (emails Yousign) → webhook done → SIGNED.
+ * Refus / expiration signature → PENDING_PAYMENT si déjà payé, sinon SENT.
  *
- * Sans YOUSIGN_API_KEY, rien ne change : l'acceptation vaut signature (flux historique).
+ * Sans YOUSIGN_API_KEY : après paiement, passage direct en SIGNED (flux historique).
  */
 
 const prisma = require('../lib/prisma');
-const { createContractSignatureRequest } = require('./yousign');
+const { createContractSignatureRequest, isYousignConfigured } = require('./yousign');
+const { resolveContractAmountCents, makeInvoiceNumber, loadBookingByKind } = require('./contractPayment');
 const {
   generateDjContractPdf,
   generateVenueContractPdf,
@@ -157,10 +157,6 @@ async function startPrestataireContractSignature(eventPrestataireId) {
   });
 }
 
-/**
- * Retrouve le contrat (3 tables) lié à une demande de signature Yousign.
- * @returns {Promise<{ kind: 'dj'|'venue'|'prestataire', row } | null>}
- */
 async function findContractBySignatureRequestId(signatureRequestId) {
   if (!signatureRequestId) return null;
   const where = { yousignSignatureRequestId: signatureRequestId };
@@ -175,8 +171,129 @@ async function findContractBySignatureRequestId(signatureRequestId) {
   return null;
 }
 
+async function updateBookingByKind(kind, bookingId, data) {
+  if (kind === 'dj') return prisma.eventDj.update({ where: { id: bookingId }, data });
+  if (kind === 'venue') return prisma.eventVenue.update({ where: { id: bookingId }, data });
+  return prisma.eventPrestataire.update({ where: { id: bookingId }, data });
+}
+
+async function notifyContract(kind, bookingId, senderId, content) {
+  if (kind === 'dj') return createContractNotificationMessage(bookingId, senderId, content);
+  if (kind === 'venue') return createContractNotificationMessageVenue(bookingId, senderId, content);
+  return createContractNotificationMessagePrestataire(bookingId, senderId, content);
+}
+
+async function sendSignedEmail(kind, bookingId) {
+  const { sendContractSignedEmailDj, sendContractSignedEmailVenue, sendContractSignedEmailPrestataire } =
+    require('./contractEmail');
+  if (kind === 'dj') {
+    sendContractSignedEmailDj(bookingId).catch((err) => console.error('[contractSignature] Email DJ:', err));
+  } else if (kind === 'venue') {
+    sendContractSignedEmailVenue(bookingId).catch((err) => console.error('[contractSignature] Email Lieu:', err));
+  } else {
+    sendContractSignedEmailPrestataire(bookingId).catch((err) =>
+      console.error('[contractSignature] Email Prestataire:', err)
+    );
+  }
+}
+
 /**
- * Webhook `signature_request.done` : contrat → SIGNED + paiement PENDING + notif + email PDF.
+ * Les deux parties ont accepté : en attente du paiement Stripe du booker.
+ */
+async function afterBothPartiesAccepted(kind, bookingId) {
+  const row = await loadBookingByKind(kind, bookingId);
+  if (!row) throw new Error('Booking introuvable.');
+  const amountCents = resolveContractAmountCents(row);
+  if (amountCents == null || amountCents < 50) {
+    throw new Error('Montant du contrat invalide ou manquant (minimum 0,50 €).');
+  }
+  const next = await updateBookingByKind(kind, bookingId, {
+    contractStatus: 'PENDING_PAYMENT',
+    paymentStatus: 'PENDING',
+    paymentAmount: amountCents,
+    paymentCurrency: 'eur',
+  });
+  return { row: next, pendingPayment: true, status: 'PENDING_PAYMENT' };
+}
+
+/**
+ * Paiement reçu (Stripe ou manuel) → envoi Yousign ou signature directe.
+ * Idempotent si déjà en PENDING_SIGNATURE ou SIGNED.
+ */
+async function fulfillContractPaymentAndStartSignature(kind, bookingId, { paymentIntentId } = {}) {
+  const row = await loadBookingByKind(kind, bookingId);
+  if (!row) return { ok: false, reason: 'not_found' };
+  if (row.contractStatus === 'PENDING_SIGNATURE' || row.contractStatus === 'SIGNED') {
+    return { ok: true, reason: 'already_processed', status: row.contractStatus };
+  }
+  if (row.contractStatus !== 'PENDING_PAYMENT') {
+    return { ok: false, reason: 'invalid_state', status: row.contractStatus };
+  }
+
+  const paidData = {
+    paymentStatus: 'PAID',
+    paidAt: row.paidAt || new Date(),
+    invoiceNumber: row.invoiceNumber || makeInvoiceNumber(),
+    ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
+  };
+
+  const eventTitle = row.event?.title ? ` (${row.event.title})` : '';
+  const senderId = row.event?.booker?.userId;
+
+  if (isYousignConfigured()) {
+    try {
+      let requestId;
+      if (kind === 'dj') requestId = await startDjContractSignature(bookingId);
+      else if (kind === 'venue') requestId = await startVenueContractSignature(bookingId);
+      else requestId = await startPrestataireContractSignature(bookingId);
+
+      await updateBookingByKind(kind, bookingId, {
+        ...paidData,
+        contractStatus: 'PENDING_SIGNATURE',
+        yousignSignatureRequestId: requestId,
+      });
+      if (senderId) {
+        await notifyContract(
+          kind,
+          bookingId,
+          senderId,
+          `✍️ Paiement reçu — signature électronique envoyée par email${eventTitle}`
+        );
+      }
+      return { ok: true, status: 'PENDING_SIGNATURE', pendingSignature: true };
+    } catch (e) {
+      console.error('[contractSignature] Yousign indisponible après paiement:', e?.message || e);
+    }
+  }
+
+  await updateBookingByKind(kind, bookingId, { ...paidData, contractStatus: 'SIGNED' });
+  if (senderId) {
+    await notifyContract(kind, bookingId, senderId, `📋 Contrat signé !${eventTitle}`);
+  }
+  sendSignedEmail(kind, bookingId);
+  return { ok: true, status: 'SIGNED', pendingSignature: false };
+}
+
+/**
+ * Relance l'envoi Yousign après paiement (signature refusée / expirée).
+ */
+async function retryContractSignatureAfterPayment(kind, bookingId, userId) {
+  const row = await loadBookingByKind(kind, bookingId);
+  if (!row) return { ok: false, reason: 'not_found' };
+  if (row.event?.booker?.userId !== userId) return { ok: false, reason: 'forbidden' };
+  if (row.contractStatus !== 'PENDING_PAYMENT' || row.paymentStatus !== 'PAID') {
+    return { ok: false, reason: 'invalid_state' };
+  }
+  if (!isYousignConfigured()) {
+    return fulfillContractPaymentAndStartSignature(kind, bookingId);
+  }
+  return fulfillContractPaymentAndStartSignature(kind, bookingId, {
+    paymentIntentId: row.stripePaymentIntentId || undefined,
+  });
+}
+
+/**
+ * Webhook `signature_request.done` : contrat → SIGNED (paiement déjà effectué) + notif + email PDF.
  * Idempotent (ignore si le contrat n'est plus en PENDING_SIGNATURE).
  */
 async function finalizeSignedContract(signatureRequestId) {
@@ -185,37 +302,20 @@ async function finalizeSignedContract(signatureRequestId) {
   const { kind, row } = found;
   if (row.contractStatus !== 'PENDING_SIGNATURE') return { ok: true, reason: 'already_processed' };
 
-  const signData = {
-    contractStatus: 'SIGNED',
-    ...(row.paymentStatus !== 'PAID' && !row.paidAt ? { paymentStatus: 'PENDING' } : {}),
-  };
+  const signData = { contractStatus: 'SIGNED' };
   const senderId = row.event?.booker?.userId;
   const eventTitle = row.event?.title ? ` (${row.event.title})` : '';
   const notif = `📋 Contrat signé électroniquement !${eventTitle}`;
-  const { sendContractSignedEmailDj, sendContractSignedEmailVenue, sendContractSignedEmailPrestataire } =
-    require('./contractEmail');
 
-  if (kind === 'dj') {
-    await prisma.eventDj.update({ where: { id: row.id }, data: signData });
-    if (senderId) await createContractNotificationMessage(row.id, senderId, notif);
-    sendContractSignedEmailDj(row.id).catch((err) => console.error('[contractSignature] Email DJ:', err));
-  } else if (kind === 'venue') {
-    await prisma.eventVenue.update({ where: { id: row.id }, data: signData });
-    if (senderId) await createContractNotificationMessageVenue(row.id, senderId, notif);
-    sendContractSignedEmailVenue(row.id).catch((err) => console.error('[contractSignature] Email Lieu:', err));
-  } else {
-    await prisma.eventPrestataire.update({ where: { id: row.id }, data: signData });
-    if (senderId) await createContractNotificationMessagePrestataire(row.id, senderId, notif);
-    sendContractSignedEmailPrestataire(row.id).catch((err) =>
-      console.error('[contractSignature] Email Prestataire:', err)
-    );
-  }
+  await updateBookingByKind(kind, row.id, signData);
+  if (senderId) await notifyContract(kind, row.id, senderId, notif);
+  sendSignedEmail(kind, row.id);
   return { ok: true, kind, id: row.id };
 }
 
 /**
- * Webhook refus / expiration : retour à l'état post-envoi (SENT, seule la partie
- * émettrice garde son acceptation) pour permettre une nouvelle négociation.
+ * Webhook refus / expiration : si déjà payé → PENDING_PAYMENT (relance signature possible),
+ * sinon retour à SENT pour renégociation.
  */
 async function revertContractSignature(signatureRequestId, reason = 'declined') {
   const found = await findContractBySignatureRequestId(signatureRequestId);
@@ -223,10 +323,25 @@ async function revertContractSignature(signatureRequestId, reason = 'declined') 
   const { kind, row } = found;
   if (row.contractStatus !== 'PENDING_SIGNATURE') return { ok: true, reason: 'already_processed' };
 
-  const sentBy = row.contractSentBy ?? 'BOOKER';
-  const base = { contractStatus: 'SENT', yousignSignatureRequestId: null };
   const senderId = row.event?.booker?.userId;
   const eventTitle = row.event?.title ? ` (${row.event.title})` : '';
+  const alreadyPaid = row.paymentStatus === 'PAID' || !!row.paidAt;
+
+  if (alreadyPaid) {
+    await updateBookingByKind(kind, row.id, {
+      contractStatus: 'PENDING_PAYMENT',
+      yousignSignatureRequestId: null,
+    });
+    const notif =
+      reason === 'expired'
+        ? `📋 Signature expirée — paiement reçu, relance la signature depuis l'app${eventTitle}`
+        : `📋 Signature refusée — paiement reçu, relance la signature depuis l'app${eventTitle}`;
+    if (senderId) await notifyContract(kind, row.id, senderId, notif);
+    return { ok: true, kind, id: row.id, paid: true };
+  }
+
+  const sentBy = row.contractSentBy ?? 'BOOKER';
+  const base = { contractStatus: 'SENT', yousignSignatureRequestId: null, paymentStatus: 'UPCOMING' };
   const notif =
     reason === 'expired'
       ? `📋 Signature électronique expirée — le contrat est de nouveau ouvert${eventTitle}`
@@ -241,7 +356,6 @@ async function revertContractSignature(signatureRequestId, reason = 'declined') 
         djAcceptedAt: sentBy === 'DJ' ? row.djAcceptedAt : null,
       },
     });
-    if (senderId) await createContractNotificationMessage(row.id, senderId, notif);
   } else if (kind === 'venue') {
     await prisma.eventVenue.update({
       where: { id: row.id },
@@ -251,7 +365,6 @@ async function revertContractSignature(signatureRequestId, reason = 'declined') 
         venueAcceptedAt: sentBy === 'VENUE' ? row.venueAcceptedAt : null,
       },
     });
-    if (senderId) await createContractNotificationMessageVenue(row.id, senderId, notif);
   } else {
     await prisma.eventPrestataire.update({
       where: { id: row.id },
@@ -261,15 +374,18 @@ async function revertContractSignature(signatureRequestId, reason = 'declined') 
         prestataireAcceptedAt: sentBy === 'PRESTATAIRE' ? row.prestataireAcceptedAt : null,
       },
     });
-    if (senderId) await createContractNotificationMessagePrestataire(row.id, senderId, notif);
   }
-  return { ok: true, kind, id: row.id };
+  if (senderId) await notifyContract(kind, row.id, senderId, notif);
+  return { ok: true, kind, id: row.id, paid: false };
 }
 
 module.exports = {
   startDjContractSignature,
   startVenueContractSignature,
   startPrestataireContractSignature,
+  afterBothPartiesAccepted,
+  fulfillContractPaymentAndStartSignature,
+  retryContractSignatureAfterPayment,
   finalizeSignedContract,
   revertContractSignature,
 };

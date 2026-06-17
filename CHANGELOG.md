@@ -6,6 +6,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 9 au 12 juin 2026 (mar. – ven.)
 
+### Modifié (contrats — paiement Stripe avant signature Yousign)
+- **Nouveau flux** : les deux parties acceptent → statut **`PENDING_PAYMENT`** → le **booker paie via Stripe** → envoi **Yousign** (`PENDING_SIGNATURE`) → webhook → **`SIGNED`**. Plus d’envoi Yousign tant que le paiement n’est pas reçu.
+- **Serveur** : statut Prisma **`PENDING_PAYMENT`**, champ **`stripePaymentIntentId`** (3 modèles, migration `20260612160000`), util **`contractPayment.js`**, orchestration dans **`contractSignature.js`** (`afterBothPartiesAccepted`, `fulfillContractPaymentAndStartSignature`, retry signature si refus après paiement).
+- **API Stripe** : `POST /api/payments/create-contract-intent`, `POST /api/payments/confirm-contract-payment`, webhook Stripe `metadata.type=contract`, routes **`retry-signature`** (booker). Fallback sans Yousign : paiement → **`SIGNED`** direct.
+- **Mobile** : bouton **« Payer avec Stripe »** dans le chat booker (`PENDING_PAYMENT`), relance signature si paiement déjà reçu ; libellés **« En attente paiement »** côté DJ / lieu / prestataire.
+
 ### Corrigé (wizard événement booker — créneaux DJ multiples)
 - **Ajouter plusieurs DJs ne supprime plus le précédent** : la fusion des créneaux (`mergeDjSlotsWithForm`) est désormais une **union** state local + formulaire — un DJ présent dans le formulaire ne peut plus disparaître quand l'écran est remonté pendant la navigation vers la sélection (slot vide ajouté, ordre décalé…).
 - **Sélection par identité** plutôt que par index : `replaceDjId` (DJ actuel du créneau visé) est propagé `Step3 → SelectDjPage → DjProfilePage → wizard` ; au retour, le remplacement cible ce DJ et l'ajout va dans un créneau vide — un index décalé n'écrase plus un autre DJ. Retrait d'un créneau aussi par identité ; re-sélection d'un DJ déjà choisi ne crée plus de doublon.

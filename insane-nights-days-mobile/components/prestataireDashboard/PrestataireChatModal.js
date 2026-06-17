@@ -77,12 +77,21 @@ export default function PrestataireChatModal({
                     ? (language === 'fr' ? 'Signé' : 'Signed')
                     : contractData?.status === 'PENDING_SIGNATURE'
                       ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
-                      : contractData?.status === 'SENT'
-                        ? (language === 'fr' ? 'Envoyé' : 'Sent')
-                        : contractData?.status === 'DRAFT'
-                          ? (language === 'fr' ? 'Brouillon' : 'Draft')
-                          : contractData?.status || '—'}
+                      : contractData?.status === 'PENDING_PAYMENT'
+                        ? (language === 'fr' ? 'En attente paiement' : 'Awaiting payment')
+                        : contractData?.status === 'SENT'
+                          ? (language === 'fr' ? 'Envoyé' : 'Sent')
+                          : contractData?.status === 'DRAFT'
+                            ? (language === 'fr' ? 'Brouillon' : 'Draft')
+                            : contractData?.status || '—'}
                 </Text>
+                {contractData?.status === 'PENDING_PAYMENT' ? (
+                  <Text style={styles.cardMeta}>
+                    {language === 'fr'
+                      ? '💳 En attente du paiement Stripe de l’organisateur.'
+                      : '💳 Waiting for organizer Stripe payment.'}
+                  </Text>
+                ) : null}
                 {contractData?.status === 'PENDING_SIGNATURE' ? (
                   <Text style={styles.cardMeta}>
                     {language === 'fr'

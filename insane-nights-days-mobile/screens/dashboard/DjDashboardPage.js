@@ -48,7 +48,7 @@ export default function DjDashboardPage() {
   const shouldOpenBookings =
     !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
   const [activeSection, setActiveSection] = useState(shouldOpenBookings ? 'bookings' : 'profil');
-
+  
   const profile = useDjProfile({
     user,
     language,
@@ -359,7 +359,7 @@ export default function DjDashboardPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-
+      
       <View style={styles.mainContent}>
         <View style={styles.topBar}>
           <View style={{ width: 40 }} />
@@ -522,7 +522,7 @@ export default function DjDashboardPage() {
         }
         confirmLabel={
           rejectModalAction === 'cancel'
-            ? language === 'fr'
+                              ? language === 'fr'
               ? 'Annuler'
               : 'Cancel'
             : language === 'fr'

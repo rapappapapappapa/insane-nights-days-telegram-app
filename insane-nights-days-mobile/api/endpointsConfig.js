@@ -26,6 +26,8 @@ export const API_CONFIG = {
     TICKETS_BUY: '/api/tickets/buy',
     PAYMENTS_CREATE_TICKET_INTENT: '/api/payments/create-ticket-intent',
     PAYMENTS_CONFIRM_TICKET_PURCHASE: '/api/payments/confirm-ticket-purchase',
+    PAYMENTS_CREATE_CONTRACT_INTENT: '/api/payments/create-contract-intent',
+    PAYMENTS_CONFIRM_CONTRACT_PAYMENT: '/api/payments/confirm-contract-payment',
     PAYMENTS_ME: '/api/payments/me',
     TICKETS_USER: '/api/user',
     TICKETS_ME: '/api/user/me/tickets',

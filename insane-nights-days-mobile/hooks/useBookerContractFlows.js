@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../api/config';
+import * as Stripe from '../utils/stripe';
 import {
   draftFromPayload,
   buildVenueContractPayload,
@@ -44,7 +45,10 @@ export function useBookerContractFlows({
     error: null,
     pendingAction: null,
   });
+  const [payingContract, setPayingContract] = useState(false);
+  const [retryingSignature, setRetryingSignature] = useState(false);
 
+  const activeContractKind = isVenueChat ? 'venue' : isPrestataireChat ? 'prestataire' : 'dj';
   const activeContractId = isVenueChat
     ? selectedChatEventVenueId
     : isPrestataireChat
@@ -181,12 +185,17 @@ export function useBookerContractFlows({
           ? await api.acceptPrestataireContract(user.token, selectedChatEventPrestataireId)
           : await api.acceptBookingContract(user.token, selectedChatEventDjId);
       if (res?.success) {
+        const st = res?.contract?.status;
         showSuccess(
-          res?.contract?.status === 'PENDING_SIGNATURE'
+          st === 'PENDING_PAYMENT'
             ? (language === 'fr'
-                ? 'Contrat accepté — signature électronique envoyée par email.'
-                : 'Contract accepted — e-signature sent by email.')
-            : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
+                ? 'Contrat accepté — procède au paiement Stripe pour lancer la signature.'
+                : 'Contract accepted — complete Stripe payment to start signing.')
+            : st === 'PENDING_SIGNATURE'
+              ? (language === 'fr'
+                  ? 'Contrat accepté — signature électronique envoyée par email.'
+                  : 'Contract accepted — e-signature sent by email.')
+              : (language === 'fr' ? 'Contrat accepté.' : 'Contract accepted.')
         );
         await reloadActiveContract();
       } else {
@@ -195,6 +204,116 @@ export function useBookerContractFlows({
     } catch (e) {
       console.error('[BookerDashboard] acceptContract error:', e);
       showError(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+    }
+  };
+
+  const payContractWithStripe = async () => {
+    if (!user?.token || !activeContractId || payingContract) return;
+    if (contractData?.status !== 'PENDING_PAYMENT') return;
+    if (contractBooking?.paymentStatus === 'PAID') return;
+
+    if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
+      showError(
+        language === 'fr'
+          ? 'Paiement Stripe indisponible sur cette plateforme.'
+          : 'Stripe payment is not available on this platform.'
+      );
+      return;
+    }
+
+    setPayingContract(true);
+    try {
+      const intentRes = await api.createContractPaymentIntent(
+        user.token,
+        activeContractKind,
+        activeContractId
+      );
+      if (intentRes?.alreadyPaid) {
+        showSuccess(
+          language === 'fr'
+            ? 'Paiement déjà enregistré — signature en cours.'
+            : 'Payment already recorded — signature in progress.'
+        );
+        await reloadActiveContract();
+        return;
+      }
+      if (!intentRes?.success || !intentRes?.paymentIntentClientSecret || !intentRes?.paymentIntentId) {
+        showError(
+          intentRes?.message ||
+            (language === 'fr' ? 'Impossible de démarrer le paiement.' : 'Unable to start payment.')
+        );
+        return;
+      }
+
+      await Stripe.initStripe({
+        publishableKey: intentRes.publishableKey,
+        urlScheme: 'insane-nights-days-mobile',
+      });
+
+      const init = await Stripe.initPaymentSheet({
+        merchantDisplayName: 'Nox',
+        paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
+        returnURL: 'insane-nights-days-mobile://stripe-redirect',
+      });
+      if (init?.error) {
+        showError(init.error.message || (language === 'fr' ? 'Erreur Stripe.' : 'Stripe error.'));
+        return;
+      }
+
+      const presented = await Stripe.presentPaymentSheet();
+      if (presented?.error) {
+        if (presented.error.code !== 'Canceled') {
+          showError(presented.error.message || (language === 'fr' ? 'Paiement annulé.' : 'Payment canceled.'));
+        }
+        return;
+      }
+
+      const confirm = await api.confirmContractPayment(user.token, intentRes.paymentIntentId);
+      if (confirm?.success) {
+        showSuccess(
+          confirm.pendingSignature
+            ? language === 'fr'
+              ? 'Paiement reçu — signature électronique envoyée par email.'
+              : 'Payment received — e-signature sent by email.'
+            : language === 'fr'
+              ? 'Paiement reçu — contrat signé.'
+              : 'Payment received — contract signed.'
+        );
+        await reloadActiveContract();
+      } else {
+        showError(
+          confirm?.message ||
+            (language === 'fr' ? 'Paiement reçu mais finalisation impossible.' : 'Payment received but finalization failed.')
+        );
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] payContractWithStripe error:', e);
+      showError(language === 'fr' ? 'Erreur lors du paiement.' : 'Payment error.');
+    } finally {
+      setPayingContract(false);
+    }
+  };
+
+  const retryContractSignature = async () => {
+    if (!user?.token || !activeContractId || retryingSignature) return;
+    setRetryingSignature(true);
+    try {
+      const res = await api.retryContractSignature(user.token, activeContractKind, activeContractId);
+      if (res?.success) {
+        showSuccess(
+          language === 'fr'
+            ? 'Signature électronique renvoyée par email.'
+            : 'E-signature resent by email.'
+        );
+        await reloadActiveContract();
+      } else {
+        showError(res?.message || (language === 'fr' ? 'Impossible de relancer.' : 'Unable to retry.'));
+      }
+    } catch (e) {
+      console.error('[BookerDashboard] retryContractSignature error:', e);
+      showError(language === 'fr' ? 'Erreur réseau.' : 'Network error.');
+    } finally {
+      setRetryingSignature(false);
     }
   };
 
@@ -369,5 +488,9 @@ export function useBookerContractFlows({
     contractEventEndOptions,
     contractEventWindowHint,
     djVenueGateBlocks,
+    payingContract,
+    payContractWithStripe,
+    retryingSignature,
+    retryContractSignature,
   };
 }

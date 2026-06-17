@@ -411,6 +411,8 @@ model EventDj {
   paymentCurrency  String                @default("eur")
   paidAt           DateTime?
   invoiceNumber    String?
+  /// PaymentIntent Stripe (paiement contrat avant signature Yousign)
+  stripePaymentIntentId String?
   contractStatus   BookingContractStatus @default(DRAFT)
   contractVersion  Int                   @default(1)
   contractPayload  Json?
@@ -435,6 +437,7 @@ model EventDj {
   @@index([djId])
   @@index([status])
   @@index([yousignSignatureRequestId])
+  @@index([stripePaymentIntentId])
 }
 
 model EventVenue {
@@ -447,6 +450,7 @@ model EventVenue {
   paymentCurrency   String                @default("eur")
   paidAt            DateTime?
   invoiceNumber     String?
+  stripePaymentIntentId String?
   contractStatus    BookingContractStatus @default(DRAFT)
   contractVersion   Int                   @default(1)
   contractPayload   Json?
@@ -466,6 +470,7 @@ model EventVenue {
 
   @@unique([eventId, venueId])
   @@index([yousignSignatureRequestId])
+  @@index([stripePaymentIntentId])
 }
 
 /// Lien optionnel Organisateur ↔ Prestataire (chat privé + contrat), même logique que EventVenue.
@@ -479,6 +484,7 @@ model EventPrestataire {
   paymentCurrency       String                   @default("eur")
   paidAt                DateTime?
   invoiceNumber         String?
+  stripePaymentIntentId String?
   contractStatus        BookingContractStatus    @default(DRAFT)
   contractVersion       Int                      @default(1)
   contractPayload       Json?
@@ -501,6 +507,7 @@ model EventPrestataire {
   @@index([prestataireId])
   @@index([status])
   @@index([yousignSignatureRequestId])
+  @@index([stripePaymentIntentId])
 }
 
 model BookerCommunityFriend {
@@ -800,7 +807,9 @@ enum BookingPaymentStatus {
 enum BookingContractStatus {
   DRAFT
   SENT
-  /// Les deux parties ont accepté sur Nox ; signature électronique Yousign en cours
+  /// Les deux parties ont accepté sur Nox ; en attente du paiement Stripe du booker
+  PENDING_PAYMENT
+  /// Paiement reçu ; signature électronique Yousign en cours
   PENDING_SIGNATURE
   SIGNED
 }

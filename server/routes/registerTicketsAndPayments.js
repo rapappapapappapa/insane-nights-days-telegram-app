@@ -221,6 +221,30 @@ app.post('/api/webhooks/stripe', async (req, res) => {
       const intent = stripeEvent.data.object;
       const paymentIntentId = intent.id;
 
+      if (intent.metadata?.type === 'contract') {
+        const { findBookingByStripeIntent, resolveContractAmountCents } = require('../utils/contractPayment');
+        const { fulfillContractPaymentAndStartSignature } = require('../utils/contractSignature');
+        const found = await findBookingByStripeIntent(paymentIntentId);
+        if (!found) {
+          console.warn('[STRIPE WEBHOOK] Contrat introuvable pour intent:', paymentIntentId);
+          return res.json({ received: true });
+        }
+        const expected = resolveContractAmountCents(found.row);
+        if (expected != null && typeof intent.amount === 'number' && intent.amount !== expected) {
+          console.warn('[STRIPE WEBHOOK] Contract amount mismatch', {
+            paymentIntentId,
+            intentAmount: intent.amount,
+            expected,
+          });
+          return res.json({ received: true });
+        }
+        const result = await fulfillContractPaymentAndStartSignature(found.kind, found.row.id, {
+          paymentIntentId,
+        });
+        console.log('[STRIPE WEBHOOK] contract payment:', paymentIntentId, result);
+        return res.json({ received: true, ...result });
+      }
+
       const payment = await prisma.payment.findUnique({ where: { paymentIntentId } });
       if (!payment) {
         console.warn('[STRIPE WEBHOOK] Payment introuvable pour intent:', paymentIntentId);
@@ -810,6 +834,196 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
     res.json({ success: true, tickets: formattedTickets });
   } catch (error) {
     console.error('Erreur récupération tickets:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Crée un PaymentIntent Stripe pour payer un contrat (booker → DJ / lieu / prestataire).
+ * body: { kind: 'dj'|'venue'|'prestataire', bookingId: string }
+ */
+app.post('/api/payments/create-contract-intent', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey) {
+      return res.status(500).json({ success: false, message: 'Stripe n’est pas configuré côté serveur.' });
+    }
+    if (!stripePublishableKey) {
+      return res.status(500).json({ success: false, message: 'STRIPE_PUBLISHABLE_KEY manquante côté serveur.' });
+    }
+
+    const { kind, bookingId } = req.body ?? {};
+    const validKinds = ['dj', 'venue', 'prestataire'];
+    if (!validKinds.includes(kind) || !bookingId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Les champs kind (dj|venue|prestataire) et bookingId sont requis.',
+      });
+    }
+
+    const userId = req.user.id;
+    const {
+      loadBookingByKind,
+      assertBookerOwnsBooking,
+      resolveContractAmountCents,
+    } = require('../utils/contractPayment');
+    const { fulfillContractPaymentAndStartSignature } = require('../utils/contractSignature');
+
+    const row = await loadBookingByKind(kind, bookingId);
+    if (!row) return res.status(404).json({ success: false, message: 'Booking introuvable.' });
+    if (!assertBookerOwnsBooking(row, userId)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (row.contractStatus !== 'PENDING_PAYMENT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce contrat n’est pas en attente de paiement.',
+        contractStatus: row.contractStatus,
+      });
+    }
+    if (row.paymentStatus === 'PAID' || row.paidAt) {
+      const result = await fulfillContractPaymentAndStartSignature(kind, bookingId, {
+        paymentIntentId: row.stripePaymentIntentId || undefined,
+      });
+      return res.json({
+        success: true,
+        alreadyPaid: true,
+        contractStatus: result.status,
+      });
+    }
+
+    const amount = resolveContractAmountCents(row);
+    if (amount == null || amount < 50) {
+      return res.status(400).json({ success: false, message: 'Montant du contrat invalide (minimum 0,50 €).' });
+    }
+
+    if (row.stripePaymentIntentId) {
+      try {
+        const existing = await stripe.paymentIntents.retrieve(row.stripePaymentIntentId);
+        if (existing.status === 'succeeded') {
+          const result = await fulfillContractPaymentAndStartSignature(kind, bookingId, {
+            paymentIntentId: existing.id,
+          });
+          return res.json({ success: true, alreadyPaid: true, contractStatus: result.status });
+        }
+        if (existing.status !== 'canceled' && existing.client_secret) {
+          return res.json({
+            success: true,
+            publishableKey: stripePublishableKey,
+            paymentIntentClientSecret: existing.client_secret,
+            paymentIntentId: existing.id,
+            amount: existing.amount,
+            currency: existing.currency || 'eur',
+            kind,
+            bookingId,
+          });
+        }
+      } catch (e) {
+        console.warn('[create-contract-intent] intent existant invalide:', e?.message || e);
+      }
+    }
+
+    const intent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'eur',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        type: 'contract',
+        contractKind: kind,
+        bookingId,
+        userId,
+      },
+    });
+
+    const updateData = {
+      stripePaymentIntentId: intent.id,
+      paymentAmount: amount,
+      paymentCurrency: 'eur',
+    };
+    if (kind === 'dj') {
+      await prisma.eventDj.update({ where: { id: bookingId }, data: updateData });
+    } else if (kind === 'venue') {
+      await prisma.eventVenue.update({ where: { id: bookingId }, data: updateData });
+    } else {
+      await prisma.eventPrestataire.update({ where: { id: bookingId }, data: updateData });
+    }
+
+    res.json({
+      success: true,
+      publishableKey: stripePublishableKey,
+      paymentIntentClientSecret: intent.client_secret,
+      paymentIntentId: intent.id,
+      amount,
+      currency: 'eur',
+      kind,
+      bookingId,
+    });
+  } catch (error) {
+    console.error('Erreur création PaymentIntent contrat:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Confirme le paiement d’un contrat côté client et déclenche l’envoi Yousign.
+ */
+app.post('/api/payments/confirm-contract-payment', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey) {
+      return res.status(500).json({ success: false, message: 'Stripe n’est pas configuré côté serveur.' });
+    }
+
+    const { paymentIntentId } = req.body ?? {};
+    const userId = req.user.id;
+    if (!paymentIntentId) {
+      return res.status(400).json({ success: false, message: 'paymentIntentId est requis.' });
+    }
+
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (intent.metadata?.userId && intent.metadata.userId !== userId) {
+      return res.status(403).json({ success: false, message: 'Paiement non autorisé.' });
+    }
+    if (intent.metadata?.type !== 'contract') {
+      return res.status(400).json({ success: false, message: 'Ce paiement n’est pas un paiement de contrat.' });
+    }
+    if (intent.status !== 'succeeded') {
+      return res.status(400).json({
+        success: false,
+        message: `Paiement non validé (status: ${intent.status}).`,
+      });
+    }
+
+    const kind = intent.metadata.contractKind;
+    const bookingId = intent.metadata.bookingId;
+    const { loadBookingByKind, assertBookerOwnsBooking, resolveContractAmountCents } =
+      require('../utils/contractPayment');
+    const { fulfillContractPaymentAndStartSignature } = require('../utils/contractSignature');
+
+    const row = await loadBookingByKind(kind, bookingId);
+    if (!row) return res.status(404).json({ success: false, message: 'Booking introuvable.' });
+    if (!assertBookerOwnsBooking(row, userId)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const expected = resolveContractAmountCents(row);
+    if (expected != null && typeof intent.amount === 'number' && intent.amount !== expected) {
+      return res.status(400).json({ success: false, message: 'Montant incompatible avec le contrat.' });
+    }
+
+    const result = await fulfillContractPaymentAndStartSignature(kind, bookingId, { paymentIntentId });
+    if (!result.ok) {
+      return res.status(400).json({
+        success: false,
+        message: 'Impossible de finaliser le contrat après paiement.',
+        ...result,
+      });
+    }
+
+    res.json({
+      success: true,
+      contractStatus: result.status,
+      pendingSignature: !!result.pendingSignature,
+    });
+  } catch (error) {
+    console.error('Erreur confirmation paiement contrat:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

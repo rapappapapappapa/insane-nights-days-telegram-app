@@ -118,10 +118,12 @@ export default function VenueChatModal(props) {
                           <ActivityIndicator size="small" color={Colors.primary} />
                         ) : (
                           <Text style={styles.contractStatus}>
-                            {contractData?.status === 'SIGNED'
-                              ? (language === 'fr' ? 'Signé' : 'Signed')
-                              : contractData?.status === 'PENDING_SIGNATURE'
-                                ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
+                          {contractData?.status === 'SIGNED'
+                            ? (language === 'fr' ? 'Signé' : 'Signed')
+                            : contractData?.status === 'PENDING_SIGNATURE'
+                              ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
+                              : contractData?.status === 'PENDING_PAYMENT'
+                                ? (language === 'fr' ? 'En attente paiement' : 'Awaiting payment')
                                 : contractData?.status === 'SENT'
                                   ? (language === 'fr' ? 'Envoyé' : 'Sent')
                                   : (language === 'fr' ? 'Brouillon' : 'Draft')}
@@ -234,6 +236,12 @@ export default function VenueChatModal(props) {
                         ) : contractData?.status === 'SIGNED' ? (
                           <Text style={styles.contractHint}>
                             {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
+                          </Text>
+                        ) : contractData?.status === 'PENDING_PAYMENT' ? (
+                          <Text style={styles.contractHint}>
+                            {language === 'fr'
+                              ? '💳 Contrat accepté — en attente du paiement Stripe de l’organisateur avant la signature.'
+                              : '💳 Contract accepted — waiting for organizer Stripe payment before signing.'}
                           </Text>
                         ) : contractData?.status === 'PENDING_SIGNATURE' ? (
                           <Text style={styles.contractHint}>

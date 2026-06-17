@@ -327,7 +327,10 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           eventDjIdMap[ed.djId] = ed.id; // ID de l'EventDj pour le chat
           const resolvePaymentStatus = () => {
             if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
-            if (ed?.contractStatus === 'SIGNED') return 'PENDING'; // Contrat signé = paiement en attente
+            if (ed?.contractStatus === 'PENDING_PAYMENT' || ed?.contractStatus === 'PENDING_SIGNATURE') {
+              return 'PENDING';
+            }
+            if (ed?.contractStatus === 'SIGNED') return 'PAID';
             if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
             return 'UPCOMING';
           };
@@ -397,14 +400,20 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
         const resolveVenuePaymentStatus = (ev) => {
           if (!ev) return 'UPCOMING';
           if (ev?.paymentStatus === 'PAID' || ev?.paidAt) return 'PAID';
-          if (ev?.contractStatus === 'SIGNED') return 'PENDING';
+          if (ev?.contractStatus === 'PENDING_PAYMENT' || ev?.contractStatus === 'PENDING_SIGNATURE') {
+            return 'PENDING';
+          }
+          if (ev?.contractStatus === 'SIGNED') return 'PAID';
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };
         const resolvePrestatairePaymentStatus = (ep) => {
           if (!ep) return 'UPCOMING';
           if (ep?.paymentStatus === 'PAID' || ep?.paidAt) return 'PAID';
-          if (ep?.contractStatus === 'SIGNED') return 'PENDING';
+          if (ep?.contractStatus === 'PENDING_PAYMENT' || ep?.contractStatus === 'PENDING_SIGNATURE') {
+            return 'PENDING';
+          }
+          if (ep?.contractStatus === 'SIGNED') return 'PAID';
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };

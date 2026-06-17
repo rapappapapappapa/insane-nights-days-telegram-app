@@ -53,7 +53,10 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
 
     const resolvePaymentStatus = (ed, eventStatus) => {
       if (ed?.paymentStatus === 'PAID' || ed?.paidAt) return 'PAID';
-      if (ed?.contractStatus === 'SIGNED') return 'PENDING'; // Contrat signé = paiement en attente
+      if (ed?.contractStatus === 'PENDING_PAYMENT' || ed?.contractStatus === 'PENDING_SIGNATURE') {
+        return 'PENDING';
+      }
+      if (ed?.contractStatus === 'SIGNED') return 'PAID';
       if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
       return 'UPCOMING';
     };
@@ -140,7 +143,10 @@ app.get('/api/venue/bookings', authenticateToken, async (req, res) => {
 
     const resolvePaymentStatus = (ev, eventStatus) => {
       if (ev?.paymentStatus === 'PAID' || ev?.paidAt) return 'PAID';
-      if (ev?.contractStatus === 'SIGNED') return 'PENDING';
+      if (ev?.contractStatus === 'PENDING_PAYMENT' || ev?.contractStatus === 'PENDING_SIGNATURE') {
+        return 'PENDING';
+      }
+      if (ev?.contractStatus === 'SIGNED') return 'PAID';
       if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
       return 'UPCOMING';
     };
@@ -228,7 +234,10 @@ app.get('/api/prestataire/bookings', authenticateToken, async (req, res) => {
 
     const resolvePaymentStatus = (ep, eventStatus) => {
       if (ep?.paymentStatus === 'PAID' || ep?.paidAt) return 'PAID';
-      if (ep?.contractStatus === 'SIGNED') return 'PENDING';
+      if (ep?.contractStatus === 'PENDING_PAYMENT' || ep?.contractStatus === 'PENDING_SIGNATURE') {
+        return 'PENDING';
+      }
+      if (ep?.contractStatus === 'SIGNED') return 'PAID';
       if (eventStatus === 'FINISHED' || eventStatus === 'ONGOING') return 'PENDING';
       return 'UPCOMING';
     };

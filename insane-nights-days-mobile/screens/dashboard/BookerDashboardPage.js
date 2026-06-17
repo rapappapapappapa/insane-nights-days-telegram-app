@@ -196,6 +196,11 @@ export default function BookerDashboardPage() {
     contractEventEndOptions,
     contractEventWindowHint,
     djVenueGateBlocks,
+    contractBooking,
+    payingContract,
+    payContractWithStripe,
+    retryingSignature,
+    retryContractSignature,
     chatMessages,
     loadingChatMessages,
     newMessageText,
@@ -431,6 +436,11 @@ export default function BookerDashboardPage() {
         openContractEditorFromChat={openContractEditorFromChat}
         openContractPdfPreview={openContractPdfPreview}
         djVenueGateBlocks={djVenueGateBlocks}
+        contractBooking={contractBooking}
+        payingContract={payingContract}
+        payContractWithStripe={payContractWithStripe}
+        retryingSignature={retryingSignature}
+        retryContractSignature={retryContractSignature}
         loadingChatMessages={loadingChatMessages}
         chatMessages={chatMessages}
         handleDeleteMessage={handleDeleteMessage}

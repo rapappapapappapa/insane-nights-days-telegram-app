@@ -171,5 +171,37 @@ export function createBookerEventsApiMethods({ apiRequest, getMimeType, getFileN
       token
     );
   },
+
+  createContractPaymentIntent: async (token, kind, bookingId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!kind || !bookingId) throw new Error('kind et bookingId requis.');
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.PAYMENTS_CREATE_CONTRACT_INTENT,
+      { method: 'POST', body: JSON.stringify({ kind, bookingId }) },
+      token
+    );
+  },
+
+  confirmContractPayment: async (token, paymentIntentId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!paymentIntentId) throw new Error('paymentIntentId requis.');
+    return apiRequest(
+      API_CONFIG.ENDPOINTS.PAYMENTS_CONFIRM_CONTRACT_PAYMENT,
+      { method: 'POST', body: JSON.stringify({ paymentIntentId }) },
+      token
+    );
+  },
+
+  retryContractSignature: async (token, kind, bookingId) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!kind || !bookingId) throw new Error('kind et bookingId requis.');
+    const path =
+      kind === 'venue'
+        ? `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTVENUES}/${bookingId}/retry-signature`
+        : kind === 'prestataire'
+          ? `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTPRESTATAIRES}/${bookingId}/retry-signature`
+          : `${API_CONFIG.ENDPOINTS.CONTRACTS_EVENTDJS}/${bookingId}/retry-signature`;
+    return apiRequest(path, { method: 'POST' }, token);
+  },
   };
 }

@@ -304,8 +304,8 @@ export default function DjChatModal(props) {
                       ) : contractData?.status === 'PENDING_PAYMENT' ? (
                         <Text style={styles.contractHint}>
                           {language === 'fr'
-                            ? '💳 Contrat accepté par les deux parties — en attente du paiement Stripe de l’organisateur avant la signature.'
-                            : '💳 Both parties accepted — waiting for organizer Stripe payment before signing.'}
+                            ? '💳 Contrat accepté — l’organisateur paie dans son dashboard (chat → bouton « Payer avec Stripe »). Pas de lien par email pour le paiement.'
+                            : '💳 Contract accepted — the organizer pays from their dashboard (chat → “Pay with Stripe” button). No payment email link.'}
                         </Text>
                       ) : contractData?.status === 'PENDING_SIGNATURE' ? (
                         <Text style={styles.contractHint}>

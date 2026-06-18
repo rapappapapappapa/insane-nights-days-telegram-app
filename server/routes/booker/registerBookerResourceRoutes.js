@@ -336,6 +336,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           };
           paymentInfoMap[ed.djId] = {
             paymentStatus: resolvePaymentStatus(),
+            contractStatus: ed.contractStatus ?? null,
             paymentAmount: ed.paymentAmount ?? null,
             paymentCurrency: ed.paymentCurrency ?? 'eur',
             paidAt: ed.paidAt ?? null,

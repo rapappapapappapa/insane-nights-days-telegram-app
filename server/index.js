@@ -244,6 +244,9 @@ const uploadMemory = multer({
   },
 });
 
+// Pages légales publiques (URL requise par App Store / Play Store)
+app.use('/legal', express.static(path.join(__dirname, 'public', 'legal')));
+
 // Servir les fichiers statiques uniquement en mode local
 if (MEDIA_STORAGE === 'local') {
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -219,6 +219,17 @@ export default function BookerEventsSection(props) {
                                       {payLabels[payStatus] || payStatus}
                                     </Text>
                                   </View>
+                                  {dj?.payment?.contractStatus === 'PENDING_PAYMENT' &&
+                                  dj?.payment?.paymentStatus !== 'PAID' ? (
+                                    <TouchableOpacity
+                                      style={styles.contractPayChip}
+                                      onPress={() => openChat(dj.eventDjId)}
+                                    >
+                                      <Text style={styles.contractPayChipText}>
+                                        {language === 'fr' ? '💳 Payer (chat)' : '💳 Pay (chat)'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ) : null}
                                   {status === 'ACCEPTED' && dj.eventDjId && payStatus !== 'PAID' ? (
                                     <TouchableOpacity
                                       style={styles.chatButtonSmall}

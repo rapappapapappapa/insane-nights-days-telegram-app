@@ -122,6 +122,26 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  contractPaymentBanner: {
+    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.45)',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  contractPaymentBannerTitle: {
+    color: '#ffc107',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  contractPaymentBannerText: {
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
   contractAckRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -958,6 +978,20 @@ export const styles = StyleSheet.create({
   djStatusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  contractPayChip: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 193, 7, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.5)',
+  },
+  contractPayChipText: {
+    color: '#ffc107',
+    fontSize: 11,
+    fontWeight: '800',
   },
   emptyText: {
     color: 'rgba(255,255,255,0.6)',

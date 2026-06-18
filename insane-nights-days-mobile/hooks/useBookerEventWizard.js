@@ -14,6 +14,8 @@ import {
   hasBookerEventPrice,
   buildDjSlotsFromFormData,
   mergeDjSlotsWithForm,
+  resolveDjSlotTargetIndex,
+  syncDjSlotsToFormData,
   getMergedInitialBookerWizardStep,
   isReturnFromVenueOrDjPicker,
   parseHM,
@@ -245,12 +247,7 @@ export function useBookerEventWizard({
       };
       
       const syncSlotsToForm = (slotsAfter /* applyEqual déjà fait */) => {
-        const filled = slotsAfter.filter((s) => s.djId);
-        setFormData((prevForm) => ({
-          ...prevForm,
-          djIds: filled.map((s) => s.djId),
-          djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
-        }));
+        syncDjSlotsToFormData(setFormData, slotsAfter);
       };
   
       let appliedDjFromRoute = false;
@@ -264,21 +261,14 @@ export function useBookerEventWizard({
             const newSlots = mergeDjSlotsWithForm(prev, formData);
             // Ne pas dupliquer si le DJ choisi est déjà dans un créneau.
             if (!newSlots.some((s) => s.djId === currentDjId)) {
-              // Cible par identité d'abord : l'écran est démonté pendant la sélection et
-              // les slots reconstruits compactent les DJs au début — l'index peut se décaler
-              // et pointer sur un autre DJ (qui serait écrasé / perdu).
-              let targetIdx = currentReplaceDjId
-                ? newSlots.findIndex((s) => s.djId === currentReplaceDjId)
-                : -1;
-              if (targetIdx === -1 && safeSlotIndex < newSlots.length && !newSlots[safeSlotIndex]?.djId) {
-                targetIdx = safeSlotIndex;
-              }
-              if (targetIdx === -1) targetIdx = newSlots.findIndex((s) => !s.djId);
-              if (targetIdx === -1) {
-                newSlots.push(emptyDjSlot());
-                targetIdx = newSlots.length - 1;
-              }
-              newSlots[targetIdx] = { ...newSlots[targetIdx], djId: currentDjId };
+              const { targetIdx, slots: resolved } = resolveDjSlotTargetIndex(newSlots, {
+                slotIndex: safeSlotIndex,
+                replaceDjId: currentReplaceDjId,
+              });
+              resolved[targetIdx] = { ...resolved[targetIdx], djId: currentDjId };
+              const timed = applyEqualDjSlotTimes(resolved, formData.time, durOk);
+              syncSlotsToForm(timed);
+              return timed;
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
             syncSlotsToForm(timed);
@@ -343,6 +333,8 @@ export function useBookerEventWizard({
   
       if (appliedDjFromRoute) {
         hasInitializedSlots.current = true;
+        // Efface selectedDjId / slotIndex pour ne pas re-traiter à chaque re-render.
+        queueMicrotask(() => navigate('bookerEventDashboard', { resumeStep: 3 }));
       }
       
       // Sélection de lieu (replaceVenue = remplacement depuis un événement existant)

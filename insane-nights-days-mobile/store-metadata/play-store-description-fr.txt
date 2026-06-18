@@ -1,0 +1,14 @@
+Courte description (80 car. max) :
+Plateforme événementielle : billets, DJs, organisateurs et lieux.
+
+Description complète :
+Nox (Insane Nights & Days) connecte la communauté, les DJs, les organisateurs et les lieux autour d'événements musicaux.
+
+• Découvre et suis des événements
+• Achète des billets en ligne (paiement Stripe sécurisé)
+• Présente ton QR code à l'entrée
+• Gère ton profil pro ou communauté
+• Échange avec les acteurs de la scène
+
+Application réservée aux 18 ans et plus.
+Contact : support@nox.world

@@ -52,14 +52,18 @@ Objectif : **Finaliser la v1 de l'app mobile** pour savoir quoi reproduire sur l
 
 ## 📋 Checklist avant publication stores
 
+Voir le guide détaillé : **[docs/mobile/PUBLICATION_STORES.md](docs/mobile/PUBLICATION_STORES.md)**
+
 - [ ] Compte Apple Developer / Google Play Console prêts
 - [ ] Icône et splash screen finaux
-- [ ] Politique de confidentialité hébergée (URL accessible)
-- [ ] CGU hébergées
+- [ ] Politique de confidentialité hébergée (URL `/legal/privacy.html` sur l'API prod)
+- [ ] CGU hébergées (`/legal/cgu.html`)
+- [ ] Raison sociale complétée dans `constants/legalConfig.js`
 - [ ] Backend stable sur Railway
+- [ ] `npm run store:check` sans erreur bloquante
 - [ ] Tests sur devices réels (iOS + Android)
 - [ ] Pas de logs sensibles en prod
-- [ ] Version et buildNumber incrémentés (app.json)
+- [ ] Version et buildNumber incrémentés (`app.json`)
 
 ---
 

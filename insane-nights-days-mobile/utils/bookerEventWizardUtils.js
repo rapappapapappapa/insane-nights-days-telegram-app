@@ -65,7 +65,7 @@ export function stepRequirementsHint(step, lang) {
   }
 }
 
-const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
+export const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
 
 /** Reconstruit les créneaux depuis le contexte (survit au démontage navigation selectDj → profil DJ). */
 export function buildDjSlotsFromFormData(fd) {
@@ -92,8 +92,24 @@ export function buildDjSlotsFromFormData(fd) {
 export function mergeDjSlotsWithForm(prev, fd) {
   const formIds = fd?.djIds || [];
   const assigns = fd?.djSlotAssignments || [];
-  const result = (Array.isArray(prev) ? prev : []).map((s) => ({ ...s }));
-  if (!result.length) result.push(emptyDjSlot());
+  const prevArr = Array.isArray(prev) ? prev : [];
+  const prevHasDj = prevArr.some((s) => s.djId);
+
+  let result;
+  if (!prevHasDj && formIds.length > 0) {
+    result = buildDjSlotsFromFormData(fd);
+  } else if (prevArr.length > 0) {
+    result = prevArr.map((s) => ({ ...s }));
+  } else {
+    result = [emptyDjSlot()];
+  }
+
+  // Conserver les créneaux vides ajoutés (« + Ajouter un créneau ») même si formData n’a pas encore suivi.
+  const prevLen = prevArr.length;
+  while (result.length < prevLen) {
+    result.push(emptyDjSlot());
+  }
+
   const knownIds = new Set(result.filter((s) => s.djId).map((s) => s.djId));
   formIds.forEach((id, i) => {
     if (!id || knownIds.has(id)) return;
@@ -108,6 +124,51 @@ export function mergeDjSlotsWithForm(prev, fd) {
     knownIds.add(id);
   });
   return result;
+}
+
+/**
+ * Créneau cible pour une sélection DJ.
+ * Un slotIndex vers un créneau vide a priorité sur replaceDjId (évite d’écraser le 1er DJ).
+ */
+export function resolveDjSlotTargetIndex(slots, { slotIndex, replaceDjId }) {
+  const rows = (Array.isArray(slots) ? slots : []).map((s) => ({ ...s }));
+  if (!rows.length) rows.push(emptyDjSlot());
+
+  const idx =
+    slotIndex !== undefined && slotIndex !== null && Number.isFinite(Number(slotIndex)) && Number(slotIndex) >= 0
+      ? Math.floor(Number(slotIndex))
+      : -1;
+
+  if (idx >= 0) {
+    while (rows.length <= idx) rows.push(emptyDjSlot());
+    if (!rows[idx].djId) {
+      return { targetIdx: idx, slots: rows };
+    }
+    if (replaceDjId && rows[idx].djId === replaceDjId) {
+      return { targetIdx: idx, slots: rows };
+    }
+  }
+
+  if (replaceDjId) {
+    const byId = rows.findIndex((s) => s.djId === replaceDjId);
+    if (byId !== -1) return { targetIdx: byId, slots: rows };
+  }
+
+  const emptyIdx = rows.findIndex((s) => !s.djId);
+  if (emptyIdx !== -1) return { targetIdx: emptyIdx, slots: rows };
+
+  rows.push(emptyDjSlot());
+  return { targetIdx: rows.length - 1, slots: rows };
+}
+
+/** Synchronise djIds / créneaux horaires dans le formulaire global (survit au démontage navigation). */
+export function syncDjSlotsToFormData(setFormData, slotsAfter) {
+  const filled = (slotsAfter || []).filter((s) => s.djId);
+  setFormData((prev) => ({
+    ...prev,
+    djIds: filled.map((s) => s.djId),
+    djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+  }));
 }
 
 /**

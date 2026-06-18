@@ -12,7 +12,13 @@
     "tunnel:devclient": "bash scripts/start_expo_tunnel_devclient.sh 8082",
     "tunnel:android": "npm run tunnel:go",
     "update:both": "bash scripts/publish-update-both.sh",
-    "eas:verify-fingerprint": "bash scripts/verify-eas-fingerprint.sh"
+    "eas:verify-fingerprint": "bash scripts/verify-eas-fingerprint.sh",
+    "store:check": "bash scripts/verify-store-readiness.sh",
+    "build:store:ios": "eas build --platform ios --profile production",
+    "build:store:android": "eas build --platform android --profile production",
+    "build:store:both": "eas build --platform all --profile production",
+    "submit:store:ios": "eas submit --platform ios --profile production --latest",
+    "submit:store:android": "eas submit --platform android --profile production --latest"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

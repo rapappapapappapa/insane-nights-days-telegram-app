@@ -6,6 +6,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 16 au 19 juin 2026 (lun. – jeu.)
 
+### Corrigé (wizard événement — créneaux DJ multiples, régression)
+- **2ᵉ DJ n’écrase plus le 1ᵉʳ** : priorité au `slotIndex` vers un créneau vide (`resolveDjSlotTargetIndex`) ; fusion slots/formData conserve les créneaux vides ajoutés ; sync formulaire à l’ajout d’un créneau ; nettoyage des `routeParams` après sélection.
+
+### Corrigé (contrats — visibilité paiement Stripe booker)
+- **Paiement in-app uniquement** (organisateur) : bandeau + scroll auto dans le chat booker ; chip **« 💳 Payer (chat) »** sur la liste événements si `PENDING_PAYMENT` ; message explicite côté DJ (pas de lien email pour payer).
+
+### Ajouté (publication stores — checklist & infra)
+- **Checklist publication** : `docs/mobile/PUBLICATION_STORES.md` (App Store + Play Store, OTA post-lancement, commandes).
+- **Référentiel légal (quoi / où)** : `docs/mobile/INFORMATIONS_LEGALES_A_COMPLETER.md` — formulaire éditeur + tableau des emplacements (code, HTML, stores).
+- **EAS Submit** : section `submit.production` dans `eas.json` ; scripts npm `build:store:*`, `submit:store:*`, `store:check`.
+- **Pages légales publiques** : `server/public/legal/` (privacy, CGU, CGV, mentions) servies sur **`GET /legal/*`** — URLs requises par les stores.
+- **Mobile** : `constants/legalConfig.js` (email support, placeholders éditeur) ; `store-metadata/` (descriptions FR brouillon).
+
 ### Modifié (contrats — paiement Stripe avant signature Yousign)
 - **Nouveau flux** : les deux parties acceptent → statut **`PENDING_PAYMENT`** → le **booker paie via Stripe** → envoi **Yousign** (`PENDING_SIGNATURE`) → webhook → **`SIGNED`**. Plus d’envoi Yousign tant que le paiement n’est pas reçu.
 - **Facture par email** : dès le paiement Stripe enregistré, envoi d’une **facture / reçu PDF** (`contractInvoicePdf.js` + `contractInvoiceEmail.js`) à l’organisateur et au prestataire (DJ / lieu / prestataire) — distinct de l’email **contrat signé** (après Yousign).

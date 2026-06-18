@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -85,6 +85,15 @@ export default function BookerChatModal(props) {
     sendMessage,
     sendingMessage,
   } = props;
+
+  useEffect(() => {
+    if (!chatModalVisible || contractData?.status !== 'PENDING_PAYMENT') return;
+    if (contractBooking?.paymentStatus === 'PAID') return;
+    const t = setTimeout(() => {
+      chatScrollViewRef?.current?.scrollTo?.({ y: 0, animated: true });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [chatModalVisible, contractData?.status, contractBooking?.paymentStatus, chatScrollViewRef]);
 
   return (
     <Modal
@@ -441,11 +450,16 @@ export default function BookerChatModal(props) {
                           </>
                         ) : (
                           <>
-                            <Text style={styles.contractHint}>
-                              {language === 'fr'
-                                ? 'Les deux parties ont accepté. Paie le contrat via Stripe pour lancer la signature électronique.'
-                                : 'Both parties accepted. Pay via Stripe to start the e-signature.'}
-                            </Text>
+                            <View style={styles.contractPaymentBanner}>
+                              <Text style={styles.contractPaymentBannerTitle}>
+                                {language === 'fr' ? '💳 Paiement requis' : '💳 Payment required'}
+                              </Text>
+                              <Text style={styles.contractPaymentBannerText}>
+                                {language === 'fr'
+                                  ? 'Les deux parties ont accepté. Utilise le bouton ci-dessous (paiement in-app Stripe, pas par email).'
+                                  : 'Both parties accepted. Use the button below (in-app Stripe payment, not by email).'}
+                              </Text>
+                            </View>
                             <TouchableOpacity
                               style={[styles.contractButton, styles.contractButtonPrimary]}
                               onPress={payContractWithStripe}

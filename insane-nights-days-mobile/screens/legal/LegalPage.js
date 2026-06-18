@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { applyLegalPlaceholders } from '../../constants/legalConfig';
 
 const LEGAL_CONTENT = {
   cgu: {
@@ -398,7 +399,8 @@ export default function LegalPage() {
   if (!content) return null;
 
   const title = language === 'fr' ? content.titleFr : content.titleEn;
-  const text = language === 'fr' ? content.contentFr : content.contentEn;
+  const rawText = language === 'fr' ? content.contentFr : content.contentEn;
+  const text = applyLegalPlaceholders(rawText);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

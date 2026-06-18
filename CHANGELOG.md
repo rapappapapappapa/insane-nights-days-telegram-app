@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 9 au 12 juin 2026 (mar. – ven.)
+## Semaine du 16 au 19 juin 2026 (lun. – jeu.)
 
 ### Modifié (contrats — paiement Stripe avant signature Yousign)
 - **Nouveau flux** : les deux parties acceptent → statut **`PENDING_PAYMENT`** → le **booker paie via Stripe** → envoi **Yousign** (`PENDING_SIGNATURE`) → webhook → **`SIGNED`**. Plus d’envoi Yousign tant que le paiement n’est pas reçu.
@@ -12,13 +12,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Serveur** : statut Prisma **`PENDING_PAYMENT`**, champ **`stripePaymentIntentId`** (3 modèles, migration `20260612160000`), util **`contractPayment.js`**, orchestration dans **`contractSignature.js`** (`afterBothPartiesAccepted`, `fulfillContractPaymentAndStartSignature`, retry signature si refus après paiement).
 - **API Stripe** : `POST /api/payments/create-contract-intent`, `POST /api/payments/confirm-contract-payment`, webhook Stripe `metadata.type=contract`, routes **`retry-signature`** (booker). Fallback sans Yousign : paiement → **`SIGNED`** direct.
 - **Mobile** : bouton **« Payer avec Stripe »** dans le chat booker (`PENDING_PAYMENT`), relance signature si paiement déjà reçu ; libellés **« En attente paiement »** côté DJ / lieu / prestataire.
+- **Tests serveur** : 6 nouveaux tests (`contractPayment`, `contractInvoice`) — **32 au total**.
+
+---
+
+## Semaine du 9 au 12 juin 2026 (mar. – ven.)
 
 ### Corrigé (wizard événement booker — créneaux DJ multiples)
 - **Ajouter plusieurs DJs ne supprime plus le précédent** : la fusion des créneaux (`mergeDjSlotsWithForm`) est désormais une **union** state local + formulaire — un DJ présent dans le formulaire ne peut plus disparaître quand l'écran est remonté pendant la navigation vers la sélection (slot vide ajouté, ordre décalé…).
 - **Sélection par identité** plutôt que par index : `replaceDjId` (DJ actuel du créneau visé) est propagé `Step3 → SelectDjPage → DjProfilePage → wizard` ; au retour, le remplacement cible ce DJ et l'ajout va dans un créneau vide — un index décalé n'écrase plus un autre DJ. Retrait d'un créneau aussi par identité ; re-sélection d'un DJ déjà choisi ne crée plus de doublon.
 
 ### Ajouté (contrats — signature électronique Yousign)
-- **Signature électronique** des contrats (DJ / lieu / prestataire) via **Yousign** : quand les **deux parties acceptent** sur Nox, le contrat passe en **`PENDING_SIGNATURE`** et chacune reçoit un **email Yousign** pour signer le PDF ; le webhook **`signature_request.done`** finalise en **`SIGNED`** (+ paiement `PENDING`, notif chat, email PDF) ; refus / expiration → retour à `SENT`. **Sans `YOUSIGN_API_KEY`, flux historique inchangé** (acceptation = signature) — fallback aussi en cas d'erreur Yousign.
+- **Signature électronique** des contrats (DJ / lieu / prestataire) via **Yousign** : statut intermédiaire **`PENDING_SIGNATURE`**, emails de signature, webhook **`signature_request.done`** → **`SIGNED`** (+ notif chat, email PDF) ; refus / expiration → retour négociable. **Sans `YOUSIGN_API_KEY`, fallback** acceptation directe. *(Le flux complet acceptation → paiement → signature est détaillé en semaine 16–19.)*
 - **Serveur** : client API v3 **`utils/yousign.js`** (sandbox par défaut, multipart natif, HMAC webhook), orchestration **`utils/contractSignature.js`**, webhook **`POST /api/webhooks/yousign`** (body brut + vérif `x-yousign-signature-256`), **smart anchors** `{{s1/s2|signature}}` (texte blanc) dans les PDF pdfkit (option `signatureAnchors`, preview / email inchangés).
 - **Prisma** : statut **`PENDING_SIGNATURE`** + champ **`yousignSignatureRequestId`** (+ index) sur `EventDj` / `EventVenue` / `EventPrestataire` (migration `20260610170000`).
 - **Mobile** : statut « Signature en cours » + hint explicatif dans les 4 modales chat ; toast « signature électronique envoyée par email » à l'acceptation.

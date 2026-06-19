@@ -2,6 +2,8 @@
 
 **Objectif :** un seul endroit pour savoir **quoi** renseigner et **où** le mettre (code, pages web, stores).
 
+> **Pour le patron / l’éditeur :** utilise le formulaire imprimable **[FORMULAIRE_LEGAL_EDITEUR.md](./FORMULAIRE_LEGAL_EDITEUR.md)** (tableaux + texte à trou). Une fois complété, reporte les réponses dans le code via la section B ci-dessous.
+
 > Remplis d’abord le **bloc A** ci-dessous, puis propage les valeurs aux emplacements listés.
 
 ---

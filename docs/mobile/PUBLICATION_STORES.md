@@ -187,6 +187,7 @@ Aujourd’hui Android utilise le canal `preview`, iOS le canal `production`. **A
 
 | Fichier | Rôle |
 |---------|------|
+| **`docs/mobile/FORMULAIRE_LEGAL_EDITEUR.md`** | **Formulaire / texte à trou pour l’éditeur (patron)** |
 | **`docs/mobile/INFORMATIONS_LEGALES_A_COMPLETER.md`** | **Quoi remplir et où (formulaire + tableau)** |
 | `insane-nights-days-mobile/eas.json` | Profils build + submit |
 | `insane-nights-days-mobile/app.json` | Version, bundle ID, permissions |

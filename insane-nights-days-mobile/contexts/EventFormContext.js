@@ -21,6 +21,8 @@ export function EventFormProvider({ children }) {
     djIds: [],
     /// Même ordre que djIds : { slotStart, slotEnd } en « HH:mm »
     djSlotAssignments: [],
+    /// Grille complète des créneaux DJ (y compris vides) — survit à la navigation vers selectDj
+    djSlotsLayout: null,
     price: '',
     durationHours: '4',
     capacity: '',
@@ -81,6 +83,7 @@ export function EventFormProvider({ children }) {
       venueId: '',
       djIds: [],
       djSlotAssignments: [],
+      djSlotsLayout: null,
       price: '',
       durationHours: '4',
       capacity: '',

@@ -226,8 +226,10 @@ export function useBookerEventWizard({
       hasInitializedSlots.current = true;
     }, [currentStep, formData.djIds, formData.djSlotAssignments, routeParams]);
   
-    // Gérer les sélections depuis routeParams
+    // Gérer les sélections depuis routeParams (après réhydratation brouillon)
     React.useLayoutEffect(() => {
+      if (draftGate) return;
+
       const isSlotUpdate = safeSlotIndex !== undefined && safeSlotIndex !== null;
       
       if (!isSlotUpdate) {
@@ -347,7 +349,7 @@ export function useBookerEventWizard({
       } else if (currentVenueId && currentAction === 'remove') {
         setVenue('');
       }
-    }, [currentDjId, currentVenueId, currentAction, currentReplaceDjId, safeSlotIndex, formData.time, formData.durationHours]);
+    }, [currentDjId, currentVenueId, currentAction, currentReplaceDjId, safeSlotIndex, formData.time, formData.durationHours, draftGate]);
   
     const fetchAvailableDjs = async () => {
       if (!user?.token || loadingDjs) return;
@@ -449,12 +451,7 @@ export function useBookerEventWizard({
             if (field === 'start') return { ...s, slotStart: hhmm };
             return { ...s, slotEnd: hhmm };
           });
-          const filled = next.filter((s) => s.djId);
-          setFormData((p) => ({
-            ...p,
-            djIds: filled.map((s) => s.djId),
-            djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
-          }));
+          syncDjSlotsToFormData(setFormData, next);
           return next;
         });
       },

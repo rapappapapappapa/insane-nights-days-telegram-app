@@ -7,6 +7,7 @@ import {
   getEventMinLeadDaysFromEnv,
   getMinEventCalendarDate,
   buildDjSlotsFromFormData,
+  mergeDjSlotsWithForm,
   isReturnFromVenueOrDjPicker,
 } from '../utils/bookerEventWizardUtils';
 
@@ -111,9 +112,17 @@ export function useBookerEventWizardDraft({
           setDraftGate(false);
           return;
         }
-        if (!isReturnFromVenueOrDjPicker(routeParams)) {
-          applyEventDraft(d);
+        if (isReturnFromVenueOrDjPicker(routeParams)) {
+          // Restaurer la grille de créneaux (y compris vides) avant le handler routeParams
+          const baseSlots =
+            Array.isArray(d.djSlots) && d.djSlots.length > 0
+              ? d.djSlots
+              : buildDjSlotsFromFormData(d.formData);
+          setDjSlots(mergeDjSlotsWithForm(baseSlots, d.formData));
+          if (!cancelled) setDraftGate(false);
+          return;
         }
+        applyEventDraft(d);
         if (!cancelled) setDraftGate(false);
       } catch (e) {
         console.warn('[EventDraft] load', e);

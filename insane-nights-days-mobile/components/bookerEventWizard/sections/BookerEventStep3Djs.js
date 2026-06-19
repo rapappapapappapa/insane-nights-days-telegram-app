@@ -237,14 +237,7 @@ export default function BookerEventStep3Djs(props) {
                       onPress={() => {
                         const filled = djSlots.filter((s) => s.djId);
                         if (filled.length > 0) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            djIds: filled.map((s) => s.djId),
-                            djSlotAssignments: filled.map((s) => ({
-                              slotStart: s.slotStart,
-                              slotEnd: s.slotEnd,
-                            })),
-                          }));
+                          syncDjSlotsToFormData(setFormData, djSlots);
                           setCurrentStep(4);
                         }
                       }}

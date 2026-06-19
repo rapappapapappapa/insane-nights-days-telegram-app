@@ -11,6 +11,19 @@ import {
   isReturnFromVenueOrDjPicker,
 } from '../utils/bookerEventWizardUtils';
 
+/** Préfère la grille la plus complète entre contexte live et brouillon AsyncStorage. */
+function pickDjSlotsBase(ctxSlots, draftSlots) {
+  const ctx = Array.isArray(ctxSlots) ? ctxSlots : [emptyDjSlot()];
+  const draft = Array.isArray(draftSlots) && draftSlots.length > 0 ? draftSlots : [emptyDjSlot()];
+  const ctxDjCount = ctx.filter((s) => s.djId).length;
+  const draftDjCount = draft.filter((s) => s.djId).length;
+  if (ctxDjCount > draftDjCount) return ctx;
+  if (draftDjCount > ctxDjCount) return draft;
+  if (ctx.length > draft.length) return ctx;
+  if (draft.length > ctx.length) return draft;
+  return ctx.some((s) => s.djId) ? ctx : draft;
+}
+
 /**
  * Brouillon AsyncStorage du wizard création événement booker.
  */
@@ -86,15 +99,25 @@ export function useBookerEventWizardDraft({
       }
       if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
       else setCoverImageUri(null);
-      if (Array.isArray(d.djSlots) && d.djSlots.length > 0) {
-        setDjSlots(d.djSlots);
-        hasInitializedSlots.current = true;
-      } else if (d.formData?.djIds?.length) {
-        setDjSlots(buildDjSlotsFromFormData(d.formData));
-        hasInitializedSlots.current = true;
-      }
+      const draftSlots =
+        Array.isArray(d.djSlots) && d.djSlots.length > 0
+          ? d.djSlots
+          : buildDjSlotsFromFormData(d.formData);
+      setDjSlots((prev) => mergeDjSlotsWithForm(pickDjSlotsBase(prev, draftSlots), formData));
+      hasInitializedSlots.current = true;
     },
-    [setFormData, setEventDateTime, setCoverImageUri, routeParams, setCurrentStep, setDjSlots, setTempDate, setTempTime, hasInitializedSlots]
+    [
+      setFormData,
+      setEventDateTime,
+      setCoverImageUri,
+      routeParams,
+      setCurrentStep,
+      setDjSlots,
+      setTempDate,
+      setTempTime,
+      hasInitializedSlots,
+      formData,
+    ]
   );
 
   useEffect(() => {
@@ -113,12 +136,24 @@ export function useBookerEventWizardDraft({
           return;
         }
         if (isReturnFromVenueOrDjPicker(routeParams)) {
-          // Restaurer la grille de créneaux (y compris vides) avant le handler routeParams
-          const baseSlots =
+          const draftSlots =
             Array.isArray(d.djSlots) && d.djSlots.length > 0
               ? d.djSlots
               : buildDjSlotsFromFormData(d.formData);
-          setDjSlots(mergeDjSlotsWithForm(baseSlots, d.formData));
+          setFormData((prev) => {
+            const merged = { ...d.formData };
+            if (prev?.venueId && !merged.venueId) merged.venueId = prev.venueId;
+            if ((prev?.djIds?.length || 0) > (merged.djIds?.length || 0)) {
+              merged.djIds = prev.djIds;
+              merged.djSlotAssignments = prev.djSlotAssignments;
+              merged.djSlotsLayout = prev.djSlotsLayout;
+            }
+            setDjSlots((ctxSlots) =>
+              mergeDjSlotsWithForm(pickDjSlotsBase(ctxSlots, draftSlots), merged)
+            );
+            return merged;
+          });
+          hasInitializedSlots.current = true;
           if (!cancelled) setDraftGate(false);
           return;
         }
@@ -132,7 +167,7 @@ export function useBookerEventWizardDraft({
     return () => {
       cancelled = true;
     };
-  }, [routeParams, applyEventDraft]);
+  }, [routeParams, applyEventDraft, setFormData, setDjSlots, hasInitializedSlots]);
 
   const persistDraft = useCallback(async () => {
     try {
@@ -178,7 +213,6 @@ export function useBookerEventWizardDraft({
     }
     resetForm();
     setCurrentStep(1);
-    setDjSlots([emptyDjSlot()]);
     hasInitializedSlots.current = false;
     const now = new Date();
     setTempDate(now);
@@ -188,7 +222,16 @@ export function useBookerEventWizardDraft({
         ? 'Brouillon effacé. Tu peux créer un nouvel événement.'
         : 'Draft cleared. You can create a new event.'
     );
-  }, [creating, resetForm, language, showSuccess, setCurrentStep, setDjSlots, hasInitializedSlots, setTempDate, setTempTime]);
+  }, [
+    creating,
+    resetForm,
+    language,
+    showSuccess,
+    setCurrentStep,
+    hasInitializedSlots,
+    setTempDate,
+    setTempTime,
+  ]);
 
   return {
     draftGate,

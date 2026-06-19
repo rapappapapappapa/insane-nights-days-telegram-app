@@ -44,6 +44,8 @@ export default function BookerEventDashboardPage() {
     setCoverImageUri,
     bookerEventWizardStep,
     setBookerEventWizardStep,
+    djSlots,
+    setDjSlots,
   } = useEventForm();
 
   const wizard = useBookerEventWizard({
@@ -66,6 +68,8 @@ export default function BookerEventDashboardPage() {
     setCoverImageUri,
     bookerEventWizardStep,
     setBookerEventWizardStep,
+    djSlots,
+    setDjSlots,
   });
 
   const {

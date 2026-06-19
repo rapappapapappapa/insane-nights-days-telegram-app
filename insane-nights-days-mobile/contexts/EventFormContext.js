@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { emptyDjSlot, syncDjSlotsToFormData } from '../utils/bookerEventWizardUtils';
 
 const EventFormContext = createContext();
 
@@ -36,6 +37,20 @@ export function EventFormProvider({ children }) {
   });
 
   const [eventDateTime, setEventDateTime] = useState(new Date());
+
+  /** Grille créneaux DJ (y compris vides) — survit au démontage navigation selectDj / profil DJ. */
+  const [djSlots, setDjSlotsRaw] = useState(() => [emptyDjSlot()]);
+
+  const setDjSlots = useCallback(
+    (updater) => {
+      setDjSlotsRaw((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        syncDjSlotsToFormData(setFormData, next);
+        return next;
+      });
+    },
+    [setFormData]
+  );
 
   // Fonctions helpers pour éviter les re-renders inutiles
   const addDj = useCallback((djId) => {
@@ -96,6 +111,7 @@ export function EventFormProvider({ children }) {
       extraTicketTiers: [],
     });
     setEventDateTime(new Date());
+    setDjSlotsRaw([emptyDjSlot()]);
   }, []);
 
   return (
@@ -113,6 +129,8 @@ export function EventFormProvider({ children }) {
         removeDj,
         setVenue,
         resetForm,
+        djSlots,
+        setDjSlots,
       }}
     >
       {children}

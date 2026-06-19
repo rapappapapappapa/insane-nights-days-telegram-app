@@ -9,6 +9,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (wizard événement — créneaux DJ multiples, régression)
 - **2ᵉ DJ n’écrase plus le 1ᵉʳ** : priorité au `slotIndex` vers un créneau vide (`resolveDjSlotTargetIndex`) ; fusion slots/formData conserve les créneaux vides ajoutés ; sync formulaire à l’ajout d’un créneau ; nettoyage des `routeParams` après sélection.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
+- **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
 ### Corrigé (contrats — visibilité paiement Stripe booker)
 - **Paiement in-app uniquement** (organisateur) : bandeau + scroll auto dans le chat booker ; chip **« 💳 Payer (chat) »** sur la liste événements si `PENDING_PAYMENT` ; message explicite côté DJ (pas de lien email pour payer).

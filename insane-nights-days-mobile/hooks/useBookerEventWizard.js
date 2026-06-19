@@ -15,10 +15,10 @@ import {
   buildDjSlotsFromFormData,
   mergeDjSlotsWithForm,
   resolveDjSlotTargetIndex,
-  syncDjSlotsToFormData,
   getMergedInitialBookerWizardStep,
   isReturnFromVenueOrDjPicker,
   parseHM,
+  formatHM,
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
 } from '../utils/bookerEventWizardUtils';
@@ -46,6 +46,8 @@ export function useBookerEventWizard({
   setCoverImageUri,
   bookerEventWizardStep,
   setBookerEventWizardStep,
+  djSlots,
+  setDjSlots,
 }) {
     const [availableDjs, setAvailableDjs] = useState([]);
     const [venues, setVenues] = useState([]);
@@ -63,8 +65,7 @@ export function useBookerEventWizard({
       setBookerEventWizardStep(currentStep);
     }, [currentStep, setBookerEventWizardStep]);
   
-    // Slots DJ pour la création d'événement (créneau horaire par ligne)
-    const [djSlots, setDjSlots] = useState(() => buildDjSlotsFromFormData(formData));
+    // Slots DJ : state dans EventFormContext (survit au démontage selectDj / profil DJ)
     const [slotTimePicker, setSlotTimePicker] = useState(null);
     const [tempSlotTime, setTempSlotTime] = useState(() => new Date());
     
@@ -247,11 +248,7 @@ export function useBookerEventWizard({
         action: currentAction,
         slotIndex: safeSlotIndex,
       };
-      
-      const syncSlotsToForm = (slotsAfter /* applyEqual déjà fait */) => {
-        syncDjSlotsToFormData(setFormData, slotsAfter);
-      };
-  
+
       let appliedDjFromRoute = false;
   
       // Sélection de DJ
@@ -269,11 +266,9 @@ export function useBookerEventWizard({
               });
               resolved[targetIdx] = { ...resolved[targetIdx], djId: currentDjId };
               const timed = applyEqualDjSlotTimes(resolved, formData.time, durOk);
-              syncSlotsToForm(timed);
               return timed;
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
-            syncSlotsToForm(timed);
             return timed;
           });
           if (currentStep !== 3) {
@@ -291,7 +286,6 @@ export function useBookerEventWizard({
               }
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
-            syncSlotsToForm(timed);
             return timed;
           });
           setCurrentStep(3);
@@ -323,7 +317,6 @@ export function useBookerEventWizard({
               newSlots[safeSlotIndex] = emptyDjSlot();
             }
             const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
-            syncSlotsToForm(timed);
             return timed;
           });
           setCurrentStep(3);
@@ -451,11 +444,10 @@ export function useBookerEventWizard({
             if (field === 'start') return { ...s, slotStart: hhmm };
             return { ...s, slotEnd: hhmm };
           });
-          syncDjSlotsToFormData(setFormData, next);
           return next;
         });
       },
-      [setFormData, formData.time, formData.durationHours, showError, language]
+      [formData.time, formData.durationHours, showError, language, setDjSlots]
     );
   
     const openSlotTimeField = (slotIndex, field) => {
@@ -759,7 +751,6 @@ export function useBookerEventWizard({
   
         resetForm();
         setCurrentStep(1);
-        setDjSlots([emptyDjSlot()]);
         hasInitializedSlots.current = false;
         setPostCreateModal({ eventId: newEventId || null, title: createdTitle });
       } catch (error) {

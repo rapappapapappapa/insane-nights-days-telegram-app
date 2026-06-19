@@ -11,7 +11,6 @@ import Colors from '../../../constants/colors';
 import {
   emptyDjSlot,
   applyEqualDjSlotTimes,
-  syncDjSlotsToFormData,
 } from '../../../utils/bookerEventWizardUtils';
 
 export default function BookerEventStep3Djs(props) {
@@ -131,7 +130,6 @@ export default function BookerEventStep3Djs(props) {
                                 if (newSlots.length === 0) newSlots = [emptyDjSlot()];
                                 const timed = applyEqualDjSlotTimes(newSlots, formData.time, durOk);
                                 setDjSlots(timed);
-                                syncDjSlotsToFormData(setFormData, timed);
                               }}
                             >
                               <Text style={styles.removeSlotButtonText}>✕</Text>
@@ -201,9 +199,7 @@ export default function BookerEventStep3Djs(props) {
                   <TouchableOpacity
                     style={styles.addSlotButton}
                     onPress={() => {
-                      const next = [...djSlots, emptyDjSlot()];
-                      setDjSlots(next);
-                      syncDjSlotsToFormData(setFormData, next);
+                      setDjSlots([...djSlots, emptyDjSlot()]);
                     }}
                   >
                     <Text style={styles.addSlotButtonText}>
@@ -235,9 +231,7 @@ export default function BookerEventStep3Djs(props) {
                         djSlots.filter((s) => s.djId).length === 0 && styles.nextButtonDisabled,
                       ]}
                       onPress={() => {
-                        const filled = djSlots.filter((s) => s.djId);
-                        if (filled.length > 0) {
-                          syncDjSlotsToFormData(setFormData, djSlots);
+                        if (djSlots.filter((s) => s.djId).length > 0) {
                           setCurrentStep(4);
                         }
                       }}

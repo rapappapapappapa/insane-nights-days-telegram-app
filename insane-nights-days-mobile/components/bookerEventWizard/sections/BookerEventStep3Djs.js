@@ -100,6 +100,13 @@ export default function BookerEventStep3Djs(props) {
         const selectedDj = slotRow.djId
           ? availableDjs.find((dj) => dj.userId === slotRow.djId)
           : null;
+        const djDisplayName =
+          selectedDj?.artistName ||
+          (slotRow.djId
+            ? language === 'fr'
+              ? 'DJ sélectionné'
+              : 'Selected DJ'
+            : null);
         return (
           <View
             key={slotRow.djId ? `dj-${slotRow.djId}-${index}` : `empty-slot-${index}`}
@@ -133,9 +140,9 @@ export default function BookerEventStep3Djs(props) {
                 setPickerSlotIndex(index);
               }}
             >
-              <Text style={[styles.selectButtonText, !selectedDj && styles.placeholderText]}>
-                {selectedDj
-                  ? `${selectedDj.artistName} • ${language === 'fr' ? 'prix à convenir' : 'price to agree'}`
+              <Text style={[styles.selectButtonText, !djDisplayName && styles.placeholderText]}>
+                {djDisplayName
+                  ? `${djDisplayName} • ${language === 'fr' ? 'prix à convenir' : 'price to agree'}`
                   : language === 'fr'
                     ? 'Choisir un DJ'
                     : 'Choose a DJ'}
@@ -143,7 +150,7 @@ export default function BookerEventStep3Djs(props) {
               <Text style={styles.chevron}>▼</Text>
             </TouchableOpacity>
 
-            {selectedDj ? (
+            {slotRow.djId ? (
               <>
                 <View style={styles.djSlotTimesRow}>
                   <TouchableOpacity

@@ -70,6 +70,7 @@ export default function BookerEventStep2Venue(props) {
     selectedVenue,
     coverImageUri,
     navigate,
+    flushDraftNow,
     hasBookerEventTitle,
     hasBookerEventPrice,
   } = props;
@@ -88,7 +89,8 @@ export default function BookerEventStep2Venue(props) {
     
                   <TouchableOpacity
                     style={styles.selectButton}
-                    onPress={() => {
+                    onPress={async () => {
+                      await flushDraftNow?.();
                       navigate('selectVenue', {
                         selectedVenueId: formData.venueId,
                         returnTo: 'bookerEventDashboard',

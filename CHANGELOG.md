@@ -11,6 +11,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Correctif définitif multi-DJ** : `assignDjToSlotAtIndex` (mode `fill` / `replace`) ; brouillon AsyncStorage **ne réécrase plus** la grille au retour selectDj ; `djSlotsLayout` préservé ; token `pickToken` anti double-traitement.
 - **UX étape 3 refaite** : sélection DJ via **modal in-app** (`BookerEventDjPickerModal`) — plus de navigation selectDj/profil ; `assignDjToWizardSlot` dans le contexte ; sync `djSlots` → `formData` par effet dédié.
 - **Multi-DJ garanti (v2)** : création API et récap lisent **`djSlots`** via `djSlotsToFormDjFields` (plus `formData.djIds` seul) ; brouillon chargé **une seule fois** au montage ; clé AsyncStorage **v2** ; badge « modal intégré (v2) » étape 3 pour confirmer la mise à jour OTA.
+- **Brouillon + retour lieu** : réhydratation AsyncStorage au retour selectVenue (fusion sans écraser date/lieu live) ; `flushDraftNow` avant navigation lieu ; créneaux horaires DJ visibles dès qu’un `djId` est posé ; recalc auto des heures si manquantes.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 

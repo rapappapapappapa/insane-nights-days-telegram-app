@@ -49,6 +49,19 @@ export function EventFormProvider({ children }) {
     syncDjSlotsToFormData(setFormData, djSlots);
   }, [djSlots]);
 
+  /** Recalcule début/fin des créneaux DJ quand l’horaire événement est connu. */
+  useEffect(() => {
+    const durOk = parseDurationHours(formData.durationHours);
+    const timeStr = (formData.time || '').trim();
+    if (!timeStr || !durOk) return;
+    setDjSlotsRaw((prev) => {
+      if (!prev.some((s) => s.djId)) return prev;
+      const needsTimes = prev.some((s) => s.djId && (!s.slotStart || !s.slotEnd));
+      if (!needsTimes) return prev;
+      return applyEqualDjSlotTimes(prev, timeStr, durOk);
+    });
+  }, [formData.time, formData.durationHours]);
+
   /** Assignation directe depuis le modal étape 3 — source de vérité unique. */
   const assignDjToWizardSlot = useCallback((slotIndex, djUserId, intent, timeStr, durationHours) => {
     if (!djUserId || slotIndex == null || slotIndex < 0) return;

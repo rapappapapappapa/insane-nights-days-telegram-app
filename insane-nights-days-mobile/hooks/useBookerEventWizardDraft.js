@@ -9,7 +9,7 @@ import {
   buildDjSlotsFromFormData,
   mergeDjSlotsWithForm,
   mergeFormDataPreservingDjGrid,
-  isReturnFromVenueOrDjPicker,
+  parseResumeStepFromParams,
   djSlotsToFormDjFields,
 } from '../utils/bookerEventWizardUtils';
 
@@ -83,17 +83,27 @@ export function useBookerEventWizardDraft({
       const shouldResumeFromSelection = resumeVenue || resumeDj;
 
       setFormData((prev) => mergeFormDataPreservingDjGrid(prev, d.formData));
-      const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
-      if (!isNaN(ed.getTime())) {
-        setEventDateTime(ed);
-        setTempDate(ed);
-        setTempTime(ed);
-      }
       if (!shouldResumeFromSelection) {
         setCurrentStep(Math.min(5, Math.max(1, d.currentStep || 1)));
+      } else {
+        const rs = parseResumeStepFromParams(rp);
+        if (rs != null) setCurrentStep(rs);
+      }
+      setEventDateTime((prev) => {
+        if (shouldResumeFromSelection && prev && !isNaN(prev.getTime())) {
+          return prev;
+        }
+        const ed = d.eventDateTime ? new Date(d.eventDateTime) : null;
+        if (ed && !isNaN(ed.getTime())) return ed;
+        return prev;
+      });
+      const edTemp = d.eventDateTime ? new Date(d.eventDateTime) : null;
+      if (edTemp && !isNaN(edTemp.getTime())) {
+        setTempDate(edTemp);
+        setTempTime(edTemp);
       }
       if (d.coverImageUri) setCoverImageUri(d.coverImageUri);
-      else setCoverImageUri(null);
+      else if (!shouldResumeFromSelection) setCoverImageUri(null);
       const draftSlots =
         Array.isArray(d.djSlots) && d.djSlots.length > 0
           ? d.djSlots
@@ -134,11 +144,6 @@ export function useBookerEventWizardDraft({
         const d = JSON.parse(raw);
         if (!d || d.version !== DRAFT_VERSION || !d.formData) {
           setDraftGate(false);
-          return;
-        }
-        // Retour selectVenue : ne pas écraser la grille live avec un brouillon périmé.
-        if (isReturnFromVenueOrDjPicker(routeParams)) {
-          if (!cancelled) setDraftGate(false);
           return;
         }
         applyEventDraft(d);
@@ -190,8 +195,13 @@ export function useBookerEventWizardDraft({
 
   useEffect(() => {
     if (draftGate) return;
-    const t = setTimeout(persistDraft, 700);
+    const t = setTimeout(persistDraft, 300);
     return () => clearTimeout(t);
+  }, [draftGate, persistDraft]);
+
+  const flushDraftNow = useCallback(async () => {
+    if (draftGate) return;
+    await persistDraft();
   }, [draftGate, persistDraft]);
 
   const clearDraftAndRestartWizard = useCallback(async () => {
@@ -227,5 +237,6 @@ export function useBookerEventWizardDraft({
   return {
     draftGate,
     clearDraftAndRestartWizard,
+    flushDraftNow,
   };
 }

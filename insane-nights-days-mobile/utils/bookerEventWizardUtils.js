@@ -173,6 +173,16 @@ export function assignDjToSlotAtIndex(slots, slotIndex, djId, intent = 'fill') {
 /** Fusion formData brouillon + live en préservant la grille DJ la plus complète. */
 export function mergeFormDataPreservingDjGrid(prev, incoming) {
   const merged = { ...(incoming || {}) };
+  // Ne pas écraser date/heure/lieu/titre par un brouillon AsyncStorage en retard (debounce 700 ms).
+  ['title', 'date', 'time', 'venueId', 'durationHours', 'price', 'capacity', 'genre', 'description'].forEach(
+    (key) => {
+      const inc = merged[key];
+      const pv = prev?.[key];
+      const incEmpty = inc === '' || inc == null;
+      const pvSet = pv !== '' && pv != null && !(typeof pv === 'string' && !pv.trim());
+      if (incEmpty && pvSet) merged[key] = pv;
+    }
+  );
   const prevLayout = prev?.djSlotsLayout;
   const incLayout = merged?.djSlotsLayout;
   if (Array.isArray(prevLayout) && prevLayout.length > 0) {

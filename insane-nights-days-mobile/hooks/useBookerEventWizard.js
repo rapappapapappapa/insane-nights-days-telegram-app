@@ -12,6 +12,7 @@ import {
   hasBookerEventTitle,
   hasBookerEventPrice,
   getMergedInitialBookerWizardStep,
+  parseResumeStepFromParams,
   parseHM,
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
@@ -75,7 +76,7 @@ export function useBookerEventWizard({
     const currentVenueId = routeParams?.selectedVenueId;
     const currentAction = routeParams?.action;
 
-    const { draftGate, clearDraftAndRestartWizard } = useBookerEventWizardDraft({
+    const { draftGate, clearDraftAndRestartWizard, flushDraftNow } = useBookerEventWizardDraft({
       language,
       showSuccess,
       routeParams,
@@ -215,11 +216,12 @@ export function useBookerEventWizard({
         (currentAction === 'select' || currentAction === 'replaceVenue')
       ) {
         setVenue(currentVenueId);
-        setCurrentStep(2);
+        const rs = parseResumeStepFromParams(routeParams);
+        setCurrentStep(rs ?? 2);
       } else if (currentVenueId && currentAction === 'remove') {
         setVenue('');
       }
-    }, [currentVenueId, currentAction, draftGate, setVenue, setCurrentStep]);
+    }, [currentVenueId, currentAction, draftGate, setVenue, setCurrentStep, routeParams]);
   
     const fetchAvailableDjs = async () => {
       if (!user?.token || loadingDjs) return;
@@ -676,6 +678,7 @@ export function useBookerEventWizard({
     handleChange,
     pickCoverImage,
     clearDraftAndRestartWizard,
+    flushDraftNow,
     handleCreateEvent,
     selectedVenue,
     fetchAvailableDjs,

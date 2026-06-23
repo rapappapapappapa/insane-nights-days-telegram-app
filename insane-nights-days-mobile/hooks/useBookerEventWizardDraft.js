@@ -96,9 +96,12 @@ export function useBookerEventWizardDraft({
         Array.isArray(d.djSlots) && d.djSlots.length > 0
           ? d.djSlots
           : buildDjSlotsFromFormData(d.formData);
-      setDjSlots((prev) =>
-        mergeDjSlotsWithForm(pickDjSlotsBase(prev, draftSlots), d.formData)
-      );
+      setDjSlots((prev) => {
+        const prevFilled = prev.filter((s) => s.djId).length;
+        const draftFilled = draftSlots.filter((s) => s.djId).length;
+        if (prevFilled > 0 && prevFilled >= draftFilled) return prev;
+        return mergeDjSlotsWithForm(pickDjSlotsBase(prev, draftSlots), d.formData);
+      });
       hasInitializedSlots.current = true;
     },
     [

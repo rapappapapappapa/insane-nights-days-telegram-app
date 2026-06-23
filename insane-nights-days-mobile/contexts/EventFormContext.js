@@ -1,17 +1,20 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { emptyDjSlot, syncDjSlotsToFormData } from '../utils/bookerEventWizardUtils';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import {
+  emptyDjSlot,
+  assignDjToSlotAtIndex,
+  applyEqualDjSlotTimes,
+  syncDjSlotsToFormData,
+} from '../utils/bookerEventWizardUtils';
 
 const EventFormContext = createContext();
 
-export function EventFormProvider({ children }) {
-  /** URI locale (expo-image-picker) pour la couverture ; upload après création de l’événement. */
-  const [coverImageUri, setCoverImageUri] = useState(null);
+function parseDurationHours(raw) {
+  const dur = parseFloat(raw);
+  return Number.isFinite(dur) && dur > 0 ? dur : null;
+}
 
-  /**
-   * Étape du wizard « Créer un événement » (1–5). Persistée dans le provider pour survivre
-   * au démontage de l’écran (navigation vers sélection lieu/DJ) quand routeParams ne sont pas
-   * encore fiables au premier rendu.
-   */
+export function EventFormProvider({ children }) {
+  const [coverImageUri, setCoverImageUri] = useState(null);
   const [bookerEventWizardStep, setBookerEventWizardStep] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -20,9 +23,7 @@ export function EventFormProvider({ children }) {
     time: '',
     venueId: '',
     djIds: [],
-    /// Même ordre que djIds : { slotStart, slotEnd } en « HH:mm »
     djSlotAssignments: [],
-    /// Grille complète des créneaux DJ (y compris vides) — survit à la navigation vers selectDj
     djSlotsLayout: null,
     price: '',
     durationHours: '4',
@@ -37,40 +38,62 @@ export function EventFormProvider({ children }) {
   });
 
   const [eventDateTime, setEventDateTime] = useState(new Date());
-
-  /** Grille créneaux DJ (y compris vides) — survit au démontage navigation selectDj / profil DJ. */
   const [djSlots, setDjSlotsRaw] = useState(() => [emptyDjSlot()]);
 
-  const setDjSlots = useCallback(
-    (updater) => {
-      setDjSlotsRaw((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        syncDjSlotsToFormData(setFormData, next);
-        return next;
-      });
-    },
-    [setFormData]
-  );
+  const setDjSlots = useCallback((updater) => {
+    setDjSlotsRaw((prev) => (typeof updater === 'function' ? updater(prev) : updater));
+  }, []);
 
-  // Fonctions helpers pour éviter les re-renders inutiles
+  /** formData suit djSlots après commit (évite setState imbriqué dans l'updater). */
+  useEffect(() => {
+    syncDjSlotsToFormData(setFormData, djSlots);
+  }, [djSlots]);
+
+  /** Assignation directe depuis le modal étape 3 — source de vérité unique. */
+  const assignDjToWizardSlot = useCallback((slotIndex, djUserId, intent, timeStr, durationHours) => {
+    if (!djUserId || slotIndex == null || slotIndex < 0) return;
+    const durOk = parseDurationHours(durationHours);
+    setDjSlotsRaw((prev) => {
+      const assigned = assignDjToSlotAtIndex(prev, slotIndex, djUserId, intent);
+      return applyEqualDjSlotTimes(assigned, timeStr, durOk);
+    });
+  }, []);
+
+  const appendWizardDjSlot = useCallback(() => {
+    setDjSlotsRaw((prev) => [...prev, emptyDjSlot()]);
+  }, []);
+
+  const removeWizardDjSlotAt = useCallback((index, timeStr, durationHours) => {
+    const durOk = parseDurationHours(durationHours);
+    setDjSlotsRaw((prev) => {
+      let next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) next = [emptyDjSlot()];
+      return applyEqualDjSlotTimes(next, timeStr, durOk);
+    });
+  }, []);
+
+  const clearWizardDjSlotAt = useCallback((index, timeStr, durationHours) => {
+    const durOk = parseDurationHours(durationHours);
+    setDjSlotsRaw((prev) => {
+      if (!prev[index]) return prev;
+      const next = prev.map((s, i) => (i === index ? emptyDjSlot() : { ...s }));
+      return applyEqualDjSlotTimes(next, timeStr, durOk);
+    });
+  }, []);
+
   const addDj = useCallback((djId) => {
-    setFormData(prev => {
-      if (prev.djIds.includes(djId)) {
-        return prev; // Pas de changement, pas de re-render
-      }
+    setFormData((prev) => {
+      if (prev.djIds.includes(djId)) return prev;
       return {
         ...prev,
         djIds: [...prev.djIds, djId],
-        djSlotAssignments: [
-          ...(prev.djSlotAssignments || []),
-          { slotStart: '', slotEnd: '' },
-        ],
+        djSlotAssignments: [...(prev.djSlotAssignments || []), { slotStart: '', slotEnd: '' }],
       };
     });
   }, []);
 
   const removeDj = useCallback((djId) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const idx = prev.djIds.indexOf(djId);
       if (idx === -1) return prev;
       return {
@@ -82,10 +105,7 @@ export function EventFormProvider({ children }) {
   }, []);
 
   const setVenue = useCallback((venueId) => {
-    setFormData(prev => ({
-      ...prev,
-      venueId: venueId
-    }));
+    setFormData((prev) => ({ ...prev, venueId }));
   }, []);
 
   const resetForm = useCallback(() => {
@@ -131,6 +151,10 @@ export function EventFormProvider({ children }) {
         resetForm,
         djSlots,
         setDjSlots,
+        assignDjToWizardSlot,
+        appendWizardDjSlot,
+        removeWizardDjSlotAt,
+        clearWizardDjSlotAt,
       }}
     >
       {children}
@@ -145,4 +169,3 @@ export function useEventForm() {
   }
   return context;
 }
-

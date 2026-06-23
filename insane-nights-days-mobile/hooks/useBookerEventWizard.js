@@ -7,17 +7,12 @@ import { api } from '../api/config';
 import {
   EVENT_CREATION_DRAFT_KEY,
   DRAFT_VERSION,
-  emptyDjSlot,
   getEventMinLeadDaysFromEnv,
   getMinEventCalendarDate,
   hasBookerEventTitle,
   hasBookerEventPrice,
-  buildDjSlotsFromFormData,
-  assignDjToSlotAtIndex,
   getMergedInitialBookerWizardStep,
-  isReturnFromVenueOrDjPicker,
   parseHM,
-  formatHM,
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
 } from '../utils/bookerEventWizardUtils';
@@ -38,8 +33,6 @@ export function useBookerEventWizard({
   eventDateTime,
   setEventDateTime,
   resetForm,
-  addDj,
-  removeDj,
   setVenue,
   coverImageUri,
   setCoverImageUri,
@@ -75,22 +68,11 @@ export function useBookerEventWizard({
     const [showTimePicker, setShowTimePicker] = useState(false);
     
     // Gérer les sélections depuis routeParams
-    const lastProcessedParams = useRef({ selectedDjId: null, selectedVenueId: null, action: null, slotIndex: null, pickToken: null });
+    const lastProcessedParams = useRef({ selectedVenueId: null, action: null });
     const hasInitializedSlots = useRef(false);
-    
-    const currentDjId = routeParams?.selectedDjId;
+
     const currentVenueId = routeParams?.selectedVenueId;
     const currentAction = routeParams?.action;
-    /** Android / bridge : slotIndex peut arriver en string ; 0 doit rester 0 (sinon 2e DJ écrase le 1er). */
-    const rawSlot = routeParams?.slotIndex;
-    const safeSlotIndex =
-      rawSlot === undefined || rawSlot === null
-        ? undefined
-        : Number.isFinite(Number(rawSlot)) && Number(rawSlot) >= 0
-          ? Math.floor(Number(rawSlot))
-          : undefined;
-    const slotIntent = routeParams?.slotIntent === 'replace' ? 'replace' : 'fill';
-    const pickToken = routeParams?.pickToken ?? null;
 
     const { draftGate, clearDraftAndRestartWizard } = useBookerEventWizardDraft({
       language,
@@ -210,125 +192,33 @@ export function useBookerEventWizard({
       }
     }, [formData.date, currentStep, user?.token]);
   
-    // Hydrater la grille depuis formData une seule fois (sans écraser le contexte live).
-    useEffect(() => {
-      if (currentStep !== 3) {
-        hasInitializedSlots.current = false;
-        return;
-      }
-      if (hasInitializedSlots.current) return;
-      if (isReturnFromVenueOrDjPicker(routeParams)) return;
-
-      const ctxHasDj = djSlots.some((s) => s.djId);
-      if (ctxHasDj) {
-        hasInitializedSlots.current = true;
-        return;
-      }
-      if (formData.djIds.length > 0 || (formData.djSlotsLayout?.length ?? 0) > 0) {
-        setDjSlots(buildDjSlotsFromFormData(formData));
-      }
-      hasInitializedSlots.current = true;
-    }, [currentStep, formData, routeParams, djSlots, setDjSlots]);
-  
     // Gérer les sélections depuis routeParams (après réhydratation brouillon)
     React.useLayoutEffect(() => {
       if (draftGate) return;
 
-      if (currentDjId && currentAction === 'add' && pickToken != null) {
-        if (lastProcessedParams.current.pickToken === pickToken) return;
-        lastProcessedParams.current.pickToken = pickToken;
+      const paramsKey = `${currentVenueId}-${currentAction}`;
+      const lastParamsKey = `${lastProcessedParams.current.selectedVenueId}-${lastProcessedParams.current.action}`;
+
+      if (paramsKey === lastParamsKey && paramsKey !== 'null-null') {
+        return;
       }
 
-      const isSlotUpdate = safeSlotIndex !== undefined && safeSlotIndex !== null;
-      
-      if (!isSlotUpdate && pickToken == null) {
-        const paramsKey = `${currentDjId}-${currentVenueId}-${currentAction}-${safeSlotIndex}`;
-        const lastParamsKey = `${lastProcessedParams.current.selectedDjId}-${lastProcessedParams.current.selectedVenueId}-${lastProcessedParams.current.action}-${lastProcessedParams.current.slotIndex}`;
-        
-        if (paramsKey === lastParamsKey && paramsKey !== 'null-null-null-null') {
-          return;
-        }
-      }
-      
       lastProcessedParams.current = {
-        selectedDjId: currentDjId,
         selectedVenueId: currentVenueId,
         action: currentAction,
-        slotIndex: safeSlotIndex,
-        pickToken,
       };
 
-      let appliedDjFromRoute = false;
-  
-      // Sélection de DJ — la grille live (contexte) est la source de vérité, pas formData du closure.
-      if (currentDjId && currentAction === 'add') {
-        const dur = parseFloat(formData.durationHours);
-        const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
-        if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
-          setDjSlots((prev) => {
-            const assigned = assignDjToSlotAtIndex(prev, safeSlotIndex, currentDjId, slotIntent);
-            return applyEqualDjSlotTimes(assigned, formData.time, durOk);
-          });
-          if (currentStep !== 3) {
-            setCurrentStep(3);
-          }
-        } else if (currentStep >= 3) {
-          setDjSlots((prev) => {
-            const assigned = assignDjToSlotAtIndex(prev, prev.findIndex((s) => !s.djId), currentDjId, 'fill');
-            return applyEqualDjSlotTimes(assigned, formData.time, durOk);
-          });
-          setCurrentStep(3);
-        } else {
-          addDj(currentDjId);
-          const evS = parseHM(formData.time);
-          if (evS != null && durOk != null) {
-            setFormData((prev) => ({
-              ...prev,
-              djSlotAssignments: [
-                { slotStart: formatHM(evS), slotEnd: formatHM(evS + durOk * 60) },
-              ],
-            }));
-          }
-          setCurrentStep(4);
-        }
-        appliedDjFromRoute = true;
-      } else if (currentDjId && currentAction === 'remove') {
-        const dur = parseFloat(formData.durationHours);
-        const durOk = Number.isFinite(dur) && dur > 0 ? dur : null;
-        if (safeSlotIndex !== undefined && safeSlotIndex !== null) {
-          setDjSlots((prev) => {
-            const idx = prev.findIndex((s) => s.djId === currentDjId);
-            const next = prev.map((s, i) => {
-              if (idx !== -1 && i === idx) return emptyDjSlot();
-              if (idx === -1 && i === safeSlotIndex) return emptyDjSlot();
-              return { ...s };
-            });
-            return applyEqualDjSlotTimes(next, formData.time, durOk);
-          });
-          setCurrentStep(3);
-        } else {
-          removeDj(currentDjId);
-        }
-        appliedDjFromRoute = true;
-      }
-  
-      if (appliedDjFromRoute) {
-        hasInitializedSlots.current = true;
-        // Efface selectedDjId / slotIndex pour ne pas re-traiter à chaque re-render.
-        queueMicrotask(() => navigate('bookerEventDashboard', { resumeStep: 3 }));
-      }
-      
       // Sélection de lieu (replaceVenue = remplacement depuis un événement existant)
       if (
         currentVenueId &&
         (currentAction === 'select' || currentAction === 'replaceVenue')
       ) {
         setVenue(currentVenueId);
-        setCurrentStep(2); // Rester sur l'étape Lieu pour voir la sélection
+        setCurrentStep(2);
       } else if (currentVenueId && currentAction === 'remove') {
         setVenue('');
       }
-    }, [currentDjId, currentVenueId, currentAction, safeSlotIndex, slotIntent, pickToken, formData.time, formData.durationHours, draftGate, setDjSlots, setCurrentStep, navigate, currentStep, addDj, removeDj, setFormData, setVenue]);
+    }, [currentVenueId, currentAction, draftGate, setVenue, setCurrentStep]);
   
     const fetchAvailableDjs = async () => {
       if (!user?.token || loadingDjs) return;

@@ -84,7 +84,18 @@ export default function BookerEventDashboardPage() {
     ...stepProps
   } = wizard;
 
-  const shared = { language, styles, ...stepProps, formData, currentStep, setCurrentStep, navigate, creating };
+  const shared = {
+    language,
+    styles,
+    ...stepProps,
+    formData,
+    currentStep,
+    setCurrentStep,
+    navigate,
+    creating,
+    showError,
+    showSuccess,
+  };
 
   return (
     <KeyboardAvoidingView

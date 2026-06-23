@@ -66,7 +66,7 @@ export default function DjProfilePage() {
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, replaceDjId = null, isSlotMode = false } = routeParams || {};
+  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, slotIntent = 'fill', replaceDjId = null, isSlotMode = false } = routeParams || {};
   
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
@@ -382,13 +382,15 @@ export default function DjProfilePage() {
               onPress={() => {
                 // Retourner au dashboard avec la sélection
                 const slotIndexToPass = (slotIndex !== null && slotIndex !== undefined) ? slotIndex : undefined;
+                const pickToken = `${Date.now()}-${dj.userId}-${slotIndexToPass ?? 'x'}`;
                 navigate(returnTo || 'bookerDashboard', {
                   selectedDjId: dj.userId,
                   selectedDjName: dj.artistName,
                   action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
                   eventId: eventId || undefined,
-                  slotIndex: slotIndexToPass, // Toujours passer slotIndex s'il est défini
-                  replaceDjId: replaceDjId || undefined, // DJ actuel du créneau visé (remplacement par identité)
+                  slotIndex: slotIndexToPass,
+                  slotIntent: slotIntent || (replaceDjId ? 'replace' : 'fill'),
+                  pickToken,
                   ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
                 });
               }}

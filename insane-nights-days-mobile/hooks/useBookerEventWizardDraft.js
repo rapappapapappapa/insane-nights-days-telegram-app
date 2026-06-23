@@ -8,6 +8,7 @@ import {
   getMinEventCalendarDate,
   buildDjSlotsFromFormData,
   mergeDjSlotsWithForm,
+  mergeFormDataPreservingDjGrid,
   isReturnFromVenueOrDjPicker,
 } from '../utils/bookerEventWizardUtils';
 
@@ -79,15 +80,7 @@ export function useBookerEventWizardDraft({
         rp?.selectedDjId && (rp?.action === 'add' || rp?.action === 'remove');
       const shouldResumeFromSelection = resumeVenue || resumeDj;
 
-      setFormData((prev) => {
-        const merged = { ...d.formData };
-        if (resumeVenue && rp?.selectedVenueId) {
-          merged.venueId = rp.selectedVenueId;
-        } else if (prev?.venueId && !merged.venueId) {
-          merged.venueId = prev.venueId;
-        }
-        return merged;
-      });
+      setFormData((prev) => mergeFormDataPreservingDjGrid(prev, d.formData));
       const ed = d.eventDateTime ? new Date(d.eventDateTime) : new Date();
       if (!isNaN(ed.getTime())) {
         setEventDateTime(ed);
@@ -103,7 +96,9 @@ export function useBookerEventWizardDraft({
         Array.isArray(d.djSlots) && d.djSlots.length > 0
           ? d.djSlots
           : buildDjSlotsFromFormData(d.formData);
-      setDjSlots((prev) => mergeDjSlotsWithForm(pickDjSlotsBase(prev, draftSlots), formData));
+      setDjSlots((prev) =>
+        mergeDjSlotsWithForm(pickDjSlotsBase(prev, draftSlots), d.formData)
+      );
       hasInitializedSlots.current = true;
     },
     [
@@ -116,7 +111,6 @@ export function useBookerEventWizardDraft({
       setTempDate,
       setTempTime,
       hasInitializedSlots,
-      formData,
     ]
   );
 
@@ -135,25 +129,8 @@ export function useBookerEventWizardDraft({
           setDraftGate(false);
           return;
         }
+        // Retour selectDj / profil DJ : ne pas écraser la grille live avec un brouillon périmé.
         if (isReturnFromVenueOrDjPicker(routeParams)) {
-          const draftSlots =
-            Array.isArray(d.djSlots) && d.djSlots.length > 0
-              ? d.djSlots
-              : buildDjSlotsFromFormData(d.formData);
-          setFormData((prev) => {
-            const merged = { ...d.formData };
-            if (prev?.venueId && !merged.venueId) merged.venueId = prev.venueId;
-            if ((prev?.djIds?.length || 0) > (merged.djIds?.length || 0)) {
-              merged.djIds = prev.djIds;
-              merged.djSlotAssignments = prev.djSlotAssignments;
-              merged.djSlotsLayout = prev.djSlotsLayout;
-            }
-            setDjSlots((ctxSlots) =>
-              mergeDjSlotsWithForm(pickDjSlotsBase(ctxSlots, draftSlots), merged)
-            );
-            return merged;
-          });
-          hasInitializedSlots.current = true;
           if (!cancelled) setDraftGate(false);
           return;
         }
@@ -167,7 +144,7 @@ export function useBookerEventWizardDraft({
     return () => {
       cancelled = true;
     };
-  }, [routeParams, applyEventDraft, setFormData, setDjSlots, hasInitializedSlots]);
+  }, [routeParams, applyEventDraft]);
 
   const persistDraft = useCallback(async () => {
     try {

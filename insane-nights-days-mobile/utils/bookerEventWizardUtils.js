@@ -135,12 +135,17 @@ export function mergeDjSlotsWithForm(prev, fd) {
 }
 
 /**
- * Créneau cible pour une sélection DJ.
- * Un slotIndex vers un créneau vide a priorité sur replaceDjId (évite d’écraser le 1er DJ).
+ * Assigne un DJ à un créneau sans écraser les autres DJs déjà choisis.
+ * @param {'fill'|'replace'} intent — fill : créneau vide ciblé uniquement ; replace : remplace le DJ du créneau
  */
-export function resolveDjSlotTargetIndex(slots, { slotIndex, replaceDjId }) {
-  const rows = (Array.isArray(slots) ? slots : []).map((s) => ({ ...s }));
-  if (!rows.length) rows.push(emptyDjSlot());
+export function assignDjToSlotAtIndex(slots, slotIndex, djId, intent = 'fill') {
+  if (!djId) return Array.isArray(slots) ? slots.map((s) => ({ ...s })) : [emptyDjSlot()];
+
+  const rows = (Array.isArray(slots) && slots.length > 0 ? slots : [emptyDjSlot()]).map((s) => ({
+    ...s,
+  }));
+
+  if (rows.some((s) => s.djId === djId)) return rows;
 
   const idx =
     slotIndex !== undefined && slotIndex !== null && Number.isFinite(Number(slotIndex)) && Number(slotIndex) >= 0
@@ -149,25 +154,42 @@ export function resolveDjSlotTargetIndex(slots, { slotIndex, replaceDjId }) {
 
   if (idx >= 0) {
     while (rows.length <= idx) rows.push(emptyDjSlot());
-    if (!rows[idx].djId) {
-      return { targetIdx: idx, slots: rows };
+    if (intent === 'replace' || !rows[idx].djId) {
+      rows[idx] = { ...rows[idx], djId };
+      return rows;
     }
-    if (replaceDjId && rows[idx].djId === replaceDjId) {
-      return { targetIdx: idx, slots: rows };
-    }
-    // Index cible déjà occupé par un autre DJ : ne pas écraser, chercher un créneau vide
-  }
-
-  if (replaceDjId) {
-    const byId = rows.findIndex((s) => s.djId === replaceDjId);
-    if (byId !== -1) return { targetIdx: byId, slots: rows };
   }
 
   const emptyIdx = rows.findIndex((s) => !s.djId);
-  if (emptyIdx !== -1) return { targetIdx: emptyIdx, slots: rows };
+  if (emptyIdx !== -1) {
+    rows[emptyIdx] = { ...rows[emptyIdx], djId };
+    return rows;
+  }
 
-  rows.push(emptyDjSlot());
-  return { targetIdx: rows.length - 1, slots: rows };
+  rows.push({ ...emptyDjSlot(), djId });
+  return rows;
+}
+
+/** Fusion formData brouillon + live en préservant la grille DJ la plus complète. */
+export function mergeFormDataPreservingDjGrid(prev, incoming) {
+  const merged = { ...(incoming || {}) };
+  const prevLayout = prev?.djSlotsLayout;
+  const incLayout = merged?.djSlotsLayout;
+  if (Array.isArray(prevLayout) && prevLayout.length > 0) {
+    if (!Array.isArray(incLayout) || prevLayout.length > incLayout.length) {
+      merged.djSlotsLayout = prevLayout;
+    }
+  }
+  const prevIds = prev?.djIds || [];
+  const incIds = merged?.djIds || [];
+  if (prevIds.length > incIds.length) {
+    merged.djIds = prevIds;
+    merged.djSlotAssignments = prev?.djSlotAssignments || [];
+  } else if (prevIds.length === incIds.length && Array.isArray(prevLayout) && prevLayout.length > 0) {
+    merged.djSlotsLayout = prevLayout;
+    merged.djSlotAssignments = prev?.djSlotAssignments || merged.djSlotAssignments;
+  }
+  return merged;
 }
 
 /** Synchronise djIds / créneaux horaires dans le formulaire global (survit au démontage navigation). */

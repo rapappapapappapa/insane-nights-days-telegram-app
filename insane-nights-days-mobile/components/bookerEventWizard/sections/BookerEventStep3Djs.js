@@ -115,7 +115,7 @@ export default function BookerEventStep3Djs(props) {
                       ? availableDjs.find((dj) => dj.userId === slotRow.djId)
                       : null;
                     return (
-                      <View key={index} style={styles.djSlotContainer}>
+                      <View key={slotRow.djId ? `dj-${slotRow.djId}` : `empty-slot-${index}`} style={styles.djSlotContainer}>
                         <View style={styles.djSlotHeader}>
                           <Text style={styles.djSlotLabel}>
                             {language === 'fr' ? `Créneau ${index + 1}` : `Slot ${index + 1}`}
@@ -146,9 +146,7 @@ export default function BookerEventStep3Djs(props) {
                             navigate('selectDj', {
                               selectedDjIds: otherSelectedDjIds,
                               slotIndex: index,
-                              // DJ actuel du créneau : permet le remplacement par identité au retour
-                              // (les index peuvent se décaler, l'écran étant démonté pendant la sélection)
-                              replaceDjId: currentSlotDjId || null,
+                              slotIntent: currentSlotDjId ? 'replace' : 'fill',
                               isSlotMode: true,
                               returnTo: 'bookerEventDashboard',
                             });

@@ -84,9 +84,17 @@ export default function BookerEventStep3Djs(props) {
 
       <Text style={styles.stepDescription}>
         {language === 'fr'
-          ? 'Ajoute un ou plusieurs créneaux, puis choisis un DJ pour chacun (sélection directe, sans quitter cet écran).'
-          : 'Add one or more slots, then pick a DJ for each (stays on this screen).'}
+          ? 'Ajoute un ou plusieurs créneaux, puis choisis un DJ pour chacun (liste intégrée — plusieurs DJs possibles).'
+          : 'Add one or more slots, then pick a DJ for each (built-in list — multiple DJs supported).'}
       </Text>
+
+      <View style={styles.infoBox}>
+        <Text style={styles.infoText}>
+          {language === 'fr'
+            ? '✓ Sélection multi-DJ · modal intégré (v2)'
+            : '✓ Multi-DJ selection · built-in modal (v2)'}
+        </Text>
+      </View>
 
       {djSlots.map((slotRow, index) => {
         const selectedDj = slotRow.djId

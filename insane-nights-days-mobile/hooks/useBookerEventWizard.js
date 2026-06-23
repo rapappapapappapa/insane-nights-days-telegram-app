@@ -15,6 +15,7 @@ import {
   parseHM,
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
+  djSlotsToFormDjFields,
 } from '../utils/bookerEventWizardUtils';
 import { useBookerEventWizardDraft } from './useBookerEventWizardDraft';
 import { useBookerEventWizardRental } from './useBookerEventWizardRental';
@@ -368,20 +369,22 @@ export function useBookerEventWizard({
         return;
       }
   
+      const djPayload = djSlotsToFormDjFields(djSlots);
+
       if (
         !hasBookerEventTitle(formData) ||
         !formData.date ||
         !formData.time ||
         !formData.venueId ||
-        formData.djIds.length === 0
+        djPayload.djIds.length === 0
       ) {
         showError(language === 'fr' ? 'Veuillez remplir tous les champs requis (titre, date, heure, lieu, DJ).' : 'Please fill in all required fields (title, date, time, venue, DJ).');
         return;
       }
-  
+
       const durCheck = parseFloat(formData.durationHours);
-      const assign = formData.djSlotAssignments || [];
-      for (let i = 0; i < formData.djIds.length; i++) {
+      const assign = djPayload.djSlotAssignments || [];
+      for (let i = 0; i < djPayload.djIds.length; i++) {
         const a = assign[i] || {};
         if (!a.slotStart || !a.slotEnd) {
           showError(
@@ -562,8 +565,8 @@ export function useBookerEventWizard({
           date: formattedDate,
           time: formData.time.trim(),
           venueId: formData.venueId,
-          djIds: formData.djIds,
-          djSlotAssignments: formData.djSlotAssignments || [],
+          djIds: djPayload.djIds,
+          djSlotAssignments: djPayload.djSlotAssignments,
           price: formData.price ? parseFloat(formData.price) : 0,
           durationHours: formData.durationHours ? parseFloat(formData.durationHours) : null,
           capacity: formData.capacity ? parseInt(formData.capacity) : 100,
@@ -613,6 +616,7 @@ export function useBookerEventWizard({
         // Création réussie : toujours supprimer le brouillon local (ne pas le rouvrir au prochain accès).
         try {
           await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+          await AsyncStorage.removeItem('@nox_booker_event_creation_draft_v1');
         } catch (e) {
           /* ignore */
         }

@@ -8,7 +8,7 @@ import {
   Image,
 } from 'react-native';
 import Colors from '../../../constants/colors';
-import { summarizeEquipmentRentalBlurb } from '../../../utils/bookerEventWizardUtils';
+import { summarizeEquipmentRentalBlurb, djSlotsToFormDjFields } from '../../../utils/bookerEventWizardUtils';
 import { ticketPricingBreakdown, NOX_COMMISSION_RATE, TVA_RATE } from '../../../utils/ticketPricingUtils';
 
 export default function BookerEventStep5Summary(props) {
@@ -74,6 +74,8 @@ export default function BookerEventStep5Summary(props) {
     hasBookerEventTitle,
     hasBookerEventPrice,
   } = props;
+
+  const djSummary = djSlotsToFormDjFields(djSlots);
 
   return (
 <>
@@ -195,14 +197,14 @@ export default function BookerEventStep5Summary(props) {
                       </View>
                     )}
     
-                    {formData.djIds.length > 0 && (
+                    {djSummary.djIds.length > 0 && (
                       <View style={styles.summarySection}>
                         <Text style={styles.summaryLabel}>
                           {language === 'fr' ? 'DJs et créneaux' : 'DJs and time slots'}
                         </Text>
-                        {formData.djIds.map((id, i) => {
+                        {djSummary.djIds.map((id, i) => {
                           const dj = availableDjs.find((d) => d.userId === id);
-                          const a = formData.djSlotAssignments?.[i];
+                          const a = djSummary.djSlotAssignments?.[i];
                           return (
                             <Text key={id} style={styles.summaryValue}>
                               • {dj?.artistName || id}

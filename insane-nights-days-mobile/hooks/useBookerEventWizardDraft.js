@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   EVENT_CREATION_DRAFT_KEY,
@@ -10,6 +10,7 @@ import {
   mergeDjSlotsWithForm,
   mergeFormDataPreservingDjGrid,
   isReturnFromVenueOrDjPicker,
+  djSlotsToFormDjFields,
 } from '../utils/bookerEventWizardUtils';
 
 /** Préfère la grille la plus complète entre contexte live et brouillon AsyncStorage. */
@@ -49,6 +50,7 @@ export function useBookerEventWizardDraft({
   setTempTime,
 }) {
   const [draftGate, setDraftGate] = useState(true);
+  const draftLoadedRef = useRef(false);
 
   useEffect(() => {
     if (draftGate) return;
@@ -118,11 +120,13 @@ export function useBookerEventWizardDraft({
   );
 
   useEffect(() => {
+    if (draftLoadedRef.current) return;
     let cancelled = false;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(EVENT_CREATION_DRAFT_KEY);
         if (cancelled) return;
+        draftLoadedRef.current = true;
         if (!raw) {
           setDraftGate(false);
           return;
@@ -132,7 +136,7 @@ export function useBookerEventWizardDraft({
           setDraftGate(false);
           return;
         }
-        // Retour selectDj / profil DJ : ne pas écraser la grille live avec un brouillon périmé.
+        // Retour selectVenue : ne pas écraser la grille live avec un brouillon périmé.
         if (isReturnFromVenueOrDjPicker(routeParams)) {
           if (!cancelled) setDraftGate(false);
           return;
@@ -141,13 +145,16 @@ export function useBookerEventWizardDraft({
         if (!cancelled) setDraftGate(false);
       } catch (e) {
         console.warn('[EventDraft] load', e);
+        draftLoadedRef.current = true;
         if (!cancelled) setDraftGate(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [routeParams, applyEventDraft]);
+    // Chargement unique au montage — ne pas ré-appliquer le brouillon à chaque changement de routeParams.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const persistDraft = useCallback(async () => {
     try {
@@ -163,7 +170,10 @@ export function useBookerEventWizardDraft({
       }
       const payload = {
         version: DRAFT_VERSION,
-        formData,
+        formData: {
+          ...formData,
+          ...djSlotsToFormDjFields(djSlots),
+        },
         eventDateTime:
           eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
             ? eventDateTime.toISOString()
@@ -186,9 +196,10 @@ export function useBookerEventWizardDraft({
 
   const clearDraftAndRestartWizard = useCallback(async () => {
     if (creating) return;
-    try {
-      await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
-    } catch (e) {
+      try {
+        await AsyncStorage.removeItem(EVENT_CREATION_DRAFT_KEY);
+        await AsyncStorage.removeItem('@nox_booker_event_creation_draft_v1');
+      } catch (e) {
       /* ignore */
     }
     resetForm();

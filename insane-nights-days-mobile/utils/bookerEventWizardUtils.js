@@ -1,5 +1,5 @@
-export const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v1';
-export const DRAFT_VERSION = 1;
+export const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v2';
+export const DRAFT_VERSION = 2;
 
 /** Aligné avec EVENT_MIN_LEAD_DAYS côté serveur. 0 = désactiver (EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0). */
 export function getEventMinLeadDaysFromEnv() {
@@ -192,19 +192,32 @@ export function mergeFormDataPreservingDjGrid(prev, incoming) {
   return merged;
 }
 
-/** Synchronise djIds / créneaux horaires dans le formulaire global (survit au démontage navigation). */
-export function syncDjSlotsToFormData(setFormData, slotsAfter) {
-  const rows = (slotsAfter || []).map((s) => ({
-    djId: s.djId ?? null,
-    slotStart: s.slotStart || '',
-    slotEnd: s.slotEnd || '',
+/** Créneaux remplis uniquement (ordre d’affichage conservé). */
+export function getFilledDjSlots(slots) {
+  return (Array.isArray(slots) ? slots : []).filter((s) => s?.djId);
+}
+
+/** Payload DJ dérivé de la grille — source de vérité unique (création API + brouillon). */
+export function djSlotsToFormDjFields(slots) {
+  const rows = (Array.isArray(slots) ? slots : []).map((s) => ({
+    djId: s?.djId ?? null,
+    slotStart: s?.slotStart || '',
+    slotEnd: s?.slotEnd || '',
   }));
   const filled = rows.filter((s) => s.djId);
-  setFormData((prev) => ({
-    ...prev,
+  return {
     djIds: filled.map((s) => s.djId),
     djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
     djSlotsLayout: rows,
+  };
+}
+
+/** Synchronise djIds / créneaux horaires dans le formulaire global (survit au démontage navigation). */
+export function syncDjSlotsToFormData(setFormData, slotsAfter) {
+  const fields = djSlotsToFormDjFields(slotsAfter);
+  setFormData((prev) => ({
+    ...prev,
+    ...fields,
   }));
 }
 

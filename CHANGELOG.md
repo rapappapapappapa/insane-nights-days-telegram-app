@@ -15,6 +15,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
+### Corrigé (mobile — crash au démarrage, build 9 / cause racine)
+- **`ReferenceError` à l’évaluation des styles** : le découpage automatique des écrans en `*.styles.js` avait laissé des références **`Platform`** (`BookerDashboardPage.styles.js`) et **`width`** (`VenueDashboardPage.styles.js`, `DjProfilePage.styles.js`) **non importées/non définies** au niveau module. Comme `App.js` importe tous ces écrans, le bundle plantait dès l’évaluation → **fermeture instantanée sur iOS et Android** (Metro ne détecte pas ces erreurs). Imports/`Dimensions` ajoutés.
+- **Garde-fou** : `scripts/find-module-scope-refs.js` détecte les identifiants référencés au niveau module mais non liés (anti-régression de ce type de crash).
+
 ### Corrigé (mobile — crash boucle OTA TestFlight)
 - **Démarrage** : plus de `reloadAsync()` automatique au lancement (`App.js`) — téléchargement OTA en arrière-plan seulement ; application via menu **Mises à jour (OTA) → Vérifier** (évite boucle crash si OTA incompatible).
 - **Rollback OTA production iOS** : retour au bundle embarqué du build TestFlight si une OTA provoquait un crash au redémarrage.

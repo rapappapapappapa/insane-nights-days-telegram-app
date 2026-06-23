@@ -161,9 +161,9 @@ export default function DrawerContent({ navigation }) {
       const isEmbedded = Updates?.isEmbeddedLaunch || false;
 
       const autoHintFr =
-        'Une vérification OTA est aussi faite au lancement de l’app. « Vérifier » force une recherche tout de suite (secours si besoin).';
+        'Au lancement, une mise à jour peut être téléchargée en arrière-plan. « Vérifier » l’applique tout de suite (redémarrage).';
       const autoHintEn =
-        'An OTA check also runs when the app starts. “Check” forces a search now (fallback if needed).';
+        'On launch, an update may download in the background. “Check” applies it now (restarts the app).';
 
       const updateInfo = [
         `Updates activés: ${isEnabled ? '✅ Oui' : '❌ Non'}`,

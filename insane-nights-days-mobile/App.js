@@ -401,26 +401,12 @@ export default function App() {
 
     (async () => {
       try {
+        // Télécharge en arrière-plan uniquement — pas de reloadAsync ici (boucle crash si OTA incompatible).
         if (Updates.isEnabled) {
           const check = await Updates.checkForUpdateAsync();
           if (cancelled) return;
           if (check.isAvailable) {
             await Updates.fetchUpdateAsync();
-            if (cancelled) return;
-            clearTimeout(safetyTimer);
-            const reloadSafety = setTimeout(() => {
-              if (!cancelled) setUpdateBootstrapDone(true);
-            }, 25000);
-            try {
-              await Updates.reloadAsync();
-              clearTimeout(reloadSafety);
-              if (!cancelled) setUpdateBootstrapDone(true);
-            } catch (reloadErr) {
-              clearTimeout(reloadSafety);
-              console.warn('[EASUpdate] reloadAsync', reloadErr?.message || reloadErr);
-              if (!cancelled) setUpdateBootstrapDone(true);
-            }
-            return;
           }
         }
       } catch (e) {

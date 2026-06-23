@@ -15,6 +15,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
+### Corrigé (mobile — crash boucle OTA TestFlight)
+- **Démarrage** : plus de `reloadAsync()` automatique au lancement (`App.js`) — téléchargement OTA en arrière-plan seulement ; application via menu **Mises à jour (OTA) → Vérifier** (évite boucle crash si OTA incompatible).
+- **Rollback OTA production iOS** : retour au bundle embarqué du build TestFlight si une OTA provoquait un crash au redémarrage.
+
 ### Corrigé (contrats — visibilité paiement Stripe booker)
 - **Paiement in-app uniquement** (organisateur) : bandeau + scroll auto dans le chat booker ; chip **« 💳 Payer (chat) »** sur la liste événements si `PENDING_PAYMENT` ; message explicite côté DJ (pas de lien email pour payer).
 

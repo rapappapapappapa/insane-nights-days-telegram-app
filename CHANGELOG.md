@@ -15,6 +15,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
+### Corrigé (mobile — crashs « Oups une erreur est survenue » des dashboards, post-refactor)
+- **Dashboard organisateur** : `BookerChatModal` recevait les setters mais pas les valeurs `selectedChatEventDjId/VenueId/PrestataireId` (`ReferenceError`) ; `cancellationPolicyLabel` non importé. Valeurs passées + import ajouté.
+- **Dashboard lieu** : `useVenueDashboard` retournait `handleDeleteMessage` jamais défini (crash à l’ouverture) — fonction implémentée ; `VenueChatModal` : `Colors`/`cleanText` non importés, `selectedChatEventVenueId`/`contractBooking` manquants, et helpers (`dealTypeLabel`, `PAYMENT_TERMS_OPTIONS`…) déstructurés des props masquaient les imports ; `VenueBookingsTab` : `Colors` non importé.
+- **Dashboard DJ** : `DjProfilSection` n’exposait pas `openDjStreamPreview` (aperçu SoundCloud/Spotify).
+- **Création d’événement** : `BookerEventStep4Details` n’avait pas `setCoverImageUri` (retrait image de couverture) — exposé par le hook wizard.
+- **Détail événement** : `unitPriceForPurchase` non retourné par le hook d’achat (crash bouton « Acheter ») ; appel orphelin `setInvitingGroupId` retiré.
+- **Outil anti-régression** : `scripts/find-unbound-refs.js` détecte tout identifiant référencé mais non lié (import/prop/déclaration manquants), y compris dans les composants.
+
 ### Corrigé (mobile — crash au démarrage, build 9 / cause racine)
 - **`ReferenceError` à l’évaluation des styles** : le découpage automatique des écrans en `*.styles.js` avait laissé des références **`Platform`** (`BookerDashboardPage.styles.js`) et **`width`** (`VenueDashboardPage.styles.js`, `DjProfilePage.styles.js`) **non importées/non définies** au niveau module. Comme `App.js` importe tous ces écrans, le bundle plantait dès l’évaluation → **fermeture instantanée sur iOS et Android** (Metro ne détecte pas ces erreurs). Imports/`Dimensions` ajoutés.
 - **Garde-fou** : `scripts/find-module-scope-refs.js` détecte les identifiants référencés au niveau module mais non liés (anti-régression de ce type de crash).

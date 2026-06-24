@@ -19,6 +19,7 @@ import {
   contractAcceptAckLabel,
   contractReadBeforeSendLabel,
   dealTypeLabel,
+  cancellationPolicyLabel,
 } from '../../constants/contractPayload';
 import ContractDraftEditorFields from '../ContractDraftEditorFields';
 import Colors from '../../constants/colors';
@@ -38,6 +39,10 @@ export default function BookerChatModal(props) {
     reopenChatAfterContractRef,
     flushPendingContractEditor,
     setChatModalVisible,
+    selectedChatEventDjId,
+    selectedChatEventVenueId,
+    selectedChatEventId,
+    selectedChatEventPrestataireId,
     setSelectedChatEventDjId,
     setSelectedChatEventVenueId,
     setSelectedChatEventId,

@@ -1,23 +1,22 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import Colors from '../../constants/colors';
 import { buildVenueContractPayload, contractAcceptAckLabel, dealTypeLabel, cancellationPolicyLabel } from '../../constants/contractPayload';
 import ContractDraftEditorFields from '../ContractDraftEditorFields';
-import { PAYMENT_TERMS_OPTIONS } from '../../utils/venueDashboardUtils';
+import { PAYMENT_TERMS_OPTIONS, cleanText } from '../../utils/venueDashboardUtils';
 export default function VenueChatModal(props) {
   const {
     language, styles, chatModalVisible, pendingOpenContractEditorRef,
     openContractEditorFallbackTimerRef, setContractEditorVisible, reopenChatAfterContractRef,
-    flushPendingContractEditor, setChatModalVisible, setSelectedChatEventVenueId,
+    flushPendingContractEditor, setChatModalVisible, selectedChatEventVenueId, setSelectedChatEventVenueId,
     setChatMessages, setNewMessageText, setShowPaymentTermsModal, setShowDealTypeModal,
     setShowCancellationModal, setShowEventEndModal, refreshUnreadCount, chatScrollViewRef,
-    contractLoading, contractData, contractDraft, setContractDraft, contractAcceptAck,
+    contractLoading, contractData, contractBooking, contractDraft, setContractDraft, contractAcceptAck,
     setContractAcceptAck, contractEventEndOptions, contractEventWindowHint,
     setShowPaymentTermsModalForContract, setShowDealTypeModalForContract,
     setShowCancellationModalForContract, setShowEventEndModalForContract,
     openContractEditorFromChat, openContractPdfPreview, loadingChatMessages, chatMessages,
     handleDeleteMessage, newMessageText, sendMessage, sendingMessage, showConfirm,
-    buildVenueContractPayload, contractAcceptAckLabel, dealTypeLabel, cancellationPolicyLabel,
-    PAYMENT_TERMS_OPTIONS,
   } = props;
   return (
     <Modal

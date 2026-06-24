@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import StarRating from '../../StarRating';
+import Colors from '../../../constants/colors';
 import { normalizeMediaUrl } from '../../../api/config';
 import { SCREEN_WIDTH } from '../../../utils/venueDashboardUtils';
 

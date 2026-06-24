@@ -687,6 +687,7 @@ export function useBookerEventWizard({
     hasBookerEventPrice,
     formData,
     coverImageUri,
+    setCoverImageUri,
     navigate,
   };
 }

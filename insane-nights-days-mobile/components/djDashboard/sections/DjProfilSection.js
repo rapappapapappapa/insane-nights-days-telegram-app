@@ -58,6 +58,7 @@ export default function DjProfilSection(props) {
     setSoundcloudUrl,
     spotifyUrl,
     setSpotifyUrl,
+    openDjStreamPreview,
     youtubeUrl,
     setYoutubeUrl,
     instagramUrl,

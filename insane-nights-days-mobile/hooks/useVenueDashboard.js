@@ -320,6 +320,21 @@ export function useVenueDashboard({
         setSendingMessage(false);
       }
     };
+
+    const handleDeleteMessage = async (messageId) => {
+      if (!user?.token || !messageId) return;
+      try {
+        await api.deleteMessage(user.token, messageId);
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, deleted: true, content: 'message supprimé' } : m
+          )
+        );
+      } catch (error) {
+        console.error('[VenueDashboard] handleDeleteMessage error:', error);
+        showError(language === 'fr' ? 'Impossible de supprimer le message.' : 'Unable to delete message.');
+      }
+    };
   
     const loadVenueContract = async (eventVenueId) => {
       if (!user?.token || !eventVenueId) return;

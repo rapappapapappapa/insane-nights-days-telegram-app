@@ -232,6 +232,7 @@ export default function EventDetailPage() {
     ticketTiersForPurchase,
     hasMultipleTicketTiers,
     canProceedPurchaseTier,
+    unitPriceForPurchase,
     priceBadgeLabel,
     handleBuyTicket,
   } = purchase;
@@ -729,7 +730,7 @@ export default function EventDetailPage() {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
-                onPress={() => { setInviteModalVisible(false); setInvitingGroupId(null); }}
+                onPress={() => { setInviteModalVisible(false); }}
                 accessibilityRole="button"
                 accessibilityLabel={language === 'fr' ? 'Annuler' : 'Cancel'}
               >

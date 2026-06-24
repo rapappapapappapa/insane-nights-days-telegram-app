@@ -201,6 +201,7 @@ export function useEventDetailPurchase({
     ticketTiersForPurchase,
     hasMultipleTicketTiers,
     canProceedPurchaseTier,
+    unitPriceForPurchase,
     priceBadgeLabel,
     handleBuyTicket,
   };

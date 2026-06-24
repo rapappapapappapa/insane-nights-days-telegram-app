@@ -401,6 +401,10 @@ export default function BookerDashboardPage() {
         reopenChatAfterContractRef={reopenChatAfterContractRef}
         flushPendingContractEditor={flushPendingContractEditor}
         setChatModalVisible={setChatModalVisible}
+        selectedChatEventDjId={selectedChatEventDjId}
+        selectedChatEventVenueId={selectedChatEventVenueId}
+        selectedChatEventId={selectedChatEventId}
+        selectedChatEventPrestataireId={selectedChatEventPrestataireId}
         setSelectedChatEventDjId={setSelectedChatEventDjId}
         setSelectedChatEventVenueId={setSelectedChatEventVenueId}
         setSelectedChatEventId={setSelectedChatEventId}

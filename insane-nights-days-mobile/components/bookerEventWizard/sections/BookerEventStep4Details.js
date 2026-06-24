@@ -69,6 +69,7 @@ export default function BookerEventStep4Details(props) {
     handleCreateEvent,
     selectedVenue,
     coverImageUri,
+    setCoverImageUri,
     navigate,
     hasBookerEventTitle,
     hasBookerEventPrice,

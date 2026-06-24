@@ -656,6 +656,8 @@ export function useBookerEventWizard({
     setPostCreateModal,
     currentStep,
     setCurrentStep,
+    eventDateTime,
+    setEventDateTime,
     djSlots,
     setDjSlots,
     slotTimePicker,

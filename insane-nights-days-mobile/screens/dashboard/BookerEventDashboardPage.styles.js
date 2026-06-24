@@ -433,14 +433,40 @@ export const styles = StyleSheet.create({
   },
   djPickerList: {
     paddingHorizontal: 8,
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  djPickerListContent: {
+    paddingBottom: 16,
   },
   djPickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  djPickerRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  djPickerProfileBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,23,68,0.5)',
+    backgroundColor: 'rgba(255,23,68,0.08)',
+    marginLeft: 8,
+  },
+  djPickerProfileBtnText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   djPickerRowName: {
     color: '#fff',

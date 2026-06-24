@@ -89,14 +89,19 @@ export default function BookerEventStep1Date(props) {
                       onPress={openDatePicker}
                     >
                       <Text style={[styles.selectButtonText, !formData.date && styles.placeholderText]}>
-                        {formData.date
-                          ? new Date(eventDateTime).toLocaleDateString(
-                              language === 'fr' ? 'fr-FR' : 'en-US',
-                              { day: '2-digit', month: '2-digit', year: 'numeric' }
-                            )
-                          : language === 'fr'
-                          ? 'Choisir une date'
-                          : 'Choose a date'}
+                        {(() => {
+                          const placeholder = language === 'fr' ? 'Choisir une date' : 'Choose a date';
+                          if (!formData.date) return placeholder;
+                          const candidate =
+                            eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
+                              ? eventDateTime
+                              : new Date(formData.date);
+                          if (isNaN(candidate.getTime())) return placeholder;
+                          return candidate.toLocaleDateString(
+                            language === 'fr' ? 'fr-FR' : 'en-US',
+                            { day: '2-digit', month: '2-digit', year: 'numeric' }
+                          );
+                        })()}
                       </Text>
                       <Text style={styles.chevron}>📅</Text>
                     </TouchableOpacity>

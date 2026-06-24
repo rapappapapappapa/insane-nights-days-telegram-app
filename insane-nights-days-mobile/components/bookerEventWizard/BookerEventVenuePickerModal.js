@@ -11,36 +11,29 @@ import {
 import StarRating from '../StarRating';
 import Colors from '../../constants/colors';
 
-/** Sélection DJ in-app (modal) — évite la navigation selectDj / profil qui perdait la grille multi-créneaux. */
-export default function BookerEventDjPickerModal({
+/** Sélection lieu in-app (modal) — uniformisé avec le sélecteur DJ. */
+export default function BookerEventVenuePickerModal({
   visible,
-  slotIndex,
   language,
   styles,
-  availableDjs,
-  loadingDjs,
-  excludedDjUserIds = [],
+  venues,
+  loadingVenues,
   onClose,
-  onSelectDj,
+  onSelectVenue,
   onViewProfile,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
-    const excluded = new Set(excludedDjUserIds.filter(Boolean));
-    return (availableDjs || []).filter((dj) => {
-      if (excluded.has(dj.userId)) return false;
-      if (!searchQuery.trim()) return true;
-      return dj.artistName?.toLowerCase().includes(searchQuery.trim().toLowerCase());
+    const q = searchQuery.trim().toLowerCase();
+    return (venues || []).filter((v) => {
+      if (!q) return true;
+      return (
+        v.venueName?.toLowerCase().includes(q) ||
+        v.address?.toLowerCase().includes(q)
+      );
     });
-  }, [availableDjs, excludedDjUserIds, searchQuery]);
-
-  const slotLabel =
-    slotIndex != null
-      ? language === 'fr'
-        ? `Créneau ${slotIndex + 1}`
-        : `Slot ${slotIndex + 1}`
-      : '';
+  }, [venues, searchQuery]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -48,8 +41,7 @@ export default function BookerEventDjPickerModal({
         <View style={styles.djPickerSheet}>
           <View style={styles.djPickerHeader}>
             <Text style={styles.djPickerTitle}>
-              {language === 'fr' ? 'Choisir un DJ' : 'Choose a DJ'}
-              {slotLabel ? ` · ${slotLabel}` : ''}
+              {language === 'fr' ? 'Choisir un lieu' : 'Choose a venue'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.djPickerClose} hitSlop={12}>
               <Text style={styles.djPickerCloseText}>✕</Text>
@@ -58,13 +50,13 @@ export default function BookerEventDjPickerModal({
 
           <TextInput
             style={styles.djPickerSearch}
-            placeholder={language === 'fr' ? 'Rechercher un artiste…' : 'Search artist…'}
+            placeholder={language === 'fr' ? 'Rechercher un lieu…' : 'Search venue…'}
             placeholderTextColor="rgba(255,255,255,0.4)"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
 
-          {loadingDjs ? (
+          {loadingVenues ? (
             <ActivityIndicator size="large" color={Colors.primary} style={{ marginVertical: 24 }} />
           ) : (
             <ScrollView
@@ -75,28 +67,33 @@ export default function BookerEventDjPickerModal({
             >
               {filtered.length === 0 ? (
                 <Text style={styles.djPickerEmpty}>
-                  {language === 'fr' ? 'Aucun DJ disponible.' : 'No DJ available.'}
+                  {language === 'fr' ? 'Aucun lieu disponible.' : 'No venue available.'}
                 </Text>
               ) : (
-                filtered.map((dj) => (
-                  <View key={dj.userId} style={styles.djPickerRow}>
+                filtered.map((venue) => (
+                  <View key={venue.id} style={styles.djPickerRow}>
                     <TouchableOpacity
                       style={styles.djPickerRowMain}
-                      onPress={() => onSelectDj(dj)}
+                      onPress={() => onSelectVenue(venue)}
                       activeOpacity={0.85}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.djPickerRowName}>{dj.artistName || '—'}</Text>
-                        {dj.genre ? (
-                          <Text style={styles.djPickerRowMeta}>🎧 {dj.genre}</Text>
+                        <Text style={styles.djPickerRowName}>{venue.venueName || '—'}</Text>
+                        {venue.address ? (
+                          <Text style={styles.djPickerRowMeta}>📍 {venue.address}</Text>
+                        ) : null}
+                        {venue.capacity ? (
+                          <Text style={styles.djPickerRowMeta}>
+                            👥 {venue.capacity} {language === 'fr' ? 'pers.' : 'cap.'}
+                          </Text>
                         ) : null}
                       </View>
-                      <StarRating rating={dj.averageRatingGlobal || 0} size={14} />
+                      <StarRating rating={venue.averageRatingGlobal || 0} size={14} />
                     </TouchableOpacity>
                     {onViewProfile ? (
                       <TouchableOpacity
                         style={styles.djPickerProfileBtn}
-                        onPress={() => onViewProfile(dj)}
+                        onPress={() => onViewProfile(venue)}
                         hitSlop={8}
                         activeOpacity={0.85}
                       >

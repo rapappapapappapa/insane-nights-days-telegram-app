@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   View,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import { getEventMinLeadDaysFromEnv } from '../../../utils/bookerEventWizardUtils';
+import BookerEventVenuePickerModal from '../BookerEventVenuePickerModal';
 
 export default function BookerEventStep2Venue(props) {
     const {
@@ -75,6 +76,21 @@ export default function BookerEventStep2Venue(props) {
     hasBookerEventPrice,
   } = props;
 
+  const [venuePickerVisible, setVenuePickerVisible] = useState(false);
+
+  const handleSelectVenue = (venue) => {
+    if (!venue?.id) return;
+    handleChange('venueId', venue.id);
+    setVenuePickerVisible(false);
+  };
+
+  const handleViewVenueProfile = async (venue) => {
+    if (!venue?.id || !navigate) return;
+    setVenuePickerVisible(false);
+    await flushDraftNow?.();
+    navigate('venueProfile', { venueId: venue.id });
+  };
+
   return (
 <>
                   <Text style={styles.sectionTitle}>
@@ -89,13 +105,7 @@ export default function BookerEventStep2Venue(props) {
     
                   <TouchableOpacity
                     style={styles.selectButton}
-                    onPress={async () => {
-                      await flushDraftNow?.();
-                      navigate('selectVenue', {
-                        selectedVenueId: formData.venueId,
-                        returnTo: 'bookerEventDashboard',
-                      });
-                    }}
+                    onPress={() => setVenuePickerVisible(true)}
                   >
                     <Text style={[styles.selectButtonText, !selectedVenue && styles.placeholderText]}>
                       {selectedVenue
@@ -136,6 +146,17 @@ export default function BookerEventStep2Venue(props) {
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  <BookerEventVenuePickerModal
+                    visible={venuePickerVisible}
+                    language={language}
+                    styles={styles}
+                    venues={venues}
+                    loadingVenues={loadingVenues}
+                    onClose={() => setVenuePickerVisible(false)}
+                    onSelectVenue={handleSelectVenue}
+                    onViewProfile={handleViewVenueProfile}
+                  />
                 </>
   );
 }

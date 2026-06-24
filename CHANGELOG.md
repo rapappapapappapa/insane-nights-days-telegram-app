@@ -15,6 +15,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
+### Corrigé / Ajouté (wizard création événement — date et sélecteurs)
+- **« Invalid Date » étape 1** : `eventDateTime` n’était pas exposé par le hook `useBookerEventWizard` (donc `undefined` → `new Date(undefined)`). Ajouté au retour ; affichage de la date avec repli défensif sur `formData.date`.
+- **Sélecteur DJ (modale)** : bouton **« 👁 Profil »** par DJ (ouvre le profil, le brouillon est sauvegardé avant navigation) ; scroll fiabilisé (liste `flexShrink` + zone tap dédiée).
+- **Sélecteur lieu uniformisé** : nouvelle **modale in-app** `BookerEventVenuePickerModal` (recherche, profil, sélection) à l’étape 2, à la place de la navigation vers une page séparée — même UX que le sélecteur DJ.
+
 ### Corrigé (mobile — crashs « Oups une erreur est survenue » des dashboards, post-refactor)
 - **Dashboard organisateur** : `BookerChatModal` recevait les setters mais pas les valeurs `selectedChatEventDjId/VenueId/PrestataireId` (`ReferenceError`) ; `cancellationPolicyLabel` non importé. Valeurs passées + import ajouté.
 - **Dashboard lieu** : `useVenueDashboard` retournait `handleDeleteMessage` jamais défini (crash à l’ouverture) — fonction implémentée ; `VenueChatModal` : `Colors`/`cleanText` non importés, `selectedChatEventVenueId`/`contractBooking` manquants, et helpers (`dealTypeLabel`, `PAYMENT_TERMS_OPTIONS`…) déstructurés des props masquaient les imports ; `VenueBookingsTab` : `Colors` non importé.

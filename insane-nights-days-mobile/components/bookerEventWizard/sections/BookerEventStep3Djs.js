@@ -20,6 +20,8 @@ export default function BookerEventStep3Djs(props) {
     djSlots,
     openSlotTimeField,
     showError,
+    navigate,
+    flushDraftNow,
   } = props;
 
   const { assignDjToWizardSlot, appendWizardDjSlot, removeWizardDjSlotAt, clearWizardDjSlotAt } =
@@ -54,6 +56,13 @@ export default function BookerEventStep3Djs(props) {
     const intent = djSlots[pickerSlotIndex]?.djId ? 'replace' : 'fill';
     assignDjToWizardSlot(pickerSlotIndex, dj.userId, intent, formData.time, formData.durationHours);
     setPickerSlotIndex(null);
+  };
+
+  const handleViewDjProfile = async (dj) => {
+    if (!dj?.userId || !navigate) return;
+    setPickerSlotIndex(null);
+    await flushDraftNow?.();
+    navigate('djProfile', { djUserId: dj.userId, djId: dj.djId });
   };
 
   return (
@@ -231,6 +240,7 @@ export default function BookerEventStep3Djs(props) {
         excludedDjUserIds={excludedForPicker}
         onClose={() => setPickerSlotIndex(null)}
         onSelectDj={handleSelectDj}
+        onViewProfile={handleViewDjProfile}
       />
     </>
   );

@@ -18,7 +18,7 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
-import { NoxRadialNav } from './components/nox';
+import NoxRadialNav from './components/nox/NoxRadialNav';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -321,6 +321,17 @@ function AppContent() {
       .catch(() => {});
   }, [isInitializing, user?.isAuthenticated, navigateToChatFromPushData]);
 
+  useEffect(() => {
+    if (isInitializing) return;
+    console.log(
+      '[NOX Boot]',
+      'screen=',
+      currentPage,
+      'auth=',
+      user?.isAuthenticated ? 'yes' : 'no',
+    );
+  }, [isInitializing, currentPage, user?.isAuthenticated]);
+
   // Afficher un loader pendant l'initialisation de l'authentification
   if (isInitializing) {
     return (
@@ -359,7 +370,13 @@ function AppContent() {
             <ScreenComponent />
           </ErrorBoundary>
         ) : (
-          <ScreenComponent />
+          <ErrorBoundary
+            key={currentPage}
+            title="Erreur écran"
+            context={`Écran: ${currentPage}`}
+          >
+            <ScreenComponent />
+          </ErrorBoundary>
         )}
       </Drawer>
       <NoxRadialNav onOpenMenu={() => drawerRef.current?.open?.()} />
@@ -397,7 +414,7 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
-  const { fontsLoaded } = useNoxFonts();
+  const { fontsLoaded, fontsError } = useNoxFonts();
   const [updateBootstrapDone, setUpdateBootstrapDone] = useState(__DEV__);
 
   useEffect(() => {
@@ -431,6 +448,22 @@ export default function App() {
       clearTimeout(safetyTimer);
     };
   }, []);
+
+  if (fontsError) {
+    console.error('[NOX] Échec chargement polices Satoshi:', fontsError?.message || fontsError);
+    return (
+      <SafeAreaProvider>
+        <View style={styles.updateBootstrap}>
+          <Text style={{ color: Colors.primary, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Erreur polices (Satoshi)
+          </Text>
+          <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 }} selectable>
+            {fontsError?.message || String(fontsError)}
+          </Text>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
 
   if (!updateBootstrapDone || !fontsLoaded) {
     return (

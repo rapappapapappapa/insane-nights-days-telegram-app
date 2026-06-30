@@ -33,6 +33,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (mobile — crash « Oups une erreur » au lancement / feed)
 - **`NoxTabs`** : `NoxText` utilisé sans import → `ReferenceError` dès l’écran Welcome (utilisateur connecté redirigé au boot).
 
+### Ajouté (debug crash — détails erreur à l’écran)
+- **`ErrorBoundary`** : message, stack JS et composant affichés en prod (texte sélectionnable) + logs `console.error`.
+- **`installGlobalErrorHandlers`** : handler global JS + promesses rejetées (`index.js`).
+- **`App.js`** : ErrorBoundary par écran (`Écran: onboarding`, etc.), log `[NOX Boot]`, erreur polices Satoshi visible.
+
 - **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
 - **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
 - **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral.

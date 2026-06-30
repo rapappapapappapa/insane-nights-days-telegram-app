@@ -17,8 +17,12 @@ import Colors, { primaryAlpha } from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
 import { Radius, Spacing } from '../../constants/theme';
 
-const NAV_SIZE = 52;
+const NAV_SIZE = 48;
 const NX_SIZE = 64;
+/** Distance centre NX → icônes (plus grand = arc plus aéré). */
+const ORBIT_RADIUS = 118;
+/** Arc au-dessus du bouton NX (de gauche à droite). */
+const ORBIT_ANGLES = [-152, -119, -86, -53, -20];
 
 const NAV_ITEMS = [
   {
@@ -27,7 +31,6 @@ const NAV_ITEMS = [
     icon: 'compass-outline',
     labelFr: 'Discover',
     labelEn: 'Discover',
-    angle: -135,
   },
   {
     id: 'home',
@@ -35,7 +38,6 @@ const NAV_ITEMS = [
     icon: 'home-outline',
     labelFr: 'Home',
     labelEn: 'Home',
-    angle: -108,
   },
   {
     id: 'tickets',
@@ -43,7 +45,6 @@ const NAV_ITEMS = [
     icon: 'ticket-outline',
     labelFr: 'Tickets',
     labelEn: 'Tickets',
-    angle: -72,
   },
   {
     id: 'notifs',
@@ -51,7 +52,6 @@ const NAV_ITEMS = [
     icon: 'notifications-outline',
     labelFr: 'Notifs',
     labelEn: 'Notifs',
-    angle: -45,
   },
   {
     id: 'profile',
@@ -59,9 +59,8 @@ const NAV_ITEMS = [
     icon: 'person-outline',
     labelFr: 'Profil',
     labelEn: 'Profile',
-    angle: -18,
   },
-];
+].map((item, index) => ({ ...item, angle: ORBIT_ANGLES[index] }));
 
 /** Pages où la nav NX flottante est masquée (auth, wizards, dashboards…). */
 export const HIDE_RADIAL_NAV_PAGES = new Set([
@@ -115,6 +114,8 @@ export default function NoxRadialNav({ onOpenMenu }) {
   const backdrop = useRef(new Animated.Value(0)).current;
 
   const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
+  /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
+  const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 
   useEffect(() => {
     Animated.parallel([
@@ -151,15 +152,23 @@ export default function NoxRadialNav({ onOpenMenu }) {
   return (
     <>
       {open ? (
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close menu">
-          <Animated.View style={[styles.backdrop, { opacity: backdrop }]} />
-        </Pressable>
+        <>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.backdrop, { opacity: backdrop, zIndex: 9999 }]}
+          />
+          <Pressable
+            style={[styles.backdropTap, { bottom: navClusterClearance, zIndex: 10000 }]}
+            onPress={close}
+            accessibilityLabel={language === 'fr' ? 'Fermer le menu' : 'Close menu'}
+          />
+        </>
       ) : null}
 
-      <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
+      <View pointerEvents="box-none" style={[styles.wrap, { bottom, zIndex: 10002 }]}>
         <View style={styles.anchor}>
           {NAV_ITEMS.map((item) => {
-            const offset = polarOffset(item.angle, 96);
+            const offset = polarOffset(item.angle, ORBIT_RADIUS);
             const tx = progress.interpolate({
               inputRange: [0, 1],
               outputRange: [0, offset.x],
@@ -209,12 +218,11 @@ export default function NoxRadialNav({ onOpenMenu }) {
             );
           })}
 
-          <TouchableOpacity
+          <Pressable
             style={styles.nxButton}
             onPress={toggle}
             onLongPress={onOpenMenu}
             delayLongPress={350}
-            activeOpacity={0.9}
             accessibilityRole="button"
             accessibilityLabel={open ? 'Fermer le menu NX' : 'Ouvrir le menu NX'}
             accessibilityHint={
@@ -224,7 +232,7 @@ export default function NoxRadialNav({ onOpenMenu }) {
             <Animated.Text style={[styles.nxLabel, { transform: [{ rotate: nxRotate }] }]}>
               NX
             </Animated.Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </>
@@ -236,12 +244,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
+  backdropTap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
   wrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: 10002,
     elevation: 16,
   },
   anchor: {
@@ -253,9 +266,9 @@ const styles = StyleSheet.create({
   orbitItem: {
     position: 'absolute',
     alignItems: 'center',
-    width: NAV_SIZE + 12,
+    minWidth: NAV_SIZE + 20,
     top: (NX_SIZE - NAV_SIZE) / 2 - 6,
-    left: (NX_SIZE - NAV_SIZE) / 2 - 6,
+    left: (NX_SIZE - NAV_SIZE) / 2 - 10,
   },
   orbitBtn: {
     width: NAV_SIZE,
@@ -282,9 +295,11 @@ const styles = StyleSheet.create({
   },
   orbitLabel: {
     marginTop: 4,
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: FontFamily.medium,
     color: Colors.textTertiary,
+    textAlign: 'center',
+    maxWidth: 56,
   },
   orbitLabelActive: {
     color: Colors.primary,
@@ -302,7 +317,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
+    elevation: 12,
+    zIndex: 2,
   },
   nxLabel: {
     fontFamily: FontFamily.black,

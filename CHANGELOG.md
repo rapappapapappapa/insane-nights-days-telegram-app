@@ -37,6 +37,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`NoxTabs`** : `NoxText` utilisé sans import → `ReferenceError` dès l’écran Welcome (utilisateur connecté redirigé au boot).
 - **Outil anti-régression** : `scripts/find-unbound-refs.js` détecte aussi les identifiants JSX (`JSXIdentifier`).
 
+### Corrigé (mobile — nav NX radiale)
+- **`NoxRadialNav`** : second appui sur **NX** referme bien le menu (le backdrop ne recapturait plus le tap en même temps que le bouton) ; arc plus aéré (rayon + angles élargis).
+
+### Ajouté (doc mobile — reprise refonte NOX)
+- **`docs/mobile/SYNTHESE_REFONTE_NOX_JUIN2026.md`** : synthèse étape par étape (phases 0–2, correctifs, commits, commandes git/OTA depuis un autre poste).
+
 ### Ajouté (debug crash — détails erreur à l’écran)
 - **`ErrorBoundary`** : message, stack JS et composant affichés en prod (texte sélectionnable) + logs `console.error`.
 - **`installGlobalErrorHandlers`** : handler global JS + promesses rejetées (`index.js`).

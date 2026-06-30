@@ -10,6 +10,7 @@ import { Layout, Radius, Spacing } from '../../constants/theme';
 export default function NoxInput({
   label,
   icon,
+  rightSlot,
   error,
   containerStyle,
   inputStyle,
@@ -25,6 +26,7 @@ export default function NoxInput({
           style={[styles.input, inputStyle]}
           {...textInputProps}
         />
+        {rightSlot ? <View style={styles.rightSlot}>{rightSlot}</View> : null}
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -56,6 +58,9 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: Spacing.md,
+  },
+  rightSlot: {
+    marginLeft: Spacing.sm,
   },
   input: {
     flex: 1,

@@ -8,7 +8,6 @@ import {
   Image,
   Modal,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
@@ -17,7 +16,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { api, normalizeMediaUrl } from '../../api/config';
-import { NoxSearchBar } from '../../components/nox';
+import { NoxSearchBar, NoxTabs, NoxFeedPostCard } from '../../components/nox';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationBadge from '../../components/NotificationBadge';
@@ -423,90 +422,70 @@ export default function WelcomePage() {
         <StatusBar style="light" />
 
         <View style={styles.feedContainer}>
-          <View style={styles.feedHeader}>
-            <View style={styles.feedHeaderMain}>
+          <View style={styles.screenHeader}>
+            <View style={styles.headerRow}>
               <Text style={styles.helloTitle}>
                 {language === 'fr' ? `Hello ${displayName} !` : `Hello ${displayName}!`}
               </Text>
+              <View style={styles.headerActions}>
+                {user?.isAuthenticated && chatUnreadCount > 0 ? (
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={openChatNotifications}
+                    accessibilityRole="button"
+                    accessibilityLabel={language === 'fr' ? 'Messages' : 'Messages'}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.text} />
+                    <NotificationBadge count={chatUnreadCount} />
+                  </TouchableOpacity>
+                ) : null}
+                {feedNotificationsCount > 0 ? (
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={openFeedNotifications}
+                    accessibilityRole="button"
+                    accessibilityLabel={language === 'fr' ? 'Notifications' : 'Notifications'}
+                  >
+                    <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+                    <NotificationBadge count={feedNotificationsCount} />
+                  </TouchableOpacity>
+                ) : null}
+                {(user?.activeProfileType === 'DJ' || user?.activeProfileType === 'BOOKER') ? (
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => navigate('createFeedPost')}
+                    accessibilityRole="button"
+                    accessibilityLabel={language === 'fr' ? 'Créer une publication' : 'Create post'}
+                  >
+                    <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
 
-            <View style={styles.feedHeaderRight}>
-              {/* ✅ Cloche "MESSAGES" (chat DJ/Organisateur) */}
-              {user?.isAuthenticated && chatUnreadCount > 0 && (
-                <TouchableOpacity
-                  style={styles.notificationsButton}
-                  onPress={openChatNotifications}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Messages et chats' : 'Messages and chats'}
-                >
-                  <Ionicons name="notifications" size={24} color={Colors.primary} />
-                  <NotificationBadge count={chatUnreadCount} />
-                </TouchableOpacity>
-              )}
-
-              {feedNotificationsCount > 0 && (
-                <TouchableOpacity
-                  style={styles.notificationsButton}
-                  onPress={openFeedNotifications}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Notifications du fil' : 'Feed notifications'}
-                >
-                  <Ionicons name="notifications" size={24} color={Colors.primary} />
-                  <NotificationBadge count={feedNotificationsCount} />
-                </TouchableOpacity>
-              )}
-              {(user?.activeProfileType === 'DJ' || user?.activeProfileType === 'BOOKER') && (
-                <TouchableOpacity
-                  style={styles.createPostButton}
-                  onPress={() => navigate('createFeedPost')}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Créer une publication' : 'Create post'}
-                >
-                  <Ionicons name="add-circle" size={24} color={Colors.primary} />
-                  <Text style={styles.createPostText}>
-                    {language === 'fr' ? 'Poster' : 'Post'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.searchSection}>
             <NoxSearchBar
               placeholder={language === 'fr' ? 'Rechercher artistes, lieux, events…' : 'Search artists, venues, events…'}
               onPress={() => navigate('events')}
+              style={styles.searchBar}
             />
           </View>
 
-          {/* Onglets Figma : Events feed | Following feed */}
-          <View style={styles.feedTabs}>
-            <TouchableOpacity
-              style={[styles.feedTab, feedTab === 'all' && styles.feedTabActive]}
-              onPress={() => setFeedTab('all')}
-              activeOpacity={0.7}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: feedTab === 'all' }}
-              accessibilityLabel={language === 'fr' ? 'Fil pour tous' : 'For you feed'}
-            >
-              <Text style={[styles.feedTabText, feedTab === 'all' && styles.feedTabTextActive]}>
-                {language === 'fr' ? 'Events feed' : 'Events feed'}
-              </Text>
-              {feedTab === 'all' && <View style={styles.feedTabIndicator} />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.feedTab, feedTab === 'following' && styles.feedTabActive]}
-              onPress={() => setFeedTab('following')}
-              activeOpacity={0.7}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: feedTab === 'following' }}
-              accessibilityLabel={language === 'fr' ? 'Fil abonnements' : 'Following feed'}
-            >
-              <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
-                {language === 'fr' ? 'Following feed' : 'Following feed'}
-              </Text>
-              {feedTab === 'following' && <View style={styles.feedTabIndicator} />}
-            </TouchableOpacity>
-          </View>
+          <NoxTabs
+            tabs={[
+              {
+                id: 'all',
+                label: 'Events feed',
+                accessibilityLabel: language === 'fr' ? 'Fil événements' : 'Events feed',
+              },
+              {
+                id: 'following',
+                label: 'Following feed',
+                accessibilityLabel: language === 'fr' ? 'Fil abonnements' : 'Following feed',
+              },
+            ]}
+            activeId={feedTab}
+            onChange={setFeedTab}
+          />
 
           {/* Liste du feed */}
           {loadingFeed ? (
@@ -575,239 +554,55 @@ export default function WelcomePage() {
                     const isBrokenImage = !!brokenPostImages[item.id];
                     
                     return (
-                      <View key={`post-${item.id}`} style={styles.postCard}>
-                        <View style={styles.postHeader}>
-                          <TouchableOpacity
-                            style={styles.postHeaderLeft}
-                            activeOpacity={0.7}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            accessibilityRole="link"
-                            accessibilityLabel={
-                              language === 'fr'
-                                ? `Profil ${profileName || 'utilisateur'}, ${isDj ? 'DJ' : 'organisateur'}`
-                                : `Profile ${profileName || 'user'}, ${isDj ? 'DJ' : 'organizer'}`
-                            }
-                            onPress={() => {
-                              if (isDj && item.dj) {
-                                navigate('djProfile', {
-                                  djId: item.dj.id,
-                                  djUserId: item.dj.userId,
-                                });
-                              } else if (!isDj && (item.booker?.id || item.bookerId)) {
-                                navigate('bookerProfile', { bookerId: item.booker?.id || item.bookerId });
-                              }
-                            }}
-                          >
-                            <View style={styles.postAvatar}>
-                              {profileImage ? (
-                                <Image
-                                  source={{ uri: profileImage }}
-                                  style={styles.avatarImage}
-                                />
-                              ) : (
-                                <View style={[styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
-                                  <Text style={styles.avatarText}>
-                                    {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'DJ' : 'O')}
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-                            <View style={styles.postHeaderInfo}>
-                              <View style={styles.postHeaderNameRow}>
-                                <Text style={styles.postAuthorName} numberOfLines={1}>
-                                  {profileName || 'Utilisateur'}
-                                </Text>
-                                <View style={[styles.profileBadge, isDj ? styles.badgeDj : styles.badgeBooker]}>
-                                  <Ionicons 
-                                    name={isDj ? "musical-notes" : "calendar"} 
-                                    size={10} 
-                                    color="#fff" 
-                                  />
-                                  <Text style={styles.profileBadgeText}>
-                                    {isDj ? 'DJ' : 'Organisateur'}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View style={styles.postMetaRow}>
-                                {profileLocation && (
-                                  <Text style={styles.postMeta}>
-                                    {profileLocation}
-                                  </Text>
-                                )}
-                                <Text style={styles.postMetaDot}>•</Text>
-                                <Text style={styles.postMeta}>
-                                  {formatDate(item.createdAt)}
-                                </Text>
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                          {/* ✅ AJOUT: Bouton de suppression (visible uniquement pour l'auteur) */}
-                          {isAuthor && (
-                            <TouchableOpacity
-                              style={styles.deletePostButton}
-                              onPress={() => handleDeletePost(item.id)}
-                              accessibilityRole="button"
-                              accessibilityLabel={language === 'fr' ? 'Supprimer ce post' : 'Delete this post'}
-                            >
-                              <Ionicons name="trash-outline" size={18} color="rgba(255,255,255,0.6)" />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-
-                        <Text style={styles.postContent}>{item.content}</Text>
-
-                        {!!imageUri && !isBrokenImage && (
-                          <View style={styles.postImageContainer}>
-                            <Image
-                              source={{ uri: imageUri }}
-                              style={styles.postImage}
-                              resizeMode="cover"
-                              onError={(error) => {
-                                setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }));
-                              }}
-                            />
-                          </View>
-                        )}
-
-                        {!!imageUri && isBrokenImage && (
-                          <View style={[styles.postImageContainer, styles.postImageFallback]}>
-                            <Ionicons name="image-outline" size={22} color="rgba(255,255,255,0.6)" />
-                            <Text style={styles.postImageFallbackText}>
-                              {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
-                            </Text>
-                          </View>
-                        )}
-
-                        <View style={styles.postActions}>
-                          <TouchableOpacity 
-                            style={styles.postActionButton}
-                            onPress={() => handleToggleLike(item.id)}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: !!likedPosts[item.id] }}
-                            accessibilityLabel={
-                              likedPosts[item.id]
-                                ? (language === 'fr' ? 'Retirer le j\'aime' : 'Unlike')
-                                : (language === 'fr' ? 'J\'aime' : 'Like')
-                            }
-                          >
-                            <Ionicons 
-                              name={likedPosts[item.id] ? "heart" : "heart-outline"} 
-                              size={18} 
-                              color={likedPosts[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"}
-                              style={likedPosts[item.id] ? { color: Colors.primary } : undefined}
-                            />
-                            {(postLikesCount[item.id] || item.likes || 0) > 0 && (
-                              <Text style={[
-                                styles.postActionText,
-                                likedPosts[item.id] && styles.postActionTextLiked
-                              ]}>
-                                {postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.postActionButton}
-                            onPress={() => toggleComments(item.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                              expandedComments[item.id]
-                                ? (language === 'fr' ? 'Masquer les commentaires' : 'Hide comments')
-                                : (language === 'fr' ? 'Afficher les commentaires' : 'Show comments')
-                            }
-                          >
-                            <Ionicons 
-                              name={expandedComments[item.id] ? "chatbubble" : "chatbubble-outline"} 
-                              size={18} 
-                              color={expandedComments[item.id] ? Colors.primary : "rgba(255,255,255,0.6)"} 
-                            />
-                            {(postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)) > 0 && (
-                              <Text style={[
-                                styles.postActionText,
-                                expandedComments[item.id] && styles.postActionTextLiked
-                              ]}>
-                                {postComments[item.id] ? postComments[item.id].length : (item.commentsCount ?? 0)}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.postActionButton}
-                            accessibilityRole="button"
-                            accessibilityState={{ disabled: true }}
-                            accessibilityLabel={
-                              language === 'fr' ? 'Partager, non disponible pour le moment' : 'Share not available yet'
-                            }
-                          >
-                            <Ionicons name="share-outline" size={18} color="rgba(255,255,255,0.6)" />
-                          </TouchableOpacity>
-                          {isAuthor ? (
-                            <TouchableOpacity
-                              style={styles.deletePostButton}
-                              onPress={() => handleDeletePost(item.id)}
-                              accessibilityRole="button"
-                              accessibilityLabel={language === 'fr' ? 'Supprimer ce post' : 'Delete this post'}
-                            >
-                              <Ionicons name="trash-outline" size={18} color="rgba(255,255,255,0.6)" />
-                            </TouchableOpacity>
-                          ) : (
-                            <TouchableOpacity
-                              style={styles.reportPostButton}
-                              onPress={() => reportPost(item.id)}
-                              activeOpacity={0.75}
-                              accessibilityRole="button"
-                              accessibilityLabel={language === 'fr' ? 'Signaler ce post' : 'Report this post'}
-                            >
-                              <Ionicons name="flag-outline" size={18} color="rgba(255,255,255,0.6)" />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-
-                        {expandedComments[item.id] && (
-                          <View style={styles.commentsSection}>
-                            {postComments[item.id] && postComments[item.id].length > 0 && (
-                              <View style={styles.commentsList}>
-                                {postComments[item.id].map((comment) => (
-                                  <View key={comment.id} style={styles.commentItem}>
-                                    <Text style={styles.commentAuthor}>
-                                      {comment.user.username}
-                                    </Text>
-                                    <Text style={styles.commentContent}>
-                                      {comment.content}
-                                    </Text>
-                                    <Text style={styles.commentDate}>
-                                      {formatDate(comment.createdAt)}
-                                    </Text>
-                                  </View>
-                                ))}
-                              </View>
-                            )}
-
-                            {user?.token && (
-                              <View style={styles.commentInputContainer}>
-                                <TextInput
-                                  style={styles.commentInput}
-                                  placeholder={language === 'fr' ? 'Ajouter un commentaire...' : 'Add a comment...'}
-                                  placeholderTextColor="rgba(255,255,255,0.5)"
-                                  value={commentInputs[item.id] || ''}
-                                  onChangeText={(text) => setCommentInputs(prev => ({
-                                    ...prev,
-                                    [item.id]: text,
-                                  }))}
-                                  multiline
-                                  accessibilityLabel={language === 'fr' ? 'Votre commentaire' : 'Your comment'}
-                                />
-                                <TouchableOpacity
-                                  style={styles.commentSendButton}
-                                  onPress={() => handleCreateComment(item.id)}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={language === 'fr' ? 'Envoyer le commentaire' : 'Send comment'}
-                                >
-                                  <Ionicons name="send" size={18} color={Colors.primary} />
-                                </TouchableOpacity>
-                              </View>
-                            )}
-                          </View>
-                        )}
-                      </View>
+                      <NoxFeedPostCard
+                        key={`post-${item.id}`}
+                        item={item}
+                        language={language}
+                        profileName={profileName}
+                        profileLocation={profileLocation}
+                        profileImage={profileImage}
+                        imageUri={imageUri}
+                        isBrokenImage={isBrokenImage}
+                        isDj={isDj}
+                        isAuthor={isAuthor}
+                        liked={!!likedPosts[item.id]}
+                        likesCount={
+                          postLikesCount[item.id] !== undefined
+                            ? postLikesCount[item.id]
+                            : (item.likes || 0)
+                        }
+                        commentsExpanded={!!expandedComments[item.id]}
+                        comments={postComments[item.id]}
+                        commentsCount={
+                          postComments[item.id]
+                            ? postComments[item.id].length
+                            : (item.commentsCount ?? 0)
+                        }
+                        commentInput={commentInputs[item.id]}
+                        canComment={!!user?.token}
+                        formatDate={formatDate}
+                        onPressProfile={() => {
+                          if (isDj && item.dj) {
+                            navigate('djProfile', {
+                              djId: item.dj.id,
+                              djUserId: item.dj.userId,
+                            });
+                          } else if (!isDj && (item.booker?.id || item.bookerId)) {
+                            navigate('bookerProfile', { bookerId: item.booker?.id || item.bookerId });
+                          }
+                        }}
+                        onToggleLike={() => handleToggleLike(item.id)}
+                        onToggleComments={() => toggleComments(item.id)}
+                        onReport={() => reportPost(item.id)}
+                        onDelete={() => handleDeletePost(item.id)}
+                        onImageError={() => {
+                          setBrokenPostImages((prev) => ({ ...prev, [item.id]: true }));
+                        }}
+                        onCommentInputChange={(text) =>
+                          setCommentInputs((prev) => ({ ...prev, [item.id]: text }))
+                        }
+                        onSendComment={() => handleCreateComment(item.id)}
+                      />
                     );
                   } else if (item.type === 'event') {
                     return (

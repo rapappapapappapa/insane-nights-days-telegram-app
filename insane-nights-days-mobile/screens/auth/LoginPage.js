@@ -16,8 +16,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { api } from '../../api/config';
-import Logo from '../../components/Logo';
-import { NoxButton } from '../../components/nox';
+import { NoxButton, NoxInput } from '../../components/nox';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
@@ -52,6 +51,11 @@ export default function LoginPage() {
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
+
+  useEffect(() => {
+    if (nextScreen) setMode('register');
+    else if (routeParams?.mode === 'login') setMode('login');
+  }, [nextScreen, routeParams?.mode]);
 
   const handleBirthDateChange = (value) => {
     const cleaned = value.replace(/[^0-9]/g, '');
@@ -167,17 +171,18 @@ export default function LoginPage() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigate(nextScreen ? 'accountType' : 'onboarding')}
-            accessibilityRole="button"
-            accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
-          >
-            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-          </TouchableOpacity>
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigate(nextScreen ? 'accountType' : 'onboarding')}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+            >
+              <Ionicons name="chevron-back" size={26} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.header}>
-            <Logo size={72} />
             <Text style={styles.title}>
               {mode === 'register'
                 ? (language === 'fr' ? 'Rejoins le réseau' : 'Join the network')
@@ -191,149 +196,122 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.form}>
-            <View style={styles.modeRow}>
-              <TouchableOpacity
-                style={[styles.modePill, mode === 'login' && styles.modePillActive]}
-                onPress={() => setMode('login')}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel={language === 'fr' ? 'Mode connexion' : 'Login mode'}
-                accessibilityState={{ selected: mode === 'login' }}
-              >
-                <Text style={[styles.modePillText, mode === 'login' && styles.modePillTextActive]}>
-                  {language === 'fr' ? 'Connexion' : 'Login'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modePill, mode === 'register' && styles.modePillActive]}
-                onPress={() => setMode('register')}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel={language === 'fr' ? 'Mode inscription' : 'Sign up mode'}
-                accessibilityState={{ selected: mode === 'register' }}
-              >
-                <Text style={[styles.modePillText, mode === 'register' && styles.modePillTextActive]}>
-                  {language === 'fr' ? 'Inscription' : 'Sign up'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {showSocialDivider && mode === 'login' ? (
+              <>
+                {showAppleAuth ? (
+                  <AppleSignInSection
+                    language={language}
+                    mode={mode}
+                    birthDate={birthDate}
+                    certifiedMajor={certifiedMajor}
+                    acceptedCgu={acceptedCgu}
+                    username={username}
+                    loginWithApple={loginWithApple}
+                    navigate={navigate}
+                    nextScreen={nextScreen}
+                    showSuccess={showSuccess}
+                    showError={showError}
+                    formBusy={loading}
+                    isAvailable={appleAuthAvailable}
+                  />
+                ) : null}
 
-            {showSocialDivider ? (
-              <View style={styles.socialDividerRow}>
-                <View style={styles.socialDividerLine} />
-                <Text style={styles.socialDividerText}>{language === 'fr' ? 'ou' : 'or'}</Text>
-                <View style={styles.socialDividerLine} />
-              </View>
+                {showGoogleAuth ? (
+                  <GoogleSignInSection
+                    language={language}
+                    mode={mode}
+                    birthDate={birthDate}
+                    certifiedMajor={certifiedMajor}
+                    acceptedCgu={acceptedCgu}
+                    username={username}
+                    loginWithGoogle={loginWithGoogle}
+                    navigate={navigate}
+                    nextScreen={nextScreen}
+                    showSuccess={showSuccess}
+                    showError={showError}
+                    formBusy={loading}
+                    showTopDivider={false}
+                  />
+                ) : null}
+
+                <View style={styles.socialDividerRow}>
+                  <View style={styles.socialDividerLine} />
+                  <Text style={styles.socialDividerText}>{language === 'fr' ? 'ou' : 'or'}</Text>
+                  <View style={styles.socialDividerLine} />
+                </View>
+              </>
             ) : null}
 
-            {showAppleAuth ? (
-              <AppleSignInSection
-                language={language}
-                mode={mode}
-                birthDate={birthDate}
-                certifiedMajor={certifiedMajor}
-                acceptedCgu={acceptedCgu}
-                username={username}
-                loginWithApple={loginWithApple}
-                navigate={navigate}
-                nextScreen={nextScreen}
-                showSuccess={showSuccess}
-                showError={showError}
-                formBusy={loading}
-                isAvailable={appleAuthAvailable}
-              />
-            ) : null}
-
-            {showGoogleAuth ? (
-              <GoogleSignInSection
-                language={language}
-                mode={mode}
-                birthDate={birthDate}
-                certifiedMajor={certifiedMajor}
-                acceptedCgu={acceptedCgu}
-                username={username}
-                loginWithGoogle={loginWithGoogle}
-                navigate={navigate}
-                nextScreen={nextScreen}
-                showSuccess={showSuccess}
-                showError={showError}
-                formBusy={loading}
-                showTopDivider={false}
-              />
-            ) : null}
-
-            <Text style={styles.label}>{language === 'fr' ? 'Email' : 'Email'}</Text>
-            <TextInput
-              style={styles.input}
+            <NoxInput
+              label={language === 'fr' ? 'Email' : 'Email'}
               placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-              placeholderTextColor="rgba(255,255,255,0.45)"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+            />
+
+            {mode === 'register' ? (
+              <NoxInput
+                label={language === 'fr' ? 'Pseudo' : 'Username'}
+                placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={username}
+                onChangeText={setUsername}
+                icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
+              />
+            ) : null}
+
+            <NoxInput
+              label={t('password')}
+              placeholder={language === 'fr' ? 'Mot de passe' : 'Password'}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              value={password}
+              onChangeText={setPassword}
+              icon={<Ionicons name="lock-closed-outline" size={20} color={Colors.textTertiary} />}
+              rightSlot={
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    showPassword
+                      ? (language === 'fr' ? 'Masquer le mot de passe' : 'Hide password')
+                      : (language === 'fr' ? 'Afficher le mot de passe' : 'Show password')
+                  }
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={Colors.textTertiary}
+                  />
+                </TouchableOpacity>
+              }
             />
 
             {mode === 'register' ? (
               <>
-                <Text style={styles.label}>{language === 'fr' ? 'Pseudo' : 'Username'}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
-                  placeholderTextColor="rgba(255,255,255,0.45)"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={username}
-                  onChangeText={setUsername}
-                />
-              </>
-            ) : null}
-
-            <Text style={styles.label}>{t('password')}</Text>
-            <View style={styles.passwordRow}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder={language === 'fr' ? 'Mot de passe' : 'Password'}
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword(!showPassword)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  showPassword
-                    ? (language === 'fr' ? 'Masquer le mot de passe' : 'Hide password')
-                    : (language === 'fr' ? 'Afficher le mot de passe' : 'Show password')
-                }
-              >
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="rgba(255,255,255,0.7)" />
-              </TouchableOpacity>
-            </View>
-
-            {mode === 'register' ? (
-              <>
-                <Text style={styles.label}>{language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}</Text>
-                <TextInput
-                  style={styles.input}
+                <NoxInput
+                  label={language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}
                   placeholder={language === 'fr' ? 'Confirmer' : 'Confirm'}
-                  placeholderTextColor="rgba(255,255,255,0.45)"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
+                  icon={<Ionicons name="lock-closed-outline" size={20} color={Colors.textTertiary} />}
                 />
-                <Text style={styles.label}>{language === 'fr' ? 'Date de naissance' : 'Birth date'}</Text>
-                <TextInput
-                  style={styles.input}
+                <NoxInput
+                  label={language === 'fr' ? 'Date de naissance' : 'Birth date'}
                   placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-                  placeholderTextColor="rgba(255,255,255,0.45)"
                   keyboardType="number-pad"
                   value={birthDate}
                   onChangeText={handleBirthDateChange}
                   maxLength={10}
+                  icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
                 />
                 <View style={styles.cguRow}>
                   <TouchableOpacity
@@ -411,6 +389,26 @@ export default function LoginPage() {
                 />
               </>
             )}
+
+            {!nextScreen ? (
+              <View style={styles.modeSwitchRow}>
+                <Text style={styles.modeSwitchText}>
+                  {mode === 'register'
+                    ? (language === 'fr' ? 'Déjà un compte ?' : 'Already have an account?')
+                    : (language === 'fr' ? 'Pas encore de compte ?' : 'No account yet?')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setMode(mode === 'register' ? 'login' : 'register')}
+                  disabled={loading}
+                >
+                  <Text style={styles.modeSwitchLink}>
+                    {mode === 'register'
+                      ? (language === 'fr' ? 'Se connecter' : 'Log in')
+                      : (language === 'fr' ? 'Créer un compte' : 'Sign up')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -11,63 +11,66 @@ export const styles = StyleSheet.create({
   safe: {
     flex: 1,
     paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingTop: Spacing.xxxl,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.md,
+    minHeight: 44,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  stepLabel: {
+    fontFamily: FontFamily.medium,
+    fontSize: 14,
+    color: Colors.textTertiary,
+  },
+  main: {
+    flex: 1,
+    justifyContent: 'center',
     paddingBottom: Spacing.xxl,
   },
   logoWrap: {
-    alignItems: 'center',
-    marginTop: Spacing.xxl,
     marginBottom: Spacing.xxxl,
-  },
-  slideBody: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.sm,
   },
   headline: {
     fontFamily: FontFamily.black,
-    fontSize: 26,
-    lineHeight: 34,
+    fontSize: 32,
+    lineHeight: 40,
     color: Colors.text,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  bottomDock: {
+    paddingBottom: Spacing.lg,
+    gap: Spacing.lg,
   },
   dots: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
     gap: 8,
-    marginBottom: Spacing.xxl,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   dotActive: {
+    width: 24,
     backgroundColor: Colors.primary,
-    width: 22,
-  },
-  footer: {
-    gap: Spacing.md,
   },
   skipLink: {
     alignSelf: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
   },
   skipText: {
     fontFamily: FontFamily.medium,
     fontSize: 14,
     color: Colors.textTertiary,
-  },
-  backRow: {
-    position: 'absolute',
-    top: Spacing.xxxl + 8,
-    left: Layout.screenPaddingHorizontal,
-    zIndex: 2,
-  },
-  backText: {
-    fontFamily: FontFamily.medium,
-    fontSize: 22,
-    color: Colors.textSecondary,
   },
 });

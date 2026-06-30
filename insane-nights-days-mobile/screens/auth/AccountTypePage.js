@@ -2,15 +2,17 @@ import React from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
-import { NoxText } from '../../components/nox';
-import { styles } from './AccountTypePage.styles';
+import { NoxText, NoxRoleCard } from '../../components/nox';
+import Colors from '../../constants/colors';
+import { ROLE_THEMES, styles } from './AccountTypePage.styles';
 
 const accountTypes = [
   {
     id: 'dj',
-    emoji: '🎧',
+    icon: 'musical-notes',
     titleFr: 'Artiste',
     titleEn: 'Artist',
     descriptionFr: 'DJ, producteur, live act…',
@@ -19,7 +21,7 @@ const accountTypes = [
   },
   {
     id: 'booker',
-    emoji: '📅',
+    icon: 'calendar',
     titleFr: 'Organisateur',
     titleEn: 'Organizer',
     descriptionFr: 'Crée et gère tes événements',
@@ -28,7 +30,7 @@ const accountTypes = [
   },
   {
     id: 'venue',
-    emoji: '🏢',
+    icon: 'business',
     titleFr: 'Lieu',
     titleEn: 'Venue',
     descriptionFr: 'Club, bar, salle, festival…',
@@ -37,7 +39,7 @@ const accountTypes = [
   },
   {
     id: 'community',
-    emoji: '👥',
+    icon: 'people',
     titleFr: 'Communauté',
     titleEn: 'Community',
     descriptionFr: 'Suis la scène et participe',
@@ -46,7 +48,7 @@ const accountTypes = [
   },
   {
     id: 'prestataire',
-    emoji: '🛠️',
+    icon: 'construct',
     titleFr: 'Prestataire',
     titleEn: 'Service provider',
     descriptionFr: 'Photo, vidéo, technique événementielle',
@@ -83,12 +85,12 @@ export default function AccountTypePage() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.backBtn}
             onPress={() => navigate('onboarding')}
             accessibilityRole="button"
             accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
           >
-            <NoxText style={styles.backText}>← {language === 'fr' ? 'Retour' : 'Back'}</NoxText>
+            <Ionicons name="chevron-back" size={26} color={Colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -99,34 +101,25 @@ export default function AccountTypePage() {
             </NoxText>
             <NoxText variant="secondary" style={styles.subtitle}>
               {language === 'fr'
-                ? 'Tu pourras compléter ton profil juste après l’inscription.'
-                : 'You can complete your profile right after signing up.'}
+                ? 'Tu compléteras ton profil juste après l’inscription.'
+                : 'You will complete your profile right after signing up.'}
             </NoxText>
           </View>
 
           <View style={styles.grid}>
             {accountTypes.map((type) => (
-              <TouchableOpacity
+              <NoxRoleCard
                 key={type.id}
-                style={[styles.card, type.wide && styles.cardWide]}
+                wide={type.wide}
+                icon={type.icon}
+                tintColor={ROLE_THEMES[type.id]}
+                title={language === 'fr' ? type.titleFr : type.titleEn}
+                description={language === 'fr' ? type.descriptionFr : type.descriptionEn}
                 onPress={() => handleAccountTypeSelect(type.id)}
-                activeOpacity={0.85}
-                accessibilityRole="button"
                 accessibilityLabel={`${language === 'fr' ? type.titleFr : type.titleEn}. ${
                   language === 'fr' ? type.descriptionFr : type.descriptionEn
                 }`}
-              >
-                <View style={styles.cardAccent} />
-                <View style={styles.cardInner}>
-                  <NoxText style={styles.cardEmoji}>{type.emoji}</NoxText>
-                  <NoxText style={styles.cardTitle}>
-                    {language === 'fr' ? type.titleFr : type.titleEn}
-                  </NoxText>
-                  <NoxText variant="secondary" style={styles.cardDesc}>
-                    {language === 'fr' ? type.descriptionFr : type.descriptionEn}
-                  </NoxText>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         </ScrollView>

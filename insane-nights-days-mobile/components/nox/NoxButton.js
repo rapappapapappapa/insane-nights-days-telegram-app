@@ -80,6 +80,11 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   secondary: {
     backgroundColor: 'transparent',

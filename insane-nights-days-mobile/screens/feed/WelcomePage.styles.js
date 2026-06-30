@@ -12,91 +12,49 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  feedHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  screenHeader: {
     paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingTop: Spacing.xxxl,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.lg,
   },
-  feedHeaderMain: {
-    flex: 1,
-    paddingRight: Spacing.sm,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
   },
   helloTitle: {
+    flex: 1,
     fontFamily: FontFamily.black,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 28,
+    lineHeight: 34,
     color: Colors.text,
   },
-  searchSection: {
-    paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingBottom: Spacing.md,
-  },
-  feedHeaderRight: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    flexShrink: 0,
+    gap: Spacing.sm,
   },
-  notificationsButton: {
+  iconButton: {
     position: 'relative',
-    padding: 8,
-    marginRight: 12,
-  },
-  createPostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1f',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-  },
-  createPostText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  feedTabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: Colors.background,
-  },
-  feedTab: {
-    flex: 1,
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.backgroundInput,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
   },
-  feedTabActive: {},
-  feedTabText: {
-    color: Colors.textTertiary,
-    fontSize: 15,
-    fontFamily: FontFamily.medium,
-  },
-  feedTabTextActive: {
-    color: Colors.text,
-    fontFamily: FontFamily.bold,
-  },
-  feedTabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: '25%',
-    right: '25%',
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
+  searchBar: {
+    width: '100%',
   },
   feedScroll: {
     flex: 1,
   },
   feedContent: {
-    paddingBottom: 100,
+    paddingBottom: 140,
   },
   loadingContainer: {
     flex: 1,
@@ -188,9 +146,9 @@ export const styles = StyleSheet.create({
     marginLeft: 4,
   },
   badgeDj: {
-    backgroundColor: 'rgba(255, 23, 68, 0.2)',
+    backgroundColor: 'rgba(77, 163, 255, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.4)',
+    borderColor: 'rgba(77, 163, 255, 0.4)',
   },
   badgeBooker: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',

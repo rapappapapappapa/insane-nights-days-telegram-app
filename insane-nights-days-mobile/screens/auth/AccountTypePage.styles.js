@@ -1,7 +1,15 @@
 import { StyleSheet } from 'react-native';
-import Colors, { primaryAlpha } from '../../constants/colors';
+import Colors from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
-import { Layout, Radius, Spacing } from '../../constants/theme';
+import { Layout, Spacing } from '../../constants/theme';
+
+export const ROLE_THEMES = {
+  dj: '#7B5CFF',
+  booker: '#FF8A4C',
+  venue: '#3DD6A8',
+  community: '#4DA3FF',
+  prestataire: '#9CA3AF',
+};
 
 export const styles = StyleSheet.create({
   container: {
@@ -13,30 +21,28 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Layout.screenPaddingHorizontal,
   },
   topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    minHeight: 44,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-  },
-  backText: {
-    fontFamily: FontFamily.medium,
-    fontSize: 15,
-    color: Colors.primary,
+  backBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   scrollContent: {
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xxxl,
   },
   header: {
-    marginTop: Spacing.xl,
     marginBottom: Spacing.xxl,
   },
   title: {
     fontFamily: FontFamily.black,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 32,
+    lineHeight: 38,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -50,43 +56,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: Spacing.md,
-  },
-  card: {
-    width: '47%',
-    minHeight: 152,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.25),
-    backgroundColor: Colors.backgroundCard,
-  },
-  cardWide: {
-    width: '100%',
-  },
-  cardAccent: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: primaryAlpha(0.06),
-  },
-  cardInner: {
-    flex: 1,
-    padding: Spacing.lg,
-    justifyContent: 'flex-end',
-  },
-  cardEmoji: {
-    fontSize: 32,
-    marginBottom: Spacing.sm,
-  },
-  cardTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: 18,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontFamily: FontFamily.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: Colors.textSecondary,
+    rowGap: Spacing.md,
   },
 });

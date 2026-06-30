@@ -18,6 +18,7 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
+import { NoxRadialNav } from './components/nox';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -136,6 +137,7 @@ function AppContent() {
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
   const androidExitPressRef = useRef(0);
   const initialPushHandledRef = useRef(false);
+  const drawerRef = useRef(null);
 
   useExpoPushRegistration(user);
 
@@ -333,7 +335,10 @@ function AppContent() {
 
   return (
     <>
-      <Drawer>
+      <Drawer
+        ref={drawerRef}
+        showFloatingButton={!user?.isAuthenticated}
+      >
         {isCreateFeedPost ? (
           <ErrorBoundary
             title="Erreur création de post"
@@ -357,6 +362,7 @@ function AppContent() {
           <ScreenComponent />
         )}
       </Drawer>
+      <NoxRadialNav onOpenMenu={() => drawerRef.current?.open?.()} />
       {/* Notification push globale */}
       {user?.isAuthenticated && (
         <PushNotification

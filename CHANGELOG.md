@@ -23,6 +23,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Composant** : `NoxSearchBar` dans `components/nox/`.
 - **Navigation** : écran `onboarding` (boot) ; drawer « Fil d’actualité » → `welcome` ; déconnexion → onboarding.
 
+### Affiné (design system NOX — fidélité Figma phase 1b)
+- **Onboarding** : titre aligné à gauche 32px, compteur d’étape, chevron retour, CTA + dots ancrés en bas.
+- **Login** : champs `NoxInput` avec icônes (mail, user, lock), titres alignés à gauche sans carte, lien bascule connexion/inscription, glow bouton primary.
+- **Choix de rôle** : cartes `NoxRoleCard` teintées par rôle (icône Ionicons, fond dégradé simulé).
+- **Feed** : header Figma (Hello + icônes circulaires), recherche pleine largeur, onglets `NoxTabs` alignés à gauche.
+- **Composants** : `NoxTabs`, `NoxRoleCard` ; `NoxInput` avec slot droit (œil mot de passe).
+
+### Ajouté (design system NOX — phase 2 : feed, rôles, nav NX)
+- **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
+- **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
+- **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral.
+
 - **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.
 - **Typographie Satoshi** : polices Fontshare dans `assets/fonts/` ; chargement via `expo-font` + `useNoxFonts` au boot ; presets Figma dans `constants/typography.js`.
 - **Tokens layout** : `constants/theme.js` (Spacing, Radius, Layout).

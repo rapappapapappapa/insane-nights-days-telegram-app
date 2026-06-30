@@ -4,16 +4,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 16 au 19 juin 2026 (mar. - ven.)
+## Semaine du 30 juin au 4 juillet 2026 (mar. - ven.)
 
-### Corrigé (wizard événement — créneaux DJ multiples, régression)
-- **2ᵉ DJ n’écrase plus le 1ᵉʳ** : priorité au `slotIndex` vers un créneau vide (`resolveDjSlotTargetIndex`) ; fusion slots/formData conserve les créneaux vides ajoutés ; sync formulaire à l’ajout d’un créneau ; nettoyage des `routeParams` après sélection.
-- **Correctif définitif multi-DJ** : `assignDjToSlotAtIndex` (mode `fill` / `replace`) ; brouillon AsyncStorage **ne réécrase plus** la grille au retour selectDj ; `djSlotsLayout` préservé ; token `pickToken` anti double-traitement.
-- **UX étape 3 refaite** : sélection DJ via **modal in-app** (`BookerEventDjPickerModal`) — plus de navigation selectDj/profil ; `assignDjToWizardSlot` dans le contexte ; sync `djSlots` → `formData` par effet dédié.
-- **Multi-DJ garanti (v2)** : création API et récap lisent **`djSlots`** via `djSlotsToFormDjFields` (plus `formData.djIds` seul) ; brouillon chargé **une seule fois** au montage ; clé AsyncStorage **v2** ; badge « modal intégré (v2) » étape 3 pour confirmer la mise à jour OTA.
-- **Brouillon + retour lieu** : réhydratation AsyncStorage au retour selectVenue (fusion sans écraser date/lieu live) ; `flushDraftNow` avant navigation lieu ; créneaux horaires DJ visibles dès qu’un `djId` est posé ; recalc auto des heures si manquantes.
-- **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
-- **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
+### Ajouté / Refonte (design system NOX — Figma, phase 0)
+- **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.
+- **Typographie Satoshi** : polices Fontshare dans `assets/fonts/` ; chargement via `expo-font` + `useNoxFonts` au boot ; presets Figma dans `constants/typography.js`.
+- **Tokens layout** : `constants/theme.js` (Spacing, Radius, Layout).
+- **Composants de base** : `components/nox/` — `NoxText`, `NoxButton`, `NoxInput`, `NoxCard`, `NoxScreenHeader` (pour la refonte écran par écran).
+- **Typo Satoshi** appliquée sur Login, EmptyState, ErrorBoundary (premiers écrans partagés).
 
 ### Ajouté / Refonte (design system NOX — écrans principaux, phase 1)
 - **Onboarding** : 3 slides Figma (`OnboardingPage`) — point d’entrée non connecté ; boutons Continuer / Terminer ; lien « J’ai déjà un compte ».
@@ -30,23 +28,32 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Feed** : header Figma (Hello + icônes circulaires), recherche pleine largeur, onglets `NoxTabs` alignés à gauche.
 - **Composants** : `NoxTabs`, `NoxRoleCard` ; `NoxInput` avec slot droit (œil mot de passe).
 
+### Ajouté (design system NOX — phase 2 : feed, rôles, nav NX)
+- **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
+- **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
+- **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral ; `Drawer.js` en `forwardRef` + `useImperativeHandle`.
+
 ### Corrigé (mobile — crash « Oups une erreur » au lancement / feed)
 - **`NoxTabs`** : `NoxText` utilisé sans import → `ReferenceError` dès l’écran Welcome (utilisateur connecté redirigé au boot).
+- **Outil anti-régression** : `scripts/find-unbound-refs.js` détecte aussi les identifiants JSX (`JSXIdentifier`).
 
 ### Ajouté (debug crash — détails erreur à l’écran)
 - **`ErrorBoundary`** : message, stack JS et composant affichés en prod (texte sélectionnable) + logs `console.error`.
 - **`installGlobalErrorHandlers`** : handler global JS + promesses rejetées (`index.js`).
 - **`App.js`** : ErrorBoundary par écran (`Écran: onboarding`, etc.), log `[NOX Boot]`, erreur polices Satoshi visible.
 
-- **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
-- **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
-- **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral.
+---
 
-- **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.
-- **Typographie Satoshi** : polices Fontshare dans `assets/fonts/` ; chargement via `expo-font` + `useNoxFonts` au boot ; presets Figma dans `constants/typography.js`.
-- **Tokens layout** : `constants/theme.js` (Spacing, Radius, Layout).
-- **Composants de base** : `components/nox/` — `NoxText`, `NoxButton`, `NoxInput`, `NoxCard`, `NoxScreenHeader` (pour la refonte écran par écran).
-- **Typo Satoshi** appliquée sur Login, EmptyState, ErrorBoundary (premiers écrans partagés).
+## Semaine du 16 au 19 juin 2026 (mar. - ven.)
+
+### Corrigé (wizard événement — créneaux DJ multiples, régression)
+- **2ᵉ DJ n’écrase plus le 1ᵉʳ** : priorité au `slotIndex` vers un créneau vide (`resolveDjSlotTargetIndex`) ; fusion slots/formData conserve les créneaux vides ajoutés ; sync formulaire à l’ajout d’un créneau ; nettoyage des `routeParams` après sélection.
+- **Correctif définitif multi-DJ** : `assignDjToSlotAtIndex` (mode `fill` / `replace`) ; brouillon AsyncStorage **ne réécrase plus** la grille au retour selectDj ; `djSlotsLayout` préservé ; token `pickToken` anti double-traitement.
+- **UX étape 3 refaite** : sélection DJ via **modal in-app** (`BookerEventDjPickerModal`) — plus de navigation selectDj/profil ; `assignDjToWizardSlot` dans le contexte ; sync `djSlots` → `formData` par effet dédié.
+- **Multi-DJ garanti (v2)** : création API et récap lisent **`djSlots`** via `djSlotsToFormDjFields` (plus `formData.djIds` seul) ; brouillon chargé **une seule fois** au montage ; clé AsyncStorage **v2** ; badge « modal intégré (v2) » étape 3 pour confirmer la mise à jour OTA.
+- **Brouillon + retour lieu** : réhydratation AsyncStorage au retour selectVenue (fusion sans écraser date/lieu live) ; `flushDraftNow` avant navigation lieu ; créneaux horaires DJ visibles dès qu’un `djId` est posé ; recalc auto des heures si manquantes.
+- **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
+- **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
 ### Corrigé / Ajouté (wizard création événement — date et sélecteurs)
 - **« Invalid Date » étape 1** : `eventDateTime` n’était pas exposé par le hook `useBookerEventWizard` (donc `undefined` → `new Date(undefined)`). Ajouté au retour ; affichage de la date avec repli défensif sur `formData.date`.

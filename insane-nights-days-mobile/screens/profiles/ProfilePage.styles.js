@@ -111,7 +111,7 @@ export const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 18,
     padding: 20,
     marginBottom: 20,
@@ -128,12 +128,12 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addProfileButton: {
-    backgroundColor: 'rgba(255,23,68,0.25)',
+    backgroundColor: 'rgba(77,163,255,0.25)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
   },
   addProfileButtonText: {
     color: Colors.primary,
@@ -154,7 +154,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.15)',
+    borderBottomColor: 'rgba(77,163,255,0.15)',
   },
   infoLabel: {
     color: 'rgba(255,255,255,0.7)',
@@ -232,7 +232,7 @@ export const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -258,7 +258,7 @@ export const styles = StyleSheet.create({
   statsCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 18,
     padding: 20,
     marginBottom: 20,
@@ -296,7 +296,7 @@ export const styles = StyleSheet.create({
   note: {
     backgroundColor: '#141419',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
     borderRadius: 16,
     padding: 18,
   },
@@ -333,7 +333,7 @@ export const styles = StyleSheet.create({
   profileItem: {
     backgroundColor: '#141419',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
@@ -343,7 +343,7 @@ export const styles = StyleSheet.create({
   },
   profileItemActive: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.1)',
+    backgroundColor: 'rgba(77,163,255,0.1)',
   },
   profileItemText: {
     color: '#ffffff',
@@ -365,7 +365,7 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   profileEditButton: {
-    backgroundColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: 'rgba(77,163,255,0.3)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
@@ -384,7 +384,7 @@ export const styles = StyleSheet.create({
   noProfilesBox: {
     backgroundColor: '#141419',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -414,7 +414,7 @@ export const styles = StyleSheet.create({
   rgpdButton: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.4)',
+    borderColor: 'rgba(77,163,255,0.4)',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -454,7 +454,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: '#fff',
@@ -471,7 +471,7 @@ export const styles = StyleSheet.create({
   modalInput: {
     backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.4)',
+    borderColor: 'rgba(77,163,255,0.4)',
     borderRadius: 12,
     padding: 14,
     color: '#fff',

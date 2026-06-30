@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     padding: 12,
   },
   filterLabel: {
@@ -316,10 +316,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#111116',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   ratingButtonActive: {
-    backgroundColor: 'rgba(255,23,68,0.15)',
+    backgroundColor: 'rgba(77,163,255,0.15)',
     borderColor: Colors.primary,
   },
   ratingButtonText: {
@@ -343,14 +343,14 @@ const styles = StyleSheet.create({
   djCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
   },
   djCardSelected: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.1)',
+    backgroundColor: 'rgba(77,163,255,0.1)',
   },
   djCardHeader: {
     flexDirection: 'row',

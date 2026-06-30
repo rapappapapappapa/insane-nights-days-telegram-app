@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     backgroundColor: Colors?.backgroundCard ?? '#121217',
     borderWidth: 1,
-    borderColor: Colors?.borderActive ?? 'rgba(255,23,68,0.35)',
+    borderColor: Colors?.borderActive ?? 'rgba(77,163,255,0.35)',
     borderRadius: 20,
     padding: 22,
     gap: 12,

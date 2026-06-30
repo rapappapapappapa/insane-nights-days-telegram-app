@@ -209,7 +209,7 @@ export default function ScanTicketPage() {
               if (SCAN_TEST_SECRET.length < 8) return;
               persistScanTestToggle(v);
             }}
-            trackColor={{ false: 'rgba(255,255,255,0.2)', true: 'rgba(255,23,68,0.45)' }}
+            trackColor={{ false: 'rgba(255,255,255,0.2)', true: 'rgba(77,163,255,0.45)' }}
             thumbColor={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8 ? Colors.primary : '#888'}
             disabled={SCAN_TEST_SECRET.length < 8}
             accessibilityRole="switch"
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 28,
     height: 28,
-    borderColor: 'rgba(255,23,68,0.95)',
+    borderColor: 'rgba(77,163,255,0.95)',
   },
   cornerTL: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 4 },
   cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 4 },

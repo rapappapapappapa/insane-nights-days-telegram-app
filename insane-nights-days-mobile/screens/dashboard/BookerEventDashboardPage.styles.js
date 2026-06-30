@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -239,7 +239,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
+    borderColor: 'rgba(77,163,255,0.35)',
   },
   successModalTitle: {
     color: '#fff',
@@ -349,7 +349,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
   },
   djSlotTimeLabel: {
     color: 'rgba(255,255,255,0.55)',
@@ -364,7 +364,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addSlotButton: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
@@ -397,7 +397,7 @@ export const styles = StyleSheet.create({
     maxHeight: '82%',
     paddingBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   djPickerHeader: {
     flexDirection: 'row',
@@ -459,8 +459,8 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
-    backgroundColor: 'rgba(255,23,68,0.08)',
+    borderColor: 'rgba(77,163,255,0.5)',
+    backgroundColor: 'rgba(77,163,255,0.08)',
     marginLeft: 8,
   },
   djPickerProfileBtnText: {
@@ -495,7 +495,7 @@ export const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   summaryTitle: {
     color: '#fff',
@@ -679,7 +679,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toggleActive: {
-    backgroundColor: 'rgba(255,23,68,0.55)',
+    backgroundColor: 'rgba(77,163,255,0.55)',
   },
   toggleThumb: {
     width: 24,
@@ -714,7 +714,7 @@ export const styles = StyleSheet.create({
   },
   equipChipActive: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.18)',
+    backgroundColor: 'rgba(77,163,255,0.18)',
   },
   equipChipText: {
     color: 'rgba(255,255,255,0.85)',
@@ -734,7 +734,7 @@ export const styles = StyleSheet.create({
     height: 44,
     marginLeft: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,23,68,0.35)',
+    backgroundColor: 'rgba(77,163,255,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -772,7 +772,7 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
+    borderColor: 'rgba(77,163,255,0.35)',
     alignItems: 'center',
   },
   saveCatalogBtnText: {

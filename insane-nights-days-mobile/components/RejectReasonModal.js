@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   title: {
     color: '#fff',
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   optionItemSelected: {
-    borderColor: 'rgba(255,23,68,0.6)',
-    backgroundColor: 'rgba(255,23,68,0.15)',
+    borderColor: 'rgba(77,163,255,0.6)',
+    backgroundColor: 'rgba(77,163,255,0.15)',
   },
   optionText: {
     color: 'rgba(255,255,255,0.9)',

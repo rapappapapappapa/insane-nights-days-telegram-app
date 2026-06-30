@@ -57,7 +57,7 @@ export const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   feedHeaderLeft: {
     width: 40,
@@ -89,7 +89,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   createPostText: {
     color: Colors.primary,
@@ -354,7 +354,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     marginRight: 8,
   },
   commentSendButton: {
@@ -365,7 +365,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   eventCard: {
     backgroundColor: '#1a1a1f',
@@ -374,7 +374,7 @@ export const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   eventHeader: {
     flexDirection: 'row',
@@ -433,7 +433,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: '#fff',
@@ -454,7 +454,7 @@ export const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   modalButtonText: {
     color: '#fff',

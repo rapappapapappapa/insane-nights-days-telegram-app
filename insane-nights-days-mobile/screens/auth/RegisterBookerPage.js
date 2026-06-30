@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   autoFillHint: {
-    color: 'rgba(255,23,68,0.6)',
+    color: 'rgba(77,163,255,0.6)',
     fontSize: 11,
     fontWeight: '400',
     fontStyle: 'italic',
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.3)',
+    borderBottomColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: Colors.primary,
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -591,10 +591,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   modalOptionSelected: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderColor: Colors.primary,
   },
   modalOptionText: {

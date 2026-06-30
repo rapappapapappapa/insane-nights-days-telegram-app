@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   djCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -372,9 +372,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   stylePill: {
-    backgroundColor: 'rgba(255,23,68,0.12)',
+    backgroundColor: 'rgba(77,163,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
     borderRadius: 999,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: Colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   searchIcon: {
     marginRight: 8,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   ratingButtonActive: {
     backgroundColor: Colors.primary,

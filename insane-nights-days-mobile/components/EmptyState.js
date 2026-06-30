@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Colors from '../constants/colors';
+import { FontFamily } from '../constants/typography';
 
 /**
  * Composant pour afficher un état vide avec un message et une action optionnelle
@@ -45,13 +46,14 @@ const styles = StyleSheet.create({
   title: {
     color: Colors.text,
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: FontFamily.bold,
     marginBottom: 8,
     textAlign: 'center',
   },
   message: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
+    fontFamily: FontFamily.regular,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -64,9 +66,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   actionText: {
-    color: Colors.background,
+    color: '#000000',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
   },
 });
 

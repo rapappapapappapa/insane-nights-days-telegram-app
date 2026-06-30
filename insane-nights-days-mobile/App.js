@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler, ToastAndroid } from 'react-native';
 import Colors from './constants/colors';
+import { useNoxFonts } from './hooks/useNoxFonts';
 import * as Updates from 'expo-updates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -388,6 +389,7 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
+  const { fontsLoaded } = useNoxFonts();
   const [updateBootstrapDone, setUpdateBootstrapDone] = useState(__DEV__);
 
   useEffect(() => {
@@ -422,7 +424,7 @@ export default function App() {
     };
   }, []);
 
-  if (!updateBootstrapDone) {
+  if (!updateBootstrapDone || !fontsLoaded) {
     return (
       <SafeAreaProvider>
         <View style={styles.updateBootstrap}>

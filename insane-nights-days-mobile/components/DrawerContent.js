@@ -609,8 +609,8 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
-    backgroundColor: 'rgba(255,23,68,0.10)',
+    borderColor: 'rgba(77,163,255,0.35)',
+    backgroundColor: 'rgba(77,163,255,0.10)',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',

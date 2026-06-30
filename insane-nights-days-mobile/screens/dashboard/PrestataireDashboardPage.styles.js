@@ -93,7 +93,7 @@ export const styles = StyleSheet.create({
   },
   modalTitle: { color: Colors.text, fontSize: 18, fontWeight: '700' },
   msgRow: { marginBottom: 8, padding: 10, borderRadius: 10, maxWidth: '92%' },
-  msgOwn: { alignSelf: 'flex-end', backgroundColor: 'rgba(255,23,68,0.25)' },
+  msgOwn: { alignSelf: 'flex-end', backgroundColor: 'rgba(77,163,255,0.25)' },
   msgOther: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)' },
   msgText: { color: Colors.text },
   contractBox: { marginTop: 20, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: Colors.border },
@@ -121,7 +121,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
     backgroundColor: Colors.background,
   },
   contractModalTitle: {
@@ -206,7 +206,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     maxWidth: 400,
     width: '100%',
     alignSelf: 'center',
@@ -224,8 +224,8 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   paymentTermsOptionSelected: {
-    borderColor: 'rgba(255,23,68,0.5)',
-    backgroundColor: 'rgba(255,23,68,0.1)',
+    borderColor: 'rgba(77,163,255,0.5)',
+    backgroundColor: 'rgba(77,163,255,0.1)',
   },
   paymentTermsOptionText: {
     color: 'rgba(255,255,255,0.9)',

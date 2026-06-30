@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   cancelButton: {
     padding: 8,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 200,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   charCount: {
     color: 'rgba(255,255,255,0.5)',
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     marginBottom: 12,
     gap: 8,
   },
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     marginBottom: 12,
   },
   imagePreview: {

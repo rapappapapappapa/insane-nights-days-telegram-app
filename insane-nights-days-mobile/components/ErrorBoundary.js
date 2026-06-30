@@ -8,6 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import logger from '../utils/logger';
 import Colors from '../constants/colors';
+import { FontFamily } from '../constants/typography';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
     color: '#fff',
     marginTop: 20,
     marginBottom: 12,
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 16,
+    fontFamily: FontFamily.regular,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     marginBottom: 24,
@@ -164,9 +166,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   buttonText: {
-    color: Colors.background,
+    color: '#000000',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
   },
   buttonTextSecondary: {
     color: Colors.primary,

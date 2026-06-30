@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   suggestionsContainer: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 14,
     marginTop: 4,
     maxHeight: 200,
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.1)',
+    borderBottomColor: 'rgba(77,163,255,0.1)',
   },
   suggestionText: {
     color: '#ffffff',

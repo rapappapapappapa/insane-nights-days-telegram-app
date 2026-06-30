@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   title: {
     color: '#fff',
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   commentInput: {
     backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 12,
     padding: 16,
     color: '#fff',
@@ -201,9 +201,9 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

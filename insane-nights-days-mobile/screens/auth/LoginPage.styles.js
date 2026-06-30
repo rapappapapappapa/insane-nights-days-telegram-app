@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import Colors from '../../constants/colors';
+import { FontFamily } from '../../constants/typography';
 
 export const styles = StyleSheet.create({
   container: {
@@ -26,18 +27,19 @@ export const styles = StyleSheet.create({
   title: {
     color: '#fff',
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: FontFamily.black,
     marginTop: 12,
   },
   subtitle: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
+    fontFamily: FontFamily.regular,
     marginTop: 6,
   },
   form: {
     backgroundColor: 'rgba(11,11,14,0.78)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
     borderRadius: 18,
     padding: 18,
   },
@@ -56,8 +58,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modePillActive: {
-    borderColor: 'rgba(255,23,68,0.45)',
-    backgroundColor: 'rgba(255,23,68,0.18)',
+    borderColor: 'rgba(77,163,255,0.45)',
+    backgroundColor: 'rgba(77,163,255,0.18)',
   },
   modePillText: {
     color: 'rgba(255,255,255,0.85)',
@@ -203,7 +205,7 @@ export const styles = StyleSheet.create({
     maxWidth: 520,
     backgroundColor: 'rgba(11,11,14,0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
     borderRadius: 18,
     padding: 16,
   },
@@ -228,7 +230,7 @@ export const styles = StyleSheet.create({
   modalInput: {
     backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
+    borderColor: 'rgba(77,163,255,0.35)',
     borderRadius: 12,
     color: '#ffffff',
     fontSize: 16,

@@ -30,7 +30,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Feed** : header Figma (Hello + icônes circulaires), recherche pleine largeur, onglets `NoxTabs` alignés à gauche.
 - **Composants** : `NoxTabs`, `NoxRoleCard` ; `NoxInput` avec slot droit (œil mot de passe).
 
-### Ajouté (design system NOX — phase 2 : feed, rôles, nav NX)
+### Corrigé (mobile — crash « Oups une erreur » au lancement / feed)
+- **`NoxTabs`** : `NoxText` utilisé sans import → `ReferenceError` dès l’écran Welcome (utilisateur connecté redirigé au boot).
+
 - **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
 - **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
 - **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral.

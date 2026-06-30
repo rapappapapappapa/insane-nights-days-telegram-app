@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import NoxText from './NoxText';
 import { FontFamily } from '../../constants/typography';
 import Colors from '../../constants/colors';
 import { Layout, Spacing } from '../../constants/theme';

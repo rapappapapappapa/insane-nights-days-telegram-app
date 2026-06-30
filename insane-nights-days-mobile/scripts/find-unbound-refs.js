@@ -57,6 +57,18 @@ for (const file of files) {
       console.log(`[UNBOUND] ${file}:${p.node.loc.start.line} -> ${name}`);
       problems++;
     },
+    JSXIdentifier(p) {
+      if (p.parent.type !== 'JSXOpeningElement' || p.parent.name !== p.node) return;
+      const name = p.node.name;
+      if (name === name.toLowerCase()) return; // balise HTML native
+      if (GLOBALS.has(name)) return;
+      if (p.scope.getBinding(name)) return;
+      const key = `jsx:${name}:${p.node.loc.start.line}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      console.log(`[UNBOUND JSX] ${file}:${p.node.loc.start.line} -> ${name}`);
+      problems++;
+    },
   });
 }
 

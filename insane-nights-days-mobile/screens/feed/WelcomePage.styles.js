@@ -1,74 +1,38 @@
 import { StyleSheet } from 'react-native';
 import Colors from '../../constants/colors';
+import { FontFamily } from '../../constants/typography';
+import { Layout, Spacing } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  contentOverlay: {
-    flex: 1,
-    zIndex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  headerRight: {
-    width: 44,
-  },
-  headerTitleContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoContainer: {
-    marginBottom: 12,
-  },
-  welcomeText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  usernameText: {
-    color: Colors.primary,
-    fontSize: 20,
-    fontWeight: '600',
-  },
   feedContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 3,
   },
   feedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(77,163,255,0.2)',
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingTop: Spacing.xxxl,
+    paddingBottom: Spacing.md,
   },
-  feedHeaderLeft: {
-    width: 40,
-    alignItems: 'flex-start',
-  },
-  feedHeaderTitle: {
+  feedHeaderMain: {
     flex: 1,
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
+    paddingRight: Spacing.sm,
+  },
+  helloTitle: {
+    fontFamily: FontFamily.black,
+    fontSize: 26,
+    lineHeight: 32,
+    color: Colors.text,
+  },
+  searchSection: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingBottom: Spacing.md,
   },
   feedHeaderRight: {
     flexDirection: 'row',
@@ -111,12 +75,13 @@ export const styles = StyleSheet.create({
   },
   feedTabActive: {},
   feedTabText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: Colors.textTertiary,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FontFamily.medium,
   },
   feedTabTextActive: {
-    color: '#fff',
+    color: Colors.text,
+    fontFamily: FontFamily.bold,
   },
   feedTabIndicator: {
     position: 'absolute',

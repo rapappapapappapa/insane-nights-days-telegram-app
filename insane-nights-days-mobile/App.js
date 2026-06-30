@@ -20,6 +20,7 @@ import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
+import OnboardingPage from './screens/onboarding/OnboardingPage';
 import WelcomePage from './screens/feed/WelcomePage';
 import FeedPage from './screens/feed/FeedPage';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
@@ -78,6 +79,7 @@ import TutorialPage from './screens/tutorial/TutorialPage';
 import LegalPage from './screens/legal/LegalPage';
 
 const SCREENS = {
+  onboarding: OnboardingPage,
   home: HomePage,
   login: LoginPage,
   accountType: AccountTypePage,
@@ -156,12 +158,12 @@ function AppContent() {
   // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
   useEffect(() => {
     if (!isInitializing) {
-      if (user?.isAuthenticated && currentPage === 'home') {
+      if (user?.isAuthenticated && (currentPage === 'home' || currentPage === 'onboarding')) {
         navigate('welcome');
       } else if (user?.isAuthenticated && currentPage === 'login') {
         navigate('welcome');
       } else if (!user?.isAuthenticated && currentPage === 'welcome') {
-        navigate('home');
+        navigate('onboarding');
       }
     }
   }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
@@ -175,7 +177,7 @@ function AppContent() {
     if (Platform.OS !== 'android') return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tryHardwareBack()) return true;
-      if (currentPage !== 'home' && currentPage !== 'welcome') return false;
+      if (currentPage !== 'onboarding' && currentPage !== 'welcome') return false;
       const now = Date.now();
       if (now - androidExitPressRef.current < 2500) {
         BackHandler.exitApp();

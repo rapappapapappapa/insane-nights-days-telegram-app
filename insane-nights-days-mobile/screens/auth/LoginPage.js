@@ -16,8 +16,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { api } from '../../api/config';
-import BackgroundVideo from '../../components/BackgroundVideo';
 import Logo from '../../components/Logo';
+import { NoxButton } from '../../components/nox';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
@@ -159,7 +159,6 @@ export default function LoginPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <BackgroundVideo />
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           style={styles.scroll}
@@ -168,17 +167,26 @@ export default function LoginPage() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigate(nextScreen ? 'accountType' : 'onboarding')}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+          >
+            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+
           <View style={styles.header}>
-            <Logo size={90} />
+            <Logo size={72} />
             <Text style={styles.title}>
               {mode === 'register'
-                ? (language === 'fr' ? 'Inscription' : 'Sign up')
-                : (language === 'fr' ? 'Connexion' : 'Login')}
+                ? (language === 'fr' ? 'Rejoins le réseau' : 'Join the network')
+                : (language === 'fr' ? 'Accède au réseau' : 'Access the network')}
             </Text>
             <Text style={styles.subtitle}>
               {mode === 'register'
-                ? (language === 'fr' ? 'Crée ton compte' : 'Create your account')
-                : (language === 'fr' ? 'Accède à ton compte' : 'Access your account')}
+                ? (language === 'fr' ? 'Crée ton compte NOX en quelques secondes' : 'Create your NOX account in seconds')
+                : (language === 'fr' ? 'Connecte-toi pour retrouver ta scène' : 'Log in to get back to your scene')}
             </Text>
           </View>
 
@@ -366,21 +374,13 @@ export default function LoginPage() {
                     </TouchableOpacity>
                   </View>
                 </View>
-                <TouchableOpacity
-                  style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                <NoxButton
+                  label={language === 'fr' ? 'Créer mon compte' : 'Create account'}
                   onPress={handleRegister}
+                  loading={loading}
                   disabled={loading}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Créer mon compte' : 'Create account'}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={Colors.background} />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>
-                      {language === 'fr' ? 'Créer mon compte' : 'Create account'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
+                  style={styles.noxButtonSpacing}
+                />
               </>
             ) : (
               <>
@@ -402,15 +402,13 @@ export default function LoginPage() {
                     {language === 'fr' ? 'Mot de passe oublié ?' : 'Forgot password?'}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                <NoxButton
+                  label={t('loginButton')}
                   onPress={handleLogin}
+                  loading={loading}
                   disabled={loading}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Se connecter' : 'Log in'}
-                >
-                  {loading ? <ActivityIndicator color={Colors.background} /> : <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>}
-                </TouchableOpacity>
+                  style={styles.noxButtonSpacing}
+                />
               </>
             )}
           </View>

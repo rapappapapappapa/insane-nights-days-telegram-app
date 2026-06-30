@@ -15,10 +15,19 @@ export const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 28,
+    paddingTop: 12,
     paddingBottom: 28,
     flexGrow: 1,
-    justifyContent: 'center',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  backButtonText: {
+    color: Colors.primary,
+    fontSize: 15,
+    fontFamily: FontFamily.medium,
   },
   header: {
     alignItems: 'center',
@@ -37,11 +46,14 @@ export const styles = StyleSheet.create({
     marginTop: 6,
   },
   form: {
-    backgroundColor: 'rgba(11,11,14,0.78)',
+    backgroundColor: Colors.backgroundCard,
     borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.25)',
+    borderColor: 'rgba(77,163,255,0.2)',
     borderRadius: 18,
     padding: 18,
+  },
+  noxButtonSpacing: {
+    marginTop: 18,
   },
   modeRow: {
     flexDirection: 'row',
@@ -95,13 +107,15 @@ export const styles = StyleSheet.create({
     marginTop: 12,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: Colors.backgroundInput,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: Colors.borderSubtle,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#fff',
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
   },
   passwordRow: {
     flexDirection: 'row',

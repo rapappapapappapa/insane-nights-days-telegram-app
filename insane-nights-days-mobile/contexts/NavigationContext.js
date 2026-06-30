@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 const NavigationContext = createContext();
 
 export function NavigationProvider({ children }) {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState('onboarding');
   const [routeParams, setRouteParams] = useState(undefined);
   /** Pile vide au départ : le bouton retour matériel Android ne « recule » pas sur une fausse entrée. */
   const historyRef = useRef([]);
@@ -29,7 +29,7 @@ export function NavigationProvider({ children }) {
       setRouteParams(undefined);
     } else {
       // Si pas d'historique, retour à l'accueil ou welcome selon l'état de connexion
-    setCurrentPage('home');
+    setCurrentPage('onboarding');
     setRouteParams(undefined);
     }
   }, []);

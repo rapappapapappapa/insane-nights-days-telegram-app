@@ -18,7 +18,7 @@ import * as Updates from 'expo-updates';
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
 const MENU_DEF = [
   {
-    id: 'home',
+    id: 'welcome',
     icon: 'newspaper-outline',
     titleFr: 'Fil d’actualité',
     titleEn: 'Feed',
@@ -464,7 +464,7 @@ export default function DrawerContent({ navigation }) {
                 await logout();
               } finally {
                 navigation.closeDrawer();
-                navigate('home');
+                navigate('onboarding');
               }
             }}
             accessibilityRole="button"

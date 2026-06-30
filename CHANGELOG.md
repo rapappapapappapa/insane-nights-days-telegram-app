@@ -15,7 +15,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Régression multi-DJ** : grille **`djSlotsLayout`** persistée dans le contexte événement ; réhydratation depuis le brouillon AsyncStorage au retour selectDj/profil DJ ; handler routeParams attend la fin du chargement brouillon (`draftGate`).
 - **Grille créneaux dans le provider** : **`djSlots`** vit désormais dans **`EventFormContext`** (plus de state local perdu au démontage) ; le brouillon ne réécrase plus une grille contexte plus récente que le debounce 700 ms (`pickDjSlotsBase`).
 
-### Ajouté / Refonte (design system NOX — Figma, phase 0)
+### Ajouté / Refonte (design system NOX — écrans principaux, phase 1)
+- **Onboarding** : 3 slides Figma (`OnboardingPage`) — point d’entrée non connecté ; boutons Continuer / Terminer ; lien « J’ai déjà un compte ».
+- **Auth** : `LoginPage` sans vidéo de fond, copy « Accède au réseau » / « Rejoins le réseau », boutons `NoxButton`, retour onboarding.
+- **Choix de rôle** : `AccountTypePage` refondu (grille 2×2 Figma — Artiste, Organisateur, Lieu, Communauté + Prestataire).
+- **Feed connecté** : `WelcomePage` — header « Hello {name}! », barre recherche `NoxSearchBar`, onglets Events feed / Following feed, fond noir sans vidéo.
+- **Composant** : `NoxSearchBar` dans `components/nox/`.
+- **Navigation** : écran `onboarding` (boot) ; drawer « Fil d’actualité » → `welcome` ; déconnexion → onboarding.
+
 - **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.
 - **Typographie Satoshi** : polices Fontshare dans `assets/fonts/` ; chargement via `expo-font` + `useNoxFonts` au boot ; presets Figma dans `constants/typography.js`.
 - **Tokens layout** : `constants/theme.js` (Spacing, Radius, Layout).

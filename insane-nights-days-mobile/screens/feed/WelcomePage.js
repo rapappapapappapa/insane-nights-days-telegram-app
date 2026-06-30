@@ -17,8 +17,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { api, normalizeMediaUrl } from '../../api/config';
-import BackgroundVideo from '../../components/BackgroundVideo';
-import Logo from '../../components/Logo';
+import { NoxSearchBar } from '../../components/nox';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationBadge from '../../components/NotificationBadge';
@@ -412,43 +411,25 @@ export default function WelcomePage() {
    */
   const formatDate = (dateString) => formatFeedRelativeDate(dateString, language);
 
+  const displayName = (() => {
+    const raw = user?.username || '';
+    const base = raw.includes('@') ? raw.split('@')[0] : raw;
+    if (!base) return language === 'fr' ? 'toi' : 'there';
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  })();
+
   return (
       <View style={styles.container}>
-        {/* Vidéo d'arrière-plan */}
-        <BackgroundVideo opacity={0.6} />
-        
-        {/* Contenu par-dessus la vidéo */}
-        <View style={styles.contentOverlay}>
         <StatusBar style="light" />
-        
-        {/* Header avec Logo et nom d'utilisateur */}
-        <View style={styles.header}>
-          <View style={styles.headerRight} />
-          <Logo size={80} style={styles.logoContainer} />
-          <View style={styles.headerRight} />
-        </View>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.welcomeText}>
-            {language === 'fr' ? 'Bienvenue' : 'Welcome'}
-          </Text>
-          <Text style={styles.usernameText}>{user?.username || 'Utilisateur'}</Text>
-        </View>
 
-        {/* Feed (navigation principale via le drawer latéral — App.js) */}
         <View style={styles.feedContainer}>
-          {/* Header du feed */}
           <View style={styles.feedHeader}>
-            {/* ✅ AJOUT: Logo NOX à gauche */}
-            <View style={styles.feedHeaderLeft}>
-              <Logo size={40} />
+            <View style={styles.feedHeaderMain}>
+              <Text style={styles.helloTitle}>
+                {language === 'fr' ? `Hello ${displayName} !` : `Hello ${displayName}!`}
+              </Text>
             </View>
-            
-            {/* Titre au centre */}
-            <Text style={styles.feedHeaderTitle}>
-              {language === 'fr' ? 'Feed' : 'Feed'}
-            </Text>
-            
-            {/* Boutons à droite */}
+
             <View style={styles.feedHeaderRight}>
               {/* ✅ Cloche "MESSAGES" (chat DJ/Organisateur) */}
               {user?.isAuthenticated && chatUnreadCount > 0 && (
@@ -490,7 +471,14 @@ export default function WelcomePage() {
             </View>
           </View>
 
-          {/* Onglets style X : Pour tous | Abonnements */}
+          <View style={styles.searchSection}>
+            <NoxSearchBar
+              placeholder={language === 'fr' ? 'Rechercher artistes, lieux, events…' : 'Search artists, venues, events…'}
+              onPress={() => navigate('events')}
+            />
+          </View>
+
+          {/* Onglets Figma : Events feed | Following feed */}
           <View style={styles.feedTabs}>
             <TouchableOpacity
               style={[styles.feedTab, feedTab === 'all' && styles.feedTabActive]}
@@ -501,7 +489,7 @@ export default function WelcomePage() {
               accessibilityLabel={language === 'fr' ? 'Fil pour tous' : 'For you feed'}
             >
               <Text style={[styles.feedTabText, feedTab === 'all' && styles.feedTabTextActive]}>
-                {language === 'fr' ? 'Pour tous' : 'For you'}
+                {language === 'fr' ? 'Events feed' : 'Events feed'}
               </Text>
               {feedTab === 'all' && <View style={styles.feedTabIndicator} />}
             </TouchableOpacity>
@@ -514,7 +502,7 @@ export default function WelcomePage() {
               accessibilityLabel={language === 'fr' ? 'Fil abonnements' : 'Following feed'}
             >
               <Text style={[styles.feedTabText, feedTab === 'following' && styles.feedTabTextActive]}>
-                {language === 'fr' ? 'Abonnements' : 'Following'}
+                {language === 'fr' ? 'Following feed' : 'Following feed'}
               </Text>
               {feedTab === 'following' && <View style={styles.feedTabIndicator} />}
             </TouchableOpacity>
@@ -887,7 +875,6 @@ export default function WelcomePage() {
             </ScrollView>
           )}
         </View>
-      </View>
       
       {/* ✅ AJOUT: Toast pour les notifications */}
       <Toast

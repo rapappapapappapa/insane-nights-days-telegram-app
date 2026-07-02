@@ -4,6 +4,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 30 juin au 4 juillet 2026 (mar. - ven.)
+
+### Corrigé (mobile — reprise base build 10 stable)
+- **Git** : retour à **`994c20a`** (dernier commit du build TestFlight **10** stable) ; retrait des refontes NOX builds 11–15 (crash splash au boot natif).
+- **Build iOS 16** : repart de cette base prouvée ; refonte NOX à réintroduire commit par commit avec validation TestFlight.
+
 ## Semaine du 16 au 19 juin 2026 (mar. - ven.)
 
 ### Corrigé (wizard événement — créneaux DJ multiples, régression)

@@ -9,6 +9,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (mobile — reprise base build 10 stable)
 - **Git** : retour à **`994c20a`** (dernier commit du build TestFlight **10** stable) ; retrait des refontes NOX builds 11–15 (crash splash au boot natif).
 - **Build iOS 16** : repart de cette base prouvée ; refonte NOX à réintroduire commit par commit avec validation TestFlight.
+- **Build Android production** : même base **`994c20a`** / canal **`production`** (AAB store), aligné iOS 16 pour workspace propre.
 
 ## Semaine du 16 au 19 juin 2026 (mar. - ven.)
 

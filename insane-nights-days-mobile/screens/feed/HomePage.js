@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     minHeight: 44,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
   },
   languageButtonText: {
     color: '#fff',
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     minHeight: Platform.OS === 'ios' ? 60 : 50,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   feedHeaderLeft: {
     flexDirection: 'row',
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     minHeight: 44,
   },
   createPostText: {
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: '#fff',
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   modalCancelButton: {
     backgroundColor: 'transparent',

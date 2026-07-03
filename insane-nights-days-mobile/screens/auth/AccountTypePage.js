@@ -1,59 +1,67 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { NoxText, NoxRoleCard } from '../../components/nox';
 import Colors from '../../constants/colors';
+import { ROLE_THEMES, styles } from './AccountTypePage.styles';
 
 const accountTypes = [
   {
-    id: 'community',
-    emoji: '👥',
-    titleFr: 'Communauté',
-    titleEn: 'Community',
-    descriptionFr: 'Rejoignez la communauté',
-    descriptionEn: 'Join the community',
-  },
-  {
     id: 'dj',
-    emoji: '🎧',
-    titleFr: 'DJ',
-    titleEn: 'DJ',
-    descriptionFr: 'Créez votre profil DJ',
-    descriptionEn: 'Create your DJ profile',
+    icon: 'musical-notes',
+    titleFr: 'Artiste',
+    titleEn: 'Artist',
+    descriptionFr: 'DJ, producteur, live act…',
+    descriptionEn: 'DJ, producer, live act…',
+    wide: false,
   },
   {
     id: 'booker',
-    emoji: '📅',
+    icon: 'calendar',
     titleFr: 'Organisateur',
     titleEn: 'Organizer',
-    descriptionFr: 'Gérez vos événements',
-    descriptionEn: 'Manage your events',
+    descriptionFr: 'Crée et gère tes événements',
+    descriptionEn: 'Create and manage your events',
+    wide: false,
   },
   {
     id: 'venue',
-    emoji: '🏢',
+    icon: 'business',
     titleFr: 'Lieu',
     titleEn: 'Venue',
-    descriptionFr: 'Ajoutez votre lieu',
-    descriptionEn: 'Add your venue',
+    descriptionFr: 'Club, bar, salle, festival…',
+    descriptionEn: 'Club, bar, venue, festival…',
+    wide: false,
+  },
+  {
+    id: 'community',
+    icon: 'people',
+    titleFr: 'Communauté',
+    titleEn: 'Community',
+    descriptionFr: 'Suis la scène et participe',
+    descriptionEn: 'Follow the scene and engage',
+    wide: false,
   },
   {
     id: 'prestataire',
-    emoji: '🛠️',
+    icon: 'construct',
     titleFr: 'Prestataire',
     titleEn: 'Service provider',
-    descriptionFr: 'Photo, vidéo, technique événement',
+    descriptionFr: 'Photo, vidéo, technique événementielle',
     descriptionEn: 'Photo, video, event production',
+    wide: true,
   },
 ];
 
 export default function AccountTypePage() {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const { navigate } = useNavigation();
 
   const handleAccountTypeSelect = (type) => {
-    // ✅ IMPORTANT: créer/connexion compte d'abord, puis créer le profil.
     const nextScreen =
       type === 'community'
         ? 'registerCommunity'
@@ -74,133 +82,48 @@ export default function AccountTypePage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigate('home')}
-          accessibilityRole="button"
-          accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
-        >
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('createAccount')}</Text>
-          <Text style={styles.subtitle}>
-            {language === 'fr' 
-              ? 'Choisissez le type de compte qui vous correspond' 
-              : 'Choose the account type that suits you'}
-          </Text>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigate('onboarding')}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+          >
+            <Ionicons name="chevron-back" size={26} color={Colors.text} />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.cardsContainer}>
-          {accountTypes.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={styles.accountCard}
-              onPress={() => handleAccountTypeSelect(type.id)}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={`${language === 'fr' ? type.titleFr : type.titleEn}. ${
-                language === 'fr' ? type.descriptionFr : type.descriptionEn
-              }`}
-            >
-              <Text style={styles.cardEmoji}>{type.emoji}</Text>
-              <Text style={styles.cardTitle}>
-                {language === 'fr' ? type.titleFr : type.titleEn}
-              </Text>
-              <Text style={styles.cardDescription}>
-                {language === 'fr' ? type.descriptionFr : type.descriptionEn}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <NoxText style={styles.title}>
+              {language === 'fr' ? 'Choisis ton rôle' : 'Choose your role'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.subtitle}>
+              {language === 'fr'
+                ? 'Tu compléteras ton profil juste après l’inscription.'
+                : 'You will complete your profile right after signing up.'}
+            </NoxText>
+          </View>
+
+          <View style={styles.grid}>
+            {accountTypes.map((type) => (
+              <NoxRoleCard
+                key={type.id}
+                wide={type.wide}
+                icon={type.icon}
+                tintColor={ROLE_THEMES[type.id]}
+                title={language === 'fr' ? type.titleFr : type.titleEn}
+                description={language === 'fr' ? type.descriptionFr : type.descriptionEn}
+                onPress={() => handleAccountTypeSelect(type.id)}
+                accessibilityLabel={`${language === 'fr' ? type.titleFr : type.titleEn}. ${
+                  language === 'fr' ? type.descriptionFr : type.descriptionEn
+                }`}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    alignItems: 'center',
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 40,
-    alignItems: 'center',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  cardsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  accountCard: {
-    width: '48%',
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    minHeight: 160,
-  },
-  cardEmoji: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  cardDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-});
-

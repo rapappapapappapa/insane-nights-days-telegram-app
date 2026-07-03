@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   ratingLabel: {
     color: 'rgba(255,255,255,0.6)',
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1f',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   addressLabel: {
     color: 'rgba(255,255,255,0.6)',

@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    borderBottomColor: 'rgba(77,163,255,0.2)',
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   globalRatingCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     minWidth: '30%',
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   reviewCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

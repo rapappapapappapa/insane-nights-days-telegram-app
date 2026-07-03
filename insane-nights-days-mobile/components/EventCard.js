@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,23,68,0.3)',
+    borderTopColor: 'rgba(77,163,255,0.3)',
   },
   availabilityHeader: {
     flexDirection: 'row',

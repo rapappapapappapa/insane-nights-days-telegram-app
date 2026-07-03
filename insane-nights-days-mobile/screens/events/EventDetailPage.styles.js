@@ -58,7 +58,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.4)',
+    borderColor: 'rgba(77,163,255,0.4)',
   },
   scrollContent: {
     paddingBottom: 100,
@@ -182,7 +182,7 @@ export const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: 'rgba(255,23,68,0.6)',
+    borderColor: 'rgba(77,163,255,0.6)',
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -234,9 +234,9 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rateButton: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
@@ -250,7 +250,7 @@ export const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 12,
     padding: 16,
   },
@@ -263,7 +263,7 @@ export const styles = StyleSheet.create({
   dateEditorInput: {
     backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 8,
     padding: 12,
     color: '#fff',
@@ -309,10 +309,10 @@ export const styles = StyleSheet.create({
   friendsSection: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: 'rgba(255,23,68,0.08)',
+    backgroundColor: 'rgba(77,163,255,0.08)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
   },
   friendsSectionTitle: {
     color: Colors.primary,
@@ -326,7 +326,7 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
   friendsButton: {
-    backgroundColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: 'rgba(77,163,255,0.3)',
     borderWidth: 1,
     borderColor: Colors.primary,
     paddingVertical: 14,
@@ -362,7 +362,7 @@ export const styles = StyleSheet.create({
   inviteMoreBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,23,68,0.3)',
+    backgroundColor: 'rgba(77,163,255,0.3)',
     borderRadius: 8,
   },
   inviteMoreBtnText: {
@@ -400,7 +400,7 @@ export const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: '#fff',
@@ -428,9 +428,9 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   friendItemSelected: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
   },
   friendItemText: {
     color: '#fff',
@@ -493,7 +493,7 @@ export const styles = StyleSheet.create({
   },
   tierChipSelected: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.22)',
+    backgroundColor: 'rgba(77,163,255,0.22)',
   },
   tierChipDisabled: {
     opacity: 0.45,

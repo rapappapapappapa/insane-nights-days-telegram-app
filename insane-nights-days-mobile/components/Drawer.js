@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useImperativeHandle, forwardRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,7 +11,7 @@ import {
   BackHandler,
 } from 'react-native';
 import DrawerContent from './DrawerContent';
-import Colors, { withOpacity } from '../constants/colors';
+import Colors, { withOpacity, primaryAlpha } from '../constants/colors';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,7 +22,7 @@ const FLOATING_BTN_SIZE = 56;
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-export default function Drawer({
+export default forwardRef(function Drawer({
   isOpen,
   onClose,
   onOpen,
@@ -30,7 +30,7 @@ export default function Drawer({
   enableEdgeSwipe = true,
   showFloatingButton = true,
   floatingButtonLabel = 'MENU',
-}) {
+}, ref) {
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   // ✅ Mode non contrôlé si isOpen n'est pas fourni
@@ -46,6 +46,11 @@ export default function Drawer({
     if (typeof isOpen === 'boolean') onClose?.();
     else setInternalOpen(false);
   };
+
+  useImperativeHandle(ref, () => ({
+    open: requestOpen,
+    close: requestClose,
+  }), [isOpen, onOpen, onClose]);
 
   const slideAnim = React.useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = React.useRef(new Animated.Value(0)).current;
@@ -187,7 +192,7 @@ export default function Drawer({
         />
       )}
 
-      {/* ✅ Bouton menu fixe en bas (toujours visible) */}
+      {/* Ancien bouton MENU — remplacé par NoxRadialNav quand connecté */}
       {showFloatingButton && !open && (
         <TouchableOpacity
           style={[styles.floatingButton, { bottom: 22 + (insets?.bottom ?? 0) }]}
@@ -246,7 +251,7 @@ export default function Drawer({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -330,9 +335,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 23, 68, 0.12)',
+    backgroundColor: primaryAlpha(0.12),
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.22)',
+    borderColor: primaryAlpha(0.22),
     zIndex: 10002,
     elevation: 8,
   },

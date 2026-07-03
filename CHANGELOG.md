@@ -11,6 +11,54 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Build iOS 16** : repart de cette base prouvée ; refonte NOX à réintroduire commit par commit avec validation TestFlight.
 - **Build Android production** : même base **`994c20a`** / canal **`production`** (AAB store), aligné iOS 16 pour workspace propre.
 
+### OTA (mobile — NOX bleu sans rebuild natif)
+- **Code NOX** réintégré depuis **`e353fd4`** (30 juin) ; publication OTA canal **`production`** (iOS + Android).
+- **Drawer « Vérifier »** : télécharge l’OTA sans `reloadAsync` — fermer puis rouvrir l’app pour appliquer (comme au boot `ON_LOAD`).
+
+### Ajouté / Refonte (design system NOX — Figma, phase 0)
+- **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.
+- **Typographie Satoshi** : polices Fontshare dans `assets/fonts/` ; chargement via `expo-font` + `useNoxFonts` au boot ; presets Figma dans `constants/typography.js`.
+- **Tokens layout** : `constants/theme.js` (Spacing, Radius, Layout).
+- **Composants de base** : `components/nox/` — `NoxText`, `NoxButton`, `NoxInput`, `NoxCard`, `NoxScreenHeader` (pour la refonte écran par écran).
+- **Typo Satoshi** appliquée sur Login, EmptyState, ErrorBoundary (premiers écrans partagés).
+
+### Ajouté / Refonte (design system NOX — écrans principaux, phase 1)
+- **Onboarding** : 3 slides Figma (`OnboardingPage`) — point d’entrée non connecté ; boutons Continuer / Terminer ; lien « J’ai déjà un compte ».
+- **Auth** : `LoginPage` sans vidéo de fond, copy « Accède au réseau » / « Rejoins le réseau », boutons `NoxButton`, retour onboarding.
+- **Choix de rôle** : `AccountTypePage` refondu (grille 2×2 Figma — Artiste, Organisateur, Lieu, Communauté + Prestataire).
+- **Feed connecté** : `WelcomePage` — header « Hello {name}! », barre recherche `NoxSearchBar`, onglets Events feed / Following feed, fond noir sans vidéo.
+- **Composant** : `NoxSearchBar` dans `components/nox/`.
+- **Navigation** : écran `onboarding` (boot) ; drawer « Fil d’actualité » → `welcome` ; déconnexion → onboarding.
+
+### Affiné (design system NOX — fidélité Figma phase 1b)
+- **Onboarding** : titre aligné à gauche 32px, compteur d’étape, chevron retour, CTA + dots ancrés en bas.
+- **Login** : champs `NoxInput` avec icônes (mail, user, lock), titres alignés à gauche sans carte, lien bascule connexion/inscription, glow bouton primary.
+- **Choix de rôle** : cartes `NoxRoleCard` teintées par rôle (icône Ionicons, fond dégradé simulé).
+- **Feed** : header Figma (Hello + icônes circulaires), recherche pleine largeur, onglets `NoxTabs` alignés à gauche.
+- **Composants** : `NoxTabs`, `NoxRoleCard` ; `NoxInput` avec slot droit (œil mot de passe).
+
+### Ajouté (design system NOX — phase 2 : feed, rôles, nav NX)
+- **Cartes rôle** : zone visuelle type photo Figma (`NoxRoleCard` — orbes teintées + icône).
+- **Posts feed** : composant `NoxFeedPostCard` (carte arrondie, avatar 44px, actions like/commentaire).
+- **Nav NX** : `NoxRadialNav` — bouton **NX** central en bas, arc Discover / Home / Tickets / Notifs / Profil ; appui long → drawer latéral ; `Drawer.js` en `forwardRef` + `useImperativeHandle`.
+
+### Corrigé (mobile — crash « Oups une erreur » au lancement / feed)
+- **`NoxTabs`** : `NoxText` utilisé sans import → `ReferenceError` dès l’écran Welcome (utilisateur connecté redirigé au boot).
+- **Outil anti-régression** : `scripts/find-unbound-refs.js` détecte aussi les identifiants JSX (`JSXIdentifier`).
+
+### Corrigé (mobile — nav NX radiale)
+- **`NoxRadialNav`** : second appui sur **NX** referme bien le menu (le backdrop ne recapturait plus le tap en même temps que le bouton) ; arc plus aéré (rayon + angles élargis).
+
+### Ajouté (doc mobile — reprise refonte NOX)
+- **`docs/mobile/SYNTHESE_REFONTE_NOX_JUIN2026.md`** : synthèse étape par étape (phases 0–2, correctifs, commits, commandes git/OTA depuis un autre poste).
+
+### Ajouté (debug crash — détails erreur à l’écran)
+- **`ErrorBoundary`** : message, stack JS et composant affichés en prod (texte sélectionnable) + logs `console.error`.
+- **`installGlobalErrorHandlers`** : handler global JS + promesses rejetées (`index.js`).
+- **`App.js`** : ErrorBoundary par écran (`Écran: onboarding`, etc.), log `[NOX Boot]`, erreur polices Satoshi visible.
+
+---
+
 ## Semaine du 16 au 19 juin 2026 (mar. - ven.)
 
 ### Corrigé (wizard événement — créneaux DJ multiples, régression)

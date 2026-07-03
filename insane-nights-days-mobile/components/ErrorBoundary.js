@@ -4,10 +4,21 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import logger from '../utils/logger';
 import Colors from '../constants/colors';
+import { FontFamily } from '../constants/typography';
+
+function formatComponentStack(errorInfo) {
+  if (!errorInfo?.componentStack) return null;
+  return errorInfo.componentStack.split('\n').slice(0, 8).join('\n').trim();
+}
+
+function formatJsStack(error) {
+  if (!error?.stack) return null;
+  return error.stack.split('\n').slice(0, 6).join('\n').trim();
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -20,25 +31,25 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Met à jour l'état pour afficher l'UI de fallback
-    return { hasError: true };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log l'erreur de manière sécurisée
-    logger.error('[ErrorBoundary] Erreur capturée:', {
-      error: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
+    const context = this.props.context || this.props.title || 'App';
+    logger.error('[ErrorBoundary]', context, {
+      error: error?.message,
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
     });
+    console.error('[ErrorBoundary]', context, error?.message, error?.stack);
+    if (errorInfo?.componentStack) {
+      console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+    }
 
     this.setState({
       error,
       errorInfo,
     });
-
-    // En production, on pourrait envoyer l'erreur à un service de monitoring
-    // Exemple: Sentry.captureException(error, { extra: errorInfo });
   }
 
   handleReset = () => {
@@ -52,42 +63,62 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // Afficher l'UI de fallback personnalisée
+      const { error, errorInfo } = this.state;
+      const jsStack = formatJsStack(error);
+      const compStack = formatComponentStack(errorInfo);
+
       if (this.props.fallback) {
-        return this.props.fallback(this.state.error, this.handleReset);
+        return this.props.fallback(error, this.handleReset);
       }
 
-      // UI de fallback par défaut
       return (
         <View style={styles.container}>
-          <View style={styles.content}>
-            <Ionicons name="alert-circle" size={64} color={Colors.primary} />
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <Ionicons name="alert-circle" size={56} color={Colors.primary} />
             <Text style={styles.title}>
               {this.props.title || 'Oups ! Une erreur est survenue'}
             </Text>
+            {this.props.context ? (
+              <Text style={styles.contextLabel}>{this.props.context}</Text>
+            ) : null}
             <Text style={styles.message}>
-              {this.props.message || 
-                'Une erreur inattendue s\'est produite. Veuillez réessayer.'}
+              {this.props.message ||
+                'Une erreur inattendue s\'est produite. Détail ci-dessous :'}
             </Text>
-            
-            {__DEV__ && this.state.error && (
-              <View style={styles.errorDetails}>
-                <Text style={styles.errorText}>
-                  {this.state.error.toString()}
-                </Text>
-              </View>
-            )}
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={this.handleReset}
-            >
+            <View style={styles.errorDetails}>
+              <Text style={styles.errorSectionTitle}>Message</Text>
+              <Text style={styles.errorText} selectable>
+                {error?.message || error?.toString?.() || 'Erreur inconnue'}
+              </Text>
+              {error?.name ? (
+                <Text style={styles.errorMeta}>Type: {error.name}</Text>
+              ) : null}
+              {jsStack ? (
+                <>
+                  <Text style={[styles.errorSectionTitle, styles.errorSectionGap]}>Stack JS</Text>
+                  <Text style={styles.errorTextMono} selectable>
+                    {jsStack}
+                  </Text>
+                </>
+              ) : null}
+              {compStack ? (
+                <>
+                  <Text style={[styles.errorSectionTitle, styles.errorSectionGap]}>Composant</Text>
+                  <Text style={styles.errorTextMono} selectable>
+                    {compStack}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+
+            <TouchableOpacity style={styles.button} onPress={this.handleReset}>
               <Text style={styles.buttonText}>
                 {this.props.buttonLabel || 'Réessayer'}
               </Text>
             </TouchableOpacity>
 
-            {this.props.onRetry && (
+            {this.props.onRetry ? (
               <TouchableOpacity
                 style={[styles.button, styles.buttonSecondary]}
                 onPress={() => {
@@ -99,8 +130,8 @@ class ErrorBoundary extends React.Component {
                   {this.props.retryLabel || 'Recharger'}
                 </Text>
               </TouchableOpacity>
-            )}
-          </View>
+            ) : null}
+          </ScrollView>
         </View>
       );
     }
@@ -114,40 +145,75 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  content: {
-    alignItems: 'center',
-    maxWidth: 400,
+    paddingVertical: 40,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: FontFamily.bold,
     color: '#fff',
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  contextLabel: {
+    fontSize: 13,
+    fontFamily: FontFamily.medium,
+    color: Colors.primary,
+    marginBottom: 8,
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontFamily: FontFamily.regular,
+    color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   errorDetails: {
-    backgroundColor: '#1a1a1f',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 20,
     width: '100%',
+    maxWidth: 420,
+  },
+  errorSectionTitle: {
+    color: Colors.textTertiary,
+    fontSize: 11,
+    fontFamily: FontFamily.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  errorSectionGap: {
+    marginTop: 12,
   },
   errorText: {
     color: Colors.primary,
+    fontSize: 14,
+    fontFamily: FontFamily.medium,
+    lineHeight: 20,
+  },
+  errorMeta: {
+    color: Colors.textTertiary,
     fontSize: 12,
+    marginTop: 6,
+    fontFamily: FontFamily.regular,
+  },
+  errorTextMono: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
     fontFamily: 'monospace',
+    lineHeight: 16,
   },
   button: {
     backgroundColor: Colors.primary,
@@ -164,14 +230,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   buttonText: {
-    color: Colors.background,
+    color: '#000000',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FontFamily.bold,
   },
   buttonTextSecondary: {
     color: Colors.primary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FontFamily.bold,
   },
 });
 

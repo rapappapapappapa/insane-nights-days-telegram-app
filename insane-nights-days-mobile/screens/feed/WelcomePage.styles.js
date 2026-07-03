@@ -1,137 +1,60 @@
 import { StyleSheet } from 'react-native';
 import Colors from '../../constants/colors';
+import { FontFamily } from '../../constants/typography';
+import { Layout, Spacing } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  contentOverlay: {
-    flex: 1,
-    zIndex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  headerRight: {
-    width: 44,
-  },
-  headerTitleContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoContainer: {
-    marginBottom: 12,
-  },
-  welcomeText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  usernameText: {
-    color: Colors.primary,
-    fontSize: 20,
-    fontWeight: '600',
-  },
   feedContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 3,
   },
-  feedHeader: {
+  screenHeader: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.lg,
+  },
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,23,68,0.2)',
+    gap: Spacing.md,
   },
-  feedHeaderLeft: {
-    width: 40,
-    alignItems: 'flex-start',
-  },
-  feedHeaderTitle: {
+  helloTitle: {
     flex: 1,
-    color: '#fff',
+    fontFamily: FontFamily.black,
     fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
+    lineHeight: 34,
+    color: Colors.text,
   },
-  feedHeaderRight: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    flexShrink: 0,
+    gap: Spacing.sm,
   },
-  notificationsButton: {
+  iconButton: {
     position: 'relative',
-    padding: 8,
-    marginRight: 12,
-  },
-  createPostButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1f',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
-  },
-  createPostText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  feedTabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: Colors.background,
-  },
-  feedTab: {
-    flex: 1,
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.backgroundInput,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
   },
-  feedTabActive: {},
-  feedTabText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  feedTabTextActive: {
-    color: '#fff',
-  },
-  feedTabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: '25%',
-    right: '25%',
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
+  searchBar: {
+    width: '100%',
   },
   feedScroll: {
     flex: 1,
   },
   feedContent: {
-    paddingBottom: 100,
+    paddingBottom: 140,
   },
   loadingContainer: {
     flex: 1,
@@ -223,9 +146,9 @@ export const styles = StyleSheet.create({
     marginLeft: 4,
   },
   badgeDj: {
-    backgroundColor: 'rgba(255, 23, 68, 0.2)',
+    backgroundColor: 'rgba(77, 163, 255, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 23, 68, 0.4)',
+    borderColor: 'rgba(77, 163, 255, 0.4)',
   },
   badgeBooker: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -354,7 +277,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     marginRight: 8,
   },
   commentSendButton: {
@@ -365,7 +288,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   eventCard: {
     backgroundColor: '#1a1a1f',
@@ -374,7 +297,7 @@ export const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   eventHeader: {
     flexDirection: 'row',
@@ -433,7 +356,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
   },
   modalTitle: {
     color: '#fff',
@@ -454,7 +377,7 @@ export const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.2)',
+    borderColor: 'rgba(77,163,255,0.2)',
   },
   modalButtonText: {
     color: '#fff',

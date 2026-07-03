@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ratingButton: {
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: 'rgba(77,163,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.5)',
+    borderColor: 'rgba(77,163,255,0.5)',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',

@@ -377,13 +377,13 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 18,
     padding: 20,
   },
   profileCardActive: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(255,23,68,0.1)',
+    backgroundColor: 'rgba(77,163,255,0.1)',
   },
   profileCardDisabled: {
     opacity: 0.6,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   createText: {
-    color: 'rgba(255,23,68,0.7)',
+    color: 'rgba(77,163,255,0.7)',
     fontSize: 16,
     fontWeight: '600',
   },

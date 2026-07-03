@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.25)',
+    borderColor: 'rgba(77,163,255,0.25)',
     paddingHorizontal: 12,
     paddingBottom: 24,
     overflow: 'hidden',

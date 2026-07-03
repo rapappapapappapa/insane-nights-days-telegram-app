@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   autoFillHint: {
-    color: 'rgba(255,23,68,0.6)',
+    color: 'rgba(77,163,255,0.6)',
     fontSize: 11,
     fontWeight: '400',
     fontStyle: 'italic',

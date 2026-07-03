@@ -37,7 +37,8 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
-      ]
+      ],
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -57,7 +58,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#ff1744",
+          "color": "#4DA3FF",
           "defaultChannel": "default"
         }
       ],

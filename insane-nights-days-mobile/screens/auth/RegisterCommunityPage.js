@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
+    borderColor: 'rgba(77,163,255,0.35)',
     backgroundColor: 'rgba(11,11,14,0.65)',
     minHeight: 44,
     minWidth: 44,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,

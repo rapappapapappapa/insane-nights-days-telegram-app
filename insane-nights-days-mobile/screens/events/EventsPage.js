@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     marginRight: 8,
   },
   filterButtonActive: {
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: '#1a1a1f',
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.3)',
+    borderColor: 'rgba(77,163,255,0.3)',
     borderRadius: 16,
     marginBottom: 20,
     overflow: 'hidden',

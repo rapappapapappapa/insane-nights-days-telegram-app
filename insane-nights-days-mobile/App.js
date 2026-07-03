@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, LogBox, Platform, BackHandler, ToastAndroid } from 'react-native';
 import Colors from './constants/colors';
+import { useNoxFonts } from './hooks/useNoxFonts';
 import * as Updates from 'expo-updates';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -17,8 +18,10 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
+import NoxRadialNav from './components/nox/NoxRadialNav';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
+import OnboardingPage from './screens/onboarding/OnboardingPage';
 import WelcomePage from './screens/feed/WelcomePage';
 import FeedPage from './screens/feed/FeedPage';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
@@ -77,6 +80,7 @@ import TutorialPage from './screens/tutorial/TutorialPage';
 import LegalPage from './screens/legal/LegalPage';
 
 const SCREENS = {
+  onboarding: OnboardingPage,
   home: HomePage,
   login: LoginPage,
   accountType: AccountTypePage,
@@ -133,6 +137,7 @@ function AppContent() {
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
   const androidExitPressRef = useRef(0);
   const initialPushHandledRef = useRef(false);
+  const drawerRef = useRef(null);
 
   useExpoPushRegistration(user);
 
@@ -155,12 +160,12 @@ function AppContent() {
   // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
   useEffect(() => {
     if (!isInitializing) {
-      if (user?.isAuthenticated && currentPage === 'home') {
+      if (user?.isAuthenticated && (currentPage === 'home' || currentPage === 'onboarding')) {
         navigate('welcome');
       } else if (user?.isAuthenticated && currentPage === 'login') {
         navigate('welcome');
       } else if (!user?.isAuthenticated && currentPage === 'welcome') {
-        navigate('home');
+        navigate('onboarding');
       }
     }
   }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
@@ -174,7 +179,7 @@ function AppContent() {
     if (Platform.OS !== 'android') return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tryHardwareBack()) return true;
-      if (currentPage !== 'home' && currentPage !== 'welcome') return false;
+      if (currentPage !== 'onboarding' && currentPage !== 'welcome') return false;
       const now = Date.now();
       if (now - androidExitPressRef.current < 2500) {
         BackHandler.exitApp();
@@ -316,6 +321,17 @@ function AppContent() {
       .catch(() => {});
   }, [isInitializing, user?.isAuthenticated, navigateToChatFromPushData]);
 
+  useEffect(() => {
+    if (isInitializing) return;
+    console.log(
+      '[NOX Boot]',
+      'screen=',
+      currentPage,
+      'auth=',
+      user?.isAuthenticated ? 'yes' : 'no',
+    );
+  }, [isInitializing, currentPage, user?.isAuthenticated]);
+
   // Afficher un loader pendant l'initialisation de l'authentification
   if (isInitializing) {
     return (
@@ -330,7 +346,10 @@ function AppContent() {
 
   return (
     <>
-      <Drawer>
+      <Drawer
+        ref={drawerRef}
+        showFloatingButton={!user?.isAuthenticated}
+      >
         {isCreateFeedPost ? (
           <ErrorBoundary
             title="Erreur création de post"
@@ -351,9 +370,16 @@ function AppContent() {
             <ScreenComponent />
           </ErrorBoundary>
         ) : (
-          <ScreenComponent />
+          <ErrorBoundary
+            key={currentPage}
+            title="Erreur écran"
+            context={`Écran: ${currentPage}`}
+          >
+            <ScreenComponent />
+          </ErrorBoundary>
         )}
       </Drawer>
+      <NoxRadialNav onOpenMenu={() => drawerRef.current?.open?.()} />
       {/* Notification push globale */}
       {user?.isAuthenticated && (
         <PushNotification
@@ -388,6 +414,7 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
+  const { fontsLoaded, fontsError } = useNoxFonts();
   const [updateBootstrapDone, setUpdateBootstrapDone] = useState(__DEV__);
 
   useEffect(() => {
@@ -422,7 +449,23 @@ export default function App() {
     };
   }, []);
 
-  if (!updateBootstrapDone) {
+  if (fontsError) {
+    console.error('[NOX] Échec chargement polices Satoshi:', fontsError?.message || fontsError);
+    return (
+      <SafeAreaProvider>
+        <View style={styles.updateBootstrap}>
+          <Text style={{ color: Colors.primary, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Erreur polices (Satoshi)
+          </Text>
+          <Text style={{ color: Colors.textSecondary, fontSize: 13, textAlign: 'center', paddingHorizontal: 24 }} selectable>
+            {fontsError?.message || String(fontsError)}
+          </Text>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!updateBootstrapDone || !fontsLoaded) {
     return (
       <SafeAreaProvider>
         <View style={styles.updateBootstrap}>

@@ -18,7 +18,7 @@ import * as Updates from 'expo-updates';
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
 const MENU_DEF = [
   {
-    id: 'home',
+    id: 'welcome',
     icon: 'newspaper-outline',
     titleFr: 'Fil d’actualité',
     titleEn: 'Feed',
@@ -161,9 +161,9 @@ export default function DrawerContent({ navigation }) {
       const isEmbedded = Updates?.isEmbeddedLaunch || false;
 
       const autoHintFr =
-        'Au lancement, une mise à jour peut être téléchargée en arrière-plan. « Vérifier » l’applique tout de suite (redémarrage).';
+        'Au lancement, une mise à jour peut être téléchargée en arrière-plan. « Vérifier » la télécharge ; ferme complètement l’app puis rouvre-la pour l’appliquer.';
       const autoHintEn =
-        'On launch, an update may download in the background. “Check” applies it now (restarts the app).';
+        'On launch, an update may download in the background. “Check” downloads it — fully close the app, then reopen to apply.';
 
       const updateInfo = [
         `Updates activés: ${isEnabled ? '✅ Oui' : '❌ Non'}`,
@@ -202,7 +202,11 @@ export default function DrawerContent({ navigation }) {
                   return;
                 }
                 await Updates.fetchUpdateAsync();
-                await Updates.reloadAsync();
+                showSuccess(
+                  language === 'fr'
+                    ? 'Mise à jour téléchargée. Ferme complètement l’app (swipe), puis rouvre-la.'
+                    : 'Update downloaded. Fully close the app (swipe away), then reopen it.'
+                );
               } catch (e) {
                 showError(String(e?.message || e));
               }
@@ -464,7 +468,7 @@ export default function DrawerContent({ navigation }) {
                 await logout();
               } finally {
                 navigation.closeDrawer();
-                navigate('home');
+                navigate('onboarding');
               }
             }}
             accessibilityRole="button"
@@ -609,8 +613,8 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     borderWidth: 1,
-    borderColor: 'rgba(255,23,68,0.35)',
-    backgroundColor: 'rgba(255,23,68,0.10)',
+    borderColor: 'rgba(77,163,255,0.35)',
+    backgroundColor: 'rgba(77,163,255,0.10)',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',

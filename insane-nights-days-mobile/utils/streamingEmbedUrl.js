@@ -40,7 +40,7 @@ export function soundcloudUrlToWidgetUrl(pageUrl) {
   if (!/soundcloud\.com/i.test(trimmed)) return null;
   const params = new URLSearchParams({
     url: trimmed,
-    color: '#ff1744',
+    color: '#4DA3FF',
     auto_play: 'false',
     hide_related: 'false',
     show_comments: 'false',

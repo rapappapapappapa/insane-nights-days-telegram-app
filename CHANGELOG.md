@@ -12,8 +12,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Build Android production** : même base **`994c20a`** / canal **`production`** (AAB store), aligné iOS 16 pour workspace propre.
 
 ### OTA (mobile — NOX bleu sans rebuild natif)
-- **Code NOX** réintégré depuis **`e353fd4`** (30 juin) ; publication OTA canal **`production`** (iOS + Android).
+- **Code NOX** réintégré depuis **`e353fd4`** (30 juin) ; publication OTA canal **`production`** (iOS).
 - **Drawer « Vérifier »** : télécharge l’OTA sans `reloadAsync` — fermer puis rouvrir l’app pour appliquer (comme au boot `ON_LOAD`).
+- **Bandeau test OTA** : `OtaDebugBanner` — marqueur visible **« MARQUEUR OTA · B · 3 juil. 14h25 »** + état embedded/OTA/update ID pour diagnostiquer les blocages cache.
 
 ### Ajouté / Refonte (design system NOX — Figma, phase 0)
 - **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.

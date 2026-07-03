@@ -198,7 +198,13 @@ export default function DrawerContent({ navigation }) {
                 }
                 const res = await Updates.checkForUpdateAsync();
                 if (!res?.isAvailable) {
-                  showSuccess(language === 'fr' ? 'Aucune mise à jour disponible.' : 'No update available.');
+                  const reason = res?.reason ? `\nRaison: ${res.reason}` : '';
+                  showSuccess(
+                    (language === 'fr'
+                      ? `Aucune MAJ sur le serveur.\nUpdate actuel: ${Updates.updateId || 'n/a'}\nEmbedded: ${Updates.isEmbeddedLaunch ? 'oui' : 'non'}`
+                      : `No update on server.\nCurrent update: ${Updates.updateId || 'n/a'}\nEmbedded: ${Updates.isEmbeddedLaunch ? 'yes' : 'no'}`
+                    ) + reason
+                  );
                   return;
                 }
                 await Updates.fetchUpdateAsync();

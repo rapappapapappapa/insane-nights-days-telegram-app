@@ -18,6 +18,7 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
+import OtaDebugBanner from './components/OtaDebugBanner';
 import NoxRadialNav from './components/nox/NoxRadialNav';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
@@ -346,6 +347,7 @@ function AppContent() {
 
   return (
     <>
+      <OtaDebugBanner />
       <Drawer
         ref={drawerRef}
         showFloatingButton={!user?.isAuthenticated}

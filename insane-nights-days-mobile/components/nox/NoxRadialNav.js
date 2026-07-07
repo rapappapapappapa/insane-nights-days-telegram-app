@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   Text,
   Animated,
+  Easing,
   StyleSheet,
   Pressable,
   Platform,
@@ -147,26 +148,44 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
 
   const progress = useRef(new Animated.Value(0)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
+  /** Rotation NX indépendante : spring à l’ouverture, retour net à 0° à la fermeture. */
+  const nxRotateAnim = useRef(new Animated.Value(0)).current;
 
   const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 
   useEffect(() => {
+    const nxRotation = open
+      ? Animated.spring(nxRotateAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 7,
+          tension: 85,
+        })
+      : Animated.timing(nxRotateAnim, {
+          toValue: 0,
+          duration: 160,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        });
+
     Animated.parallel([
       Animated.spring(progress, {
         toValue: open ? 1 : 0,
         useNativeDriver: true,
-        friction: 7,
-        tension: 90,
+        friction: open ? 7 : 8,
+        tension: open ? 90 : 130,
+        overshootClamping: !open,
       }),
       Animated.timing(backdrop, {
         toValue: open ? 1 : 0,
         duration: open ? 180 : 140,
         useNativeDriver: true,
       }),
+      nxRotation,
     ]).start();
-  }, [open, progress, backdrop]);
+  }, [open, progress, backdrop, nxRotateAnim]);
 
   // Referme la nav radiale quand le drawer s'ouvre (évite un état ouvert résiduel au retour).
   useEffect(() => {
@@ -188,9 +207,10 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     if (currentPage !== screen) navigate(screen);
   };
 
-  const nxRotate = progress.interpolate({
+  const nxRotate = nxRotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '45deg'],
+    outputRange: ['0deg', '42deg'],
+    extrapolate: 'clamp',
   });
 
   return (

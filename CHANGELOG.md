@@ -8,6 +8,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Corrigé (mobile — bouton NX toggle fermeture) — 7 juil.
 - **`NoxRadialNav`** : ré-appui sur NX referme bien le menu radial (couche orbite séparée, `pointerEvents` quand fermé, bouton NX au-dessus en z-index/elevation).
+- **`NoxRadialNav`** : rotation horaire du bouton NX à l’ouverture (~42°), retour droit garanti à la fermeture (animation dédiée + `extrapolate: clamp`).
 
 ### Modifié (mobile — refonte NOX phase 3 : parcours événements & profil) — 7 juil.
 

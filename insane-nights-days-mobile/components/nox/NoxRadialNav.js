@@ -22,7 +22,7 @@ import {
 } from '../../utils/noxRoleNavigation';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
-import { Radius, Spacing } from '../../constants/theme';
+import { Spacing } from '../../constants/theme';
 
 const NAV_SIZE = 48;
 const NX_SIZE = 64;
@@ -118,6 +118,32 @@ function polarOffset(angleDeg, radius) {
   };
 }
 
+function buildOrbitMotion(menuAnim, angle) {
+  const offset = polarOffset(angle, ORBIT_RADIUS);
+  return {
+    tx: menuAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, offset.x],
+      extrapolate: 'clamp',
+    }),
+    ty: menuAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, offset.y],
+      extrapolate: 'clamp',
+    }),
+    scale: menuAnim.interpolate({
+      inputRange: [0, 0.6, 1],
+      outputRange: [0.3, 0.85, 1],
+      extrapolate: 'clamp',
+    }),
+    opacity: menuAnim.interpolate({
+      inputRange: [0, 0.35, 1],
+      outputRange: [0, 0.5, 1],
+      extrapolate: 'clamp',
+    }),
+  };
+}
+
 /**
  * Barre NX Figma — bouton central qui déploie les raccourcis en arc au-dessus.
  */
@@ -146,17 +172,52 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     [homeScreen, profileScreen],
   );
 
-  const progress = useRef(new Animated.Value(0)).current;
-  const backdrop = useRef(new Animated.Value(0)).current;
-  /** Rotation NX indépendante : spring à l’ouverture, retour net à 0° à la fermeture. */
+  /** Pilote unique orbite + assombrissement (évite la désync open / visuel). */
+  const menuAnim = useRef(new Animated.Value(0)).current;
   const nxRotateAnim = useRef(new Animated.Value(0)).current;
+
+  const backdropOpacity = useMemo(
+    () =>
+      menuAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+    [menuAnim],
+  );
+
+  const nxRotate = useMemo(
+    () =>
+      nxRotateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '42deg'],
+        extrapolate: 'clamp',
+      }),
+    [nxRotateAnim],
+  );
+
+  const orbitMotions = useMemo(
+    () => navItems.map((item) => buildOrbitMotion(menuAnim, item.angle)),
+    [navItems, menuAnim],
+  );
 
   const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 
   useEffect(() => {
-    const nxRotation = open
+    menuAnim.stopAnimation();
+    nxRotateAnim.stopAnimation();
+
+    const menuTransition = Animated.spring(menuAnim, {
+      toValue: open ? 1 : 0,
+      useNativeDriver: true,
+      friction: open ? 7 : 8,
+      tension: open ? 90 : 130,
+      overshootClamping: !open,
+    });
+
+    const rotateTransition = open
       ? Animated.spring(nxRotateAnim, {
           toValue: 1,
           useNativeDriver: true,
@@ -165,27 +226,13 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
         })
       : Animated.timing(nxRotateAnim, {
           toValue: 0,
-          duration: 160,
+          duration: 180,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         });
 
-    Animated.parallel([
-      Animated.spring(progress, {
-        toValue: open ? 1 : 0,
-        useNativeDriver: true,
-        friction: open ? 7 : 8,
-        tension: open ? 90 : 130,
-        overshootClamping: !open,
-      }),
-      Animated.timing(backdrop, {
-        toValue: open ? 1 : 0,
-        duration: open ? 180 : 140,
-        useNativeDriver: true,
-      }),
-      nxRotation,
-    ]).start();
-  }, [open, progress, backdrop, nxRotateAnim]);
+    Animated.parallel([menuTransition, rotateTransition]).start();
+  }, [open, menuAnim, nxRotateAnim]);
 
   // Referme la nav radiale quand le drawer s'ouvre (évite un état ouvert résiduel au retour).
   useEffect(() => {
@@ -207,87 +254,67 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     if (currentPage !== screen) navigate(screen);
   };
 
-  const nxRotate = nxRotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '42deg'],
-    extrapolate: 'clamp',
-  });
-
   return (
     <>
-      {open ? (
-        <>
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.backdrop, { opacity: backdrop, zIndex: 9999 }]}
-          />
-          <Pressable
-            style={[styles.backdropTap, { bottom: navClusterClearance, zIndex: 10000 }]}
-            onPress={close}
-            accessibilityLabel={language === 'fr' ? 'Fermer le menu' : 'Close menu'}
-          />
-        </>
-      ) : null}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.backdrop, { opacity: backdropOpacity, zIndex: 9999 }]}
+      />
+      <Pressable
+        pointerEvents={open ? 'auto' : 'none'}
+        style={[styles.backdropTap, { bottom: navClusterClearance, zIndex: 10000 }]}
+        onPress={close}
+        accessibilityLabel={language === 'fr' ? 'Fermer le menu' : 'Close menu'}
+      />
 
       <View pointerEvents="box-none" style={[styles.wrap, { bottom, zIndex: 10002 }]}>
-        <View
-          pointerEvents={open ? 'box-none' : 'none'}
-          style={styles.orbitHost}
-        >
+        <View pointerEvents={open ? 'box-none' : 'none'} style={styles.orbitHost}>
           <View style={styles.anchor} pointerEvents="box-none">
-            {navItems.map((item) => {
-            const offset = polarOffset(item.angle, ORBIT_RADIUS);
-            const tx = progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, offset.x],
-            });
-            const ty = progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, offset.y],
-            });
-            const scale = progress.interpolate({
-              inputRange: [0, 0.6, 1],
-              outputRange: [0.3, 0.85, 1],
-            });
-            const opacity = progress.interpolate({
-              inputRange: [0, 0.35, 1],
-              outputRange: [0, 0.5, 1],
-            });
-            const active =
-              currentPage === item.screen ||
-              (item.id === 'home' && isHomeScreenForProfile(user?.activeProfileType, currentPage)) ||
-              (item.id === 'profile' && isProfileScreenForProfile(user?.activeProfileType, currentPage));
-            const label = language === 'fr' ? item.labelFr : item.labelEn;
+            {navItems.map((item, index) => {
+              const motion = orbitMotions[index];
+              const active =
+                currentPage === item.screen ||
+                (item.id === 'home' &&
+                  isHomeScreenForProfile(user?.activeProfileType, currentPage)) ||
+                (item.id === 'profile' &&
+                  isProfileScreenForProfile(user?.activeProfileType, currentPage));
+              const label = language === 'fr' ? item.labelFr : item.labelEn;
 
-            return (
-              <Animated.View
-                key={item.id}
-                style={[
-                  styles.orbitItem,
-                  {
-                    opacity,
-                    transform: [{ translateX: tx }, { translateY: ty }, { scale }],
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  style={[styles.orbitBtn, active && styles.orbitBtnActive]}
-                  onPress={() => navigateTo(item.screen)}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={label}
-                  accessibilityState={{ selected: active }}
+              return (
+                <Animated.View
+                  key={item.id}
+                  style={[
+                    styles.orbitItem,
+                    {
+                      opacity: motion.opacity,
+                      transform: [
+                        { translateX: motion.tx },
+                        { translateY: motion.ty },
+                        { scale: motion.scale },
+                      ],
+                    },
+                  ]}
                 >
-                  <Ionicons
-                    name={item.icon}
-                    size={22}
-                    color={active ? Colors.primary : Colors.text}
-                  />
-                </TouchableOpacity>
-                <Text style={[styles.orbitLabel, active && styles.orbitLabelActive]}>{label}</Text>
-              </Animated.View>
-            );
-          })}
+                  <TouchableOpacity
+                    style={[styles.orbitBtn, active && styles.orbitBtnActive]}
+                    onPress={() => navigateTo(item.screen)}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={label}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      color={active ? Colors.primary : Colors.text}
+                    />
+                  </TouchableOpacity>
+                  <Text style={[styles.orbitLabel, active && styles.orbitLabelActive]}>
+                    {label}
+                  </Text>
+                </Animated.View>
+              );
+            })}
           </View>
         </View>
 
@@ -303,9 +330,9 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
             language === 'fr' ? 'Appui long pour le menu latéral' : 'Long press for side menu'
           }
         >
-          <Animated.Text style={[styles.nxLabel, { transform: [{ rotate: nxRotate }] }]}>
-            NX
-          </Animated.Text>
+          <Animated.View style={{ transform: [{ rotate: nxRotate }] }}>
+            <Text style={styles.nxLabel}>NX</Text>
+          </Animated.View>
         </Pressable>
       </View>
     </>

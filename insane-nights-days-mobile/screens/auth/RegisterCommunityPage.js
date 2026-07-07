@@ -180,7 +180,7 @@ export default function RegisterCommunityPage() {
         ? `Votre numéro ISN : ${response.profile?.isnNumber || 'N/A'}\n\nProfil Communauté créé avec succès !`
         : `Your ISN number: ${response.profile?.isnNumber || 'N/A'}\n\nCommunity profile created successfully!`;
       showSuccess(successMessage);
-      setTimeout(() => navigate('welcome'), 2000);
+      setTimeout(() => navigate('communityOnboarding'), 2000);
     } catch (error) {
       console.error('Erreur création profil Communauté:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));

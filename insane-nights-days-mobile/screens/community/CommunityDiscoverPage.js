@@ -131,7 +131,7 @@ export default function CommunityDiscoverPage() {
       <NoxBottomNav
         active="home"
         onHome={() => navigate('communityHome')}
-        onProfile={() => navigate('communityProfile')}
+        onProfile={() => navigate('profile')}
         onCreate={() => {}}
       />
     </View>

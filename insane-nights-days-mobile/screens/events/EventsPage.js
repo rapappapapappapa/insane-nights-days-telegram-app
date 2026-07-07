@@ -1,26 +1,28 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  Alert,
   ActivityIndicator,
   Image,
   RefreshControl,
   ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api } from '../../api/config';
 import { useDebounce } from '../../hooks/useDebounce';
+import { NoxText, NoxSearchBar, NoxCard, NoxScreenHeader } from '../../components/nox';
 import SkeletonLoader from '../../components/SkeletonLoader';
-import EventCard from '../../components/EventCard';
+import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
 import { EVENT_DETAIL_MOCK_EVENTS as mockEvents } from '../../utils/eventDetailPageUtils';
+import { styles } from './EventsPage.styles';
+
+const API_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function startOfToday() {
   const d = new Date();
@@ -30,67 +32,139 @@ function startOfToday() {
 
 function parseEventDate(dateStr) {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
+  const iso = API_DATE_RE.test(dateStr) ? `${dateStr}T12:00:00` : dateStr;
+  const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
+function formatEventDateLabel(dateStr, language) {
+  if (!dateStr) return '';
+  try {
+    const iso = API_DATE_RE.test(dateStr) ? `${dateStr}T12:00:00` : dateStr;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getEventStatusStyle(status) {
+  switch (status) {
+    case 'UPCOMING':
+      return { bg: 'rgba(16,185,129,0.12)', border: Colors.success, color: Colors.success, labelFr: 'À venir', labelEn: 'Upcoming' };
+    case 'ONGOING':
+      return { bg: 'rgba(245,158,11,0.12)', border: Colors.warning, color: Colors.warning, labelFr: 'En cours', labelEn: 'Ongoing' };
+    case 'FINISHED':
+      return { bg: 'rgba(255,255,255,0.06)', border: Colors.textTertiary, color: Colors.textTertiary, labelFr: 'Terminé', labelEn: 'Finished' };
+    default:
+      return null;
+  }
+}
+
 export default function EventsPage() {
-  const { navigate } = useNavigation();
+  const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
   const { language } = useLanguage();
+  const fr = language === 'fr';
+
+  const [mode, setMode] = useState(routeParams?.tab === 'djs' ? 'djs' : 'events');
   const [events, setEvents] = useState(mockEvents);
-  const [loading, setLoading] = useState(true);
+  const [djs, setDjs] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingDjs, setLoadingDjs] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [dateFilter, setDateFilter] = useState('upcoming');
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [brokenImages, setBrokenImages] = useState({});
 
-  // ✅ AJOUT: Vérifier l'authentification et rediriger si non connecté
+  useEffect(() => {
+    if (routeParams?.tab === 'djs') setMode('djs');
+    else if (routeParams?.tab === 'events') setMode('events');
+  }, [routeParams?.tab]);
+
   useEffect(() => {
     if (!user?.isAuthenticated) {
       navigate('home');
     }
   }, [user?.isAuthenticated, navigate]);
 
-  const fetchEvents = async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const fetchEvents = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingEvents(true);
     try {
       const data = await api.getEvents();
-      if (data && data.success && Array.isArray(data.events)) {
+      if (data?.success && Array.isArray(data.events)) {
         setEvents(data.events);
       } else {
         setEvents(mockEvents);
       }
-    } catch (error) {
+    } catch {
       setEvents(mockEvents);
     } finally {
-      setLoading(false);
+      setLoadingEvents(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  const fetchDjs = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingDjs(true);
+    try {
+      const response = await api.getDjs();
+      if (response?.success && Array.isArray(response.djs)) {
+        setDjs(response.djs);
+      } else {
+        setDjs([]);
+      }
+    } catch {
+      setDjs([]);
+    } finally {
+      setLoadingDjs(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    if (mode === 'djs' && djs.length === 0 && !loadingDjs) {
+      fetchDjs();
+    }
+  }, [mode, djs.length, loadingDjs, fetchDjs]);
 
   const genres = useMemo(() => {
-    return ['all', ...new Set(events.map(event => event.genre))];
-  }, [events]);
+    const source = mode === 'events' ? events : djs;
+    const values = source
+      .map((item) => (mode === 'events' ? item.genre : item.genre || item.style))
+      .filter(Boolean);
+    return ['all', ...new Set(values)];
+  }, [events, djs, mode]);
+
+  useEffect(() => {
+    setSelectedGenre('all');
+  }, [mode]);
 
   const filteredEvents = useMemo(() => {
     const today = startOfToday();
     return events.filter((event) => {
       const matchesGenre = selectedGenre === 'all' || event.genre === selectedGenre;
+      const q = debouncedSearchTerm.toLowerCase();
       const matchesSearch =
-        event.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        !q ||
+        event.title?.toLowerCase().includes(q) ||
+        event.location?.toLowerCase().includes(q) ||
+        event.genre?.toLowerCase().includes(q);
 
       const eventDate = parseEventDate(event.date);
       let matchesDate = true;
@@ -103,267 +177,316 @@ export default function EventsPage() {
     });
   }, [events, selectedGenre, debouncedSearchTerm, dateFilter]);
 
-  if (loading && events.length === 0) {
+  const filteredDjs = useMemo(() => {
+    const q = debouncedSearchTerm.toLowerCase();
+    return djs.filter((dj) => {
+      const djGenre = (dj.genre || dj.style || '').toString();
+      const matchesGenre = selectedGenre === 'all' || djGenre === selectedGenre;
+      const matchesSearch =
+        !q ||
+        dj.artistName?.toLowerCase().includes(q) ||
+        djGenre.toLowerCase().includes(q) ||
+        dj.city?.toLowerCase().includes(q);
+      return matchesGenre && matchesSearch;
+    });
+  }, [djs, selectedGenre, debouncedSearchTerm]);
+
+  const handleRefresh = () => {
+    if (mode === 'events') fetchEvents(true);
+    else fetchDjs(true);
+  };
+
+  const loading = mode === 'events' ? loadingEvents : loadingDjs;
+  const dateOptions = [
+    { id: 'upcoming', label: fr ? 'À venir' : 'Upcoming' },
+    { id: 'past', label: fr ? 'Passés' : 'Past' },
+    { id: 'all', label: fr ? 'Tous' : 'All' },
+  ];
+
+  const renderGenreChip = (genre) => {
+    const active = selectedGenre === genre;
+    const label =
+      genre === 'all'
+        ? fr ? 'Tous' : 'All'
+        : genre;
     return (
-      <View style={styles.container}>
+      <TouchableOpacity
+        key={genre}
+        style={[styles.chip, active && styles.chipActive]}
+        onPress={() => setSelectedGenre(genre)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
+      >
+        <NoxText variant="secondary" style={[styles.chipText, active && styles.chipTextActive]}>
+          {label}
+        </NoxText>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEventRow = (event) => {
+    const statusStyle = getEventStatusStyle(event.status);
+    const priceLabel = formatEventPriceBadge(event, language);
+    const imageBroken = brokenImages[`ev-${event.id}`];
+
+    return (
+      <TouchableOpacity
+        key={event.id}
+        activeOpacity={0.85}
+        onPress={() => navigate('eventDetail', { eventId: event.id })}
+        accessibilityRole="button"
+        accessibilityLabel={event.title}
+      >
+        <NoxCard style={styles.listCard} padded={false}>
+          <View style={styles.eventThumb}>
+            {event.image && !imageBroken ? (
+              <Image
+                source={{ uri: event.image }}
+                style={styles.eventThumbImage}
+                onError={() => setBrokenImages((prev) => ({ ...prev, [`ev-${event.id}`]: true }))}
+              />
+            ) : (
+              <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
+            )}
+          </View>
+          <View style={styles.itemBody}>
+            <NoxText variant="form" style={styles.itemName} numberOfLines={2}>
+              {event.title}
+            </NoxText>
+            <NoxText variant="secondary" numberOfLines={1}>
+              {formatEventDateLabel(event.date, language)}
+              {event.location ? ` · ${event.location}` : ''}
+            </NoxText>
+            {priceLabel ? (
+              <NoxText variant="secondary" style={styles.itemPrice}>
+                {priceLabel}
+              </NoxText>
+            ) : null}
+            {statusStyle ? (
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: statusStyle.bg, borderColor: statusStyle.border },
+                ]}
+              >
+                <NoxText style={[styles.statusDotText, { color: statusStyle.color }]}>
+                  {fr ? statusStyle.labelFr : statusStyle.labelEn}
+                </NoxText>
+              </View>
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+        </NoxCard>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderDjRow = (dj) => {
+    const djGenre = dj.genre || dj.style || '';
+    const imageBroken = brokenImages[`dj-${dj.id}`];
+
+    return (
+      <TouchableOpacity
+        key={dj.id}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigate('djProfile', {
+            djId: dj.id,
+            djUserId: dj.userId,
+            djName: dj.artistName,
+          })
+        }
+        accessibilityRole="button"
+        accessibilityLabel={dj.artistName}
+      >
+        <NoxCard style={styles.listCard} padded={false}>
+          <View style={styles.djThumb}>
+            {dj.profileImage && !imageBroken ? (
+              <Image
+                source={{ uri: dj.profileImage }}
+                style={styles.eventThumbImage}
+                onError={() => setBrokenImages((prev) => ({ ...prev, [`dj-${dj.id}`]: true }))}
+              />
+            ) : (
+              <Ionicons name="person" size={22} color={Colors.primary} />
+            )}
+          </View>
+          <View style={styles.itemBody}>
+            <NoxText variant="form" style={styles.itemName} numberOfLines={1}>
+              {dj.artistName}
+            </NoxText>
+            {dj.city ? (
+              <NoxText variant="secondary" numberOfLines={1}>
+                {dj.city}
+              </NoxText>
+            ) : null}
+            {djGenre ? (
+              <NoxText variant="secondary" style={styles.itemGenre} numberOfLines={1}>
+                {djGenre}
+              </NoxText>
+            ) : null}
+          </View>
+          {dj.averageRatingGlobal != null ? (
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={13} color={Colors.primary} />
+              <NoxText variant="secondary" style={styles.ratingText}>
+                {Number(dj.averageRatingGlobal).toFixed(1)}
+              </NoxText>
+            </View>
+          ) : (
+            <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+          )}
+        </NoxCard>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Ionicons
+          name={mode === 'events' ? 'calendar-outline' : 'person-outline'}
+          size={32}
+          color={Colors.primary}
+        />
+      </View>
+      <NoxText variant="titleSecondary" style={styles.emptyTitle}>
+        {mode === 'events'
+          ? fr ? 'Aucun événement trouvé' : 'No events found'
+          : fr ? 'Aucun DJ trouvé' : 'No DJs found'}
+      </NoxText>
+      <NoxText variant="secondary" style={styles.emptyText}>
+        {fr ? 'Essaie de modifier tes filtres ou ta recherche.' : 'Try changing your filters or search.'}
+      </NoxText>
+    </View>
+  );
+
+  if (loadingEvents && events.length === 0) {
+    return (
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
         <StatusBar style="light" />
-        <View style={styles.eventsTopBar}>
-          <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
-            <Text style={styles.backButtonTopText}>← Retour</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.eventsScroll} contentContainerStyle={styles.eventsContent}>
-          <View style={styles.eventsHeader}>
-            <SkeletonLoader width="60%" height={28} style={{ marginBottom: 8 }} />
-            <SkeletonLoader width="80%" height={14} />
+        <View style={styles.loadingContent}>
+          <NoxScreenHeader
+            title={fr ? 'Discover' : 'Discover'}
+            subtitle={fr ? 'Événements et DJs' : 'Events and DJs'}
+            onBack={goBack}
+          />
+          <SkeletonLoader width="100%" height={48} style={{ borderRadius: 12 }} />
+          <SkeletonLoader width="100%" height={40} style={{ borderRadius: 12 }} />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <SkeletonLoader width={80} height={34} style={{ borderRadius: 20 }} />
+            <SkeletonLoader width={90} height={34} style={{ borderRadius: 20 }} />
+            <SkeletonLoader width={70} height={34} style={{ borderRadius: 20 }} />
           </View>
-          
-          <SkeletonLoader width="100%" height={50} style={{ marginBottom: 16, borderRadius: 12 }} />
-          
-          <View style={{ flexDirection: 'row', marginBottom: 20 }}>
-            <SkeletonLoader width={80} height={36} style={{ marginRight: 8, borderRadius: 20 }} />
-            <SkeletonLoader width={100} height={36} style={{ marginRight: 8, borderRadius: 20 }} />
-            <SkeletonLoader width={90} height={36} style={{ borderRadius: 20 }} />
-          </View>
-          
-          {[1, 2, 3].map(i => (
-            <View key={i} style={styles.eventCard}>
-              <SkeletonLoader width="100%" height={200} style={{ marginBottom: 16 }} />
-              <SkeletonLoader width="80%" height={20} style={{ marginBottom: 8 }} />
-              <SkeletonLoader width="60%" height={16} style={{ marginBottom: 12 }} />
-              <SkeletonLoader width="100%" height={12} style={{ marginBottom: 4 }} />
-              <SkeletonLoader width="70%" height={12} style={{ marginBottom: 16 }} />
-              <SkeletonLoader width="100%" height={48} style={{ borderRadius: 12 }} />
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={styles.skeletonCard}>
+              <SkeletonLoader width="100%" height={56} style={{ borderRadius: 8, marginBottom: 12 }} />
+              <SkeletonLoader width="70%" height={16} style={{ marginBottom: 8 }} />
+              <SkeletonLoader width="50%" height={14} />
             </View>
           ))}
-        </ScrollView>
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
-      <View style={styles.eventsTopBar}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
-          <Text style={styles.backButtonTopText}>← Retour</Text>
-        </TouchableOpacity>
+
+      <View style={styles.headerBlock}>
+        <NoxScreenHeader
+          title="Discover"
+          subtitle={fr ? 'Événements, artistes et lieux' : 'Events, artists and venues'}
+          onBack={goBack}
+        />
+
+        <NoxSearchBar
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholder={
+            fr
+              ? 'Rechercher un événement, un artiste ou un lieu'
+              : 'Search an event, artist or venue'
+          }
+        />
+
+        <View style={styles.segment}>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'events' && styles.segmentBtnActive]}
+            onPress={() => setMode('events')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === 'events' }}
+          >
+            <NoxText
+              variant="buttonSecondary"
+              style={[styles.segmentText, mode === 'events' && styles.segmentTextActive]}
+            >
+              {fr ? 'Événements' : 'Events'}
+            </NoxText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'djs' && styles.segmentBtnActive]}
+            onPress={() => setMode('djs')}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === 'djs' }}
+          >
+            <NoxText
+              variant="buttonSecondary"
+              style={[styles.segmentText, mode === 'djs' && styles.segmentTextActive]}
+            >
+              DJs
+            </NoxText>
+          </TouchableOpacity>
+        </View>
+
+        {mode === 'events' ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+            {dateOptions.map((opt) => {
+              const active = dateFilter === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setDateFilter(opt.id)}
+                >
+                  <NoxText variant="secondary" style={[styles.chipText, active && styles.chipTextActive]}>
+                    {opt.label}
+                  </NoxText>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersRow}>
+          {genres.map(renderGenreChip)}
+        </ScrollView>
       </View>
+
       <ScrollView
-        style={styles.eventsScroll}
-        contentContainerStyle={styles.eventsContent}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => fetchEvents(true)}
-            tintColor={Colors.primary}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
         }
       >
-        <View style={styles.eventsHeader}>
-          <Text style={styles.eventsTitle}>📅 Événements</Text>
-          <Text style={styles.eventsSubtitle}>Découvrez tous les événements</Text>
-        </View>
+        {loading && mode === 'djs' ? (
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 24 }} />
+        ) : null}
 
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un événement..."
-            placeholderTextColor="rgba(255,255,255,0.5)"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-          />
-        </View>
+        {mode === 'events'
+          ? filteredEvents.map(renderEventRow)
+          : filteredDjs.map(renderDjRow)}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateFiltersContainer}>
-          {[
-            { id: 'upcoming', label: language === 'fr' ? 'À venir' : 'Upcoming' },
-            { id: 'past', label: language === 'fr' ? 'Passés' : 'Past' },
-            { id: 'all', label: language === 'fr' ? 'Tous' : 'All' },
-          ].map((opt) => (
-            <TouchableOpacity
-              key={opt.id}
-              style={[styles.filterButton, dateFilter === opt.id && styles.filterButtonActive]}
-              onPress={() => setDateFilter(opt.id)}
-            >
-              <Text
-                style={[styles.filterText, dateFilter === opt.id && styles.filterTextActive]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
-          {genres.map(genre => (
-            <TouchableOpacity
-              key={genre}
-              style={[
-                styles.filterButton,
-                selectedGenre === genre && styles.filterButtonActive,
-              ]}
-              onPress={() => setSelectedGenre(genre)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedGenre === genre && styles.filterTextActive,
-                ]}
-              >
-                {genre === 'all' ? '🎵 Tous' : genre}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {filteredEvents.map(event => (
-          <EventCard
-            key={event.id}
-            event={event}
-            language={language}
-            onPress={(eventId) => navigate('eventDetail', { eventId })}
-          />
-        ))}
-
-        {filteredEvents.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>😔</Text>
-            <Text style={styles.emptyTitle}>Aucun événement trouvé</Text>
-            <Text style={styles.emptyText}>
-              Essayez de modifier vos filtres ou votre recherche
-            </Text>
-          </View>
-        )}
+        {!loading &&
+        (mode === 'events' ? filteredEvents.length === 0 : filteredDjs.length === 0)
+          ? renderEmptyState()
+          : null}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  eventsTopBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    backgroundColor: Colors.background,
-  },
-  backButtonTop: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonTopText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  eventsScroll: {
-    flex: 1,
-  },
-  eventsContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  eventsHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  eventsTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  eventsSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
-  },
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    color: Colors.primary,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  dateFiltersContainer: {
-    marginBottom: 12,
-  },
-  filtersContainer: {
-    marginBottom: 20,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    marginRight: 8,
-  },
-  filterButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  filterTextActive: {
-    color: Colors.background,
-  },
-  // eventCard sert encore au squelette de chargement
-  eventCard: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 16,
-    marginBottom: 20,
-    overflow: 'hidden',
-    padding: 16,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
-

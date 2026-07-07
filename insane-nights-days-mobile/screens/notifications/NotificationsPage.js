@@ -3,20 +3,19 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
-  StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Colors from '../../constants/colors';
-import EmptyState from '../../components/EmptyState';
+import { NoxText, NoxCard, NoxScreenHeader } from '../../components/nox';
+import { styles } from './NotificationsPage.styles';
 
 function cleanText(s) {
   if (!s) return '';
@@ -31,28 +30,17 @@ function formatRelativeDate(dateString, language) {
   const diffMs = Date.now() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return language === 'fr' ? 'À l’instant' : 'Just now';
   if (diffMins < 60) return language === 'fr' ? `Il y a ${diffMins} min` : `${diffMins}m ago`;
   if (diffHours < 24) return language === 'fr' ? `Il y a ${diffHours}h` : `${diffHours}h ago`;
-  if (diffDays < 7) return language === 'fr' ? `Il y a ${diffDays}j` : `${diffDays}d ago`;
-  return date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' });
-}
 
-function actorEmoji(profileType) {
-  switch (profileType) {
-    case 'DJ':
-      return '🎧';
-    case 'BOOKER':
-      return '📋';
-    case 'VENUE':
-      return '📍';
-    case 'COMMUNITY':
-      return '👥';
-    default:
-      return '👤';
-  }
+  return date.toLocaleString(language === 'fr' ? 'fr-FR' : 'en-US', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function notifIcon(type) {
@@ -65,15 +53,39 @@ function notifIcon(type) {
 
 function notifLabel(type, language) {
   const t = (type || '').toLowerCase();
-  if (t === 'like') return language === 'fr' ? 'Like' : 'Like';
-  if (t === 'comment' || t === 'reply') return language === 'fr' ? 'Commentaire' : 'Comment';
-  if (t === 'follow_post' || t === 'new_post') return language === 'fr' ? 'Nouveau post' : 'New post';
-  return language === 'fr' ? 'Notification' : 'Notification';
+  if (t === 'like') return language === 'fr' ? 'a aimé ton post' : 'liked your post';
+  if (t === 'comment' || t === 'reply') return language === 'fr' ? 'a commenté' : 'commented';
+  if (t === 'follow_post' || t === 'new_post') return language === 'fr' ? 'nouveau post' : 'new post';
+  return language === 'fr' ? 'interaction' : 'interaction';
+}
+
+function groupNotifications(items) {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+
+  const groups = { today: [], yesterday: [], week: [], older: [] };
+  items.forEach((n) => {
+    const d = new Date(n.createdAt);
+    if (Number.isNaN(d.getTime())) {
+      groups.older.push(n);
+      return;
+    }
+    if (d >= todayStart) groups.today.push(n);
+    else if (d >= yesterdayStart) groups.yesterday.push(n);
+    else if (d >= weekStart) groups.week.push(n);
+    else groups.older.push(n);
+  });
+  return groups;
 }
 
 export default function NotificationsPage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
+  const fr = language === 'fr';
   const { goBack, navigate } = useNavigation();
   const { user } = useAuth();
 
@@ -97,7 +109,6 @@ export default function NotificationsPage() {
 
         if (opts?.markRead) {
           await api.markAllFeedNotificationsRead(user.token);
-          // Optimiste: on met aussi la liste en "read"
           setItems((prev) => prev.map((n) => ({ ...n, read: true })));
         }
       } catch (e) {
@@ -108,7 +119,7 @@ export default function NotificationsPage() {
         setRefreshing(false);
       }
     },
-    [user?.token]
+    [user?.token],
   );
 
   useEffect(() => {
@@ -120,145 +131,115 @@ export default function NotificationsPage() {
     fetchNotifications({ markRead: false });
   }, [fetchNotifications]);
 
-  const hasItems = useMemo(() => items.length > 0, [items.length]);
+  const grouped = useMemo(() => groupNotifications(items), [items]);
+
+  const sections = useMemo(
+    () =>
+      [
+        { key: 'today', label: fr ? "Aujourd'hui" : 'Today', data: grouped.today },
+        { key: 'yesterday', label: fr ? 'Hier' : 'Yesterday', data: grouped.yesterday },
+        { key: 'week', label: fr ? 'Cette semaine' : 'This week', data: grouped.week },
+        { key: 'older', label: fr ? 'Plus ancien' : 'Older', data: grouped.older },
+      ].filter((s) => s.data.length > 0),
+    [grouped, fr],
+  );
 
   const handlePress = async (notif) => {
-    // Best-effort: marquer l'item lu (si jamais mark-all-read a été désactivé plus tard)
     try {
       if (user?.token && notif?.id && notif?.read === false) {
         await api.markFeedNotificationRead(user.token, notif.id);
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
+    navigate('welcome', { highlightPostId: notif?.post?.id || null });
+  };
 
-    // Aller au feed (pour l'instant, on ouvre juste le feed)
-    navigate('feed', { highlightPostId: notif?.post?.id || null });
+  const renderNotif = (n) => {
+    const type = (n?.type || '').toLowerCase();
+    const icon = notifIcon(type);
+    const iconColor = type === 'like' ? '#ff4d6d' : Colors.primary;
+    const actorName = cleanText(n?.actor?.username) || (fr ? 'Quelqu’un' : 'Someone');
+    const postExcerpt = cleanText(n?.post?.content).slice(0, 120);
+    const time = formatRelativeDate(n?.createdAt, language);
+    const unread = n.read === false;
+
+    return (
+      <TouchableOpacity key={n.id} activeOpacity={0.85} onPress={() => handlePress(n)}>
+        <NoxCard style={[styles.notifCard, unread && styles.notifUnread]} padded={false}>
+          <View style={styles.avatar}>
+            <Ionicons name={icon} size={18} color={iconColor} />
+          </View>
+          <View style={styles.notifBody}>
+            <View style={styles.notifTopRow}>
+              <NoxText variant="form" style={styles.notifTitle} numberOfLines={2}>
+                {actorName} {notifLabel(type, language)}
+              </NoxText>
+              {unread ? <View style={styles.unreadDot} /> : null}
+            </View>
+            {postExcerpt ? (
+              <NoxText variant="secondary" style={styles.notifExcerpt} numberOfLines={2}>
+                « {postExcerpt} »
+              </NoxText>
+            ) : null}
+            <NoxText variant="secondary" style={styles.notifTime}>
+              {time}
+            </NoxText>
+          </View>
+          <View style={styles.thumb}>
+            <Ionicons name="image-outline" size={16} color={Colors.textTertiary} />
+          </View>
+        </NoxCard>
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
 
-      <View style={[styles.topBar, { paddingTop: Math.max(12, (insets?.top ?? 0) + 10) }]}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack} activeOpacity={0.8}>
-          <Text style={styles.backText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.title}>{language === 'fr' ? 'Notifications' : 'Notifications'}</Text>
-
-        <View style={{ width: 64 }} />
-      </View>
+      <NoxScreenHeader
+        title={fr ? 'Notifications' : 'Notifications'}
+        subtitle={fr ? 'Activité sur ton fil' : 'Your feed activity'}
+        onBack={goBack}
+      />
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator color={Colors.primary} />
-          <Text style={styles.loadingText}>{language === 'fr' ? 'Chargement…' : 'Loading…'}</Text>
+          <ActivityIndicator color={Colors.primary} size="large" />
+          <NoxText variant="secondary">{fr ? 'Chargement…' : 'Loading…'}</NoxText>
         </View>
       ) : (
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          }
+          showsVerticalScrollIndicator={false}
         >
-          {!hasItems ? (
-            <EmptyState
-              icon="notifications-outline"
-              title={language === 'fr' ? 'Aucune notification' : 'No notifications'}
-              message={language === 'fr' ? 'Tes interactions apparaîtront ici.' : 'Your interactions will show up here.'}
-            />
-          ) : (
-            <View style={{ gap: 10 }}>
-              {items.map((n) => {
-                const type = (n?.type || '').toLowerCase();
-                const icon = notifIcon(type);
-                const iconColor = type === 'like' ? '#ff4d6d' : Colors.primary;
-                const actorName = cleanText(n?.actor?.username) || (language === 'fr' ? 'Quelqu’un' : 'Someone');
-                const aEmoji = actorEmoji(n?.actor?.profileType);
-                const postExcerpt = cleanText(n?.post?.content).slice(0, 120);
-                const time = formatRelativeDate(n?.createdAt, language);
-
-                return (
-                  <TouchableOpacity
-                    key={n.id}
-                    style={[styles.card, n.read ? styles.cardRead : styles.cardUnread]}
-                    onPress={() => handlePress(n)}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.cardLeft}>
-                      <View style={[styles.iconBubble, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
-                        <Ionicons name={icon} size={18} color={iconColor} />
-                      </View>
-                    </View>
-
-                    <View style={styles.cardBody}>
-                      <View style={styles.cardTopRow}>
-                        <Text style={styles.cardTitle} numberOfLines={1}>
-                          {aEmoji} {actorName} • {notifLabel(type, language)}
-                        </Text>
-                        <Text style={styles.cardTime}>{time}</Text>
-                      </View>
-
-                      <Text style={styles.cardSubtitle} numberOfLines={2}>
-                        {postExcerpt ? `“${postExcerpt}”` : (language === 'fr' ? 'Post' : 'Post')}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+          {sections.length === 0 ? (
+            <View style={styles.emptyBlock}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="notifications-outline" size={32} color={Colors.primary} />
+              </View>
+              <NoxText variant="titleSecondary" style={{ textAlign: 'center' }}>
+                {fr ? 'Aucune notification' : 'No notifications'}
+              </NoxText>
+              <NoxText variant="secondary" style={{ textAlign: 'center' }}>
+                {fr ? 'Tes interactions apparaîtront ici.' : 'Your interactions will show up here.'}
+              </NoxText>
             </View>
+          ) : (
+            sections.map((section) => (
+              <View key={section.key}>
+                <NoxText style={styles.sectionTitle}>{section.label}</NoxText>
+                {section.data.map(renderNotif)}
+              </View>
+            ))
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  topBar: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-  },
-  backButton: { paddingVertical: 8, paddingHorizontal: 8 },
-  backText: { color: Colors.primary, fontSize: 16, fontWeight: '800' },
-  title: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  loadingText: { color: 'rgba(255,255,255,0.7)' },
-  scroll: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cardUnread: {
-    backgroundColor: 'rgba(255, 23, 68, 0.10)',
-    borderColor: 'rgba(255, 23, 68, 0.30)',
-  },
-  cardRead: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  cardLeft: { width: 34, alignItems: 'center', paddingTop: 2 },
-  iconBubble: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardBody: { flex: 1 },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardTitle: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '900' },
-  cardTime: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '700' },
-  cardSubtitle: { marginTop: 6, color: 'rgba(255,255,255,0.75)', fontSize: 13, lineHeight: 18 },
-});
-

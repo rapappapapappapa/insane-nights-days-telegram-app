@@ -19,6 +19,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
+import { getHomeScreenForProfile } from './utils/noxRoleNavigation';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -185,15 +186,16 @@ function AppContent() {
   // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
   useEffect(() => {
     if (!isInitializing) {
+      const homeScreen = getHomeScreenForProfile(user?.activeProfileType);
       if (user?.isAuthenticated && (currentPage === 'home' || currentPage === 'onboarding')) {
-        navigate('welcome');
+        navigate(homeScreen);
       } else if (user?.isAuthenticated && currentPage === 'login') {
-        navigate('welcome');
+        navigate(homeScreen);
       } else if (!user?.isAuthenticated && currentPage === 'welcome') {
         navigate('onboarding');
       }
     }
-  }, [user?.isAuthenticated, currentPage, navigate, isInitializing]);
+  }, [user?.isAuthenticated, user?.activeProfileType, currentPage, navigate, isInitializing]);
 
   useEffect(() => {
     androidExitPressRef.current = 0;

@@ -47,7 +47,7 @@ export default function CommunityHomePage() {
         <View style={styles.searchWrap}>
           <NoxSearchBar
             placeholder="Rechercher un événement, un artiste ou un lieu"
-            onPress={() => navigate('communityDiscover')}
+            onPress={() => navigate('events')}
           />
         </View>
 
@@ -58,7 +58,7 @@ export default function CommunityHomePage() {
         <TouchableOpacity
           style={styles.featured}
           activeOpacity={0.9}
-          onPress={() => navigate('communityEventDetail')}
+          onPress={() => navigate('events')}
         >
           <View style={styles.featuredImage}>
             <Ionicons name="flame-outline" size={30} color={primaryAlpha(0.7)} />
@@ -81,7 +81,7 @@ export default function CommunityHomePage() {
           <NoxText variant="titleSecondary" style={styles.sectionTitle}>
             Prochains événements
           </NoxText>
-          <TouchableOpacity onPress={() => navigate('communityDiscover')}>
+          <TouchableOpacity onPress={() => navigate('events')}>
             <NoxText variant="secondary" style={styles.link}>
               Voir plus
             </NoxText>
@@ -97,7 +97,7 @@ export default function CommunityHomePage() {
               key={ev.id}
               style={styles.upcomingCard}
               activeOpacity={0.85}
-              onPress={() => navigate('communityEventDetail')}
+              onPress={() => navigate('events')}
             >
               <View style={styles.upcomingImage}>
                 <Ionicons name="calendar-outline" size={22} color={primaryAlpha(0.6)} />
@@ -117,7 +117,7 @@ export default function CommunityHomePage() {
           <NoxText variant="titleSecondary" style={styles.sectionTitle}>
             Suggestions de DJs
           </NoxText>
-          <TouchableOpacity onPress={() => navigate('communityDiscover', { tab: 'djs' })}>
+          <TouchableOpacity onPress={() => navigate('events', { tab: 'djs' })}>
             <NoxText variant="secondary" style={styles.link}>
               Voir plus
             </NoxText>
@@ -147,8 +147,8 @@ export default function CommunityHomePage() {
       <NoxBottomNav
         active="home"
         onHome={() => navigate('communityHome')}
-        onProfile={() => navigate('communityProfile')}
-        onCreate={() => navigate('communityDiscover')}
+        onProfile={() => navigate('profile')}
+        onCreate={() => navigate('createFeedPost')}
       />
     </View>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -13,6 +13,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import {
+  getHomeScreenForProfile,
+  getProfileScreenForProfile,
+  isHomeScreenForProfile,
+  isProfileScreenForProfile,
+} from '../../utils/noxRoleNavigation';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
 import { Radius, Spacing } from '../../constants/theme';
@@ -24,7 +30,7 @@ const ORBIT_RADIUS = 118;
 /** Arc au-dessus du bouton NX (de gauche à droite). */
 const ORBIT_ANGLES = [-152, -119, -86, -53, -20];
 
-const NAV_ITEMS = [
+const NAV_ITEM_DEFS = [
   {
     id: 'discover',
     screen: 'events',
@@ -34,7 +40,7 @@ const NAV_ITEMS = [
   },
   {
     id: 'home',
-    screen: 'welcome',
+    screenKey: 'home',
     icon: 'home-outline',
     labelFr: 'Home',
     labelEn: 'Home',
@@ -55,12 +61,12 @@ const NAV_ITEMS = [
   },
   {
     id: 'profile',
-    screen: 'profile',
+    screenKey: 'profile',
     icon: 'person-outline',
     labelFr: 'Profil',
     labelEn: 'Profile',
   },
-].map((item, index) => ({ ...item, angle: ORBIT_ANGLES[index] }));
+];
 
 /** Pages où la nav NX flottante est masquée (auth, wizards, dashboards…). */
 export const HIDE_RADIAL_NAV_PAGES = new Set([
@@ -120,6 +126,24 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
   const { navigate, currentPage } = useNavigation();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+
+  const homeScreen = getHomeScreenForProfile(user?.activeProfileType);
+  const profileScreen = getProfileScreenForProfile(user?.activeProfileType);
+
+  const navItems = useMemo(
+    () =>
+      NAV_ITEM_DEFS.map((item, index) => ({
+        ...item,
+        angle: ORBIT_ANGLES[index],
+        screen:
+          item.screenKey === 'home'
+            ? homeScreen
+            : item.screenKey === 'profile'
+              ? profileScreen
+              : item.screen,
+      })),
+    [homeScreen, profileScreen],
+  );
 
   const progress = useRef(new Animated.Value(0)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
@@ -185,7 +209,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
 
       <View pointerEvents="box-none" style={[styles.wrap, { bottom, zIndex: 10002 }]}>
         <View style={styles.anchor}>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const offset = polarOffset(item.angle, ORBIT_RADIUS);
             const tx = progress.interpolate({
               inputRange: [0, 1],
@@ -203,7 +227,10 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
               inputRange: [0, 0.35, 1],
               outputRange: [0, 0.5, 1],
             });
-            const active = currentPage === item.screen;
+            const active =
+              currentPage === item.screen ||
+              (item.id === 'home' && isHomeScreenForProfile(user?.activeProfileType, currentPage)) ||
+              (item.id === 'profile' && isProfileScreenForProfile(user?.activeProfileType, currentPage));
             const label = language === 'fr' ? item.labelFr : item.labelEn;
 
             return (

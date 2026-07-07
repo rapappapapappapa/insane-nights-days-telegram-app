@@ -11,22 +11,21 @@
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
   Image,
-  Alert,
   Modal,
   Share,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
+import Colors from '../../constants/colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, normalizeMediaUrl } from '../../api/config';
+import { NoxText, NoxButton, NoxCard, NoxScreenHeader, NoxInput } from '../../components/nox';
+import { getHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { styles } from './ProfilePage.styles';
@@ -40,8 +39,7 @@ import { styles } from './ProfilePage.styles';
  */
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser, logout } = useAuth();
-  const { navigate } = useNavigation();
-  const insets = useSafeAreaInsets();
+  const { navigate, goBack } = useNavigation();
   const { toast, showError, showSuccess, hideToast } = useToast();
   
   // Utiliser authUser du contexte au lieu des props user (source de vérité)
@@ -118,6 +116,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
         await refreshCurrentUser();
         await fetchProfiles();
         showSuccess(`Profil basculé vers ${profileType}`);
+        navigate(getHomeScreenForProfile(profileType));
       } else {
         showError(response?.message || 'Impossible de basculer le profil');
       }
@@ -210,20 +209,17 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
-      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
-        <TouchableOpacity style={styles.backButtonTop} onPress={() => navigate('welcome')}>
-          <Text style={styles.backButtonTopText}>← Retour</Text>
-        </TouchableOpacity>
-      </View>
+      <NoxScreenHeader
+        title="Profil"
+        subtitle="Gère tes profils et tes préférences"
+        onBack={goBack}
+      />
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: Math.max(insets.bottom, 20) + 56 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
@@ -257,66 +253,75 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
               if (imageUrl) {
                 return <Image source={{ uri: normalizeMediaUrl(imageUrl) }} style={styles.avatarImage} />;
               }
-              return <Text style={styles.avatarText}>{initial}</Text>;
+              return <NoxText style={styles.avatarText}>{initial}</NoxText>;
             })()}
           </View>
-          <Text style={styles.title}>👤 Mes Profils</Text>
-          <Text style={styles.subtitle}>Gère tes profils et bascule entre eux</Text>
+          <NoxText variant="titleSecondary" style={styles.title}>
+            Mes profils
+          </NoxText>
+          <NoxText variant="secondary" style={styles.subtitle}>
+            Gère tes profils et bascule entre eux
+          </NoxText>
         </View>
 
-        <View style={styles.card}>
+        <NoxCard style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Informations</Text>
+            <NoxText variant="titleSecondary" style={styles.cardTitle}>
+              Informations
+            </NoxText>
             {!isEditing ? (
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Text style={styles.editButton}>✏️ Modifier</Text>
+                <NoxText style={styles.editLink}>Modifier</NoxText>
               </TouchableOpacity>
             ) : null}
           </View>
 
           {isEditing ? (
             <View>
-              <Text style={styles.label}>Nom d'utilisateur</Text>
-              <TextInput
+              <NoxInput
+                label="Nom d'utilisateur"
                 value={form.username}
-                onChangeText={text => setForm({ username: text })}
+                onChangeText={(text) => setForm({ username: text })}
                 placeholder="Nom d'utilisateur"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                style={styles.input}
+                containerStyle={styles.codeInputWrap}
               />
               <View style={styles.editActions}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
-                  <Text style={styles.cancelText}>Annuler</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                  <Text style={styles.saveText}>Enregistrer</Text>
-                </TouchableOpacity>
+                <NoxButton
+                  label="Annuler"
+                  variant="secondary"
+                  onPress={() => setIsEditing(false)}
+                  style={styles.editActionBtn}
+                />
+                <NoxButton label="Enregistrer" onPress={handleSave} style={styles.editActionBtn} />
               </View>
             </View>
           ) : (
             <View style={styles.info}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Nom d'utilisateur</Text>
-                <Text style={styles.infoValue}>{username}</Text>
+                <NoxText variant="secondary">Nom d'utilisateur</NoxText>
+                <NoxText variant="form" style={styles.infoValue}>
+                  {username}
+                </NoxText>
               </View>
               {isAuthenticated ? (
                 <>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Email</Text>
-                    <Text style={styles.infoValue}>{email}</Text>
+                    <NoxText variant="secondary">Email</NoxText>
+                    <NoxText variant="form" style={styles.infoValue}>{email}</NoxText>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Statut</Text>
-                    <Text style={[styles.infoValue, emailVerified ? styles.success : styles.warning]}>
+                    <NoxText variant="secondary">Statut</NoxText>
+                    <NoxText variant="form" style={[styles.infoValue, emailVerified ? styles.success : styles.warning]}>
                       {emailVerified ? 'Vérifié' : 'Non vérifié'}
-                    </Text>
+                    </NoxText>
                   </View>
 
                   {!emailVerified ? (
                     <View style={styles.emailVerifyBox}>
-                      <TouchableOpacity
-                        style={[styles.smallButton, (sendingEmailCode || emailCodeCooldown > 0) && styles.smallButtonDisabled]}
+                      <NoxButton
+                        label={sendingEmailCode ? '…' : 'Envoyer un code'}
+                        variant="secondary"
                         onPress={async () => {
                           if (!authUser?.token || sendingEmailCode || emailCodeCooldown > 0) return;
                           setSendingEmailCode(true);
@@ -330,25 +335,18 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             setSendingEmailCode(false);
                           }
                         }}
-                        disabled={sendingEmailCode}
-                      >
-                        <Text style={styles.smallButtonText}>
-                          {sendingEmailCode ? '...' : 'Envoyer un code'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TextInput
+                        disabled={sendingEmailCode || emailCodeCooldown > 0}
+                      />
+                      <NoxInput
                         value={emailCode}
                         onChangeText={setEmailCode}
                         placeholder="Code (6 chiffres)"
-                        placeholderTextColor="rgba(255,255,255,0.4)"
                         keyboardType="number-pad"
                         maxLength={6}
-                        style={[styles.input, styles.codeInput]}
+                        containerStyle={styles.codeInputWrap}
                       />
-
-                      <TouchableOpacity
-                        style={[styles.smallPrimaryButton, verifyingEmailCode && styles.smallButtonDisabled]}
+                      <NoxButton
+                        label={verifyingEmailCode ? '…' : 'Vérifier'}
                         onPress={async () => {
                           if (!authUser?.token || verifyingEmailCode) return;
                           if (!emailCode || emailCode.trim().length !== 6) {
@@ -371,191 +369,158 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                             setVerifyingEmailCode(false);
                           }
                         }}
+                        loading={verifyingEmailCode}
                         disabled={verifyingEmailCode}
-                      >
-                        <Text style={styles.smallPrimaryButtonText}>
-                          {verifyingEmailCode ? '...' : 'Vérifier'}
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     </View>
                   ) : null}
                 </>
               ) : null}
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Niveau</Text>
-                <Text style={styles.infoValue}>{level}</Text>
+                <NoxText variant="secondary">Niveau</NoxText>
+                <NoxText variant="form" style={styles.infoValue}>{level}</NoxText>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Score</Text>
-                <Text style={[styles.infoValue, styles.infoValueHighlight]}>{score}</Text>
+                <NoxText variant="secondary">Score</NoxText>
+                <NoxText variant="form" style={[styles.infoValue, { color: Colors.primary }]}>{score}</NoxText>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>SBT</Text>
-                <Text style={[styles.infoValue, sbtActive ? styles.success : styles.warning]}>
-                  {sbtActive ? '✅ Actif' : '❌ Inactif'}
-                </Text>
+                <NoxText variant="secondary">SBT</NoxText>
+                <NoxText variant="form" style={[styles.infoValue, sbtActive ? styles.success : styles.warning]}>
+                  {sbtActive ? 'Actif' : 'Inactif'}
+                </NoxText>
               </View>
             </View>
           )}
-        </View>
+        </NoxCard>
 
-        {/* Section Changer le mot de passe */}
         {isAuthenticated && (
-          <View style={styles.card}>
+          <NoxCard style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>🔒 Sécurité</Text>
+              <NoxText variant="titleSecondary" style={styles.cardTitle}>Sécurité</NoxText>
               {!isChangingPassword ? (
                 <TouchableOpacity onPress={() => setIsChangingPassword(true)}>
-                  <Text style={styles.editButton}>Modifier</Text>
+                  <NoxText style={styles.editLink}>Modifier</NoxText>
                 </TouchableOpacity>
               ) : null}
             </View>
 
             {isChangingPassword ? (
               <View>
-                <Text style={styles.label}>Ancien mot de passe</Text>
-                <TextInput
+                <NoxInput
+                  label="Ancien mot de passe"
                   value={passwordForm.oldPassword}
-                  onChangeText={text => setPasswordForm({ ...passwordForm, oldPassword: text })}
-                  placeholder="Ancien mot de passe"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  style={styles.input}
+                  onChangeText={(text) => setPasswordForm({ ...passwordForm, oldPassword: text })}
                   secureTextEntry
                 />
-
-                <Text style={styles.label}>Nouveau mot de passe</Text>
-                <TextInput
+                <NoxInput
+                  label="Nouveau mot de passe"
                   value={passwordForm.newPassword}
-                  onChangeText={text => setPasswordForm({ ...passwordForm, newPassword: text })}
-                  placeholder="Nouveau mot de passe (min. 6 caractères)"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  style={styles.input}
+                  onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
                   secureTextEntry
                 />
-
-                <Text style={styles.label}>Confirmer le nouveau mot de passe</Text>
-                <TextInput
+                <NoxInput
+                  label="Confirmer le nouveau mot de passe"
                   value={passwordForm.confirmPassword}
-                  onChangeText={text => setPasswordForm({ ...passwordForm, confirmPassword: text })}
-                  placeholder="Confirmer le nouveau mot de passe"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  style={styles.input}
+                  onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
                   secureTextEntry
                 />
-
                 <View style={styles.editActions}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
+                  <NoxButton
+                    label="Annuler"
+                    variant="secondary"
                     onPress={() => {
                       setIsChangingPassword(false);
-                      setPasswordForm({
-                        oldPassword: '',
-                        newPassword: '',
-                        confirmPassword: '',
-                      });
+                      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
                     }}
                     disabled={changingPassword}
-                  >
-                    <Text style={styles.cancelText}>Annuler</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveButton}
+                    style={styles.editActionBtn}
+                  />
+                  <NoxButton
+                    label="Enregistrer"
                     onPress={handleChangePassword}
-                    disabled={changingPassword}
-                  >
-                    {changingPassword ? (
-                      <ActivityIndicator color={Colors.background} />
-                    ) : (
-                      <Text style={styles.saveText}>Enregistrer</Text>
-                    )}
-                  </TouchableOpacity>
+                    loading={changingPassword}
+                    style={styles.editActionBtn}
+                  />
                 </View>
               </View>
             ) : (
-              <View style={styles.info}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Mot de passe</Text>
-                  <Text style={styles.infoValue}>••••••••</Text>
-                </View>
+              <View style={styles.infoRow}>
+                <NoxText variant="secondary">Mot de passe</NoxText>
+                <NoxText variant="form" style={styles.infoValue}>••••••••</NoxText>
               </View>
             )}
-          </View>
+          </NoxCard>
         )}
 
-        {/* Section Données et confidentialité (RGPD) */}
         {isAuthenticated && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📋 Données et confidentialité</Text>
-            <Text style={styles.rgpdDescription}>
-              Exportez vos données ou supprimez votre compte (RGPD).
-            </Text>
+          <NoxCard style={styles.card}>
+            <NoxText variant="titleSecondary" style={styles.cardTitle}>
+              Données et confidentialité
+            </NoxText>
+            <NoxText variant="secondary" style={styles.rgpdDescription}>
+              Exporte tes données ou supprime ton compte (RGPD).
+            </NoxText>
             <View style={styles.rgpdButtons}>
-              <TouchableOpacity
-                style={[styles.rgpdButton, exportingData && styles.rgpdButtonDisabled]}
+              <NoxButton
+                label="Exporter mes données"
+                variant="secondary"
+                loading={exportingData}
                 onPress={async () => {
                   if (!authUser?.token || exportingData) return;
                   setExportingData(true);
                   try {
                     const data = await api.exportUserData(authUser.token);
-                    const jsonStr = JSON.stringify(data, null, 2);
                     await Share.share({
-                      message: jsonStr,
-                      title: 'Mes données Insane Nights & Days',
+                      message: JSON.stringify(data, null, 2),
+                      title: 'Mes données NOX',
                     });
-                    showSuccess('Données exportées. Partagez ou enregistrez-les.');
+                    showSuccess('Données exportées.');
                   } catch (e) {
                     showError(e?.message || 'Erreur lors de l\'export.');
                   } finally {
                     setExportingData(false);
                   }
                 }}
-                disabled={exportingData}
-              >
-                {exportingData ? (
-                  <ActivityIndicator size="small" color={Colors.background} />
-                ) : (
-                  <Text style={styles.rgpdButtonText}>Exporter mes données</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.rgpdButtonDanger]}
+                style={styles.rgpdBtn}
+              />
+              <NoxButton
+                label="Supprimer mon compte"
+                variant="ghost"
                 onPress={() => setDeleteModalVisible(true)}
-              >
-                <Text style={styles.rgpdButtonDangerText}>Supprimer mon compte</Text>
-              </TouchableOpacity>
+                style={styles.rgpdBtn}
+                textStyle={{ color: Colors.error }}
+              />
             </View>
-          </View>
+          </NoxCard>
         )}
 
-        {/* Modal suppression compte */}
         <Modal visible={deleteModalVisible} transparent animationType="fade">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Supprimer mon compte</Text>
-              <Text style={styles.modalText}>
-                Cette action est irréversible. Toutes vos données seront effacées. Entrez votre mot de passe pour confirmer.
-              </Text>
-              <TextInput
-                style={styles.modalInput}
+            <NoxCard style={styles.modalCard}>
+              <NoxText variant="titleSecondary">Supprimer mon compte</NoxText>
+              <NoxText variant="secondary">
+                Action irréversible. Entre ton mot de passe pour confirmer.
+              </NoxText>
+              <NoxInput
                 placeholder="Mot de passe"
-                placeholderTextColor="rgba(255,255,255,0.4)"
                 secureTextEntry
                 value={deletePassword}
                 onChangeText={setDeletePassword}
               />
               <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
+                <NoxButton
+                  label="Annuler"
+                  variant="secondary"
                   onPress={() => {
                     setDeleteModalVisible(false);
                     setDeletePassword('');
                   }}
                   disabled={deletingAccount}
-                >
-                  <Text style={styles.modalCancelText}>Annuler</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalDeleteButton, (!deletePassword || deletingAccount) && styles.modalButtonDisabled]}
+                  style={styles.modalActionBtn}
+                />
+                <NoxButton
+                  label="Supprimer"
                   onPress={async () => {
                     if (!authUser?.token || !deletePassword || deletingAccount) return;
                     setDeletingAccount(true);
@@ -572,267 +537,109 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                       setDeletingAccount(false);
                     }
                   }}
+                  loading={deletingAccount}
                   disabled={!deletePassword || deletingAccount}
-                >
-                  {deletingAccount ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.modalDeleteText}>Supprimer définitivement</Text>
-                  )}
-                </TouchableOpacity>
+                  style={styles.modalActionBtn}
+                />
               </View>
-            </View>
+            </NoxCard>
           </View>
         </Modal>
 
-        {/* Section Profils */}
         {isAuthenticated && (
-          <View style={styles.card}>
+          <NoxCard style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Mes Profils</Text>
-              <TouchableOpacity
-                style={styles.addProfileButton}
+              <NoxText variant="titleSecondary" style={styles.cardTitle}>
+                Mes profils
+              </NoxText>
+              <NoxButton
+                label="+ Ajouter"
+                variant="ghost"
                 onPress={() => navigate('switchProfile')}
-              >
-                <Text style={styles.addProfileButtonText}>+ Ajouter</Text>
-              </TouchableOpacity>
+                fullWidth={false}
+                style={styles.profileEditBtn}
+              />
             </View>
             {loadingProfiles ? (
               <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
             ) : profiles ? (
               <View>
-                <Text style={styles.profileActiveLabel}>
+                <NoxText style={styles.profileActiveLabel}>
                   Profil actif : {profiles.activeProfileType || 'Aucun'}
-                </Text>
-                
-                {/* Profils Community */}
-                {profiles.profiles?.community && profiles.profiles.community.length > 0 && (
-                  <View style={styles.profileSection}>
-                    <Text style={styles.profileSectionTitle}>👥 Communauté</Text>
-                    {profiles.profiles.community.map((profile) => (
-                      <View key={profile.id} style={styles.profileItemRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.profileItem,
-                            styles.profileItemFlex,
-                            profiles.activeProfileType === 'COMMUNITY' && styles.profileItemActive,
-                          ]}
-                          onPress={() => handleSwitchProfile('COMMUNITY')}
-                          disabled={switchingProfile || profiles.activeProfileType === 'COMMUNITY'}
-                        >
-                          <Text style={styles.profileItemText}>
-                            {profile.pseudo || `${profile.prenom} ${profile.nom}`}
-                          </Text>
-                          {profiles.activeProfileType === 'COMMUNITY' && (
-                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                          )}
-                          {switchingProfile && profiles.activeProfileType !== 'COMMUNITY' && (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.profileEditButton}
-                          onPress={() => navigate('communityProfileEdit')}
-                        >
-                          <Text style={styles.profileEditButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
+                </NoxText>
+                {[
+                  { key: 'COMMUNITY', title: 'Communauté', list: profiles.profiles?.community, label: (p) => p.pseudo || `${p.prenom} ${p.nom}`, edit: () => navigate('communityProfileEdit') },
+                  { key: 'DJ', title: 'DJ', list: profiles.profiles?.dj, label: (p) => p.artistName, edit: () => navigate('djDashboard', { openSection: 'profil' }) },
+                  { key: 'BOOKER', title: 'Organisateur', list: profiles.profiles?.booker, label: (p) => p.pseudo || `${p.prenom} ${p.nom}`, edit: () => navigate('bookerDashboard', { openSection: 'profil' }) },
+                  { key: 'VENUE', title: 'Lieu', list: profiles.profiles?.venue, label: (p) => p.venueName, edit: () => navigate('venueProfileEdit') },
+                  { key: 'PRESTATAIRE', title: 'Prestataire', list: profiles.profiles?.prestataire, label: (p) => p.businessName, edit: () => navigate('prestataireDashboard') },
+                ].map(({ key, title, list, label, edit }) =>
+                  list?.length ? (
+                    <View key={key} style={styles.profileSection}>
+                      <NoxText style={styles.profileSectionTitle}>{title}</NoxText>
+                      {list.map((profile) => (
+                        <View key={profile.id} style={styles.profileItemRow}>
+                          <TouchableOpacity
+                            style={[styles.profileItem, profiles.activeProfileType === key && styles.profileItemActive]}
+                            onPress={() => handleSwitchProfile(key)}
+                            disabled={switchingProfile || profiles.activeProfileType === key}
+                          >
+                            <NoxText variant="form" style={styles.profileItemText} numberOfLines={2}>
+                              {label(profile)}
+                            </NoxText>
+                            {profiles.activeProfileType === key ? (
+                              <NoxText style={styles.profileItemActiveBadge}>Actif</NoxText>
+                            ) : switchingProfile ? (
+                              <ActivityIndicator size="small" color={Colors.primary} />
+                            ) : null}
+                          </TouchableOpacity>
+                          <NoxButton label="Modifier" variant="ghost" onPress={edit} fullWidth={false} style={styles.profileEditBtn} />
+                        </View>
+                      ))}
+                    </View>
+                  ) : null,
                 )}
-
-                {/* Profils DJ */}
-                {profiles.profiles?.dj && profiles.profiles.dj.length > 0 && (
-                  <View style={styles.profileSection}>
-                    <Text style={styles.profileSectionTitle}>🎧 DJ</Text>
-                    {profiles.profiles.dj.map((profile) => (
-                      <View key={profile.id} style={styles.profileItemRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.profileItem,
-                            styles.profileItemFlex,
-                            profiles.activeProfileType === 'DJ' && styles.profileItemActive,
-                          ]}
-                          onPress={() => handleSwitchProfile('DJ')}
-                          disabled={switchingProfile || profiles.activeProfileType === 'DJ'}
-                        >
-                          <Text style={styles.profileItemText}>{profile.artistName}</Text>
-                          {profiles.activeProfileType === 'DJ' && (
-                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                          )}
-                          {switchingProfile && profiles.activeProfileType !== 'DJ' && (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.profileEditButton}
-                          onPress={() => navigate('djDashboard', { openSection: 'profil' })}
-                        >
-                          <Text style={styles.profileEditButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Profils Organisateur */}
-                {profiles.profiles?.booker && profiles.profiles.booker.length > 0 && (
-                  <View style={styles.profileSection}>
-                    <Text style={styles.profileSectionTitle}>📅 Organisateur</Text>
-                    {profiles.profiles.booker.map((profile) => (
-                      <View key={profile.id} style={styles.profileItemRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.profileItem,
-                            styles.profileItemFlex,
-                            profiles.activeProfileType === 'BOOKER' && styles.profileItemActive,
-                          ]}
-                          onPress={() => handleSwitchProfile('BOOKER')}
-                          disabled={switchingProfile || profiles.activeProfileType === 'BOOKER'}
-                        >
-                          <Text style={styles.profileItemText}>
-                            {profile.pseudo || `${profile.prenom} ${profile.nom}`}
-                          </Text>
-                          {profiles.activeProfileType === 'BOOKER' && (
-                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                          )}
-                          {switchingProfile && profiles.activeProfileType !== 'BOOKER' && (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.profileEditButton}
-                          onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
-                        >
-                          <Text style={styles.profileEditButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Profils Venue */}
-                {profiles.profiles?.venue && profiles.profiles.venue.length > 0 && (
-                  <View style={styles.profileSection}>
-                    <Text style={styles.profileSectionTitle}>🏢 Lieu</Text>
-                    {profiles.profiles.venue.map((profile) => (
-                      <View key={profile.id} style={styles.profileItemRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.profileItem,
-                            styles.profileItemFlex,
-                            profiles.activeProfileType === 'VENUE' && styles.profileItemActive,
-                          ]}
-                          onPress={() => handleSwitchProfile('VENUE')}
-                          disabled={switchingProfile || profiles.activeProfileType === 'VENUE'}
-                        >
-                          <Text style={styles.profileItemText}>{profile.venueName}</Text>
-                          {profiles.activeProfileType === 'VENUE' && (
-                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                          )}
-                          {switchingProfile && profiles.activeProfileType !== 'VENUE' && (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.profileEditButton}
-                          onPress={() => navigate('venueProfileEdit')}
-                        >
-                          <Text style={styles.profileEditButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {/* Profils Prestataire */}
-                {profiles.profiles?.prestataire && profiles.profiles.prestataire.length > 0 && (
-                  <View style={[styles.profileSection, styles.profileSectionLast]}>
-                    <Text style={styles.profileSectionTitle}>🛠️ Prestataire</Text>
-                    {profiles.profiles.prestataire.map((profile) => (
-                      <View key={profile.id} style={styles.profileItemRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.profileItem,
-                            styles.profileItemFlex,
-                            profiles.activeProfileType === 'PRESTATAIRE' && styles.profileItemActive,
-                          ]}
-                          onPress={() => handleSwitchProfile('PRESTATAIRE')}
-                          disabled={switchingProfile || profiles.activeProfileType === 'PRESTATAIRE'}
-                        >
-                          <Text style={styles.profileItemText} numberOfLines={2}>
-                            {profile.businessName}
-                            {Array.isArray(profile.prestationGenres) && profile.prestationGenres.length > 0
-                              ? ` · ${profile.prestationGenres.join(', ')}`
-                              : ''}
-                          </Text>
-                          {profiles.activeProfileType === 'PRESTATAIRE' && (
-                            <Text style={styles.profileItemActiveBadge}>✓ Actif</Text>
-                          )}
-                          {switchingProfile && profiles.activeProfileType !== 'PRESTATAIRE' && (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.profileEditButton}
-                          onPress={() => navigate('prestataireDashboard')}
-                        >
-                          <Text style={styles.profileEditButtonText}>Modifier</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                {(!profiles.profiles?.community || profiles.profiles.community.length === 0) &&
-                 (!profiles.profiles?.dj || profiles.profiles.dj.length === 0) &&
-                 (!profiles.profiles?.booker || profiles.profiles.booker.length === 0) &&
-                 (!profiles.profiles?.venue || profiles.profiles.venue.length === 0) &&
-                 (!profiles.profiles?.prestataire || profiles.profiles.prestataire.length === 0) && (
+                {!profiles.profiles?.community?.length &&
+                !profiles.profiles?.dj?.length &&
+                !profiles.profiles?.booker?.length &&
+                !profiles.profiles?.venue?.length &&
+                !profiles.profiles?.prestataire?.length ? (
                   <View style={styles.noProfilesBox}>
-                    <Text style={styles.noProfilesText}>
-                      Aucun profil créé. Créez-en un !
-                    </Text>
-                    <TouchableOpacity style={styles.createProfileBtn} onPress={() => navigate('switchProfile')}>
-                      <Text style={styles.createProfileBtnText}>Créer un profil</Text>
-                    </TouchableOpacity>
+                    <NoxText variant="secondary">Aucun profil créé.</NoxText>
+                    <NoxButton label="Créer un profil" onPress={() => navigate('switchProfile')} fullWidth={false} />
                   </View>
-                )}
+                ) : null}
               </View>
             ) : (
-              <Text style={styles.noProfilesText}>Chargement des profils...</Text>
+              <NoxText variant="secondary">Chargement des profils…</NoxText>
             )}
-          </View>
+          </NoxCard>
         )}
 
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Statistiques</Text>
+        <NoxCard style={styles.card}>
+          <NoxText variant="titleSecondary" style={styles.cardTitle}>
+            Statistiques
+          </NoxText>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{ticketsCount}</Text>
-              <Text style={styles.statLabel}>Tickets</Text>
+              <NoxText style={styles.statValue}>{ticketsCount}</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>Tickets</NoxText>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{eventsParticipated}</Text>
-              <Text style={styles.statLabel}>Événements</Text>
+              <NoxText style={styles.statValue}>{eventsParticipated}</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>Événements</NoxText>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>3</Text>
-              <Text style={styles.statLabel}>Badges</Text>
+              <NoxText style={styles.statValue}>3</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>Badges</NoxText>
             </View>
           </View>
-        </View>
+        </NoxCard>
 
       </ScrollView>
 
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
-      />
-    </View>
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
+    </SafeAreaView>
   );
 }
 

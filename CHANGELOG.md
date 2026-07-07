@@ -6,6 +6,28 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — refonte NOX phase 3 : parcours événements & profil) — 7 juil.
+
+Refonte UI des écrans **production** (API réelle) alignée maquettes Figma / `components/nox`, sans régression fonctionnelle.
+
+| Écran | Changements UI | Logique conservée |
+|-------|----------------|-------------------|
+| **`TicketsPage`** | Satoshi, onglets **Mes tickets / Historique**, modal QR plein écran, badges Actif/Passé | API tickets, calendrier, notation, suppression temporaire |
+| **`EventDetailPage`** | Hero image, sections Infos / Description / Line-Up / Organisateur / Lieu | Achat multi-tarifs, CGV, groupes amis, calendrier, notation |
+| **`EventsPage`** (Discover NX) | Segment **Événements / DJs**, filtres date + genre, listes `NoxCard` | `getEvents`, `getDjs`, recherche debouncée, pull-to-refresh |
+| **`ProfilePage`** | `NoxScreenHeader`, cartes NOX, bascule profils simplifiée, RGPD / sécurité | Multi-profils, email, mot de passe, export / suppression compte |
+| **`NotificationsPage`** | Groupes **Aujourd'hui / Hier / Cette semaine**, cartes NOX, point non-lu | Feed notifications API, mark-as-read |
+
+### Modifié (mobile — branchement flux NOX par rôle) — 7 juil.
+
+- **`utils/noxRoleNavigation.js`** : routage home / profil selon `activeProfileType` (COMMUNITY → `communityHome`, VENUE → `lieuxDashboard`, DJ/BOOKER/PRESTATAIRE → dashboards, défaut → `welcome`).
+- **`NoxRadialNav`** : Home et Profil dynamiques selon le profil actif.
+- **`App.js`** : redirection post-login vers le home du profil actif (plus systématiquement `welcome`).
+- **Inscription** : Community → `communityOnboarding`, Venue → `lieuxDashboard`.
+- **`CommunityHomePage` / `CommunityDiscoverPage`** : liens Discover / profil / création branchés vers `events`, `profile`, `createFeedPost` (API réelle).
+
+Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, `NotificationsPage.styles.js`, `ProfilePage.styles.js` refondu.
+
 ### Ajouté (écrans design NOX — LIEUX & COMMUNAUTÉ, UI-first) — 7 juil.
 - **Nouveau composant `NoxBottomNav`** : barre de navigation basse (Accueil / bouton central `+` / Profil) alignée au design Figma, exportée depuis `components/nox`.
 - **Bloc LIEUX** (`screens/lieux/`, données mockées `mockData.js`, à brancher au backend plus tard) :

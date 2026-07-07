@@ -303,7 +303,7 @@ export default function RegisterVenuePage() {
       showSuccess(language === 'fr'
         ? 'Profil Lieu créé avec succès !'
         : 'Venue profile created successfully!');
-      setTimeout(() => navigate('welcome'), 1500);
+      setTimeout(() => navigate('lieuxDashboard'), 1500);
     } catch (error) {
       console.error('Erreur création profil Lieu:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));

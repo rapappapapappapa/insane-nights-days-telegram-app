@@ -4,6 +4,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
+
+### Résolu ✅ — Crash iOS / OTA qui ne s’appliquaient pas (7 juil.)
+- **Problème réglé** : sur iOS, l’UI restait bloquée sur l’ancien affichage rouge et les OTA ne s’appliquaient jamais (retour au bundle embarqué). Idem crash au splash des builds natifs 11–15.
+- **Cause racine** : `utils/installGlobalErrorHandlers.js` importait `{ ErrorUtils } from 'react-native'` — or `ErrorUtils` est un **global du runtime**, pas un export → `undefined` → crash dans `index.js` **avant le montage de l’app**, suivi d’un rollback OTA vers le bundle rouge.
+- **Correctif** : lecture via `globalThis.ErrorUtils` + garde-fou (no-op si absent) ; appel enveloppé dans un `try/catch` dans `index.js`.
+- **Validé** : NOX bleu démarre correctement en local (Expo Go, iOS), puis OTA publiées avec le fix sur `production` (iOS) et `preview` (Android) — commit `9942c46`.
+- **Bonus fiabilité** : auto-apply des OTA (`reloadAsync` au boot + bouton « Vérifier ») et `fallbackToCacheTimeout: 10000` ; publication OTA allégée avec `--platform` + `EAS_SKIP_AUTO_FINGERPRINT=1` (évite la surcharge PC).
+
+---
+
 ## Semaine du 30 juin au 4 juillet 2026 (mar. - ven.)
 
 ### Corrigé (mobile — reprise base build 10 stable)

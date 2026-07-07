@@ -16,6 +16,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Drawer « Vérifier »** : télécharge l’OTA sans `reloadAsync` — fermer puis rouvrir l’app pour appliquer (comme au boot `ON_LOAD`).
 - **Bandeau test OTA** : `OtaDebugBanner` — marqueur visible **« MARQUEUR OTA · B · 3 juil. 14h25 »** + état embedded/OTA/update ID pour diagnostiquer les blocages cache.
 
+### Corrigé (mobile — CRASH iOS au boot, cause racine trouvée) — 7 juil.
+- **Cause racine du crash splash iOS** (builds 11–15) **et du rollback OTA vers le rouge** : `utils/installGlobalErrorHandlers.js` faisait `import { ErrorUtils } from 'react-native'` — or **`ErrorUtils` est un GLOBAL du runtime, pas un export de `react-native`** → `undefined` → `ErrorUtils.getGlobalHandler` plante dans `index.js` **avant même le montage de l’app**. Reproduit en local (Expo Go : `[runtime not ready] Cannot read property 'getGlobalHandler' of undefined`).
+- **Fix** : lecture via `globalThis.ErrorUtils` + garde-fou (no-op si absent) ; appel enveloppé dans un `try/catch` dans `index.js` pour ne jamais bloquer le démarrage.
+- **Impact** : fichier absent du build 16 rouge stable (d’où sa stabilité) ; présent dans le code NOX → expliquait crash natif iOS **et** OTA NOX qui retombait sur le bundle embarqué rouge.
+- **Validé** : NOX bleu démarre correctement en local (Expo Go, iOS).
+
 ### Corrigé (mobile — OTA qui ne s’appliquaient pas) — 7 juil.
 - **Cause racine** : livraison OTA correcte (canal `production`, runtime `1.0.0`, iOS, sans code signing) mais **jamais appliquée** — `App.js` et le bouton « Vérifier » téléchargeaient sans `reloadAsync`, et `fallbackToCacheTimeout: 0` fait toujours démarrer sur l’ancien bundle. Sur iOS, « fermer » = arrière-plan (process en mémoire) → la MAJ téléchargée ne basculait jamais.
 - **Boot `App.js`** : après `fetchUpdateAsync` réussi, `reloadAsync()` appliqué **dans la fenêtre de bootstrap** (avant montage navigation/auth → pas de boucle de crash). Compatibilité native vérifiée : seul delta = `expo-font`, déjà lié via `@expo/vector-icons`.

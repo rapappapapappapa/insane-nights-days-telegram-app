@@ -1,4 +1,6 @@
-import { ErrorUtils } from 'react-native';
+// ⚠️ ErrorUtils est un GLOBAL fourni par le runtime RN/Hermes, PAS un export de 'react-native'.
+// L'importer depuis 'react-native' renvoie `undefined` → crash au boot (index.js) sur iOS.
+// On le lit donc via globalThis, avec garde-fou.
 
 /** Dernière erreur fatale JS (pour affichage debug à l’écran si besoin). */
 let lastGlobalError = null;
@@ -21,6 +23,12 @@ function logBox(title, error, extra = '') {
 export function installGlobalErrorHandlers() {
   if (global.__NOX_ERROR_HANDLERS__) return;
   global.__NOX_ERROR_HANDLERS__ = true;
+
+  const ErrorUtils = globalThis.ErrorUtils || global.ErrorUtils;
+  // Runtime sans ErrorUtils (ou pas encore prêt) : ne rien faire pour éviter tout crash au démarrage.
+  if (!ErrorUtils || typeof ErrorUtils.setGlobalHandler !== 'function') {
+    return;
+  }
 
   const defaultHandler = ErrorUtils.getGlobalHandler?.();
 

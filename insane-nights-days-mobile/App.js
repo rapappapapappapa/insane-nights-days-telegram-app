@@ -430,12 +430,19 @@ export default function App() {
 
     (async () => {
       try {
-        // Télécharge en arrière-plan uniquement — pas de reloadAsync ici (boucle crash si OTA incompatible).
         if (Updates.isEnabled) {
           const check = await Updates.checkForUpdateAsync();
           if (cancelled) return;
           if (check.isAvailable) {
-            await Updates.fetchUpdateAsync();
+            const fetched = await Updates.fetchUpdateAsync();
+            if (cancelled) return;
+            // Applique l'OTA MAINTENANT, dans la fenêtre de bootstrap : AppContent
+            // (navigation + auth) n'est pas encore monté, donc pas de boucle de crash.
+            // reloadAsync redémarre l'app sur le nouveau bundle ; le code après ne s'exécute pas.
+            if (fetched?.isNew) {
+              await Updates.reloadAsync();
+              return;
+            }
           }
         }
       } catch (e) {

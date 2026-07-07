@@ -161,9 +161,9 @@ export default function DrawerContent({ navigation }) {
       const isEmbedded = Updates?.isEmbeddedLaunch || false;
 
       const autoHintFr =
-        'Au lancement, une mise à jour peut être téléchargée en arrière-plan. « Vérifier » la télécharge ; ferme complètement l’app puis rouvre-la pour l’appliquer.';
+        'Au lancement, une mise à jour disponible est téléchargée puis appliquée automatiquement (l’app redémarre). « Vérifier » force le téléchargement et redémarre l’app tout de suite.';
       const autoHintEn =
-        'On launch, an update may download in the background. “Check” downloads it — fully close the app, then reopen to apply.';
+        'On launch, an available update is downloaded and applied automatically (the app restarts). “Check” forces the download and restarts the app right away.';
 
       const updateInfo = [
         `Updates activés: ${isEnabled ? '✅ Oui' : '❌ Non'}`,
@@ -210,9 +210,12 @@ export default function DrawerContent({ navigation }) {
                 await Updates.fetchUpdateAsync();
                 showSuccess(
                   language === 'fr'
-                    ? 'Mise à jour téléchargée. Ferme complètement l’app (swipe), puis rouvre-la.'
-                    : 'Update downloaded. Fully close the app (swipe away), then reopen it.'
+                    ? 'Mise à jour téléchargée. Redémarrage de l’app…'
+                    : 'Update downloaded. Restarting the app…'
                 );
+                // Applique la MAJ tout de suite (déclenché par l'utilisateur).
+                // Si le nouveau bundle plantait, expo-updates fait un rollback automatique.
+                await Updates.reloadAsync();
               } catch (e) {
                 showError(String(e?.message || e));
               }

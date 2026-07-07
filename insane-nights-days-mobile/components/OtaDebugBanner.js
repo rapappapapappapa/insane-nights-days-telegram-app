@@ -4,7 +4,7 @@ import * as Updates from 'expo-updates';
 import Colors from '../constants/colors';
 
 /** Change ce libellé à chaque OTA test pour vérifier visuellement que la MAJ s’applique. */
-export const OTA_VISIBLE_MARKER = 'MARQUEUR OTA · B · 3 juil. 14h25';
+export const OTA_VISIBLE_MARKER = 'MARQUEUR OTA · C · 7 juil. (auto-reload)';
 
 function shortId(id) {
   if (!id || id === 'n/a') return '—';

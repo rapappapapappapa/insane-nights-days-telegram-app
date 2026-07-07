@@ -9,12 +9,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (mobile — reprise base build 10 stable)
 - **Git** : retour à **`994c20a`** (dernier commit du build TestFlight **10** stable) ; retrait des refontes NOX builds 11–15 (crash splash au boot natif).
 - **Build iOS 16** : repart de cette base prouvée ; refonte NOX à réintroduire commit par commit avec validation TestFlight.
-- **Build Android production** : même base **`994c20a`** / canal **`production`** (AAB store), aligné iOS 16 pour workspace propre.
+- **Build Android production** : même base **`994c20a`** / canal **`production`** (AAB v2) ; **v3** en cours avec code NOX aligné iOS (`e7fd09c`).
 
 ### OTA (mobile — NOX bleu sans rebuild natif)
 - **Code NOX** réintégré depuis **`e353fd4`** (30 juin) ; publication OTA canal **`production`** (iOS).
 - **Drawer « Vérifier »** : télécharge l’OTA sans `reloadAsync` — fermer puis rouvrir l’app pour appliquer (comme au boot `ON_LOAD`).
 - **Bandeau test OTA** : `OtaDebugBanner` — marqueur visible **« MARQUEUR OTA · B · 3 juil. 14h25 »** + état embedded/OTA/update ID pour diagnostiquer les blocages cache.
+
+### Corrigé (mobile — OTA qui ne s’appliquaient pas) — 7 juil.
+- **Cause racine** : livraison OTA correcte (canal `production`, runtime `1.0.0`, iOS, sans code signing) mais **jamais appliquée** — `App.js` et le bouton « Vérifier » téléchargeaient sans `reloadAsync`, et `fallbackToCacheTimeout: 0` fait toujours démarrer sur l’ancien bundle. Sur iOS, « fermer » = arrière-plan (process en mémoire) → la MAJ téléchargée ne basculait jamais.
+- **Boot `App.js`** : après `fetchUpdateAsync` réussi, `reloadAsync()` appliqué **dans la fenêtre de bootstrap** (avant montage navigation/auth → pas de boucle de crash). Compatibilité native vérifiée : seul delta = `expo-font`, déjà lié via `@expo/vector-icons`.
+- **Drawer « Vérifier »** : applique désormais la MAJ immédiatement (`reloadAsync` après téléchargement, rollback auto d’Expo si plantage).
+- **`app.json`** : `fallbackToCacheTimeout` **0 → 10000** — au cold start, applique une OTA déjà téléchargée au lieu de démarrer d’office sur l’ancien bundle.
+- **Marqueur OTA** : **« MARQUEUR OTA · C · 7 juil. (auto-reload) »** pour valider visuellement la prochaine OTA.
 
 ### Ajouté / Refonte (design system NOX — Figma, phase 0)
 - **Palette globale** : accent **bleu `#4DA3FF`** (Figma) remplace le rouge cyberpunk ; fond `#000` ; helper `primaryAlpha()` ; remplacement des `rgba(255,23,68,…)` codés en dur dans les styles.

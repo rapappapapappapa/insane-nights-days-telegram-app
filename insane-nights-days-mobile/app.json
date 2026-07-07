@@ -38,7 +38,7 @@
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -88,7 +88,7 @@
     "updates": {
       "url": "https://u.expo.dev/a1612b7f-f046-4ead-9ca4-584c238abb20",
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 10000
     }
   }
 }

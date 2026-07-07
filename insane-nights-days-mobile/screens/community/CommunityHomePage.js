@@ -16,7 +16,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
-import { NoxText, NoxSearchBar, NoxTabs, NoxBottomNav } from '../../components/nox';
+import CommunityFeedStream from '../../components/community/CommunityFeedStream';
+import { NoxText, NoxSearchBar, NoxTabs } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import {
@@ -27,10 +28,13 @@ import {
   getFeaturedEvent,
 } from '../../utils/noxDiscoverUtils';
 
-const TABS = [
-  { id: 'events', label: 'Events feed' },
-  { id: 'following', label: 'Following feed' },
-];
+function buildTabs(fr) {
+  return [
+    { id: 'events', label: fr ? 'Événements' : 'Events' },
+    { id: 'posts', label: fr ? 'Publications' : 'Posts' },
+    { id: 'following', label: fr ? 'Abonnements' : 'Following' },
+  ];
+}
 
 export default function CommunityHomePage() {
   const { navigate } = useNavigation();
@@ -39,22 +43,24 @@ export default function CommunityHomePage() {
   const insets = useSafeAreaInsets();
   const { unreadCount: feedNotificationsCount } = useFeedNotifications();
 
+  const fr = language === 'fr';
+  const tabs = useMemo(() => buildTabs(fr), [fr]);
+
   const [activeTab, setActiveTab] = useState('events');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState(null);
   const [events, setEvents] = useState([]);
   const [djs, setDjs] = useState([]);
-  const [followingFeed, setFollowingFeed] = useState([]);
   const [brokenImages, setBrokenImages] = useState({});
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
-  const fr = language === 'fr';
   const displayName = getDisplayName(user, profile);
   const featured = useMemo(() => getFeaturedEvent(events), [events]);
   const upcoming = useMemo(() => filterUpcomingEvents(events, 8), [events]);
   const suggestedDjs = useMemo(() => djs.slice(0, 8), [djs]);
 
-  const loadData = useCallback(
+  const loadDiscovery = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
@@ -67,18 +73,8 @@ export default function CommunityHomePage() {
 
         const [eventsRes, djsRes, profileRes] = await Promise.all(tasks);
 
-        if (eventsRes?.success && Array.isArray(eventsRes.events)) {
-          setEvents(eventsRes.events);
-        } else {
-          setEvents([]);
-        }
-
-        if (djsRes?.success && Array.isArray(djsRes.djs)) {
-          setDjs(djsRes.djs);
-        } else {
-          setDjs([]);
-        }
-
+        setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
+        setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
         if (profileRes?.success && profileRes.profile) {
           setProfile(profileRes.profile);
         }
@@ -93,34 +89,15 @@ export default function CommunityHomePage() {
     [user?.token],
   );
 
-  const loadFollowingFeed = useCallback(async () => {
-    if (!user?.token) {
-      setFollowingFeed([]);
-      return;
-    }
-    try {
-      const res = await api.getFeedFollowing(user.token, 30, 0);
-      setFollowingFeed(res?.success && Array.isArray(res.feed) ? res.feed : []);
-    } catch {
-      setFollowingFeed([]);
-    }
-  }, [user?.token]);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    if (activeTab === 'following') {
-      loadFollowingFeed();
+    if (activeTab === 'events') {
+      loadDiscovery();
     }
-  }, [activeTab, loadFollowingFeed]);
+  }, [activeTab, loadDiscovery]);
 
-  const onRefresh = async () => {
-    await loadData(true);
-    if (activeTab === 'following') {
-      await loadFollowingFeed();
-    }
+  const onRefreshEvents = async () => {
+    await loadDiscovery(true);
+    setEventsRefreshKey((k) => k + 1);
   };
 
   const openEvent = (eventId) => {
@@ -151,60 +128,46 @@ export default function CommunityHomePage() {
     return <Ionicons name={fallbackIcon} size={22} color={primaryAlpha(0.6)} />;
   };
 
-  const renderFollowingItem = (item) => {
-    if (item.type === 'event') {
-      return (
-        <TouchableOpacity
-          key={`ev-${item.id}`}
-          style={styles.feedCard}
-          activeOpacity={0.85}
-          onPress={() => openEvent(item.id)}
-        >
-          <View style={styles.upcomingImage}>
-            {renderThumb(item.image, 'calendar-outline', `feed-ev-${item.id}`)}
+  const renderHeader = () => (
+    <>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.avatar}>
+            {profile?.profileImage && !brokenImages.profile ? (
+              <Image
+                source={{ uri: normalizeMediaUrl(profile.profileImage) }}
+                style={styles.avatarImage}
+                onError={() => setBrokenImages((prev) => ({ ...prev, profile: true }))}
+              />
+            ) : null}
           </View>
-          <View style={{ flex: 1 }}>
-            <NoxText variant="form" style={styles.upcomingName} numberOfLines={1}>
-              {item.title || item.name}
+          <View>
+            <NoxText variant="titleSecondary" style={styles.greeting}>
+              Hello {displayName} !
             </NoxText>
-            <NoxText variant="secondary" style={styles.upcomingMeta}>
-              {formatEventDateLabel(item.date, language, { shortMonth: true })}
-              {item.location ? ` • ${item.location}` : ''}
+            <NoxText variant="secondary">
+              {fr ? 'Découvre ton prochain événement' : 'Discover your next event'}
             </NoxText>
           </View>
+        </View>
+        <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
+          <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+          {feedNotificationsCount > 0 ? <View style={styles.notifDot} /> : null}
         </TouchableOpacity>
-      );
-    }
+      </View>
 
-    if (item.type === 'post') {
-      const author =
-        item.profileType === 'DJ'
-          ? item.dj?.artistName
-          : item.booker?.name || item.author?.username;
-      return (
-        <TouchableOpacity
-          key={`post-${item.id}`}
-          style={styles.feedCard}
-          activeOpacity={0.85}
-          onPress={() => navigate('welcome')}
-        >
-          <View style={styles.djAvatar}>
-            <Ionicons name="newspaper-outline" size={22} color={primaryAlpha(0.6)} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <NoxText variant="form" style={styles.upcomingName} numberOfLines={1}>
-              {author || (fr ? 'Publication' : 'Post')}
-            </NoxText>
-            <NoxText variant="secondary" numberOfLines={2}>
-              {item.content || (fr ? 'Voir dans le feed' : 'View in feed')}
-            </NoxText>
-          </View>
-        </TouchableOpacity>
-      );
-    }
+      <View style={styles.searchWrap}>
+        <NoxSearchBar
+          placeholder={
+            fr ? 'Rechercher un événement, un artiste ou un lieu' : 'Search an event, artist or venue'
+          }
+          onPress={() => navigate('events')}
+        />
+      </View>
 
-    return null;
-  };
+      <NoxTabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
+    </>
+  );
 
   const renderEventsSections = () => (
     <>
@@ -226,9 +189,6 @@ export default function CommunityHomePage() {
               {featured.time ? `, ${formatEventTimeLabel(featured.time)}` : ''}
               {featured.location ? ` • ${featured.location}` : ''}
             </NoxText>
-          </View>
-          <View style={styles.bookmark}>
-            <Ionicons name="bookmark-outline" size={18} color={Colors.text} />
           </View>
         </TouchableOpacity>
       ) : null}
@@ -307,101 +267,41 @@ export default function CommunityHomePage() {
     </>
   );
 
-  const renderFollowingSections = () => {
-    if (!user?.token) {
-      return (
-        <NoxText variant="secondary" style={styles.emptyHint}>
-          {fr ? 'Connecte-toi pour voir ton fil abonnements.' : 'Log in to see your following feed.'}
-        </NoxText>
-      );
-    }
-
-    if (followingFeed.length === 0) {
-      return (
-        <NoxText variant="secondary" style={styles.emptyHint}>
-          {fr
-            ? 'Suis des DJs ou organisateurs pour voir leurs publications ici.'
-            : 'Follow DJs or organizers to see their posts here.'}
-        </NoxText>
-      );
-    }
-
-    return (
-      <View style={styles.followingList}>
-        {followingFeed.map((item) => renderFollowingItem(item))}
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + Spacing.md, paddingBottom: 140 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
-        }
-      >
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.avatar}>
-              {profile?.profileImage && !brokenImages.profile ? (
-                <Image
-                  source={{ uri: normalizeMediaUrl(profile.profileImage) }}
-                  style={styles.avatarImage}
-                  onError={() => setBrokenImages((prev) => ({ ...prev, profile: true }))}
-                />
-              ) : null}
-            </View>
-            <View>
-              <NoxText variant="titleSecondary" style={styles.greeting}>
-                Hello {displayName} !
-              </NoxText>
-              <NoxText variant="secondary">
-                {fr ? 'Découvre ton prochain événement' : 'Discover your next event'}
-              </NoxText>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
-            <Ionicons name="notifications-outline" size={22} color={Colors.text} />
-            {feedNotificationsCount > 0 ? <View style={styles.notifDot} /> : null}
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.topArea, { paddingTop: insets.top + Spacing.md }]}>{renderHeader()}</View>
 
-        <View style={styles.searchWrap}>
-          <NoxSearchBar
-            placeholder={
-              fr ? 'Rechercher un événement, un artiste ou un lieu' : 'Search an event, artist or venue'
-            }
-            onPress={() => navigate('events')}
-          />
-        </View>
-
-        <NoxTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
-
-        {loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing.xxl }} />
-        ) : activeTab === 'events' ? (
-          renderEventsSections()
-        ) : (
-          renderFollowingSections()
-        )}
-      </ScrollView>
-
-      <NoxBottomNav
-        active="home"
-        onHome={() => navigate('communityHome')}
-        onProfile={() => navigate('profile')}
-        onCreate={() => navigate('createFeedPost')}
-      />
+      {activeTab === 'events' ? (
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefreshEvents} tintColor={Colors.primary} />
+          }
+        >
+          {loading ? (
+            <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing.xxl }} />
+          ) : (
+            renderEventsSections()
+          )}
+        </ScrollView>
+      ) : (
+        <CommunityFeedStream
+          key={`${activeTab}-${eventsRefreshKey}`}
+          feedTab={activeTab === 'following' ? 'following' : 'all'}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  flex: { flex: 1 },
+  topArea: { paddingBottom: Spacing.sm },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -441,7 +341,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   searchWrap: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
-  tabs: { marginBottom: Spacing.lg },
+  tabs: { marginBottom: Spacing.sm },
   featured: {
     marginHorizontal: Spacing.xl,
     height: 180,
@@ -461,17 +361,6 @@ const styles = StyleSheet.create({
   },
   featuredTitle: { fontSize: 20 },
   featuredMeta: { color: Colors.textSecondary, marginTop: 2 },
-  bookmark: {
-    position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -514,15 +403,4 @@ const styles = StyleSheet.create({
   },
   djName: { color: Colors.text, fontWeight: '600' },
   djGenre: { fontSize: 11 },
-  followingList: { paddingHorizontal: Spacing.xl, gap: Spacing.md },
-  feedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.borderSubtle,
-  },
 });

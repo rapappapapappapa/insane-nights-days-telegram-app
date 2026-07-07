@@ -15,7 +15,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { useDebounce } from '../../hooks/useDebounce';
-import { NoxText, NoxSearchBar, NoxCard, NoxBottomNav } from '../../components/nox';
+import { NoxText, NoxSearchBar, NoxCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
@@ -251,13 +251,6 @@ export default function CommunityDiscoverPage() {
           ))
         )}
       </ScrollView>
-
-      <NoxBottomNav
-        active="home"
-        onHome={() => navigate('communityHome')}
-        onProfile={() => navigate('profile')}
-        onCreate={() => navigate('createFeedPost')}
-      />
     </View>
   );
 }

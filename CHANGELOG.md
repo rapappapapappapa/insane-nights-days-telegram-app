@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — accueil COMMUNAUTÉ : 3 onglets + fil social + bouton NX) — 7 juil.
+- **`CommunityHomePage`** : onglets **Événements / Publications / Abonnements** ; fil API avec likes/commentaires (`CommunityFeedStream`) ; bouton **NX** radial réactivé (retrait `NoxBottomNav` sur l’accueil).
+- **`CommunityFeedStream`** : composant partagé feed posts + événements publiés (style Twitter/NOX).
+- **`NoxRadialNav`** : visible sur `communityHome` et `communityDiscover` (plus masqué sauf onboarding).
+
 ### Modifié (mobile — branchement backend écrans COMMUNAUTÉ & LIEUX) — 7 juil.
 - **`CommunityHomePage`** : profil communauté, événements (`getEvents`), DJs (`getDjs`), fil abonnements (`getFeedFollowing`), navigation vers détail / profils / discover.
 - **`CommunityDiscoverPage`** : liste événements & DJs API, recherche + filtres genre, liens `eventDetail` / `djProfile`.

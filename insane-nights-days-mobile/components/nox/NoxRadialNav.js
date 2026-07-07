@@ -103,11 +103,8 @@ export const HIDE_RADIAL_NAV_PAGES = new Set([
   'lieuxAvailability',
   'lieuxMedia',
   'lieuxRequestDetail',
-  // COMMUNAUTÉ (nouveau design) — barre de nav basse dédiée / plein écran
+  // COMMUNAUTÉ — barre basse dédiée sur onboarding uniquement
   'communityOnboarding',
-  'communityHome',
-  'communityEventDetail',
-  'communityDiscover',
 ]);
 
 function polarOffset(angleDeg, radius) {

@@ -41,7 +41,7 @@ export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthEr
           setRefreshing(false);
           return;
         } else {
-          response = await api.getFeed(50, 0);
+          response = await api.getFeed(50, 0, user?.token || null);
         }
 
         if (!mountedRef.current) return;

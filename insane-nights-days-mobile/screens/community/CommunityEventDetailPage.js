@@ -1,13 +1,22 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { EVENT_DETAIL } from './mockData';
+import { formatEventDateLabel, formatEventTimeLabel } from '../../utils/noxDiscoverUtils';
 
 function InfoLine({ label, value }) {
   return (
@@ -16,24 +25,118 @@ function InfoLine({ label, value }) {
         {label}
       </NoxText>
       <NoxText variant="form" style={styles.infoValue}>
-        {value}
+        {value || '—'}
       </NoxText>
     </View>
   );
 }
 
+const formatTimeRange = (time, durationHours) => {
+  if (!time) return '';
+  if (!durationHours) return formatEventTimeLabel(time);
+  const normalized = String(time).replace(/[hH]/g, ':');
+  const parts = normalized.split(':').map((p) => parseInt(p, 10));
+  const h = parts[0] ?? 0;
+  const m = parts[1] ?? 0;
+  const endH = (h + Number(durationHours)) % 24;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(h)}h${pad(m)} → ${pad(endH)}h${pad(m)}`;
+};
+
 export default function CommunityEventDetailPage() {
-  const { goBack, navigate } = useNavigation();
+  const { goBack, navigate, routeParams } = useNavigation();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
-  const e = EVENT_DETAIL;
+  const fr = language === 'fr';
+
+  const eventId = routeParams?.eventId;
+  const [loading, setLoading] = useState(true);
+  const [event, setEvent] = useState(null);
+  const [imageBroken, setImageBroken] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await api.getEventById(eventId);
+        if (!cancelled && data?.success && data.event) {
+          setEvent(data.event);
+        } else if (!cancelled) {
+          setEvent(null);
+        }
+      } catch {
+        if (!cancelled) setEvent(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  const lineup = useMemo(() => {
+    const djs = event?.djs || [];
+    return djs.map((dj) => ({
+      name: dj.artistName || dj.name || 'DJ',
+      time: dj.setTime || '',
+    }));
+  }, [event]);
+
+  const venueLabel = useMemo(() => {
+    if (event?.venueName && event?.location) return `${event.venueName} - ${event.location}`;
+    return event?.venueName || event?.location || '';
+  }, [event]);
+
+  const organizerName = event?.booker?.name || event?.bookerName || '';
+
+  if (!eventId) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <NoxText variant="secondary">{fr ? 'Événement introuvable.' : 'Event not found.'}</NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <NoxText variant="secondary">{fr ? 'Impossible de charger cet événement.' : 'Unable to load this event.'}</NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
+      </View>
+    );
+  }
+
+  const heroImage = event.image ? normalizeMediaUrl(event.image) : null;
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Hero */}
       <View style={styles.hero}>
-        <Ionicons name="flame-outline" size={40} color={primaryAlpha(0.7)} />
+        {heroImage && !imageBroken ? (
+          <Image
+            source={{ uri: heroImage }}
+            style={StyleSheet.absoluteFillObject}
+            onError={() => setImageBroken(true)}
+          />
+        ) : (
+          <Ionicons name="flame-outline" size={40} color={primaryAlpha(0.7)} />
+        )}
         <View style={[styles.heroTop, { paddingTop: insets.top + Spacing.sm }]}>
           <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.heroBtn}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
@@ -44,10 +147,11 @@ export default function CommunityEventDetailPage() {
         </View>
         <View style={styles.heroInfo}>
           <NoxText variant="title" style={styles.heroTitle}>
-            {e.name}
+            {event.title}
           </NoxText>
           <NoxText variant="secondary" style={styles.heroDate}>
-            {e.date}
+            {formatEventDateLabel(event.date, language)}
+            {event.time ? ` • ${formatEventTimeLabel(event.time)}` : ''}
           </NoxText>
         </View>
       </View>
@@ -56,77 +160,73 @@ export default function CommunityEventDetailPage() {
         contentContainerStyle={{ paddingHorizontal: Spacing.xl, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Infos */}
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Informations événement
+          {fr ? 'Informations événement' : 'Event information'}
         </NoxText>
-        <InfoLine label="Nom" value={e.infos.nom} />
-        <InfoLine label="Horaires" value={e.infos.horaires} />
-        <InfoLine label="Participants attendus" value={e.infos.participants} />
-        <InfoLine label="Style" value={e.infos.style} />
-        <InfoLine label="Lieu" value={e.infos.lieu} />
-
-        {/* Description */}
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Description
-        </NoxText>
-        <NoxText variant="description">{e.description}</NoxText>
-
-        {/* Line-up */}
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Line-Up
-        </NoxText>
-        {e.lineup.map((dj) => (
-          <View key={dj.name} style={styles.lineupRow}>
-            <NoxText variant="form" style={styles.lineupName}>
-              {dj.name}
-            </NoxText>
-            <NoxText variant="secondary">{dj.time}</NoxText>
-          </View>
-        ))}
-
-        {/* Organisateur */}
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Organisateur
-        </NoxText>
-        <View style={styles.orgRow}>
-          <View style={styles.orgAvatar}>
-            <Ionicons name="people-outline" size={22} color={primaryAlpha(0.6)} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <NoxText variant="form" style={styles.orgName}>
-              {e.organizer.name}
-            </NoxText>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={13} color={Colors.primary} />
-              <NoxText variant="secondary" style={styles.ratingText}>
-                {e.organizer.rating} • {e.organizer.events} événements organisés
-              </NoxText>
-            </View>
-          </View>
-        </View>
-        <NoxButton
-          label="Voir le profil"
-          variant="ghost"
-          onPress={() => navigate('communityDiscover')}
-          style={styles.profileBtn}
+        <InfoLine label={fr ? 'Nom' : 'Name'} value={event.title} />
+        <InfoLine
+          label={fr ? 'Horaires' : 'Schedule'}
+          value={formatTimeRange(event.time, event.durationHours)}
         />
+        <InfoLine
+          label={fr ? 'Participants attendus' : 'Expected attendees'}
+          value={event.expectedAttendees || event.capacity || event.maxCapacity}
+        />
+        <InfoLine label={fr ? 'Style' : 'Genre'} value={event.genre} />
+        <InfoLine label={fr ? 'Lieu' : 'Venue'} value={venueLabel} />
 
-        {/* Lieu */}
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Lieu
+          {fr ? 'Description' : 'Description'}
         </NoxText>
-        <View style={styles.orgRow}>
-          <View style={styles.orgAvatar}>
-            <Ionicons name="business-outline" size={22} color={primaryAlpha(0.6)} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <NoxText variant="form" style={styles.orgName}>
-              {e.venue.name}
+        <NoxText variant="description">{event.description || (fr ? 'Pas de description.' : 'No description.')}</NoxText>
+
+        {lineup.length > 0 ? (
+          <>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              Line-Up
             </NoxText>
-            <NoxText variant="secondary">{e.venue.events} événements organisés</NoxText>
-          </View>
-        </View>
+            {lineup.map((dj) => (
+              <View key={`${dj.name}-${dj.time}`} style={styles.lineupRow}>
+                <NoxText variant="form" style={styles.lineupName}>
+                  {dj.name}
+                </NoxText>
+                <NoxText variant="secondary">{dj.time || '—'}</NoxText>
+              </View>
+            ))}
+          </>
+        ) : null}
+
+        {organizerName ? (
+          <>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              {fr ? 'Organisateur' : 'Organizer'}
+            </NoxText>
+            <View style={styles.orgRow}>
+              <View style={styles.orgAvatar}>
+                <Ionicons name="people-outline" size={22} color={primaryAlpha(0.6)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <NoxText variant="form" style={styles.orgName}>
+                  {organizerName}
+                </NoxText>
+              </View>
+            </View>
+            {event.booker?.id ? (
+              <NoxButton
+                label={fr ? 'Voir le profil' : 'View profile'}
+                variant="ghost"
+                onPress={() => navigate('bookerProfile', { bookerId: event.booker.id })}
+                style={styles.profileBtn}
+              />
+            ) : null}
+          </>
+        ) : null}
+
+        <NoxButton
+          label={fr ? 'Acheter des billets' : 'Buy tickets'}
+          onPress={() => navigate('eventDetail', { eventId: event.id })}
+          style={{ marginTop: Spacing.xxl }}
+        />
       </ScrollView>
     </View>
   );
@@ -134,11 +234,13 @@ export default function CommunityEventDetailPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
   hero: {
     height: 240,
     backgroundColor: primaryAlpha(0.12),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   heroTop: {
     position: 'absolute',
@@ -162,6 +264,9 @@ const styles = StyleSheet.create({
     bottom: Spacing.lg,
     left: Spacing.xl,
     right: Spacing.xl,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    padding: Spacing.md,
+    borderRadius: Radius.md,
   },
   heroTitle: { fontSize: 26 },
   heroDate: { color: Colors.primary, marginTop: 2 },
@@ -200,7 +305,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   orgName: { fontWeight: '700' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  ratingText: { fontSize: 12 },
   profileBtn: { marginTop: Spacing.md, alignSelf: 'flex-start', paddingHorizontal: 24 },
 });

@@ -6,6 +6,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — branchement backend écrans COMMUNAUTÉ & LIEUX) — 7 juil.
+- **`CommunityHomePage`** : profil communauté, événements (`getEvents`), DJs (`getDjs`), fil abonnements (`getFeedFollowing`), navigation vers détail / profils / discover.
+- **`CommunityDiscoverPage`** : liste événements & DJs API, recherche + filtres genre, liens `eventDetail` / `djProfile`.
+- **`CommunityEventDetailPage`** : détail événement via `getEventById`, achat via `eventDetail`.
+- **`CommunityOnboardingPage`** : sauvegarde pseudo/genres (`updateCommunityProfile`) + upload photo/cover.
+- **Bloc LIEUX** (`LieuxDashboard`, `LieuxProfil`, `LieuxAvailability`, `LieuxRequestDetail`, `LieuxMedia`) : profil lieu, bookings, médias, acceptation/refus invitations (`useLieuxData`).
+- **`EventsPage`** : suppression du fallback mock en cas d’erreur API.
+- **Utils** : `noxDiscoverUtils.js`, hook `useLieuxData.js`.
+
 ### Corrigé (mobile — bouton NX toggle fermeture) — 7 juil.
 - **`NoxRadialNav`** : ré-appui sur NX referme bien le menu radial (couche orbite séparée, `pointerEvents` quand fermé, bouton NX au-dessus en z-index/elevation).
 - **`NoxRadialNav`** : rotation horaire du bouton NX à l’ouverture (~42°), retour droit à la fermeture ; correction désync (une seule valeur `menuAnim`, interpolations mémoïsées, `stopAnimation` avant chaque transition).

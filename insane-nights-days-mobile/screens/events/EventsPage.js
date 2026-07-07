@@ -19,7 +19,6 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { NoxText, NoxSearchBar, NoxCard, NoxScreenHeader } from '../../components/nox';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
-import { EVENT_DETAIL_MOCK_EVENTS as mockEvents } from '../../utils/eventDetailPageUtils';
 import { styles } from './EventsPage.styles';
 
 const API_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -75,7 +74,7 @@ export default function EventsPage() {
   const fr = language === 'fr';
 
   const [mode, setMode] = useState(routeParams?.tab === 'djs' ? 'djs' : 'events');
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState([]);
   const [djs, setDjs] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingDjs, setLoadingDjs] = useState(false);
@@ -105,10 +104,10 @@ export default function EventsPage() {
       if (data?.success && Array.isArray(data.events)) {
         setEvents(data.events);
       } else {
-        setEvents(mockEvents);
+        setEvents([]);
       }
     } catch {
-      setEvents(mockEvents);
+      setEvents([]);
     } finally {
       setLoadingEvents(false);
       setRefreshing(false);

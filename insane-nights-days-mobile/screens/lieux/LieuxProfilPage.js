@@ -1,13 +1,25 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { normalizeMediaUrl } from '../../api/config';
+import { useLieuxData } from '../../hooks/useLieuxData';
 import { NoxText, NoxCard, NoxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { VENUE, VENUE_NEXT_EVENTS } from './mockData';
+import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 
 function Stat({ value, label }) {
   return (
@@ -24,7 +36,30 @@ function Stat({ value, label }) {
 
 export default function LieuxProfilPage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const fr = language === 'fr';
+
+  const { loading, refreshing, venueProfile, upcomingBookings, refresh } = useLieuxData(
+    user?.token,
+    language,
+  );
+  const [bannerBroken, setBannerBroken] = useState(false);
+
+  const cityLabel = [venueProfile?.city, venueProfile?.country].filter(Boolean).join(', ');
+  const genres = (venueProfile?.genres || '')
+    .split(',')
+    .map((g) => g.trim())
+    .filter(Boolean);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -33,82 +68,106 @@ export default function LieuxProfilPage() {
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top + Spacing.md, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />
+        }
       >
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <NoxText variant="title" style={styles.name}>
-              {VENUE.name}
+              {venueProfile?.venueName || (fr ? 'Mon lieu' : 'My venue')}
             </NoxText>
             <NoxText variant="secondary" style={styles.type}>
-              {VENUE.type}
+              {venueProfile?.companyName || (fr ? 'Lieu' : 'Venue')}
             </NoxText>
-            <NoxText variant="secondary">{VENUE.city}</NoxText>
+            <NoxText variant="secondary">{cityLabel || venueProfile?.address || ''}</NoxText>
           </View>
-          <TouchableOpacity style={styles.gear} hitSlop={10}>
+          <TouchableOpacity
+            style={styles.gear}
+            hitSlop={10}
+            onPress={() => navigate('venueProfileEdit')}
+          >
             <Ionicons name="settings-outline" size={22} color={Colors.text} />
           </TouchableOpacity>
         </View>
 
-        {/* Banner */}
         <View style={styles.banner}>
-          <Ionicons name="images-outline" size={30} color={primaryAlpha(0.6)} />
+          {venueProfile?.bannerImage && !bannerBroken ? (
+            <Image
+              source={{ uri: normalizeMediaUrl(venueProfile.bannerImage) }}
+              style={StyleSheet.absoluteFillObject}
+              onError={() => setBannerBroken(true)}
+            />
+          ) : (
+            <Ionicons name="images-outline" size={30} color={primaryAlpha(0.6)} />
+          )}
         </View>
 
-        {/* Stats */}
         <View style={styles.statsRow}>
-          <Stat value={VENUE.capacity} label="Capacité (pers.)" />
-          <Stat value={VENUE.surface} label="Surface (m²)" />
-          <Stat value="??" label="Sound system" />
+          <Stat
+            value={venueProfile?.maxCapacity ?? '—'}
+            label={fr ? 'Capacité (pers.)' : 'Capacity'}
+          />
+          <Stat value={upcomingBookings.length} label={fr ? 'À venir' : 'Upcoming'} />
+          <Stat value={venueProfile?.siret ? '✓' : '—'} label="SIRET" />
         </View>
 
-        {/* Genres */}
-        <View style={styles.genres}>
-          {VENUE.genres.map((g) => (
-            <View key={g} style={styles.genreTag}>
-              <NoxText variant="secondary" style={styles.genreText}>
-                {g}
-              </NoxText>
-            </View>
-          ))}
-        </View>
+        {genres.length > 0 ? (
+          <View style={styles.genres}>
+            {genres.map((g) => (
+              <View key={g} style={styles.genreTag}>
+                <NoxText variant="secondary" style={styles.genreText}>
+                  {g}
+                </NoxText>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
-        {/* Description */}
         <NoxText variant="description" style={styles.description}>
-          {VENUE.description}
+          {venueProfile?.address ||
+            (fr ? 'Complète ton profil lieu depuis les paramètres.' : 'Complete your venue profile in settings.')}
         </NoxText>
 
-        {/* Prochains événements */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-              Prochains événements ({VENUE_NEXT_EVENTS.length})
+              {fr ? 'Prochains événements' : 'Upcoming events'} ({upcomingBookings.length})
             </NoxText>
             <TouchableOpacity onPress={() => navigate('lieuxAvailability')}>
               <NoxText variant="secondary" style={styles.link}>
-                Voir plus
+                {fr ? 'Voir plus' : 'See more'}
               </NoxText>
             </TouchableOpacity>
           </View>
 
-          {VENUE_NEXT_EVENTS.map((ev) => (
-            <TouchableOpacity key={ev.id} activeOpacity={0.85} onPress={() => navigate('lieuxRequestDetail')}>
-              <NoxCard style={styles.eventCard} padded={false}>
-                <View style={styles.thumb}>
-                  <Ionicons name="musical-notes-outline" size={20} color={primaryAlpha(0.6)} />
-                </View>
-                <View style={styles.eventInfo}>
-                  <NoxText variant="form" style={styles.eventName}>
-                    {ev.name}
-                  </NoxText>
-                  <NoxText variant="secondary">
-                    {ev.date} • {ev.city}
-                  </NoxText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-              </NoxCard>
-            </TouchableOpacity>
-          ))}
+          {upcomingBookings.length === 0 ? (
+            <NoxText variant="secondary">{fr ? 'Aucun événement confirmé.' : 'No confirmed events.'}</NoxText>
+          ) : (
+            upcomingBookings.map((ev) => (
+              <TouchableOpacity
+                key={ev.id}
+                activeOpacity={0.85}
+                onPress={() => navigate('eventDetail', { eventId: ev.booking?.eventId })}
+              >
+                <NoxCard style={styles.eventCard} padded={false}>
+                  <View style={styles.thumb}>
+                    <Ionicons name="musical-notes-outline" size={20} color={primaryAlpha(0.6)} />
+                  </View>
+                  <View style={styles.eventInfo}>
+                    <NoxText variant="form" style={styles.eventName}>
+                      {ev.title}
+                    </NoxText>
+                    <NoxText variant="secondary">
+                      {formatEventDateLabel(ev.date, language, { shortMonth: true, withYear: true })}
+                      {ev.location ? ` • ${ev.location}` : ''}
+                    </NoxText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+                </NoxCard>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -124,15 +183,15 @@ export default function LieuxProfilPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,
   },
-  name: { fontSize: 26 },
-  type: { color: Colors.primary, marginTop: 2 },
+  name: { fontSize: 24 },
+  type: { marginTop: 2 },
   gear: {
     width: 40,
     height: 40,
@@ -144,30 +203,30 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderSubtle,
   },
   banner: {
+    height: 120,
     marginHorizontal: Spacing.xl,
-    height: 150,
     borderRadius: Radius.card,
     backgroundColor: primaryAlpha(0.1),
-    borderWidth: 1,
-    borderColor: Colors.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl,
-    marginTop: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
-  stat: { flex: 1, alignItems: 'center' },
-  statValue: { color: Colors.primary, fontSize: 20 },
-  statLabel: { textAlign: 'center', marginTop: 2 },
+  stat: { alignItems: 'center', flex: 1 },
+  statValue: { fontSize: 18 },
+  statLabel: { fontSize: 11, textAlign: 'center' },
   genres: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
     paddingHorizontal: Spacing.xl,
-    marginTop: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   genreTag: {
     paddingHorizontal: Spacing.md,
@@ -175,21 +234,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     backgroundColor: primaryAlpha(0.12),
     borderWidth: 1,
-    borderColor: primaryAlpha(0.35),
+    borderColor: Colors.borderSubtle,
   },
-  genreText: { color: Colors.primaryLight },
-  description: {
-    paddingHorizontal: Spacing.xl,
-    marginTop: Spacing.lg,
-  },
-  section: { paddingHorizontal: Spacing.xl, marginTop: Spacing.xxl },
+  genreText: { fontSize: 12 },
+  description: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
+  section: { paddingHorizontal: Spacing.xl },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: Spacing.md,
   },
-  sectionTitle: { fontSize: 17, marginBottom: Spacing.md },
-  link: { color: Colors.primary, marginBottom: Spacing.md },
+  sectionTitle: { fontSize: 17 },
+  link: { color: Colors.primary },
   eventCard: {
     flexDirection: 'row',
     alignItems: 'center',

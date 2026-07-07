@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { api, normalizeMediaUrl } from '../../api/config';
+import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import { NoxText, NoxSearchBar, NoxTabs, NoxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { FEATURED_EVENT, UPCOMING, SUGGESTED_DJS } from './mockData';
+import {
+  filterUpcomingEvents,
+  formatEventDateLabel,
+  formatEventTimeLabel,
+  getDisplayName,
+  getFeaturedEvent,
+} from '../../utils/noxDiscoverUtils';
 
 const TABS = [
   { id: 'events', label: 'Events feed' },
@@ -16,8 +34,304 @@ const TABS = [
 
 export default function CommunityHomePage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const { unreadCount: feedNotificationsCount } = useFeedNotifications();
+
   const [activeTab, setActiveTab] = useState('events');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [djs, setDjs] = useState([]);
+  const [followingFeed, setFollowingFeed] = useState([]);
+  const [brokenImages, setBrokenImages] = useState({});
+
+  const fr = language === 'fr';
+  const displayName = getDisplayName(user, profile);
+  const featured = useMemo(() => getFeaturedEvent(events), [events]);
+  const upcoming = useMemo(() => filterUpcomingEvents(events, 8), [events]);
+  const suggestedDjs = useMemo(() => djs.slice(0, 8), [djs]);
+
+  const loadData = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
+      try {
+        const tasks = [api.getEvents(), api.getDjs()];
+        if (user?.token) {
+          tasks.push(api.getCommunityProfile(user.token).catch(() => null));
+        }
+
+        const [eventsRes, djsRes, profileRes] = await Promise.all(tasks);
+
+        if (eventsRes?.success && Array.isArray(eventsRes.events)) {
+          setEvents(eventsRes.events);
+        } else {
+          setEvents([]);
+        }
+
+        if (djsRes?.success && Array.isArray(djsRes.djs)) {
+          setDjs(djsRes.djs);
+        } else {
+          setDjs([]);
+        }
+
+        if (profileRes?.success && profileRes.profile) {
+          setProfile(profileRes.profile);
+        }
+      } catch {
+        setEvents([]);
+        setDjs([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [user?.token],
+  );
+
+  const loadFollowingFeed = useCallback(async () => {
+    if (!user?.token) {
+      setFollowingFeed([]);
+      return;
+    }
+    try {
+      const res = await api.getFeedFollowing(user.token, 30, 0);
+      setFollowingFeed(res?.success && Array.isArray(res.feed) ? res.feed : []);
+    } catch {
+      setFollowingFeed([]);
+    }
+  }, [user?.token]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (activeTab === 'following') {
+      loadFollowingFeed();
+    }
+  }, [activeTab, loadFollowingFeed]);
+
+  const onRefresh = async () => {
+    await loadData(true);
+    if (activeTab === 'following') {
+      await loadFollowingFeed();
+    }
+  };
+
+  const openEvent = (eventId) => {
+    if (!eventId) return;
+    navigate('eventDetail', { eventId });
+  };
+
+  const openDj = (dj) => {
+    if (!dj?.id) return;
+    navigate('djProfile', {
+      djId: dj.id,
+      djUserId: dj.userId,
+      djName: dj.artistName,
+    });
+  };
+
+  const renderThumb = (uri, fallbackIcon, key) => {
+    const normalized = uri ? normalizeMediaUrl(uri) : null;
+    if (normalized && !brokenImages[key]) {
+      return (
+        <Image
+          source={{ uri: normalized }}
+          style={StyleSheet.absoluteFillObject}
+          onError={() => setBrokenImages((prev) => ({ ...prev, [key]: true }))}
+        />
+      );
+    }
+    return <Ionicons name={fallbackIcon} size={22} color={primaryAlpha(0.6)} />;
+  };
+
+  const renderFollowingItem = (item) => {
+    if (item.type === 'event') {
+      return (
+        <TouchableOpacity
+          key={`ev-${item.id}`}
+          style={styles.feedCard}
+          activeOpacity={0.85}
+          onPress={() => openEvent(item.id)}
+        >
+          <View style={styles.upcomingImage}>
+            {renderThumb(item.image, 'calendar-outline', `feed-ev-${item.id}`)}
+          </View>
+          <View style={{ flex: 1 }}>
+            <NoxText variant="form" style={styles.upcomingName} numberOfLines={1}>
+              {item.title || item.name}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.upcomingMeta}>
+              {formatEventDateLabel(item.date, language, { shortMonth: true })}
+              {item.location ? ` • ${item.location}` : ''}
+            </NoxText>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    if (item.type === 'post') {
+      const author =
+        item.profileType === 'DJ'
+          ? item.dj?.artistName
+          : item.booker?.name || item.author?.username;
+      return (
+        <TouchableOpacity
+          key={`post-${item.id}`}
+          style={styles.feedCard}
+          activeOpacity={0.85}
+          onPress={() => navigate('welcome')}
+        >
+          <View style={styles.djAvatar}>
+            <Ionicons name="newspaper-outline" size={22} color={primaryAlpha(0.6)} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <NoxText variant="form" style={styles.upcomingName} numberOfLines={1}>
+              {author || (fr ? 'Publication' : 'Post')}
+            </NoxText>
+            <NoxText variant="secondary" numberOfLines={2}>
+              {item.content || (fr ? 'Voir dans le feed' : 'View in feed')}
+            </NoxText>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    return null;
+  };
+
+  const renderEventsSections = () => (
+    <>
+      {featured ? (
+        <TouchableOpacity
+          style={styles.featured}
+          activeOpacity={0.9}
+          onPress={() => openEvent(featured.id)}
+        >
+          <View style={styles.featuredImage}>
+            {renderThumb(featured.image, 'flame-outline', `featured-${featured.id}`)}
+          </View>
+          <View style={styles.featuredOverlay}>
+            <NoxText variant="titleSecondary" style={styles.featuredTitle}>
+              {featured.title}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.featuredMeta}>
+              {formatEventDateLabel(featured.date, language, { shortMonth: true })}
+              {featured.time ? `, ${formatEventTimeLabel(featured.time)}` : ''}
+              {featured.location ? ` • ${featured.location}` : ''}
+            </NoxText>
+          </View>
+          <View style={styles.bookmark}>
+            <Ionicons name="bookmark-outline" size={18} color={Colors.text} />
+          </View>
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={styles.sectionHeaderRow}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {fr ? 'Prochains événements' : 'Upcoming events'}
+        </NoxText>
+        <TouchableOpacity onPress={() => navigate('events')}>
+          <NoxText variant="secondary" style={styles.link}>
+            {fr ? 'Voir plus' : 'See more'}
+          </NoxText>
+        </TouchableOpacity>
+      </View>
+
+      {upcoming.length === 0 ? (
+        <NoxText variant="secondary" style={styles.emptyHint}>
+          {fr ? 'Aucun événement à venir pour le moment.' : 'No upcoming events yet.'}
+        </NoxText>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+          {upcoming.map((ev) => (
+            <TouchableOpacity
+              key={ev.id}
+              style={styles.upcomingCard}
+              activeOpacity={0.85}
+              onPress={() => openEvent(ev.id)}
+            >
+              <View style={styles.upcomingImage}>
+                {renderThumb(ev.image, 'calendar-outline', `up-${ev.id}`)}
+              </View>
+              <NoxText variant="secondary" style={styles.upcomingName} numberOfLines={1}>
+                {ev.title}
+              </NoxText>
+              <NoxText variant="secondary" style={styles.upcomingMeta}>
+                {formatEventDateLabel(ev.date, language, { shortMonth: true })}
+                {ev.location ? ` • ${ev.location}` : ''}
+              </NoxText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      <View style={styles.sectionHeaderRow}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {fr ? 'Suggestions de DJs' : 'Suggested DJs'}
+        </NoxText>
+        <TouchableOpacity onPress={() => navigate('events', { tab: 'djs' })}>
+          <NoxText variant="secondary" style={styles.link}>
+            {fr ? 'Voir plus' : 'See more'}
+          </NoxText>
+        </TouchableOpacity>
+      </View>
+
+      {suggestedDjs.length === 0 ? (
+        <NoxText variant="secondary" style={styles.emptyHint}>
+          {fr ? 'Aucun DJ disponible.' : 'No DJs available.'}
+        </NoxText>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+          {suggestedDjs.map((dj) => (
+            <TouchableOpacity key={dj.id} style={styles.djCard} activeOpacity={0.85} onPress={() => openDj(dj)}>
+              <View style={styles.djAvatar}>
+                {renderThumb(dj.profileImage, 'person', `dj-${dj.id}`)}
+              </View>
+              <NoxText variant="secondary" style={styles.djName} numberOfLines={1}>
+                {dj.artistName}
+              </NoxText>
+              <NoxText variant="secondary" style={styles.djGenre} numberOfLines={1}>
+                {dj.genre || dj.style || dj.city || ''}
+              </NoxText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </>
+  );
+
+  const renderFollowingSections = () => {
+    if (!user?.token) {
+      return (
+        <NoxText variant="secondary" style={styles.emptyHint}>
+          {fr ? 'Connecte-toi pour voir ton fil abonnements.' : 'Log in to see your following feed.'}
+        </NoxText>
+      );
+    }
+
+    if (followingFeed.length === 0) {
+      return (
+        <NoxText variant="secondary" style={styles.emptyHint}>
+          {fr
+            ? 'Suis des DJs ou organisateurs pour voir leurs publications ici.'
+            : 'Follow DJs or organizers to see their posts here.'}
+        </NoxText>
+      );
+    }
+
+    return (
+      <View style={styles.followingList}>
+        {followingFeed.map((item) => renderFollowingItem(item))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -26,122 +340,54 @@ export default function CommunityHomePage() {
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top + Spacing.md, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.avatar} />
+            <View style={styles.avatar}>
+              {profile?.profileImage && !brokenImages.profile ? (
+                <Image
+                  source={{ uri: normalizeMediaUrl(profile.profileImage) }}
+                  style={styles.avatarImage}
+                  onError={() => setBrokenImages((prev) => ({ ...prev, profile: true }))}
+                />
+              ) : null}
+            </View>
             <View>
               <NoxText variant="titleSecondary" style={styles.greeting}>
-                Hello Clara !
+                Hello {displayName} !
               </NoxText>
-              <NoxText variant="secondary">Découvre ton prochain événement</NoxText>
+              <NoxText variant="secondary">
+                {fr ? 'Découvre ton prochain événement' : 'Discover your next event'}
+              </NoxText>
             </View>
           </View>
           <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
             <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+            {feedNotificationsCount > 0 ? <View style={styles.notifDot} /> : null}
           </TouchableOpacity>
         </View>
 
-        {/* Search */}
         <View style={styles.searchWrap}>
           <NoxSearchBar
-            placeholder="Rechercher un événement, un artiste ou un lieu"
+            placeholder={
+              fr ? 'Rechercher un événement, un artiste ou un lieu' : 'Search an event, artist or venue'
+            }
             onPress={() => navigate('events')}
           />
         </View>
 
-        {/* Tabs */}
         <NoxTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
 
-        {/* Featured */}
-        <TouchableOpacity
-          style={styles.featured}
-          activeOpacity={0.9}
-          onPress={() => navigate('events')}
-        >
-          <View style={styles.featuredImage}>
-            <Ionicons name="flame-outline" size={30} color={primaryAlpha(0.7)} />
-          </View>
-          <View style={styles.featuredOverlay}>
-            <NoxText variant="titleSecondary" style={styles.featuredTitle}>
-              {FEATURED_EVENT.name}
-            </NoxText>
-            <NoxText variant="secondary" style={styles.featuredMeta}>
-              {FEATURED_EVENT.date}, {FEATURED_EVENT.time} • {FEATURED_EVENT.city}
-            </NoxText>
-          </View>
-          <View style={styles.bookmark}>
-            <Ionicons name="bookmark-outline" size={18} color={Colors.text} />
-          </View>
-        </TouchableOpacity>
-
-        {/* Prochains événements */}
-        <View style={styles.sectionHeaderRow}>
-          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            Prochains événements
-          </NoxText>
-          <TouchableOpacity onPress={() => navigate('events')}>
-            <NoxText variant="secondary" style={styles.link}>
-              Voir plus
-            </NoxText>
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {UPCOMING.map((ev) => (
-            <TouchableOpacity
-              key={ev.id}
-              style={styles.upcomingCard}
-              activeOpacity={0.85}
-              onPress={() => navigate('events')}
-            >
-              <View style={styles.upcomingImage}>
-                <Ionicons name="calendar-outline" size={22} color={primaryAlpha(0.6)} />
-              </View>
-              <NoxText variant="secondary" style={styles.upcomingName} numberOfLines={1}>
-                {ev.name}
-              </NoxText>
-              <NoxText variant="secondary" style={styles.upcomingMeta}>
-                {ev.date} • {ev.city}
-              </NoxText>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Suggestions de DJs */}
-        <View style={styles.sectionHeaderRow}>
-          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            Suggestions de DJs
-          </NoxText>
-          <TouchableOpacity onPress={() => navigate('events', { tab: 'djs' })}>
-            <NoxText variant="secondary" style={styles.link}>
-              Voir plus
-            </NoxText>
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hScroll}
-        >
-          {SUGGESTED_DJS.map((dj) => (
-            <View key={dj.id} style={styles.djCard}>
-              <View style={styles.djAvatar}>
-                <Ionicons name="person" size={26} color={primaryAlpha(0.6)} />
-              </View>
-              <NoxText variant="secondary" style={styles.djName} numberOfLines={1}>
-                {dj.name}
-              </NoxText>
-              <NoxText variant="secondary" style={styles.djGenre} numberOfLines={1}>
-                {dj.genre}
-              </NoxText>
-            </View>
-          ))}
-        </ScrollView>
+        {loading ? (
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing.xxl }} />
+        ) : activeTab === 'events' ? (
+          renderEventsSections()
+        ) : (
+          renderFollowingSections()
+        )}
       </ScrollView>
 
       <NoxBottomNav
@@ -171,7 +417,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundElevated,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   greeting: { fontSize: 18 },
   bell: {
     width: 40,
@@ -182,6 +430,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundCard,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
   },
   searchWrap: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
   tabs: { marginBottom: Spacing.lg },
@@ -225,6 +482,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17 },
   link: { color: Colors.primary },
+  emptyHint: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
   hScroll: { paddingHorizontal: Spacing.xl, gap: Spacing.md },
   upcomingCard: { width: 130 },
   upcomingImage: {
@@ -237,6 +495,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+    overflow: 'hidden',
   },
   upcomingName: { color: Colors.text, fontWeight: '600' },
   upcomingMeta: { fontSize: 12 },
@@ -251,7 +510,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
+    overflow: 'hidden',
   },
   djName: { color: Colors.text, fontWeight: '600' },
   djGenre: { fontSize: 11 },
+  followingList: { paddingHorizontal: Spacing.xl, gap: Spacing.md },
+  feedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
 });

@@ -5,26 +5,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxInput, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { GENRES, CITIES, ARTISTS, VENUES, EVENT_TYPES } from './mockData';
 
-const STEPS = [
-  'name',
-  'photo',
-  'genres',
-  'cities',
-  'artists',
-  'venues',
-  'events',
-  'welcome',
-];
+const STEPS = ['name', 'photo', 'genres', 'cities', 'artists', 'venues', 'events', 'welcome'];
 
 function useToggleSet() {
   const [set, setSet] = useState([]);
@@ -68,27 +65,86 @@ function SelectableRow({ label, selected, onPress }) {
 
 export default function CommunityOnboardingPage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
+  const [bannerImage, setBannerImage] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [genres, toggleGenre] = useToggleSet();
   const [cities, toggleCity] = useToggleSet();
   const [artists, toggleArtist] = useToggleSet();
   const [venues, toggleVenue] = useToggleSet();
   const [eventTypes, toggleEventType] = useToggleSet();
 
+  const fr = language === 'fr';
   const cardWidth = (width - Spacing.xl * 2 - Spacing.md * 2) / 3;
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
-  const next = () => {
-    if (isLast) {
-      navigate('communityHome');
-    } else {
-      setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const pickImage = async (type) => {
+    if (!user?.token) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: type === 'banner' ? [3, 1] : [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setUploadingPhoto(true);
+    try {
+      const res = await api.uploadCommunityProfileImage(user.token, result.assets[0].uri, type);
+      if (type === 'banner') setBannerImage(res.bannerImage);
+      else setProfileImage(res.profileImage);
+    } finally {
+      setUploadingPhoto(false);
     }
   };
+
+  const saveProfile = async () => {
+    if (!user?.token || saving) return false;
+    setSaving(true);
+    try {
+      const genreParts = [...genres, ...eventTypes].filter(Boolean);
+      const preferenceNote = [
+        cities.length ? `Villes: ${cities.join(', ')}` : null,
+        artists.length ? `Artistes: ${artists.join(', ')}` : null,
+        venues.length ? `Lieux: ${venues.join(', ')}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      const genresPayload = [genreParts.join(', '), preferenceNote].filter(Boolean).join(' · ');
+
+      await api.updateCommunityProfile(user.token, {
+        pseudo: name.trim(),
+        genres: genresPayload || null,
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const next = async () => {
+    if (isLast) {
+      const ok = await saveProfile();
+      if (ok) navigate('communityHome');
+      return;
+    }
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const renderStep = () => {
@@ -97,10 +153,10 @@ export default function CommunityOnboardingPage() {
         return (
           <View style={styles.center}>
             <NoxText variant="title" style={styles.heading}>
-              Quel est ton nom ?
+              {fr ? 'Quel est ton nom ?' : 'What is your name?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Ce nom est visible sur ton profil.
+              {fr ? 'Ce nom est visible sur ton profil.' : 'This name is visible on your profile.'}
             </NoxText>
             <NoxInput
               placeholder="Ex : NOXKID"
@@ -115,19 +171,43 @@ export default function CommunityOnboardingPage() {
         return (
           <View style={styles.center}>
             <NoxText variant="title" style={styles.heading}>
-              Construis ton identité.
+              {fr ? 'Construis ton identité.' : 'Build your identity.'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Ajoute une photo de profil et une cover pour personnaliser ton espace artiste.
+              {fr
+                ? 'Ajoute une photo de profil et une cover pour personnaliser ton espace.'
+                : 'Add a profile photo and cover to personalize your space.'}
             </NoxText>
-            <TouchableOpacity style={styles.avatarUpload} activeOpacity={0.85}>
-              <Ionicons name="add" size={34} color={Colors.primary} />
+            <TouchableOpacity
+              style={styles.avatarUpload}
+              activeOpacity={0.85}
+              onPress={() => pickImage('profile')}
+              disabled={uploadingPhoto}
+            >
+              {profileImage ? (
+                <Image source={{ uri: normalizeMediaUrl(profileImage) }} style={styles.avatarImage} />
+              ) : uploadingPhoto ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : (
+                <Ionicons name="add" size={34} color={Colors.primary} />
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.coverUpload} activeOpacity={0.85}>
-              <Ionicons name="image-outline" size={26} color={primaryAlpha(0.6)} />
-              <NoxText variant="secondary" style={{ marginTop: Spacing.sm }}>
-                Ajouter une cover
-              </NoxText>
+            <TouchableOpacity
+              style={styles.coverUpload}
+              activeOpacity={0.85}
+              onPress={() => pickImage('banner')}
+              disabled={uploadingPhoto}
+            >
+              {bannerImage ? (
+                <Image source={{ uri: normalizeMediaUrl(bannerImage) }} style={styles.coverImage} />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={26} color={primaryAlpha(0.6)} />
+                  <NoxText variant="secondary" style={{ marginTop: Spacing.sm }}>
+                    {fr ? 'Ajouter une cover' : 'Add a cover'}
+                  </NoxText>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         );
@@ -136,10 +216,10 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              Quels styles écoutes-tu ?
+              {fr ? 'Quels styles écoutes-tu ?' : 'What styles do you listen to?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Choisis tes genres préférés.
+              {fr ? 'Choisis tes genres préférés.' : 'Choose your favorite genres.'}
             </NoxText>
             <View style={styles.grid}>
               {GENRES.map((g) => (
@@ -159,10 +239,10 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              Quelles scènes t'inspirent ?
+              {fr ? 'Quelles scènes t\'inspirent ?' : 'Which scenes inspire you?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Sélectionne les villes que tu suis.
+              {fr ? 'Sélectionne les villes que tu suis.' : 'Select cities you follow.'}
             </NoxText>
             <View style={styles.list}>
               {CITIES.map((c) => (
@@ -181,10 +261,10 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              Suis quelques artistes
+              {fr ? 'Suis quelques artistes' : 'Follow some artists'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Nous personnaliserons ton fil.
+              {fr ? 'Nous personnaliserons ton fil.' : 'We will personalize your feed.'}
             </NoxText>
             <View style={styles.grid}>
               {ARTISTS.map((a) => (
@@ -204,10 +284,10 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              Suis des lieux et collectifs
+              {fr ? 'Suis des lieux et collectifs' : 'Follow venues and collectives'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Retrouve leurs événements sur ton fil.
+              {fr ? 'Retrouve leurs événements sur ton fil.' : 'Find their events on your feed.'}
             </NoxText>
             <View style={styles.grid}>
               {VENUES.map((v) => (
@@ -227,10 +307,10 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              Qu'est-ce qui te fait sortir ?
+              {fr ? 'Qu\'est-ce qui te fait sortir ?' : 'What gets you going out?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Choisis les événements qui te ressemblent.
+              {fr ? 'Choisis les événements qui te ressemblent.' : 'Pick events that match you.'}
             </NoxText>
             <View style={styles.list}>
               {EVENT_TYPES.map((e) => (
@@ -253,13 +333,15 @@ export default function CommunityOnboardingPage() {
               <Ionicons name="checkmark-circle" size={64} color={Colors.primary} />
             </View>
             <NoxText variant="title" style={styles.heading}>
-              Bienvenue dans NOX
+              {fr ? 'Bienvenue dans NOX' : 'Welcome to NOX'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              Ton profil est prêt.
+              {fr ? 'Ton profil est prêt.' : 'Your profile is ready.'}
             </NoxText>
             <NoxText variant="description" style={styles.welcomeText}>
-              Découvre les artistes, collectifs et événements sélectionnés pour toi.
+              {fr
+                ? 'Découvre les artistes, collectifs et événements sélectionnés pour toi.'
+                : 'Discover artists, collectives and events picked for you.'}
             </NoxText>
           </View>
         );
@@ -270,7 +352,6 @@ export default function CommunityOnboardingPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header : retour + progression */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={back} hitSlop={12} style={styles.backBtn} disabled={step === 0}>
           {step > 0 ? <Ionicons name="chevron-back" size={24} color={Colors.text} /> : null}
@@ -283,10 +364,7 @@ export default function CommunityOnboardingPage() {
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {renderStep()}
       </ScrollView>
 
@@ -294,14 +372,15 @@ export default function CommunityOnboardingPage() {
         {current === 'events' ? (
           <TouchableOpacity onPress={next} style={styles.skip}>
             <NoxText variant="secondary" style={styles.skipText}>
-              Passer
+              {fr ? 'Passer' : 'Skip'}
             </NoxText>
           </TouchableOpacity>
         ) : null}
         <NoxButton
-          label={isLast ? 'Entrer dans NOX' : 'Continuer'}
+          label={isLast ? (fr ? 'Entrer dans NOX' : 'Enter NOX') : fr ? 'Continuer' : 'Continue'}
           onPress={next}
-          disabled={current === 'name' && !name.trim()}
+          disabled={(current === 'name' && !name.trim()) || saving}
+          loading={saving}
         />
       </View>
     </View>
@@ -397,7 +476,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.xxxl,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   coverUpload: {
     width: '100%',
     height: 110,
@@ -408,7 +489,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.xl,
+    overflow: 'hidden',
   },
+  coverImage: { width: '100%', height: '100%' },
   welcomeIcon: { marginBottom: Spacing.lg },
   welcomeText: { textAlign: 'center', marginTop: Spacing.lg },
   footer: {

@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
-import { NoxText } from '../../components/nox';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useLieuxData } from '../../hooks/useLieuxData';
+import { NoxText, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { COLLAB_REQUEST } from './mockData';
+import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 
 function InfoRow({ label, value }) {
   return (
@@ -16,54 +25,120 @@ function InfoRow({ label, value }) {
         {label}
       </NoxText>
       <NoxText variant="form" style={styles.infoValue}>
-        {value}
+        {value || '—'}
       </NoxText>
     </View>
   );
 }
 
 const DECISIONS = [
-  { id: 'confirmed', label: 'Confirmé' },
-  { id: 'negotiate', label: 'À négocier' },
-  { id: 'refused', label: 'Refusé' },
+  { id: 'accept', labelFr: 'Confirmé', labelEn: 'Confirmed' },
+  { id: 'negotiate', labelFr: 'À négocier', labelEn: 'To negotiate' },
+  { id: 'reject', labelFr: 'Refusé', labelEn: 'Refused' },
 ];
 
 export default function LieuxRequestDetailPage() {
-  const { goBack } = useNavigation();
+  const { goBack, navigate, routeParams } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const fr = language === 'fr';
+
+  const eventVenueId = routeParams?.eventVenueId;
   const [decision, setDecision] = useState(null);
-  const r = COLLAB_REQUEST;
+  const [processing, setProcessing] = useState(false);
+
+  const { loading, bookings, respondToBooking, statusLabel, refresh } = useLieuxData(
+    user?.token,
+    language,
+  );
+
+  const booking = useMemo(
+    () =>
+      bookings.find(
+        (b) => String(b.eventVenueId || b.id) === String(eventVenueId),
+      ) || bookings[0],
+    [bookings, eventVenueId],
+  );
+
+  const handleDecision = async (decisionId) => {
+    if (!booking || processing) return;
+    setDecision(decisionId);
+
+    if (decisionId === 'negotiate') {
+      navigate('venueDashboard', { openBookings: true });
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      if (decisionId === 'accept') {
+        await respondToBooking(booking.eventVenueId || booking.id, 'accept');
+      } else if (decisionId === 'reject') {
+        await respondToBooking(booking.eventVenueId || booking.id, 'reject');
+      }
+      await refresh();
+      goBack();
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <NoxText variant="secondary">{fr ? 'Demande introuvable.' : 'Request not found.'}</NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
+      </View>
+    );
+  }
+
+  const organizer = booking.booker?.name || (fr ? 'Organisateur' : 'Organizer');
+  const payment =
+    booking.paymentAmount != null
+      ? `${booking.paymentAmount}${booking.paymentCurrency === 'eur' ? '€' : ` ${booking.paymentCurrency}`}`
+      : '—';
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}>
         <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.headerBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <NoxText variant="titleSecondary" style={styles.orgName}>
-            {r.organizer}
+            {organizer}
           </NoxText>
           <NoxText variant="secondary" style={styles.eventDate}>
-            {r.eventDate}
+            {formatEventDateLabel(booking.eventDate, language, { withYear: true })}
           </NoxText>
           <NoxText variant="secondary" style={styles.sentDate}>
-            Demande envoyée le {r.sentDate}
+            {booking.eventTitle}
           </NoxText>
         </View>
-        <TouchableOpacity hitSlop={12} style={styles.headerBtn}>
+        <TouchableOpacity
+          hitSlop={12}
+          style={styles.headerBtn}
+          onPress={() => navigate('venueDashboard', { openBookings: true })}
+        >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Statut */}
       <View style={styles.statusWrap}>
         <View style={styles.statusBadge}>
           <NoxText variant="secondary" style={styles.statusText}>
-            {r.status}
+            {statusLabel(booking.invitationStatus)}
           </NoxText>
         </View>
       </View>
@@ -73,46 +148,50 @@ export default function LieuxRequestDetailPage() {
         showsVerticalScrollIndicator={false}
       >
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          Informations événement
+          {fr ? 'Informations événement' : 'Event information'}
         </NoxText>
 
-        <InfoRow label="Date demandée" value={r.requestedDate} />
-        <InfoRow label="Format" value={r.format} />
-        <InfoRow label="Capacité prévue" value={r.capacity} />
-        <InfoRow label="Proposition financière" value={r.budget} />
-        <InfoRow label="Billeterie" value={r.ticketing} />
-        <InfoRow label="Montage/Démontage" value={`${r.setup}  •  ${r.teardown}`} />
+        <InfoRow
+          label={fr ? 'Date' : 'Date'}
+          value={formatEventDateLabel(booking.eventDate, language, { withYear: true })}
+        />
+        <InfoRow label={fr ? 'Lieu' : 'Location'} value={booking.eventLocation} />
+        <InfoRow label={fr ? 'Budget / paiement' : 'Budget / payment'} value={payment} />
+        <InfoRow label={fr ? 'Statut événement' : 'Event status'} value={booking.eventStatus} />
 
-        <View style={styles.messageBlock}>
-          <NoxText variant="secondary" style={styles.infoLabel}>
-            Message
-          </NoxText>
-          <NoxText variant="description" style={styles.message}>
-            {r.message}
-          </NoxText>
-        </View>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {fr ? 'Décision' : 'Decision'}
+        </NoxText>
 
-        {/* Décisions */}
-        <View style={styles.decisionRow}>
-          {DECISIONS.map((d) => {
-            const active = decision === d.id;
-            return (
-              <TouchableOpacity
-                key={d.id}
-                style={[styles.decisionBtn, active && styles.decisionBtnActive]}
-                onPress={() => setDecision(d.id)}
-                activeOpacity={0.85}
-              >
-                <NoxText
-                  variant="buttonSecondary"
-                  style={[styles.decisionText, active && styles.decisionTextActive]}
-                >
-                  {d.label}
-                </NoxText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {DECISIONS.map((d) => (
+          <TouchableOpacity
+            key={d.id}
+            style={[styles.decisionRow, decision === d.id && styles.decisionRowActive]}
+            onPress={() => handleDecision(d.id)}
+            disabled={processing}
+          >
+            <NoxText variant="form">{fr ? d.labelFr : d.labelEn}</NoxText>
+            <View style={[styles.radio, decision === d.id && styles.radioSelected]}>
+              {decision === d.id ? <View style={styles.radioDot} /> : null}
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {String(booking.invitationStatus).toUpperCase() === 'PENDING' ? (
+          <NoxButton
+            label={fr ? 'Accepter la demande' : 'Accept request'}
+            onPress={() => handleDecision('accept')}
+            loading={processing}
+            style={{ marginTop: Spacing.xl }}
+          />
+        ) : (
+          <NoxButton
+            label={fr ? 'Voir le dashboard lieu' : 'Open venue dashboard'}
+            variant="ghost"
+            onPress={() => navigate('venueDashboard', { openBookings: true })}
+            style={{ marginTop: Spacing.xl }}
+          />
+        )}
       </ScrollView>
     </View>
   );
@@ -120,30 +199,38 @@ export default function LieuxRequestDetailPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
+    gap: Spacing.sm,
   },
-  headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundCard,
+  },
   headerCenter: { flex: 1, alignItems: 'center' },
-  orgName: { fontSize: 20, letterSpacing: 0.5 },
-  eventDate: { color: Colors.primary, marginTop: 2 },
-  sentDate: { color: Colors.textTertiary, fontSize: 12, marginTop: 2 },
-  statusWrap: { alignItems: 'center', marginBottom: Spacing.xl },
+  orgName: { fontSize: 18, textAlign: 'center' },
+  eventDate: { marginTop: 2 },
+  sentDate: { marginTop: 2, textAlign: 'center' },
+  statusWrap: { alignItems: 'center', marginVertical: Spacing.lg },
   statusBadge: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
     borderRadius: Radius.pill,
-    backgroundColor: primaryAlpha(0.12),
+    backgroundColor: primaryAlpha(0.15),
     borderWidth: 1,
     borderColor: primaryAlpha(0.35),
   },
-  statusText: { color: Colors.primaryLight },
+  statusText: { color: Colors.primary },
   sectionTitle: {
     fontSize: 16,
+    marginTop: Spacing.xl,
     marginBottom: Spacing.md,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
@@ -152,33 +239,29 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+  infoLabel: { flex: 1 },
+  infoValue: { flex: 1, textAlign: 'right', fontWeight: '600' },
+  decisionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  infoLabel: { flex: 1 },
-  infoValue: { textAlign: 'right', fontWeight: '600' },
-  messageBlock: { marginTop: Spacing.xl },
-  message: { marginTop: Spacing.sm },
-  decisionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-    marginTop: Spacing.xxxl,
-  },
-  decisionBtn: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
+  decisionRowActive: { backgroundColor: primaryAlpha(0.06) },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
     borderColor: Colors.borderSubtle,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  decisionBtnActive: {
-    borderColor: Colors.primary,
-    backgroundColor: primaryAlpha(0.12),
-  },
-  decisionText: { color: Colors.textSecondary },
-  decisionTextActive: { color: Colors.primary },
+  radioSelected: { borderColor: Colors.primary },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
 });

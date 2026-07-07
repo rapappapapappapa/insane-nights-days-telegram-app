@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { normalizeMediaUrl } from '../../api/config';
+import { useLieuxData } from '../../hooks/useLieuxData';
 import { NoxText, NoxTabs, NoxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -15,13 +27,38 @@ const TABS = [
   { id: 'links', label: 'Liens' },
 ];
 
+const TAB_TYPE_MAP = {
+  photos: 'PHOTO',
+  videos: 'VIDEO',
+  sets: 'SET',
+  links: 'LINK',
+};
+
 export default function LieuxMediaPage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('photos');
+  const [brokenImages, setBrokenImages] = useState({});
+  const fr = language === 'fr';
+
+  const { loading, refreshing, media, refresh } = useLieuxData(user?.token, language);
 
   const tileWidth = (width - Spacing.xl * 2 - Spacing.md) / 2;
+  const filteredMedia = useMemo(() => {
+    const type = TAB_TYPE_MAP[activeTab];
+    return (media || []).filter((m) => !type || String(m.type || '').toUpperCase() === type);
+  }, [media, activeTab]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -32,7 +69,7 @@ export default function LieuxMediaPage() {
           Media
         </NoxText>
         <NoxText variant="secondary" style={styles.subtitle}>
-          Centralise tes événements.
+          {fr ? 'Centralise les médias de ton lieu.' : 'Centralize your venue media.'}
         </NoxText>
         <NoxTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
       </View>
@@ -40,25 +77,50 @@ export default function LieuxMediaPage() {
       <ScrollView
         contentContainerStyle={{ padding: Spacing.xl, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />
+        }
       >
-        <View style={styles.grid}>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <View key={i} style={[styles.tile, { width: tileWidth, height: tileWidth * 0.72 }]}>
-              <Ionicons
-                name={activeTab === 'videos' || activeTab === 'sets' ? 'play-circle-outline' : 'image-outline'}
-                size={26}
-                color={primaryAlpha(0.5)}
-              />
-            </View>
-          ))}
-        </View>
+        {filteredMedia.length === 0 ? (
+          <NoxText variant="secondary" style={styles.empty}>
+            {fr ? 'Aucun média pour cette catégorie.' : 'No media in this category.'}
+          </NoxText>
+        ) : (
+          <View style={styles.grid}>
+            {filteredMedia.map((item) => {
+              const uri = normalizeMediaUrl(item.url || item.thumbnail);
+              const key = item.id || uri;
+              return (
+                <View key={key} style={[styles.tile, { width: tileWidth, height: tileWidth * 0.72 }]}>
+                  {uri && !brokenImages[key] ? (
+                    <Image
+                      source={{ uri }}
+                      style={styles.tileImage}
+                      onError={() => setBrokenImages((p) => ({ ...p, [key]: true }))}
+                    />
+                  ) : (
+                    <Ionicons
+                      name={
+                        activeTab === 'videos' || activeTab === 'sets'
+                          ? 'play-circle-outline'
+                          : 'image-outline'
+                      }
+                      size={26}
+                      color={primaryAlpha(0.5)}
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       <NoxBottomNav
         active="home"
         onHome={() => navigate('lieuxDashboard')}
         onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => {}}
+        onCreate={() => navigate('venueDashboard')}
       />
     </View>
   );
@@ -66,20 +128,20 @@ export default function LieuxMediaPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  title: { textAlign: 'center' },
-  subtitle: { textAlign: 'center', marginTop: 4, marginBottom: Spacing.lg },
-  tabs: { justifyContent: 'center', gap: Spacing.xl },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
+  centered: { alignItems: 'center', justifyContent: 'center' },
+  title: { paddingHorizontal: Spacing.xl },
+  subtitle: { paddingHorizontal: Spacing.xl, marginTop: Spacing.xs, marginBottom: Spacing.md },
+  tabs: { marginBottom: Spacing.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   tile: {
     borderRadius: Radius.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: Colors.backgroundCard,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  tileImage: { width: '100%', height: '100%' },
+  empty: { textAlign: 'center', marginTop: Spacing.xxl },
 });

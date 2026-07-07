@@ -1,25 +1,67 @@
-import React from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { normalizeMediaUrl } from '../../api/config';
+import { useLieuxData } from '../../hooks/useLieuxData';
 import { NoxText, NoxCard, NoxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { VENUE, UPCOMING_EVENTS } from './mockData';
+import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 
-function EventThumb({ style }) {
+function EventThumb({ uri, broken, onError }) {
+  const normalized = uri ? normalizeMediaUrl(uri) : null;
   return (
-    <View style={[styles.thumb, style]}>
-      <Ionicons name="image-outline" size={20} color={primaryAlpha(0.6)} />
+    <View style={styles.thumb}>
+      {normalized && !broken ? (
+        <Image source={{ uri: normalized }} style={styles.thumbImage} onError={onError} />
+      ) : (
+        <Ionicons name="image-outline" size={20} color={primaryAlpha(0.6)} />
+      )}
     </View>
   );
 }
 
 export default function LieuxDashboardPage() {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const fr = language === 'fr';
+
+  const {
+    loading,
+    refreshing,
+    venueProfile,
+    pendingBookings,
+    upcomingBookings,
+    refresh,
+  } = useLieuxData(user?.token, language);
+
+  const [brokenImages, setBrokenImages] = useState({});
+
+  const greetingName = venueProfile?.venueName || (fr ? 'Lieu' : 'Venue');
+  const cityLabel = [venueProfile?.city, venueProfile?.country].filter(Boolean).join(', ');
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -28,16 +70,26 @@ export default function LieuxDashboardPage() {
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top + Spacing.md, paddingBottom: 140 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />
+        }
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.avatar} />
+            <View style={styles.avatar}>
+              {venueProfile?.profileImage && !brokenImages.profile ? (
+                <Image
+                  source={{ uri: normalizeMediaUrl(venueProfile.profileImage) }}
+                  style={styles.avatarImage}
+                  onError={() => setBrokenImages((p) => ({ ...p, profile: true }))}
+                />
+              ) : null}
+            </View>
             <View>
               <NoxText variant="titleSecondary" style={styles.greeting}>
-                Hello {VENUE.greetingName} !
+                Hello {greetingName} !
               </NoxText>
-              <NoxText variant="secondary">{VENUE.city}</NoxText>
+              <NoxText variant="secondary">{cityLabel || venueProfile?.address || ''}</NoxText>
             </View>
           </View>
           <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
@@ -45,97 +97,112 @@ export default function LieuxDashboardPage() {
           </TouchableOpacity>
         </View>
 
-        {/* Demandes en attente */}
-        <TouchableOpacity
-          style={styles.pending}
-          activeOpacity={0.85}
-          onPress={() => navigate('lieuxRequestDetail')}
-        >
-          <NoxText variant="button" style={styles.pendingLabel}>
-            Demandes en attente ({VENUE.pendingRequests})
-          </NoxText>
-          <NoxText variant="secondary" style={styles.pendingHint}>
-            Voir tout
-          </NoxText>
-        </TouchableOpacity>
+        {pendingBookings.length > 0 ? (
+          <TouchableOpacity
+            style={styles.pending}
+            activeOpacity={0.85}
+            onPress={() =>
+              navigate('lieuxRequestDetail', { eventVenueId: pendingBookings[0].eventVenueId || pendingBookings[0].id })
+            }
+          >
+            <NoxText variant="button" style={styles.pendingLabel}>
+              {fr ? 'Demandes en attente' : 'Pending requests'} ({pendingBookings.length})
+            </NoxText>
+            <NoxText variant="secondary" style={styles.pendingHint}>
+              {fr ? 'Voir tout' : 'See all'}
+            </NoxText>
+          </TouchableOpacity>
+        ) : null}
 
-        {/* Actions rapides */}
         <View style={styles.section}>
           <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            Actions rapides
+            {fr ? 'Actions rapides' : 'Quick actions'}
           </NoxText>
           <View style={styles.quickRow}>
-            <TouchableOpacity style={styles.quickCard} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.quickCard}
+              activeOpacity={0.85}
+              onPress={() => navigate('venueDashboard')}
+            >
               <View style={styles.quickIcon}>
                 <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
               </View>
               <NoxText variant="secondary" style={styles.quickLabel}>
-                Créer un événement
+                {fr ? 'Gérer les réservations' : 'Manage bookings'}
               </NoxText>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickCard} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={() => navigate('scanTicket')}>
               <View style={styles.quickIcon}>
                 <Ionicons name="qr-code-outline" size={22} color={Colors.primary} />
               </View>
               <NoxText variant="secondary" style={styles.quickLabel}>
-                Scanner billets
+                {fr ? 'Scanner billets' : 'Scan tickets'}
               </NoxText>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Événements à venir */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-              Événement à venir
+              {fr ? 'Événements à venir' : 'Upcoming events'}
             </NoxText>
             <TouchableOpacity onPress={() => navigate('lieuxAvailability')}>
               <NoxText variant="secondary" style={styles.link}>
-                Voir plus
+                {fr ? 'Voir plus' : 'See more'}
               </NoxText>
             </TouchableOpacity>
           </View>
 
-          {UPCOMING_EVENTS.map((ev) => (
-            <TouchableOpacity
-              key={ev.id}
-              activeOpacity={0.85}
-              onPress={() => navigate('lieuxRequestDetail')}
-            >
-              <NoxCard style={styles.eventCard} padded={false}>
-                <EventThumb />
-                <View style={styles.eventInfo}>
-                  <NoxText variant="form" style={styles.eventName}>
-                    {ev.name}
-                  </NoxText>
-                  <NoxText variant="secondary">{ev.date}</NoxText>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-              </NoxCard>
-            </TouchableOpacity>
-          ))}
+          {upcomingBookings.length === 0 ? (
+            <NoxText variant="secondary">{fr ? 'Aucun événement confirmé.' : 'No confirmed events.'}</NoxText>
+          ) : (
+            upcomingBookings.map((ev) => (
+              <TouchableOpacity
+                key={ev.id}
+                activeOpacity={0.85}
+                onPress={() => navigate('eventDetail', { eventId: ev.booking?.eventId })}
+              >
+                <NoxCard style={styles.eventCard} padded={false}>
+                  <EventThumb
+                    uri={null}
+                    broken={brokenImages[`ev-${ev.id}`]}
+                    onError={() => setBrokenImages((p) => ({ ...p, [`ev-${ev.id}`]: true }))}
+                  />
+                  <View style={styles.eventInfo}>
+                    <NoxText variant="form" style={styles.eventName}>
+                      {ev.title}
+                    </NoxText>
+                    <NoxText variant="secondary">
+                      {formatEventDateLabel(ev.date, language, { shortMonth: true, withYear: true })}
+                      {ev.location ? ` • ${ev.location}` : ''}
+                    </NoxText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+                </NoxCard>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
-        {/* Statistiques */}
         <View style={styles.section}>
           <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            Statistiques du dernier événement
+            {fr ? 'Mon lieu' : 'My venue'}
           </NoxText>
           <View style={styles.statRow}>
             <NoxCard style={styles.statCard}>
-              <Ionicons name="ticket-outline" size={20} color={Colors.primary} />
+              <Ionicons name="people-outline" size={20} color={Colors.primary} />
               <NoxText variant="title" style={styles.statValue}>
-                420
+                {venueProfile?.maxCapacity ?? '—'}
               </NoxText>
-              <NoxText variant="secondary">Billets vendus</NoxText>
+              <NoxText variant="secondary">{fr ? 'Capacité max.' : 'Max capacity'}</NoxText>
             </NoxCard>
             <NoxCard style={styles.statCard}>
-              <Ionicons name="cash-outline" size={20} color={Colors.primary} />
+              <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
               <NoxText variant="title" style={styles.statValue}>
-                6 300€
+                {upcomingBookings.length}
               </NoxText>
-              <NoxText variant="secondary">Recette</NoxText>
+              <NoxText variant="secondary">{fr ? 'À venir' : 'Upcoming'}</NoxText>
             </NoxCard>
           </View>
         </View>
@@ -153,6 +220,7 @@ export default function LieuxDashboardPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centered: { alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,7 +236,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundElevated,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   greeting: { fontSize: 18 },
   bell: {
     width: 40,
@@ -236,7 +306,9 @@ const styles = StyleSheet.create({
     backgroundColor: primaryAlpha(0.12),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  thumbImage: { width: '100%', height: '100%' },
   eventInfo: { flex: 1 },
   eventName: { fontWeight: '700', marginBottom: 2 },
   statRow: { flexDirection: 'row', gap: Spacing.md },

@@ -178,7 +178,9 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     !user?.isAuthenticated || drawerOpen || HIDE_RADIAL_NAV_PAGES.has(currentPage);
   if (hidden) return null;
 
-  const toggle = () => setOpen((v) => !v);
+  const handleNxPress = () => {
+    setOpen((prev) => !prev);
+  };
   const close = () => setOpen(false);
 
   const navigateTo = (screen) => {
@@ -208,8 +210,12 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
       ) : null}
 
       <View pointerEvents="box-none" style={[styles.wrap, { bottom, zIndex: 10002 }]}>
-        <View style={styles.anchor}>
-          {navItems.map((item) => {
+        <View
+          pointerEvents={open ? 'box-none' : 'none'}
+          style={styles.orbitHost}
+        >
+          <View style={styles.anchor} pointerEvents="box-none">
+            {navItems.map((item) => {
             const offset = polarOffset(item.angle, ORBIT_RADIUS);
             const tx = progress.interpolate({
               inputRange: [0, 1],
@@ -262,23 +268,25 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
               </Animated.View>
             );
           })}
-
-          <Pressable
-            style={styles.nxButton}
-            onPress={toggle}
-            onLongPress={onOpenMenu}
-            delayLongPress={350}
-            accessibilityRole="button"
-            accessibilityLabel={open ? 'Fermer le menu NX' : 'Ouvrir le menu NX'}
-            accessibilityHint={
-              language === 'fr' ? 'Appui long pour le menu latéral' : 'Long press for side menu'
-            }
-          >
-            <Animated.Text style={[styles.nxLabel, { transform: [{ rotate: nxRotate }] }]}>
-              NX
-            </Animated.Text>
-          </Pressable>
+          </View>
         </View>
+
+        <Pressable
+          style={styles.nxButton}
+          onPress={handleNxPress}
+          onLongPress={onOpenMenu}
+          delayLongPress={350}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={open ? 'Fermer le menu NX' : 'Ouvrir le menu NX'}
+          accessibilityHint={
+            language === 'fr' ? 'Appui long pour le menu latéral' : 'Long press for side menu'
+          }
+        >
+          <Animated.Text style={[styles.nxLabel, { transform: [{ rotate: nxRotate }] }]}>
+            NX
+          </Animated.Text>
+        </Pressable>
       </View>
     </>
   );
@@ -302,6 +310,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 16,
   },
+  orbitHost: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
   anchor: {
     width: NX_SIZE,
     height: NX_SIZE,
@@ -314,6 +326,7 @@ const styles = StyleSheet.create({
     minWidth: NAV_SIZE + 20,
     top: (NX_SIZE - NAV_SIZE) / 2 - 6,
     left: (NX_SIZE - NAV_SIZE) / 2 - 10,
+    zIndex: 1,
   },
   orbitBtn: {
     width: NAV_SIZE,
@@ -362,8 +375,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
-    zIndex: 2,
+    elevation: 24,
+    zIndex: 100,
   },
   nxLabel: {
     fontFamily: FontFamily.black,

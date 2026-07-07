@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Corrigé (mobile — bouton NX toggle fermeture) — 7 juil.
+- **`NoxRadialNav`** : ré-appui sur NX referme bien le menu radial (couche orbite séparée, `pointerEvents` quand fermé, bouton NX au-dessus en z-index/elevation).
+
 ### Modifié (mobile — refonte NOX phase 3 : parcours événements & profil) — 7 juil.
 
 Refonte UI des écrans **production** (API réelle) alignée maquettes Figma / `components/nox`, sans régression fonctionnelle.

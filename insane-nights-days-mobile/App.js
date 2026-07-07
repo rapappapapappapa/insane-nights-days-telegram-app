@@ -18,7 +18,6 @@ import { api } from './api/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
-import OtaDebugBanner from './components/OtaDebugBanner';
 import NoxRadialNav from './components/nox/NoxRadialNav';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
@@ -139,6 +138,7 @@ function AppContent() {
   const androidExitPressRef = useRef(0);
   const initialPushHandledRef = useRef(false);
   const drawerRef = useRef(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useExpoPushRegistration(user);
 
@@ -347,9 +347,11 @@ function AppContent() {
 
   return (
     <>
-      <OtaDebugBanner />
       <Drawer
         ref={drawerRef}
+        isOpen={drawerOpen}
+        onOpen={() => setDrawerOpen(true)}
+        onClose={() => setDrawerOpen(false)}
         showFloatingButton={!user?.isAuthenticated}
       >
         {isCreateFeedPost ? (
@@ -381,7 +383,7 @@ function AppContent() {
           </ErrorBoundary>
         )}
       </Drawer>
-      <NoxRadialNav onOpenMenu={() => drawerRef.current?.open?.()} />
+      <NoxRadialNav drawerOpen={drawerOpen} onOpenMenu={() => drawerRef.current?.open?.()} />
       {/* Notification push globale */}
       {user?.isAuthenticated && (
         <PushNotification

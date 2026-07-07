@@ -103,7 +103,7 @@ function polarOffset(angleDeg, radius) {
 /**
  * Barre NX Figma — bouton central qui déploie les raccourcis en arc au-dessus.
  */
-export default function NoxRadialNav({ onOpenMenu }) {
+export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
   const { language } = useLanguage();
   const { user } = useAuth();
   const { navigate, currentPage } = useNavigation();
@@ -133,7 +133,14 @@ export default function NoxRadialNav({ onOpenMenu }) {
     ]).start();
   }, [open, progress, backdrop]);
 
-  const hidden = !user?.isAuthenticated || HIDE_RADIAL_NAV_PAGES.has(currentPage);
+  // Referme la nav radiale quand le drawer s'ouvre (évite un état ouvert résiduel au retour).
+  useEffect(() => {
+    if (drawerOpen && open) setOpen(false);
+  }, [drawerOpen, open]);
+
+  // Masqué : non connecté, drawer ouvert, ou page sans nav flottante.
+  const hidden =
+    !user?.isAuthenticated || drawerOpen || HIDE_RADIAL_NAV_PAGES.has(currentPage);
   if (hidden) return null;
 
   const toggle = () => setOpen((v) => !v);

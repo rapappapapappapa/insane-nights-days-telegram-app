@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Modifié (UI NOX — nav flottante) — 7 juil.
+- **Bandeau debug OTA retiré** : suppression de `OtaDebugBanner` (haut d’écran) et du composant associé.
+- **Bouton NX** : appui pour déployer les icônes, **ré-appui pour les masquer** (toggle).
+- **Bouton NX masqué quand le tiroir (drawer) est ouvert** : l’état d’ouverture du drawer est remonté dans `App.js` et transmis à `NoxRadialNav` (se masque + referme sa nav radiale).
+
 ### Résolu ✅ — Crash iOS / OTA qui ne s’appliquaient pas (7 juil.)
 - **Problème réglé** : sur iOS, l’UI restait bloquée sur l’ancien affichage rouge et les OTA ne s’appliquaient jamais (retour au bundle embarqué). Idem crash au splash des builds natifs 11–15.
 - **Cause racine** : `utils/installGlobalErrorHandlers.js` importait `{ ErrorUtils } from 'react-native'` — or `ErrorUtils` est un **global du runtime**, pas un export → `undefined` → crash dans `index.js` **avant le montage de l’app**, suivi d’un rollback OTA vers le bundle rouge.

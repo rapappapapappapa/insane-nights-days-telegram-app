@@ -79,6 +79,19 @@ import RankingPage from './screens/ranking/RankingPage';
 import TutorialPage from './screens/tutorial/TutorialPage';
 import LegalPage from './screens/legal/LegalPage';
 
+// LIEUX (nouveau design, UI-first)
+import LieuxDashboardPage from './screens/lieux/LieuxDashboardPage';
+import LieuxProfilPage from './screens/lieux/LieuxProfilPage';
+import LieuxAvailabilityPage from './screens/lieux/LieuxAvailabilityPage';
+import LieuxMediaPage from './screens/lieux/LieuxMediaPage';
+import LieuxRequestDetailPage from './screens/lieux/LieuxRequestDetailPage';
+
+// COMMUNAUTÉ (nouveau design, UI-first)
+import CommunityOnboardingPage from './screens/community/CommunityOnboardingPage';
+import CommunityHomePage from './screens/community/CommunityHomePage';
+import CommunityEventDetailPage from './screens/community/CommunityEventDetailPage';
+import CommunityDiscoverPage from './screens/community/CommunityDiscoverPage';
+
 const SCREENS = {
   onboarding: OnboardingPage,
   home: HomePage,
@@ -128,6 +141,17 @@ const SCREENS = {
   notifications: NotificationsPage, // ✅ AJOUT: Route notifications (feed)
   admin: AdminPage, // ✅ AJOUT: Route admin (visible uniquement pour admins)
   legal: LegalPage, // CGU, CGV, mentions légales, politique de confidentialité
+  // LIEUX (nouveau design)
+  lieuxDashboard: LieuxDashboardPage,
+  lieuxProfil: LieuxProfilPage,
+  lieuxAvailability: LieuxAvailabilityPage,
+  lieuxMedia: LieuxMediaPage,
+  lieuxRequestDetail: LieuxRequestDetailPage,
+  // COMMUNAUTÉ (nouveau design)
+  communityOnboarding: CommunityOnboardingPage,
+  communityHome: CommunityHomePage,
+  communityEventDetail: CommunityEventDetailPage,
+  communityDiscover: CommunityDiscoverPage,
 };
 
 function AppContent() {

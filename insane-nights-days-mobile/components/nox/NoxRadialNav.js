@@ -90,6 +90,17 @@ export const HIDE_RADIAL_NAV_PAGES = new Set([
   'tutorial',
   'rateEvent',
   'purchaseSuccess',
+  // LIEUX (nouveau design) — barre de nav basse dédiée
+  'lieuxDashboard',
+  'lieuxProfil',
+  'lieuxAvailability',
+  'lieuxMedia',
+  'lieuxRequestDetail',
+  // COMMUNAUTÉ (nouveau design) — barre de nav basse dédiée / plein écran
+  'communityOnboarding',
+  'communityHome',
+  'communityEventDetail',
+  'communityDiscover',
 ]);
 
 function polarOffset(angleDeg, radius) {

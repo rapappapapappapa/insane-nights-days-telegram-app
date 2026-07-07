@@ -8,3 +8,4 @@ export { default as NoxTabs } from './NoxTabs';
 export { default as NoxRoleCard } from './NoxRoleCard';
 export { default as NoxFeedPostCard } from './NoxFeedPostCard';
 export { default as NoxRadialNav, HIDE_RADIAL_NAV_PAGES } from './NoxRadialNav';
+export { default as NoxBottomNav } from './NoxBottomNav';

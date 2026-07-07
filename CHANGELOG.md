@@ -6,6 +6,21 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Ajouté (écrans design NOX — LIEUX & COMMUNAUTÉ, UI-first) — 7 juil.
+- **Nouveau composant `NoxBottomNav`** : barre de navigation basse (Accueil / bouton central `+` / Profil) alignée au design Figma, exportée depuis `components/nox`.
+- **Bloc LIEUX** (`screens/lieux/`, données mockées `mockData.js`, à brancher au backend plus tard) :
+  - `LieuxDashboardPage` — Dashboard « Hello Le Sucre » (demandes en attente, actions rapides, événements à venir, stats).
+  - `LieuxProfilPage` — Profil lieu « MacBar » (bannière, stats capacité/surface/son, genres, prochains événements).
+  - `LieuxAvailabilityPage` — Disponibilités (calendrier Juin 2026 + légende de statuts, événements, « Bloquer des dates »).
+  - `LieuxMediaPage` — Media (onglets Photos / Vidéos / Sets / Liens + grille).
+  - `LieuxRequestDetailPage` — Détail demande de collab « Vico Collective » (infos, message, décisions Confirmé/À négocier/Refusé).
+- **Bloc COMMUNAUTÉ** (`screens/community/`, données mockées `mockData.js`) :
+  - `CommunityOnboardingPage` — flux 8 étapes (nom, photo, genres, villes, artistes, lieux, types d’événements, bienvenue).
+  - `CommunityHomePage` — Home/Feed « Hello Clara » (recherche, onglets Events/Following, événement mis en avant, prochains événements, suggestions de DJs).
+  - `CommunityEventDetailPage` — Détail événement « VOID WAREHOUSE » (infos, description, line-up, organisateur, lieu).
+  - `CommunityDiscoverPage` — Discover (recherche, segment Événements/DJs, filtres de genres, listes).
+- **Navigation** : nouvelles routes enregistrées dans `App.js` (`lieux*`, `community*`) et ajoutées à `HIDE_RADIAL_NAV_PAGES` (barre de nav dédiée / plein écran).
+
 ### Modifié (UI NOX — nav flottante) — 7 juil.
 - **Bandeau debug OTA retiré** : suppression de `OtaDebugBanner` (haut d’écran) et du composant associé.
 - **Bouton NX** : appui pour déployer les icônes, **ré-appui pour les masquer** (toggle).

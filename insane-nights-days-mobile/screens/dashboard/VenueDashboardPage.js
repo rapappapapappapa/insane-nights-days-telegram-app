@@ -26,6 +26,7 @@ import VenueAvisTab from '../../components/venueDashboard/sections/VenueAvisTab'
 import VenueBookingsTab from '../../components/venueDashboard/sections/VenueBookingsTab';
 import VenueChatModal from '../../components/venueDashboard/VenueChatModal';
 import VenueContractModals from '../../components/venueDashboard/VenueContractModals';
+import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 export default function VenueDashboardPage() {
   const { height: contractModalWindowH } = useWindowDimensions();
@@ -35,6 +36,7 @@ export default function VenueDashboardPage() {
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const { user } = useAuth();
+  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'venueDashboard');
   const { refreshUnreadCount, markAllAsRead } = useNotifications();
 
   const v = useVenueDashboard({
@@ -90,9 +92,13 @@ export default function VenueDashboardPage() {
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
+        {!isHome ? (
+          <TouchableOpacity style={styles.backButton} onPress={goBack}>
+            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
         <Text style={styles.headerTitle} numberOfLines={2}>
           {language === 'fr' ? 'Dashboard Lieu' : 'Venue Dashboard'}
         </Text>

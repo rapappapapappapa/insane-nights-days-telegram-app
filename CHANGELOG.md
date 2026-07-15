@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — navigation par rôle, accueil vs dashboard pro) — 15 juil.
+- **Home DJ / Booker / Prestataire** : page d’accueil = **`welcome`** (fil / discover) ; dashboards pro accessibles via drawer ou NX.
+- **Retour** : masqué sur l’écran « home » du rôle ; `goBack()` sans historique → home du profil actif (`setBackFallback` dans `NavigationContext`).
+- **Login / register** : redirection via `getPostAuthScreen()` ; switch profil → home du rôle choisi.
+- **NX radial** : visible sur les dashboards pro (plus dans `HIDE_RADIAL_NAV_PAGES`).
+- **Lieu** : drawer et entrées menu → **`lieuxDashboard`** ; `venueDashboard` conservé pour réservations/chat legacy.
+
 ### Modifié (mobile — accueil COMMUNAUTÉ : 3 onglets + fil social + bouton NX) — 7 juil.
 - **`CommunityHomePage`** : onglets **Événements / Publications / Abonnements** ; fil API avec likes/commentaires (`CommunityFeedStream`) ; bouton **NX** radial réactivé (retrait `NoxBottomNav` sur l’accueil).
 - **`CommunityFeedStream`** : composant partagé feed posts + événements publiés (style Twitter/NOX).

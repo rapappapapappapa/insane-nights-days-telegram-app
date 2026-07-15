@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 
 export default function RegisterBookerPage() {
   const { language, t } = useLanguage();
@@ -183,7 +184,7 @@ export default function RegisterBookerPage() {
       showSuccess(language === 'fr'
         ? 'Profil Organisateur créé avec succès !'
         : 'Organizer profile created successfully!');
-      setTimeout(() => navigate('welcome'), 1500);
+      setTimeout(() => navigate(getPostAuthScreen('BOOKER')), 1500);
     } catch (error) {
       console.error('Erreur création profil Organisateur:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));

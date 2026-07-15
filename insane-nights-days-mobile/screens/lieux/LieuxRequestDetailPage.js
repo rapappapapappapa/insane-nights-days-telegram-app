@@ -66,7 +66,7 @@ export default function LieuxRequestDetailPage() {
     setDecision(decisionId);
 
     if (decisionId === 'negotiate') {
-      navigate('venueDashboard', { openBookings: true });
+      navigate('lieuxDashboard', { openBookings: true });
       return;
     }
 

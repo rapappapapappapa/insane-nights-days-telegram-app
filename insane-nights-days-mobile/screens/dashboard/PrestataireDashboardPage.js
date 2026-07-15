@@ -14,6 +14,7 @@ import PrestataireProfilSection from '../../components/prestataireDashboard/Pres
 import PrestataireBookingsSection from '../../components/prestataireDashboard/PrestataireBookingsSection';
 import PrestataireChatModal from '../../components/prestataireDashboard/PrestataireChatModal';
 import PrestataireContractModals from '../../components/prestataireDashboard/PrestataireContractModals';
+import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 /**
  * Dashboard prestataire : réservations (EventPrestataire), chat privé et contrat.
@@ -22,6 +23,7 @@ export default function PrestataireDashboardPage() {
   const { language } = useLanguage();
   const { goBack, routeParams } = useNavigation();
   const { user } = useAuth();
+  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'prestataireDashboard');
   const { height: windowH } = useWindowDimensions();
   const contractEditorModalCardHeight = Math.round(windowH * 0.88);
   const { toast, showError, showSuccess, hideToast } = useToast();
@@ -91,9 +93,11 @@ export default function PrestataireDashboardPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Text style={styles.backText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
+        {!isHome ? (
+          <TouchableOpacity style={styles.backBtn} onPress={goBack}>
+            <Text style={styles.backText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <PrestataireProfilSection

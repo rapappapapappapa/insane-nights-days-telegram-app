@@ -156,7 +156,7 @@ const SCREENS = {
 };
 
 function AppContent() {
-  const { currentPage, navigate, goBack, tryHardwareBack } = useNavigation();
+  const { currentPage, navigate, goBack, tryHardwareBack, setBackFallback } = useNavigation();
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
@@ -182,6 +182,14 @@ function AppContent() {
     }
   }, [hasNewMessage]);
   
+  useEffect(() => {
+    if (user?.isAuthenticated) {
+      setBackFallback(getHomeScreenForProfile(user?.activeProfileType));
+    } else {
+      setBackFallback('onboarding');
+    }
+  }, [user?.isAuthenticated, user?.activeProfileType, setBackFallback]);
+
   // IMPORTANT: Tous les Hooks doivent être appelés AVANT tout return conditionnel
   // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
   useEffect(() => {
@@ -201,12 +209,15 @@ function AppContent() {
     androidExitPressRef.current = 0;
   }, [currentPage]);
 
-  // Android : pile d’abord ; sur écran racine (home / welcome), double appui pour quitter.
+  // Android : pile d’abord ; sur écran racine (home du rôle), double appui pour quitter.
   useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
+    const homeScreen = user?.isAuthenticated
+      ? getHomeScreenForProfile(user?.activeProfileType)
+      : 'onboarding';
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tryHardwareBack()) return true;
-      if (currentPage !== 'onboarding' && currentPage !== 'welcome') return false;
+      if (currentPage !== 'onboarding' && currentPage !== homeScreen) return false;
       const now = Date.now();
       if (now - androidExitPressRef.current < 2500) {
         BackHandler.exitApp();
@@ -220,7 +231,7 @@ function AppContent() {
       return true;
     });
     return () => sub.remove();
-  }, [tryHardwareBack, currentPage, language]);
+  }, [tryHardwareBack, currentPage, language, user?.isAuthenticated, user?.activeProfileType]);
 
   // Gérer la navigation vers le chat quand on clique sur la notification
   const handleNotificationPress = async () => {
@@ -263,18 +274,7 @@ function AppContent() {
         navigate('bookerDashboard', params);
       }
     } else {
-      // Fallback: Naviguer vers le dashboard approprié selon le profil actif
-      if (user.activeProfileType === 'DJ') {
-        navigate('djDashboard', { openBookings: true });
-      } else if (user.activeProfileType === 'BOOKER') {
-        navigate('bookerDashboard', { openBookings: true });
-      } else if (user.activeProfileType === 'VENUE') {
-        navigate('venueDashboard', { openBookings: true });
-      } else if (user.activeProfileType === 'PRESTATAIRE') {
-        navigate('prestataireDashboard', {});
-      } else {
-        navigate('welcome');
-      }
+      navigate(getHomeScreenForProfile(user.activeProfileType));
     }
 
     clearNewMessage();

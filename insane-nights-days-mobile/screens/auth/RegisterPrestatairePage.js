@@ -18,6 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 import PrestataireGenreAndAvailabilityFields, {
   DEFAULT_AVAILABLE_DAYS,
 } from '../../components/PrestataireGenreAndAvailabilityFields';
@@ -116,7 +117,7 @@ export default function RegisterPrestatairePage() {
       showSuccess(
         language === 'fr' ? 'Profil Prestataire créé !' : 'Service provider profile created!'
       );
-      setTimeout(() => navigate('welcome'), 1200);
+      setTimeout(() => navigate(getPostAuthScreen('PRESTATAIRE')), 1200);
     } catch (error) {
       console.error('[RegisterPrestataire]', error);
       showError(error?.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'));

@@ -19,6 +19,7 @@ import { api } from '../../api/config';
 import CityAutocomplete from '../../components/CityAutocomplete';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 
 export default function RegisterDjPage() {
   const { language, t } = useLanguage();
@@ -240,7 +241,7 @@ export default function RegisterDjPage() {
       showSuccess(language === 'fr'
         ? 'Profil DJ créé avec succès !'
         : 'DJ profile created successfully!');
-      setTimeout(() => navigate('welcome'), 1500);
+      setTimeout(() => navigate(getPostAuthScreen('DJ')), 1500);
     } catch (error) {
       console.error('Erreur création profil DJ:', error);
       showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));

@@ -7,12 +7,16 @@ export function NavigationProvider({ children }) {
   const [routeParams, setRouteParams] = useState(undefined);
   /** Pile vide au départ : le bouton retour matériel Android ne « recule » pas sur une fausse entrée. */
   const historyRef = useRef([]);
+  /** Page de repli quand goBack() est appelé sans historique (définie par App.js selon auth + rôle). */
+  const backFallbackRef = useRef('onboarding');
+
+  const setBackFallback = useCallback((page) => {
+    if (page) backFallbackRef.current = page;
+  }, []);
 
   const navigate = useCallback((page, params) => {
-    // Ajouter la page actuelle à l'historique avant de naviguer
     if (currentPage !== page) {
       historyRef.current.push(currentPage);
-      // Limiter l'historique à 10 pages pour éviter les fuites mémoire
       if (historyRef.current.length > 10) {
         historyRef.current.shift();
       }
@@ -22,19 +26,16 @@ export function NavigationProvider({ children }) {
   }, [currentPage]);
 
   const goBack = useCallback(() => {
-    // Récupérer la page précédente depuis l'historique
     if (historyRef.current.length > 0) {
-      const previousPage = historyRef.current.pop(); // Retirer et récupérer la dernière page de l'historique
+      const previousPage = historyRef.current.pop();
       setCurrentPage(previousPage);
       setRouteParams(undefined);
     } else {
-      // Si pas d'historique, retour à l'accueil ou welcome selon l'état de connexion
-    setCurrentPage('onboarding');
-    setRouteParams(undefined);
+      setCurrentPage(backFallbackRef.current);
+      setRouteParams(undefined);
     }
   }, []);
 
-  /** Retour matériel Android : true si un écran précédent a été restauré ; false → laisser le système (ex. quitter l'app). */
   const tryHardwareBack = useCallback(() => {
     if (historyRef.current.length > 0) {
       const previousPage = historyRef.current.pop();
@@ -46,7 +47,9 @@ export function NavigationProvider({ children }) {
   }, []);
 
   return (
-    <NavigationContext.Provider value={{ currentPage, routeParams, navigate, goBack, tryHardwareBack }}>
+    <NavigationContext.Provider
+      value={{ currentPage, routeParams, navigate, goBack, tryHardwareBack, setBackFallback }}
+    >
       {children}
     </NavigationContext.Provider>
   );

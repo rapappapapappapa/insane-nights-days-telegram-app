@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { getHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 const profileTypes = [
   {
@@ -136,7 +137,7 @@ export default function SwitchProfilePage() {
         showSuccess(language === 'fr' 
           ? `Profil basculé vers ${getProfileTitle(profileType)}` 
           : `Profile switched to ${getProfileTitle(profileType)}`);
-        setTimeout(() => goBack(), 1500);
+        setTimeout(() => navigate(getHomeScreenForProfile(profileType)), 1500);
       } else {
         showError(response?.message || (language === 'fr' ? 'Impossible de basculer le profil' : 'Unable to switch profile'));
       }

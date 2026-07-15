@@ -24,6 +24,7 @@ import GoogleSignInSection, { isGoogleOAuthConfigured } from '../../components/G
 import AppleSignInSection from '../../components/AppleSignInSection';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { styles } from './LoginPage.styles';
+import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
@@ -68,9 +69,9 @@ export default function LoginPage() {
   // ✅ Si déjà connecté, rediriger (mais PAS pendant le render)
   useEffect(() => {
     if (user?.isAuthenticated) {
-      navigate(nextScreen || 'welcome');
+      navigate(getPostAuthScreen(user?.activeProfileType, nextScreen));
     }
-  }, [user?.isAuthenticated, navigate, nextScreen]);
+  }, [user?.isAuthenticated, user?.activeProfileType, navigate, nextScreen]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') {
@@ -103,7 +104,7 @@ export default function LoginPage() {
       setEmail('');
       setPassword('');
       showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
-      setTimeout(() => navigate(nextScreen || 'welcome'), 300);
+      setTimeout(() => navigate(getPostAuthScreen(result.user?.activeProfileType, nextScreen)), 300);
     } else {
       showError(result.error || (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
     }
@@ -155,7 +156,7 @@ export default function LoginPage() {
       setBirthDate('');
       setCertifiedMajor(false);
       setAcceptedCgu(false);
-      setTimeout(() => navigate(nextScreen || 'welcome'), 300);
+      setTimeout(() => navigate(getPostAuthScreen(result.user?.activeProfileType, nextScreen)), 300);
     } else {
       showError(result.error || (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
     }

@@ -9,11 +9,9 @@ export function getHomeScreenForProfile(activeProfileType) {
     case 'VENUE':
       return 'lieuxDashboard';
     case 'DJ':
-      return 'djDashboard';
     case 'BOOKER':
-      return 'bookerDashboard';
     case 'PRESTATAIRE':
-      return 'prestataireDashboard';
+      return 'welcome';
     default:
       return 'welcome';
   }
@@ -47,4 +45,26 @@ export function isHomeScreenForProfile(activeProfileType, currentPage) {
 
 export function isProfileScreenForProfile(activeProfileType, currentPage) {
   return currentPage === getProfileScreenForProfile(activeProfileType);
+}
+
+/** Dashboard pro (secondaire) — accessible via drawer / NX, pas page d’accueil par défaut. */
+export function getProDashboardScreen(activeProfileType) {
+  switch (activeProfileType) {
+    case 'DJ':
+      return 'djDashboard';
+    case 'BOOKER':
+      return 'bookerDashboard';
+    case 'PRESTATAIRE':
+      return 'prestataireDashboard';
+    case 'VENUE':
+      return 'lieuxDashboard';
+    default:
+      return null;
+  }
+}
+
+/** Écran après login/register si pas de `nextScreen` explicite. */
+export function getPostAuthScreen(activeProfileType, nextScreen) {
+  if (nextScreen) return nextScreen;
+  return getHomeScreenForProfile(activeProfileType);
 }

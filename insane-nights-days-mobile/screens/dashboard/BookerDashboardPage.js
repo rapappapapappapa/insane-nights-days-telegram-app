@@ -34,6 +34,7 @@ import BookerDateTimePickers from '../../components/bookerDashboard/BookerDateTi
 import BookerChatModal from '../../components/bookerDashboard/BookerChatModal';
 import BookerContractModals from '../../components/bookerDashboard/BookerContractModals';
 import BookerEditEventModal from '../../components/bookerDashboard/BookerEditEventModal';
+import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 export default function BookerDashboardPage() {
   const { height: contractModalWindowH } = useWindowDimensions();
@@ -41,6 +42,7 @@ export default function BookerDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
+  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'bookerDashboard');
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
@@ -241,9 +243,13 @@ export default function BookerDashboardPage() {
       >
         <StatusBar style="light" />
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={goBack}>
-            <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-          </TouchableOpacity>
+          {!isHome ? (
+            <TouchableOpacity style={styles.backButton} onPress={goBack}>
+              <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 44 }} />
+          )}
           <Text
             style={styles.title}
             numberOfLines={2}

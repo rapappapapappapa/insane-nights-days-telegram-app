@@ -120,7 +120,7 @@ export default function LieuxMediaPage() {
         active="home"
         onHome={() => navigate('lieuxDashboard')}
         onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => navigate('venueDashboard')}
+        onCreate={() => navigate('lieuxMedia')}
       />
     </View>
   );

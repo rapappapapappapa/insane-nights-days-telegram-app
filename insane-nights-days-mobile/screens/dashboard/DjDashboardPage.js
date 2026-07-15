@@ -34,6 +34,7 @@ import DjMediasSection from '../../components/djDashboard/sections/DjMediasSecti
 import DjMediaModals from '../../components/djDashboard/DjMediaModals';
 import DjChatModal from '../../components/djDashboard/DjChatModal';
 import DjContractModals from '../../components/djDashboard/DjContractModals';
+import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 export default function DjDashboardPage() {
   const { height: contractModalWindowH } = useWindowDimensions();
@@ -41,6 +42,7 @@ export default function DjDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
+  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'djDashboard');
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
@@ -374,9 +376,13 @@ export default function DjDashboardPage() {
               <Ionicons name="chatbubbles" size={24} color="#fff" />
               <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.backButton} onPress={goBack}>
-              <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-            </TouchableOpacity>
+            {!isHome ? (
+              <TouchableOpacity style={styles.backButton} onPress={goBack}>
+                <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 72 }} />
+            )}
           </View>
         </View>
 

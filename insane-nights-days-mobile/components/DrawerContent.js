@@ -13,6 +13,7 @@ import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
 import Colors from '../constants/colors';
+import { getProDashboardScreen } from '../utils/noxRoleNavigation';
 import * as Updates from 'expo-updates';
 
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
@@ -273,10 +274,12 @@ export default function DrawerContent({ navigation }) {
 
   const dashboardItem = (() => {
     if (!isLoggedIn) return null;
+    const dashboardId = getProDashboardScreen(activeProfileType);
+    if (!dashboardId) return null;
     switch (activeProfileType) {
       case 'DJ':
         return {
-          id: 'djDashboard',
+          id: dashboardId,
           icon: 'headset-outline',
           titleFr: 'Tableau de bord DJ',
           titleEn: 'DJ dashboard',
@@ -287,7 +290,7 @@ export default function DrawerContent({ navigation }) {
         };
       case 'BOOKER':
         return {
-          id: 'bookerDashboard',
+          id: dashboardId,
           icon: 'clipboard-outline',
           titleFr: 'Tableau de bord organisateur',
           titleEn: 'Organizer dashboard',
@@ -298,18 +301,18 @@ export default function DrawerContent({ navigation }) {
         };
       case 'VENUE':
         return {
-          id: 'venueDashboard',
+          id: dashboardId,
           icon: 'location-outline',
-          titleFr: 'Tableau de bord lieu',
-          titleEn: 'Venue dashboard',
-          descFr: 'Infos, médias, avis',
-          descEn: 'Info, media, reviews',
+          titleFr: 'Espace lieu',
+          titleEn: 'Venue space',
+          descFr: 'Demandes, événements, actions rapides',
+          descEn: 'Requests, events, quick actions',
           showBadge: false,
           badgeCount: 0,
         };
       case 'PRESTATAIRE':
         return {
-          id: 'prestataireDashboard',
+          id: dashboardId,
           icon: 'construct-outline',
           titleFr: 'Tableau de bord prestataire',
           titleEn: 'Service provider dashboard',

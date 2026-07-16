@@ -4,14 +4,21 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
+## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
 
 ### Modifié (mobile — navigation par rôle, accueil vs dashboard pro) — 15 juil.
-- **Home DJ / Booker / Prestataire** : page d’accueil = **`welcome`** (fil / discover) ; dashboards pro accessibles via drawer ou NX.
-- **Retour** : masqué sur l’écran « home » du rôle ; `goBack()` sans historique → home du profil actif (`setBackFallback` dans `NavigationContext`).
-- **Login / register** : redirection via `getPostAuthScreen()` ; switch profil → home du rôle choisi.
-- **NX radial** : visible sur les dashboards pro (plus dans `HIDE_RADIAL_NAV_PAGES`).
-- **Lieu** : drawer et entrées menu → **`lieuxDashboard`** ; `venueDashboard` conservé pour réservations/chat legacy.
+- **`noxRoleNavigation.js`** : DJ / Booker / Prestataire → home **`welcome`** (fil discover) ; `getProDashboardScreen()` et `getPostAuthScreen()` pour dashboards secondaires et post-login.
+- **`NavigationContext`** : `setBackFallback()` — retour sans historique ramène au home du rôle actif (plus toujours `onboarding`).
+- **`App.js`** : fallback retour selon auth + profil ; double appui Android « quitter » sur le home du rôle ; notif push → home du profil.
+- **`NoxRadialNav`** : bouton NX visible sur les **dashboards pro** (DJ, Booker, Venue legacy, Prestataire retirés de `HIDE_RADIAL_NAV_PAGES`).
+- **Dashboards pro** (`Dj`, `Booker`, `Venue`, `Prestataire`) : bouton retour masqué quand l’écran est le home du rôle.
+- **`DrawerContent`** : entrée dashboard via `getProDashboardScreen()` ; lieu → **`lieuxDashboard`** (libellé « Espace lieu »).
+- **Auth** (`LoginPage`, registers DJ/Booker/Prestataire) + **`SwitchProfilePage`** : redirection via `getPostAuthScreen()` / home du rôle choisi.
+- **Lieu** : liens drawer/menu → `lieuxDashboard` ; `venueDashboard` conservé pour réservations / chat legacy (`LieuxMedia`, `LieuxRequestDetail`).
+
+---
+
+## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
 
 ### Modifié (mobile — accueil COMMUNAUTÉ : 3 onglets + fil social + bouton NX) — 7 juil.
 - **`CommunityHomePage`** : onglets **Événements / Publications / Abonnements** ; fil API avec likes/commentaires (`CommunityFeedStream`) ; bouton **NX** radial réactivé (retrait `NoxBottomNav` sur l’accueil).

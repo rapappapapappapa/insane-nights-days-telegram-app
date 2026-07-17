@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { normalizeMediaUrl } from '../../api/config';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxTabs, NoxBottomNav } from '../../components/nox';
+import { NoxText, NoxTabs, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 
@@ -116,12 +116,7 @@ export default function LieuxMediaPage() {
         )}
       </ScrollView>
 
-      <NoxBottomNav
-        active="home"
-        onHome={() => navigate('lieuxDashboard')}
-        onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => navigate('lieuxMedia')}
-      />
+      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }

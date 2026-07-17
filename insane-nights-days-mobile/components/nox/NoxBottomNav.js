@@ -8,9 +8,11 @@ import { Spacing } from '../../constants/theme';
 
 /**
  * Barre de navigation basse NOX (design LIEUX) : Accueil / bouton central + / Profil.
- * `active` = 'home' | 'profile'. `onHome`, `onProfile`, `onCreate` = callbacks.
+ * `active` = 'home' | 'profile' | null (aucun onglet surligné). `onHome`, `onProfile`, `onCreate` = callbacks.
  */
 export default function NoxBottomNav({ active = 'home', onHome, onProfile, onCreate }) {
+  const homeActive = active === 'home';
+  const profileActive = active === 'profile';
   const insets = useSafeAreaInsets();
 
   return (
@@ -18,13 +20,13 @@ export default function NoxBottomNav({ active = 'home', onHome, onProfile, onCre
       <View style={styles.bar}>
         <TouchableOpacity style={styles.tab} onPress={onHome} activeOpacity={0.8}>
           <Ionicons
-            name={active === 'home' ? 'home' : 'home-outline'}
+            name={homeActive ? 'home' : 'home-outline'}
             size={22}
-            color={active === 'home' ? Colors.primary : Colors.textTertiary}
+            color={homeActive ? Colors.primary : Colors.textTertiary}
           />
           <NoxText
             variant="secondary"
-            style={[styles.label, active === 'home' && styles.labelActive]}
+            style={[styles.label, homeActive && styles.labelActive]}
           >
             Accueil
           </NoxText>
@@ -34,13 +36,13 @@ export default function NoxBottomNav({ active = 'home', onHome, onProfile, onCre
 
         <TouchableOpacity style={styles.tab} onPress={onProfile} activeOpacity={0.8}>
           <Ionicons
-            name={active === 'profile' ? 'person' : 'person-outline'}
+            name={profileActive ? 'person' : 'person-outline'}
             size={22}
-            color={active === 'profile' ? Colors.primary : Colors.textTertiary}
+            color={profileActive ? Colors.primary : Colors.textTertiary}
           />
           <NoxText
             variant="secondary"
-            style={[styles.label, active === 'profile' && styles.labelActive]}
+            style={[styles.label, profileActive && styles.labelActive]}
           >
             Profil
           </NoxText>

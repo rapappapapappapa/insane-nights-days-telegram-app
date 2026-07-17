@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { normalizeMediaUrl } from '../../api/config';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxCard, NoxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
@@ -35,7 +36,7 @@ function EventThumb({ uri, broken, onError }) {
 }
 
 export default function LieuxDashboardPage() {
-  const { navigate } = useNavigation();
+  const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -51,6 +52,23 @@ export default function LieuxDashboardPage() {
   } = useLieuxData(user?.token, language);
 
   const [brokenImages, setBrokenImages] = useState({});
+
+  useEffect(() => {
+    if (routeParams?.openBookings) {
+      navigate('lieuxAvailability', { focusPending: true });
+    }
+  }, [routeParams?.openBookings, navigate]);
+
+  const showCreateEventSoon = () => {
+    Alert.alert(
+      fr ? 'Créer un événement' : 'Create event',
+      fr ? 'Disponible dans la prochaine mise à jour (Phase B).' : 'Available in the next update (Phase B).',
+    );
+  };
+
+  const openPendingList = () => {
+    navigate('lieuxAvailability', { focusPending: true });
+  };
 
   const greetingName = venueProfile?.venueName || (fr ? 'Lieu' : 'Venue');
   const cityLabel = [venueProfile?.city, venueProfile?.country].filter(Boolean).join(', ');
@@ -101,9 +119,7 @@ export default function LieuxDashboardPage() {
           <TouchableOpacity
             style={styles.pending}
             activeOpacity={0.85}
-            onPress={() =>
-              navigate('lieuxRequestDetail', { eventVenueId: pendingBookings[0].eventVenueId || pendingBookings[0].id })
-            }
+            onPress={openPendingList}
           >
             <NoxText variant="button" style={styles.pendingLabel}>
               {fr ? 'Demandes en attente' : 'Pending requests'} ({pendingBookings.length})
@@ -122,13 +138,13 @@ export default function LieuxDashboardPage() {
             <TouchableOpacity
               style={styles.quickCard}
               activeOpacity={0.85}
-              onPress={() => navigate('venueDashboard')}
+              onPress={showCreateEventSoon}
             >
               <View style={styles.quickIcon}>
-                <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
+                <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
               </View>
               <NoxText variant="secondary" style={styles.quickLabel}>
-                {fr ? 'Gérer les réservations' : 'Manage bookings'}
+                {fr ? 'Créer un event' : 'Create event'}
               </NoxText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={() => navigate('scanTicket')}>
@@ -147,7 +163,7 @@ export default function LieuxDashboardPage() {
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
               {fr ? 'Événements à venir' : 'Upcoming events'}
             </NoxText>
-            <TouchableOpacity onPress={() => navigate('lieuxAvailability')}>
+            <TouchableOpacity onPress={openPendingList}>
               <NoxText variant="secondary" style={styles.link}>
                 {fr ? 'Voir plus' : 'See more'}
               </NoxText>
@@ -161,7 +177,9 @@ export default function LieuxDashboardPage() {
               <TouchableOpacity
                 key={ev.id}
                 activeOpacity={0.85}
-                onPress={() => navigate('eventDetail', { eventId: ev.booking?.eventId })}
+                onPress={() =>
+                  navigate('lieuxRequestDetail', { eventVenueId: ev.id })
+                }
               >
                 <NoxCard style={styles.eventCard} padded={false}>
                   <EventThumb
@@ -208,12 +226,7 @@ export default function LieuxDashboardPage() {
         </View>
       </ScrollView>
 
-      <NoxBottomNav
-        active="home"
-        onHome={() => navigate('lieuxDashboard')}
-        onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => navigate('lieuxMedia')}
-      />
+      <NoxLieuxBottomNav active="home" navigate={navigate} />
     </View>
   );
 }

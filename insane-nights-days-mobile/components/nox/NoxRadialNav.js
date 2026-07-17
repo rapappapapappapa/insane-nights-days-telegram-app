@@ -20,6 +20,7 @@ import {
   isHomeScreenForProfile,
   isProfileScreenForProfile,
 } from '../../utils/noxRoleNavigation';
+import { getDiscoverScreen } from '../../utils/noxNavigation';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
 import { Spacing } from '../../constants/theme';
@@ -34,7 +35,7 @@ const ORBIT_ANGLES = [-152, -119, -86, -53, -20];
 const NAV_ITEM_DEFS = [
   {
     id: 'discover',
-    screen: 'events',
+    screenKey: 'discover',
     icon: 'compass-outline',
     labelFr: 'Discover',
     labelEn: 'Discover',
@@ -160,9 +161,11 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
             ? homeScreen
             : item.screenKey === 'profile'
               ? profileScreen
-              : item.screen,
+              : item.screenKey === 'discover'
+                ? getDiscoverScreen(user?.activeProfileType)
+                : item.screen,
       })),
-    [homeScreen, profileScreen],
+    [homeScreen, profileScreen, user?.activeProfileType],
   );
 
   /** Pilote unique orbite + assombrissement (évite la désync open / visuel). */

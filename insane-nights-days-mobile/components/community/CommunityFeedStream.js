@@ -21,6 +21,7 @@ import { useFeedPostEngagement } from '../../hooks/useFeedPostEngagement';
 import { useFeedReport } from '../../hooks/useFeedReport';
 import { postStateReducer, initialPostState, formatFeedRelativeDate } from '../../utils/feedPageUtils';
 import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
+import { openEventPreview } from '../../utils/noxNavigation';
 import { NoxText, NoxFeedPostCard } from '../nox';
 import FeedReportModal from '../feed/FeedReportModal';
 import EmptyState from '../EmptyState';
@@ -132,7 +133,7 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
       key={`event-${item.id}`}
       style={styles.eventCard}
       activeOpacity={0.85}
-      onPress={() => navigate('eventDetail', { eventId: item.id })}
+      onPress={() => openEventPreview(navigate, user?.activeProfileType, item.id)}
     >
       <View style={styles.eventHeader}>
         <Ionicons name="calendar-outline" size={18} color={Colors.primary} />

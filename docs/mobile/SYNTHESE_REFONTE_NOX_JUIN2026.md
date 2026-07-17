@@ -5,7 +5,8 @@ Document de reprise **étape par étape** si tu dois continuer depuis une autre 
 **Branche Git** : `railway-phase1`  
 **Dossier app mobile** : `insane-nights-days-mobile/`  
 **Couleur Figma** : `#4DA3FF` · typo **Satoshi**  
-**Maquettes Figma** : [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) + images dans `design-figma/`
+**Maquettes Figma** : [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) + images dans `design-figma/`  
+**Migration legacy** : [PLAN_MIGRATION_NOX_LEGACY.md](./PLAN_MIGRATION_NOX_LEGACY.md)
 
 ---
 
@@ -236,6 +237,7 @@ insane-nights-days-mobile/
 
 ## 13. Suite possible (non fait)
 
+- Voir **[PLAN_MIGRATION_NOX_LEGACY.md](./PLAN_MIGRATION_NOX_LEGACY.md)** — ordre de bascule NOX ↔ legacy (phases A→E)
 - Phase 3 : barre NX permanente, assets Figma réels sur cartes rôle
 - Refonte écran par écran (Tickets, Events, Profil…) avec composants `nox/`
 - Crash boot **non connecté** (onboarding) : utiliser le message détaillé ErrorBoundary post-OTA pour identifier la cause si encore présent

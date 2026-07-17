@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { openEventPreview } from '../../utils/noxNavigation';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { useDebounce } from '../../hooks/useDebounce';
 import { NoxText, NoxSearchBar, NoxCard } from '../../components/nox';
@@ -28,6 +30,7 @@ import {
 
 export default function CommunityDiscoverPage() {
   const { navigate, routeParams } = useNavigation();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const fr = language === 'fr';
@@ -184,7 +187,7 @@ export default function CommunityDiscoverPage() {
                 <TouchableOpacity
                   key={ev.id}
                   activeOpacity={0.85}
-                  onPress={() => navigate('eventDetail', { eventId: ev.id })}
+                  onPress={() => openEventPreview(navigate, user?.activeProfileType, ev.id)}
                 >
                   <NoxCard style={styles.eventCard} padded={false}>
                     {renderThumb(ev.image, 'calendar-outline', `ev-${ev.id}`)}

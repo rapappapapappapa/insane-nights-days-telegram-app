@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
 
+### Modifié (mobile — Phase A migration NOX : quick wins navigation) — 17 juil.
+- **`noxNavigation.js`** : routage Discover / preview event / achat selon profil actif.
+- **`NoxRadialNav`** : Discover → `communityDiscover` pour profil COMMUNITY.
+- **Communauté** : Home, Feed, Discover → `communityEventDetail` ; achat seul via `eventDetail`.
+- **Lieux** : FAB menu création (`NoxCreateSheet`), quick actions Figma, dispos `focusPending`, plus de lien « Gérer réservations » ; chat repli `openChatEventVenueId`.
+- **`PLAN_MIGRATION_NOX_LEGACY.md`** : plan de bascule NOX ↔ legacy.
+
 ### Ajouté (docs — référence maquettes Figma NOX) — 17 juil.
 - **`docs/mobile/DESIGN_FIGMA_REFERENCE.md`** : catalogue des 14 écrans Figma (design system, auth, communauté, lieux) avec liens vers le code mobile.
 - **`docs/mobile/design-figma/`** : images PNG versionnées (onboarding, wireframes, dashboards, notifications…).

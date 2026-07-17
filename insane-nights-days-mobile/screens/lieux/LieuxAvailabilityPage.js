@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -14,7 +14,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxCard, NoxButton, NoxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard, NoxButton, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { AVAILABILITY_STATUS } from './mockData';
@@ -73,7 +73,7 @@ function buildCalendarRows() {
 }
 
 export default function LieuxAvailabilityPage() {
-  const { navigate } = useNavigation();
+  const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -83,6 +83,19 @@ export default function LieuxAvailabilityPage() {
     user?.token,
     language,
   );
+
+  const focusPending = !!routeParams?.focusPending;
+
+  const sortedBookings = useMemo(() => {
+    if (!focusPending) return bookings;
+    return [...bookings].sort((a, b) => {
+      const aPending = String(a.invitationStatus || '').toUpperCase() === 'PENDING';
+      const bPending = String(b.invitationStatus || '').toUpperCase() === 'PENDING';
+      if (aPending && !bPending) return -1;
+      if (!aPending && bPending) return 1;
+      return 0;
+    });
+  }, [bookings, focusPending]);
 
   const calendarRows = buildCalendarRows();
   const monthLabel = new Date().toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
@@ -144,16 +157,22 @@ export default function LieuxAvailabilityPage() {
           ))}
         </NoxCard>
 
-        <NoxText variant="titleSecondary" style={styles.listTitle}>
-          {fr ? 'Demandes & réservations' : 'Requests & bookings'}
+        <NoxText variant="titleSecondary" style={[styles.listTitle, focusPending && styles.listTitleFocus]}>
+          {focusPending && pendingBookings.length > 0
+            ? fr
+              ? `Demandes en attente (${pendingBookings.length})`
+              : `Pending requests (${pendingBookings.length})`
+            : fr
+              ? 'Demandes & réservations'
+              : 'Requests & bookings'}
         </NoxText>
 
-        {bookings.length === 0 ? (
+        {sortedBookings.length === 0 ? (
           <NoxText variant="secondary" style={{ paddingHorizontal: Spacing.xl }}>
             {fr ? 'Aucune demande pour le moment.' : 'No requests yet.'}
           </NoxText>
         ) : (
-          bookings.map((booking) => (
+          sortedBookings.map((booking) => (
             <TouchableOpacity
               key={booking.eventVenueId || booking.id}
               activeOpacity={0.85}
@@ -198,12 +217,7 @@ export default function LieuxAvailabilityPage() {
         ) : null}
       </ScrollView>
 
-      <NoxBottomNav
-        active="home"
-        onHome={() => navigate('lieuxDashboard')}
-        onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => navigate('lieuxMedia')}
-      />
+      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }
@@ -233,6 +247,7 @@ const styles = StyleSheet.create({
   dayTextOnColor: { color: '#000', fontWeight: '700' },
   dayOff: { textDecorationLine: 'line-through' },
   listTitle: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.md },
+  listTitleFocus: { color: Colors.primary },
   requestCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,3 +9,5 @@ export { default as NoxRoleCard } from './NoxRoleCard';
 export { default as NoxFeedPostCard } from './NoxFeedPostCard';
 export { default as NoxRadialNav, HIDE_RADIAL_NAV_PAGES } from './NoxRadialNav';
 export { default as NoxBottomNav } from './NoxBottomNav';
+export { default as NoxCreateSheet } from './NoxCreateSheet';
+export { default as NoxLieuxBottomNav } from './NoxLieuxBottomNav';

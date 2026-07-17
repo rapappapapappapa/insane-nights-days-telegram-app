@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { normalizeMediaUrl } from '../../api/config';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxCard, NoxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
@@ -148,7 +148,7 @@ export default function LieuxProfilPage() {
               <TouchableOpacity
                 key={ev.id}
                 activeOpacity={0.85}
-                onPress={() => navigate('eventDetail', { eventId: ev.booking?.eventId })}
+                onPress={() => navigate('lieuxRequestDetail', { eventVenueId: ev.id })}
               >
                 <NoxCard style={styles.eventCard} padded={false}>
                   <View style={styles.thumb}>
@@ -171,12 +171,7 @@ export default function LieuxProfilPage() {
         </View>
       </ScrollView>
 
-      <NoxBottomNav
-        active="profile"
-        onHome={() => navigate('lieuxDashboard')}
-        onProfile={() => navigate('lieuxProfil')}
-        onCreate={() => navigate('lieuxMedia')}
-      />
+      <NoxLieuxBottomNav active="profile" navigate={navigate} />
     </View>
   );
 }

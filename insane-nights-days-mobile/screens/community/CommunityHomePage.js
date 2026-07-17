@@ -27,6 +27,7 @@ import {
   getDisplayName,
   getFeaturedEvent,
 } from '../../utils/noxDiscoverUtils';
+import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
 
 function buildTabs(fr) {
   return [
@@ -101,8 +102,7 @@ export default function CommunityHomePage() {
   };
 
   const openEvent = (eventId) => {
-    if (!eventId) return;
-    navigate('eventDetail', { eventId });
+    openEventPreview(navigate, user?.activeProfileType, eventId);
   };
 
   const openDj = (dj) => {
@@ -161,7 +161,7 @@ export default function CommunityHomePage() {
           placeholder={
             fr ? 'Rechercher un événement, un artiste ou un lieu' : 'Search an event, artist or venue'
           }
-          onPress={() => navigate('events')}
+          onPress={() => openDiscover(navigate, user?.activeProfileType)}
         />
       </View>
 
@@ -197,7 +197,7 @@ export default function CommunityHomePage() {
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
           {fr ? 'Prochains événements' : 'Upcoming events'}
         </NoxText>
-        <TouchableOpacity onPress={() => navigate('events')}>
+        <TouchableOpacity onPress={() => openDiscover(navigate, user?.activeProfileType)}>
           <NoxText variant="secondary" style={styles.link}>
             {fr ? 'Voir plus' : 'See more'}
           </NoxText>
@@ -236,7 +236,7 @@ export default function CommunityHomePage() {
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
           {fr ? 'Suggestions de DJs' : 'Suggested DJs'}
         </NoxText>
-        <TouchableOpacity onPress={() => navigate('events', { tab: 'djs' })}>
+        <TouchableOpacity onPress={() => openDiscover(navigate, user?.activeProfileType, { tab: 'djs' })}>
           <NoxText variant="secondary" style={styles.link}>
             {fr ? 'Voir plus' : 'See more'}
           </NoxText>

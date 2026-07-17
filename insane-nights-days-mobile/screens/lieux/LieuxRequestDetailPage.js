@@ -61,12 +61,19 @@ export default function LieuxRequestDetailPage() {
     [bookings, eventVenueId],
   );
 
+  const openBookingChat = () => {
+    const id = booking?.eventVenueId || booking?.id;
+    if (!id) return;
+    // Repli legacy temporaire — Phase B1 : lieuxBookingChat
+    navigate('venueDashboard', { openChatEventVenueId: id });
+  };
+
   const handleDecision = async (decisionId) => {
     if (!booking || processing) return;
     setDecision(decisionId);
 
     if (decisionId === 'negotiate') {
-      navigate('lieuxDashboard', { openBookings: true });
+      openBookingChat();
       return;
     }
 
@@ -126,11 +133,7 @@ export default function LieuxRequestDetailPage() {
             {booking.eventTitle}
           </NoxText>
         </View>
-        <TouchableOpacity
-          hitSlop={12}
-          style={styles.headerBtn}
-          onPress={() => navigate('venueDashboard', { openBookings: true })}
-        >
+        <TouchableOpacity hitSlop={12} style={styles.headerBtn} onPress={openBookingChat}>
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.text} />
         </TouchableOpacity>
       </View>
@@ -186,9 +189,9 @@ export default function LieuxRequestDetailPage() {
           />
         ) : (
           <NoxButton
-            label={fr ? 'Voir le dashboard lieu' : 'Open venue dashboard'}
+            label={fr ? 'Retour aux disponibilités' : 'Back to availability'}
             variant="ghost"
-            onPress={() => navigate('venueDashboard', { openBookings: true })}
+            onPress={() => navigate('lieuxAvailability', { focusPending: true })}
             style={{ marginTop: Spacing.xl }}
           />
         )}

@@ -21,6 +21,8 @@ Documentation backend :
 
 ### `/docs/mobile/`
 Documentation mobile :
+- `DESIGN_FIGMA_REFERENCE.md` - **Référence maquettes Figma NOX** (images dans `design-figma/`)
+- `SYNTHESE_REFONTE_NOX_JUIN2026.md` - Synthèse refonte design system + navigation
 - `ANALYSE_PROFESSIONNELLE.md` - Analyse professionnelle de l'app
 - `AMELIORATIONS_SYNTHESE.md` - Synthèse des améliorations
 - `OPTIMISATIONS_RECOMMANDATIONS.md` - Recommandations d'optimisation

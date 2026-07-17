@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
 
+### Ajouté (docs — référence maquettes Figma NOX) — 17 juil.
+- **`docs/mobile/DESIGN_FIGMA_REFERENCE.md`** : catalogue des 14 écrans Figma (design system, auth, communauté, lieux) avec liens vers le code mobile.
+- **`docs/mobile/design-figma/`** : images PNG versionnées (onboarding, wireframes, dashboards, notifications…).
+- Liens ajoutés dans `docs/README.md` et `SYNTHESE_REFONTE_NOX_JUIN2026.md`.
+
 ### Modifié (mobile — navigation par rôle, accueil vs dashboard pro) — 15 juil.
 - **`noxRoleNavigation.js`** : DJ / Booker / Prestataire → home **`welcome`** (fil discover) ; `getProDashboardScreen()` et `getPostAuthScreen()` pour dashboards secondaires et post-login.
 - **`NavigationContext`** : `setBackFallback()` — retour sans historique ramène au home du rôle actif (plus toujours `onboarding`).

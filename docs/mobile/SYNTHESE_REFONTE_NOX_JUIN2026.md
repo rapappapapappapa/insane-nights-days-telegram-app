@@ -4,7 +4,8 @@ Document de reprise **étape par étape** si tu dois continuer depuis une autre 
 
 **Branche Git** : `railway-phase1`  
 **Dossier app mobile** : `insane-nights-days-mobile/`  
-**Couleur Figma** : `#4DA3FF` · typo **Satoshi**
+**Couleur Figma** : `#4DA3FF` · typo **Satoshi**  
+**Maquettes Figma** : [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) + images dans `design-figma/`
 
 ---
 

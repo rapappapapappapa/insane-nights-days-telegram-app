@@ -100,6 +100,9 @@ export const HIDE_RADIAL_NAV_PAGES = new Set([
   'lieuxAvailability',
   'lieuxMedia',
   'lieuxRequestDetail',
+  'lieuxBookingChat',
+  'lieuxEvents',
+  'lieuxEventDetail',
   // COMMUNAUTÉ — barre basse dédiée sur onboarding uniquement
   'communityOnboarding',
 ]);

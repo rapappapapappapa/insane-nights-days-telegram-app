@@ -1,4 +1,8 @@
 import React from 'react';
+/**
+ * @deprecated Parcours Lieux NOX — utiliser lieuxDashboard, lieuxEvents, lieuxBookingChat.
+ * Conservé pour contrats avancés et repli temporaire hors shell NOX.
+ */
 import {
   Text,
   View,

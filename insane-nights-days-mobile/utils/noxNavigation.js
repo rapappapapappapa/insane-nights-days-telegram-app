@@ -4,7 +4,9 @@
  */
 
 export function getDiscoverScreen(activeProfileType) {
-  return activeProfileType === 'COMMUNITY' ? 'communityDiscover' : 'events';
+  if (activeProfileType === 'COMMUNITY') return 'communityDiscover';
+  if (activeProfileType === 'VENUE') return 'lieuxEvents';
+  return 'events';
 }
 
 /** Écran de présentation événement (vue sociale / browse). */

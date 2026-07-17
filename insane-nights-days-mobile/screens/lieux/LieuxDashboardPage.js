@@ -119,7 +119,7 @@ export default function LieuxDashboardPage() {
           <TouchableOpacity
             style={styles.pending}
             activeOpacity={0.85}
-            onPress={openPendingList}
+              onPress={openPendingList}
           >
             <NoxText variant="button" style={styles.pendingLabel}>
               {fr ? 'Demandes en attente' : 'Pending requests'} ({pendingBookings.length})
@@ -163,7 +163,7 @@ export default function LieuxDashboardPage() {
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
               {fr ? 'Événements à venir' : 'Upcoming events'}
             </NoxText>
-            <TouchableOpacity onPress={openPendingList}>
+            <TouchableOpacity onPress={() => navigate('lieuxEvents')}>
               <NoxText variant="secondary" style={styles.link}>
                 {fr ? 'Voir plus' : 'See more'}
               </NoxText>
@@ -177,9 +177,7 @@ export default function LieuxDashboardPage() {
               <TouchableOpacity
                 key={ev.id}
                 activeOpacity={0.85}
-                onPress={() =>
-                  navigate('lieuxRequestDetail', { eventVenueId: ev.id })
-                }
+                onPress={() => navigate('lieuxEventDetail', { eventVenueId: ev.id })}
               >
                 <NoxCard style={styles.eventCard} padded={false}>
                   <EventThumb

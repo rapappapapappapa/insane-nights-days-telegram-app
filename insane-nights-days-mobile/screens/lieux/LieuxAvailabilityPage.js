@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -19,8 +19,10 @@ import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { AVAILABILITY_STATUS } from './mockData';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
-
-const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+import {
+  buildCalendarRowsFromBookings,
+  calendarStatusColor,
+} from '../../utils/lieuxEventUtils';
 
 const LEGEND = [
   { key: 'available', label: 'Disponible' },
@@ -30,16 +32,22 @@ const LEGEND = [
 ];
 
 function Day({ item }) {
-  const color = item.status ? AVAILABILITY_STATUS[item.status] : null;
+  const color = item.status ? calendarStatusColor(item.status) : null;
   return (
     <View style={styles.dayCell}>
-      <View style={[styles.dayInner, color && { backgroundColor: color }]}>
+      <View
+        style={[
+          styles.dayInner,
+          color && item.status === 'booked' && { backgroundColor: color },
+          item.status === 'pending' && styles.dayPending,
+        ]}
+      >
         <NoxText
           variant="secondary"
           style={[
             styles.dayText,
             item.muted && styles.dayMuted,
-            color && styles.dayTextOnColor,
+            color && item.status === 'booked' && styles.dayTextOnColor,
             item.status === 'off' && styles.dayOff,
           ]}
         >
@@ -50,28 +58,6 @@ function Day({ item }) {
   );
 }
 
-/** Calendrier visuel (design) — les demandes réelles viennent de l’API ci-dessous. */
-function buildCalendarRows() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const rows = [];
-  let day = 1 - startOffset;
-  for (let r = 0; r < 6; r += 1) {
-    const row = [];
-    for (let c = 0; c < 7; c += 1) {
-      const muted = day < 1 || day > daysInMonth;
-      row.push({ d: muted ? ((day - 1 + daysInMonth) % daysInMonth) + 1 : day, muted });
-      day += 1;
-    }
-    rows.push(row);
-  }
-  return rows;
-}
-
 export default function LieuxAvailabilityPage() {
   const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -79,12 +65,27 @@ export default function LieuxAvailabilityPage() {
   const insets = useSafeAreaInsets();
   const fr = language === 'fr';
 
+  const focusPending = !!routeParams?.focusPending;
+  const [viewMonth, setViewMonth] = useState(() => new Date());
+
   const { loading, refreshing, bookings, pendingBookings, refresh, statusLabel } = useLieuxData(
     user?.token,
     language,
   );
 
-  const focusPending = !!routeParams?.focusPending;
+  const { rows: calendarRows, weekDays } = useMemo(
+    () => buildCalendarRowsFromBookings(viewMonth, bookings),
+    [viewMonth, bookings],
+  );
+
+  const monthLabel = viewMonth.toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const shiftMonth = (delta) => {
+    setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+  };
 
   const sortedBookings = useMemo(() => {
     if (!focusPending) return bookings;
@@ -96,12 +97,6 @@ export default function LieuxAvailabilityPage() {
       return 0;
     });
   }, [bookings, focusPending]);
-
-  const calendarRows = buildCalendarRows();
-  const monthLabel = new Date().toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
 
   if (loading) {
     return (
@@ -138,11 +133,19 @@ export default function LieuxAvailabilityPage() {
         </View>
 
         <NoxCard style={styles.calendar}>
-          <NoxText variant="titleSecondary" style={styles.monthLabel}>
-            {monthLabel}
-          </NoxText>
+          <View style={styles.monthHeader}>
+            <TouchableOpacity onPress={() => shiftMonth(-1)} hitSlop={12}>
+              <Ionicons name="chevron-back" size={20} color={Colors.text} />
+            </TouchableOpacity>
+            <NoxText variant="titleSecondary" style={styles.monthLabel}>
+              {monthLabel}
+            </NoxText>
+            <TouchableOpacity onPress={() => shiftMonth(1)} hitSlop={12}>
+              <Ionicons name="chevron-forward" size={20} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.weekRow}>
-            {WEEK_DAYS.map((d, i) => (
+            {weekDays.map((d, i) => (
               <NoxText key={`${d}-${i}`} variant="secondary" style={styles.weekDay}>
                 {d}
               </NoxText>
@@ -231,7 +234,13 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { fontSize: 12 },
   calendar: { marginHorizontal: Spacing.xl, padding: Spacing.lg, marginBottom: Spacing.xxl },
-  monthLabel: { textAlign: 'center', marginBottom: Spacing.md, textTransform: 'capitalize' },
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  monthLabel: { textTransform: 'capitalize', flex: 1, textAlign: 'center' },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   weekDay: { width: 36, textAlign: 'center', fontSize: 11 },
   dayCell: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
@@ -241,6 +250,10 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dayPending: {
+    borderWidth: 2,
+    borderColor: AVAILABILITY_STATUS.pending,
   },
   dayText: { fontSize: 12 },
   dayMuted: { opacity: 0.35 },

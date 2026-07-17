@@ -304,7 +304,8 @@ flowchart TB
 | Phase | Statut | Date cible |
 |-------|--------|------------|
 | A — Quick wins | ✅ Fait | 17 juil. 2026 |
-| B — Lieux métier | ⬜ À faire | — |
+| B — Lieux métier (B1–B4) | ✅ Fait | 17 juil. 2026 |
+| B — Lieux métier (B5–B9) | ⬜ À faire | — |
 | C — Communauté social | ⬜ À faire | — |
 | D — Nettoyage | ⬜ À faire | — |
 | E — Pro DJ/Booker | ⬜ Backlog | — |

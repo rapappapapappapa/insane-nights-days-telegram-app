@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
 
+### Modifié (mobile — Phase B migration NOX : Lieux métier B1–B4) — 17 juil.
+- **`lieuxBookingChat`** : chat plein écran orga ↔ lieu (`useVenueBookingChat`, plus de repli `venueDashboard` depuis Lieux).
+- **`lieuxEvents`** : liste événements avec onglets À venir / Passés / Brouillons.
+- **`lieuxEventDetail`** : détail event côté lieu (line-up, staff, chat).
+- **`lieuxAvailability`** : calendrier alimenté par les bookings API + navigation mois.
+- **`lieuxEventUtils.js`** : catégorisation bookings + grille calendrier.
+- **NX Discover (VENUE)** → `lieuxEvents` ; `venueDashboard` marqué deprecated.
+
 ### Modifié (mobile — Phase A migration NOX : quick wins navigation) — 17 juil.
 - **`noxNavigation.js`** : routage Discover / preview event / achat selon profil actif.
 - **`NoxRadialNav`** : Discover → `communityDiscover` pour profil COMMUNITY.

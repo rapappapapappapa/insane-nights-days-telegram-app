@@ -134,7 +134,7 @@ export default function LieuxProfilPage() {
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
               {fr ? 'Prochains événements' : 'Upcoming events'} ({upcomingBookings.length})
             </NoxText>
-            <TouchableOpacity onPress={() => navigate('lieuxAvailability')}>
+            <TouchableOpacity onPress={() => navigate('lieuxEvents')}>
               <NoxText variant="secondary" style={styles.link}>
                 {fr ? 'Voir plus' : 'See more'}
               </NoxText>
@@ -148,7 +148,7 @@ export default function LieuxProfilPage() {
               <TouchableOpacity
                 key={ev.id}
                 activeOpacity={0.85}
-                onPress={() => navigate('lieuxRequestDetail', { eventVenueId: ev.id })}
+                onPress={() => navigate('lieuxEventDetail', { eventVenueId: ev.id })}
               >
                 <NoxCard style={styles.eventCard} padded={false}>
                   <View style={styles.thumb}>

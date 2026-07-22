@@ -25,9 +25,7 @@ const OPTIONS = [
     icon: 'calendar-outline',
     labelFr: 'Créer un événement',
     labelEn: 'Create event',
-    enabled: false,
-    soonFr: 'Bientôt disponible (Phase B)',
-    soonEn: 'Coming soon (Phase B)',
+    enabled: true,
   },
   {
     id: 'post',
@@ -51,6 +49,8 @@ export default function NoxCreateSheet({ visible, onClose, navigate, language = 
     onClose();
     if (option.id === 'media') {
       navigate('lieuxMedia');
+    } else if (option.id === 'event') {
+      navigate('lieuxCreateEvent');
     }
   };
 

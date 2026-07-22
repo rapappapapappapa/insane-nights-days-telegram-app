@@ -85,7 +85,7 @@ export default function LieuxProfilPage() {
           <TouchableOpacity
             style={styles.gear}
             hitSlop={10}
-            onPress={() => navigate('venueProfileEdit')}
+            onPress={() => navigate('lieuxSettings')}
           >
             <Ionicons name="settings-outline" size={22} color={Colors.text} />
           </TouchableOpacity>

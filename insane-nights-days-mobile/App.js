@@ -89,6 +89,10 @@ import LieuxRequestDetailPage from './screens/lieux/LieuxRequestDetailPage';
 import LieuxBookingChatPage from './screens/lieux/LieuxBookingChatPage';
 import LieuxEventsPage from './screens/lieux/LieuxEventsPage';
 import LieuxEventDetailPage from './screens/lieux/LieuxEventDetailPage';
+import LieuxSettingsPage from './screens/lieux/LieuxSettingsPage';
+import LieuxScannerPage from './screens/lieux/LieuxScannerPage';
+import LieuxCreateEventPage from './screens/lieux/LieuxCreateEventPage';
+import LieuxNotificationsPage from './screens/lieux/LieuxNotificationsPage';
 
 // COMMUNAUTÉ (nouveau design, UI-first)
 import CommunityOnboardingPage from './screens/community/CommunityOnboardingPage';
@@ -154,6 +158,10 @@ const SCREENS = {
   lieuxBookingChat: LieuxBookingChatPage,
   lieuxEvents: LieuxEventsPage,
   lieuxEventDetail: LieuxEventDetailPage,
+  lieuxSettings: LieuxSettingsPage,
+  lieuxScanner: LieuxScannerPage,
+  lieuxCreateEvent: LieuxCreateEventPage,
+  lieuxNotifications: LieuxNotificationsPage,
   // COMMUNAUTÉ (nouveau design)
   communityOnboarding: CommunityOnboardingPage,
   communityHome: CommunityHomePage,

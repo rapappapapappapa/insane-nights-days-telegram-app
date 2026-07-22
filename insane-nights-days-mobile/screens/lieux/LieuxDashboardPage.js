@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,13 +58,6 @@ export default function LieuxDashboardPage() {
     }
   }, [routeParams?.openBookings, navigate]);
 
-  const showCreateEventSoon = () => {
-    Alert.alert(
-      fr ? 'Créer un événement' : 'Create event',
-      fr ? 'Disponible dans la prochaine mise à jour (Phase B).' : 'Available in the next update (Phase B).',
-    );
-  };
-
   const openPendingList = () => {
     navigate('lieuxAvailability', { focusPending: true });
   };
@@ -110,8 +102,9 @@ export default function LieuxDashboardPage() {
               <NoxText variant="secondary">{cityLabel || venueProfile?.address || ''}</NoxText>
             </View>
           </View>
-          <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
+          <TouchableOpacity style={styles.bell} onPress={() => navigate('lieuxNotifications')} hitSlop={10}>
             <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+            {pendingBookings.length > 0 ? <View style={styles.bellDot} /> : null}
           </TouchableOpacity>
         </View>
 
@@ -138,7 +131,7 @@ export default function LieuxDashboardPage() {
             <TouchableOpacity
               style={styles.quickCard}
               activeOpacity={0.85}
-              onPress={showCreateEventSoon}
+              onPress={() => navigate('lieuxCreateEvent')}
             >
               <View style={styles.quickIcon}>
                 <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
@@ -147,7 +140,7 @@ export default function LieuxDashboardPage() {
                 {fr ? 'Créer un event' : 'Create event'}
               </NoxText>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={() => navigate('scanTicket')}>
+            <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={() => navigate('lieuxScanner')}>
               <View style={styles.quickIcon}>
                 <Ionicons name="qr-code-outline" size={22} color={Colors.primary} />
               </View>
@@ -260,6 +253,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundCard,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
+    position: 'relative',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
   },
   pending: {
     marginHorizontal: Spacing.xl,

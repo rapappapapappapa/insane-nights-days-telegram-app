@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
+import { useLieuxEventDrafts } from '../../hooks/useLieuxEventDrafts';
 import { NoxText, NoxCard, NoxTabs, NoxLieuxBottomNav, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -22,13 +24,18 @@ import { categorizeVenueBookings, isPendingBooking } from '../../utils/lieuxEven
 
 function EventCard({ booking, fr, language, onDetails, onChat }) {
   const pending = isPendingBooking(booking);
-  const status = pending
-    ? mapBookingStatusLabel(booking.invitationStatus, language)
-    : booking.eventStatus === 'FINISHED'
-      ? fr
-        ? 'Terminé'
-        : 'Finished'
-      : mapBookingStatusLabel(booking.invitationStatus, language);
+  const isLocal = booking.isLocalDraft === true;
+  const status = isLocal
+    ? fr
+      ? 'Brouillon local'
+      : 'Local draft'
+    : pending
+      ? mapBookingStatusLabel(booking.invitationStatus, language)
+      : booking.eventStatus === 'FINISHED'
+        ? fr
+          ? 'Terminé'
+          : 'Finished'
+        : mapBookingStatusLabel(booking.invitationStatus, language);
 
   return (
     <NoxCard style={styles.eventCard} padded={false}>
@@ -80,12 +87,15 @@ export default function LieuxEventsPage() {
     if (routeParams?.tab) setActiveTab(routeParams.tab);
   }, [routeParams?.tab]);
 
-  const { loading, refreshing, bookings, refresh, statusLabel } = useLieuxData(user?.token, language);
+  const { loading, refreshing, bookings, refresh } = useLieuxData(user?.token, language);
+  const { drafts: localDrafts, load: reloadDrafts } = useLieuxEventDrafts();
 
-  const { upcoming, past, drafts } = useMemo(
+  const { upcoming, past, drafts: apiDrafts } = useMemo(
     () => categorizeVenueBookings(bookings),
     [bookings],
   );
+
+  const drafts = useMemo(() => [...localDrafts, ...apiDrafts], [localDrafts, apiDrafts]);
 
   const tabs = useMemo(
     () => [
@@ -100,6 +110,14 @@ export default function LieuxEventsPage() {
     activeTab === 'past' ? past : activeTab === 'drafts' ? drafts : upcoming;
 
   const openDetails = (booking) => {
+    if (booking.isLocalDraft) {
+      Alert.alert(
+        booking.eventTitle,
+        booking.description ||
+          (fr ? 'Brouillon enregistré localement.' : 'Locally saved draft.'),
+      );
+      return;
+    }
     const eventVenueId = booking.eventVenueId || booking.id;
     if (isPendingBooking(booking)) {
       navigate('lieuxRequestDetail', { eventVenueId });
@@ -134,7 +152,14 @@ export default function LieuxEventsPage() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: Spacing.xl }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              refresh();
+              reloadDrafts();
+            }}
+            tintColor={Colors.primary}
+          />
         }
       >
         {list.length === 0 ? (

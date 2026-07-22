@@ -40,6 +40,10 @@ export const NOX_THEMED_SCREENS = new Set([
   'lieuxBookingChat',
   'lieuxEvents',
   'lieuxEventDetail',
+  'lieuxSettings',
+  'lieuxScanner',
+  'lieuxCreateEvent',
+  'lieuxNotifications',
 ]);
 
 export function isHomeScreenForProfile(activeProfileType, currentPage) {

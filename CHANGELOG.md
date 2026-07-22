@@ -4,6 +4,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 21 au 24 juillet 2026 (mar. - ven.)
+
+### Modifié (mobile — Option A Lieux : B5–B7, B9) — 21 juil.
+- **`lieuxSettings`** : hub réglages NOX (profil, dispos, médias, scanner, notifications, légal).
+- **`lieuxScanner`** : scan QR skin NOX avec sélecteur d’événement confirmé (`useLieuxData`).
+- **`lieuxCreateEvent`** : formulaire brouillon local (`useLieuxEventDrafts` + onglet Brouillons).
+- **`lieuxNotifications`** : centre de notifs métier lieu dérivé des bookings.
+- **Dashboard / profil Lieux** : cloche → `lieuxNotifications`, engrenage → `lieuxSettings`, quick actions mises à jour ; FAB « Créer un événement » activé.
+
+---
+
 ## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
 
 ### Modifié (mobile — Phase B migration NOX : Lieux métier B1–B4) — 17 juil.

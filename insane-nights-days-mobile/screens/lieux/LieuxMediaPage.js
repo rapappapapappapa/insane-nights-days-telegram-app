@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
+  TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
   ActivityIndicator,
@@ -35,7 +36,7 @@ const TAB_TYPE_MAP = {
 };
 
 export default function LieuxMediaPage() {
-  const { navigate } = useNavigation();
+  const { goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -65,12 +66,19 @@ export default function LieuxMediaPage() {
       <StatusBar style="light" />
 
       <View style={{ paddingTop: insets.top + Spacing.md }}>
-        <NoxText variant="title" style={styles.title}>
-          Media
-        </NoxText>
-        <NoxText variant="secondary" style={styles.subtitle}>
-          {fr ? 'Centralise les médias de ton lieu.' : 'Centralize your venue media.'}
-        </NoxText>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <NoxText variant="title" style={styles.title}>
+              Media
+            </NoxText>
+            <NoxText variant="secondary" style={styles.subtitle}>
+              {fr ? 'Centralise les médias de ton lieu.' : 'Centralize your venue media.'}
+            </NoxText>
+          </View>
+        </View>
         <NoxTabs tabs={TABS} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
       </View>
 
@@ -124,8 +132,22 @@ export default function LieuxMediaPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  title: { paddingHorizontal: Spacing.xl },
-  subtitle: { paddingHorizontal: Spacing.xl, marginTop: Spacing.xs, marginBottom: Spacing.md },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.sm,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  title: { paddingHorizontal: 0 },
+  subtitle: { marginTop: Spacing.xs, marginBottom: Spacing.md, paddingHorizontal: 0 },
   tabs: { marginBottom: Spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   tile: {

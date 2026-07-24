@@ -110,8 +110,8 @@ export default function LieuxFeedPage() {
           <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
           <NoxText variant="secondary" style={styles.infoText}>
             {fr
-              ? 'Les événements confirmés apparaissent ici. Les posts texte/image pour les lieux arriveront avec une prochaine mise à jour API.'
-              : 'Confirmed events appear here. Text/image posts for venues will come in a future API update.'}
+              ? 'Les événements confirmés par les organisateurs apparaissent ici. Les posts texte/image pour les lieux arriveront avec une prochaine mise à jour API.'
+              : 'Events confirmed by organizers appear here. Text/image posts for venues will come in a future API update.'}
           </NoxText>
         </NoxCard>
 
@@ -123,8 +123,8 @@ export default function LieuxFeedPage() {
             </NoxText>
             <NoxText variant="secondary" style={styles.emptySub}>
               {fr
-                ? 'Confirme des événements pour alimenter ton feed.'
-                : 'Confirm events to populate your feed.'}
+                ? 'Les organisateurs te solliciteront ici une fois un événement confirmé.'
+                : 'Organizers will show up here once an event is confirmed.'}
             </NoxText>
           </View>
         ) : (

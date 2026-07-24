@@ -144,13 +144,13 @@ export default function LieuxDashboardPage() {
             <TouchableOpacity
               style={styles.quickCard}
               activeOpacity={0.85}
-              onPress={() => navigate('lieuxCreateEvent')}
+              onPress={() => navigate('lieuxAvailability')}
             >
               <View style={styles.quickIcon}>
-                <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
+                <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
               </View>
               <NoxText variant="secondary" style={styles.quickLabel}>
-                {fr ? 'Créer un event' : 'Create event'}
+                {fr ? 'Disponibilités' : 'Availability'}
               </NoxText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickCard} activeOpacity={0.85} onPress={() => navigate('lieuxScanner')}>

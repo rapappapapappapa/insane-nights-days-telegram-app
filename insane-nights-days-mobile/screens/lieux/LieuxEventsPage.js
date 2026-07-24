@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +14,6 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { useLieuxEventDrafts } from '../../hooks/useLieuxEventDrafts';
 import { NoxText, NoxCard, NoxTabs, NoxLieuxBottomNav, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -24,18 +22,18 @@ import { categorizeVenueBookings, isPendingBooking } from '../../utils/lieuxEven
 
 function EventCard({ booking, fr, language, onDetails, onChat }) {
   const pending = isPendingBooking(booking);
-  const isLocal = booking.isLocalDraft === true;
-  const status = isLocal
-    ? fr
-      ? 'Brouillon local'
-      : 'Local draft'
-    : pending
+  const status =
+    pending
       ? mapBookingStatusLabel(booking.invitationStatus, language)
       : booking.eventStatus === 'FINISHED'
         ? fr
           ? 'Terminé'
           : 'Finished'
-        : mapBookingStatusLabel(booking.invitationStatus, language);
+        : booking.eventStatus === 'DRAFT'
+          ? fr
+            ? 'Brouillon orga'
+            : 'Organizer draft'
+          : mapBookingStatusLabel(booking.invitationStatus, language);
 
   return (
     <NoxCard style={styles.eventCard} padded={false}>
@@ -52,7 +50,7 @@ function EventCard({ booking, fr, language, onDetails, onChat }) {
         </NoxText>
         {booking.booker?.name ? (
           <NoxText variant="secondary" style={styles.orga}>
-            {booking.booker.name}
+            {fr ? 'Organisateur' : 'Organizer'} · {booking.booker.name}
           </NoxText>
         ) : null}
         <View style={[styles.badge, pending && styles.badgePending]}>
@@ -88,20 +86,17 @@ export default function LieuxEventsPage() {
   }, [routeParams?.tab]);
 
   const { loading, refreshing, bookings, refresh } = useLieuxData(user?.token, language);
-  const { drafts: localDrafts, load: reloadDrafts } = useLieuxEventDrafts();
 
-  const { upcoming, past, drafts: apiDrafts } = useMemo(
+  const { upcoming, past, drafts } = useMemo(
     () => categorizeVenueBookings(bookings),
     [bookings],
   );
-
-  const drafts = useMemo(() => [...localDrafts, ...apiDrafts], [localDrafts, apiDrafts]);
 
   const tabs = useMemo(
     () => [
       { id: 'upcoming', label: fr ? `À venir (${upcoming.length})` : `Upcoming (${upcoming.length})` },
       { id: 'past', label: fr ? `Passés (${past.length})` : `Past (${past.length})` },
-      { id: 'drafts', label: fr ? `Brouillons (${drafts.length})` : `Drafts (${drafts.length})` },
+      { id: 'drafts', label: fr ? `Brouillons orga (${drafts.length})` : `Organizer drafts (${drafts.length})` },
     ],
     [fr, upcoming.length, past.length, drafts.length],
   );
@@ -110,14 +105,6 @@ export default function LieuxEventsPage() {
     activeTab === 'past' ? past : activeTab === 'drafts' ? drafts : upcoming;
 
   const openDetails = (booking) => {
-    if (booking.isLocalDraft) {
-      Alert.alert(
-        booking.eventTitle,
-        booking.description ||
-          (fr ? 'Brouillon enregistré localement.' : 'Locally saved draft.'),
-      );
-      return;
-    }
     const eventVenueId = booking.eventVenueId || booking.id;
     if (isPendingBooking(booking)) {
       navigate('lieuxRequestDetail', { eventVenueId });
@@ -146,28 +133,26 @@ export default function LieuxEventsPage() {
         <NoxText variant="title" style={styles.pageTitle}>
           {fr ? 'Événements' : 'Events'}
         </NoxText>
+        <NoxText variant="secondary" style={styles.subtitle}>
+          {fr
+            ? 'Les organisateurs créent les événements et te sollicitent pour ton lieu.'
+            : 'Organizers create events and invite your venue.'}
+        </NoxText>
         <NoxTabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
       </View>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: Spacing.xl }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              refresh();
-              reloadDrafts();
-            }}
-            tintColor={Colors.primary}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={Colors.primary} />
         }
       >
         {list.length === 0 ? (
           <NoxText variant="secondary" style={styles.empty}>
             {activeTab === 'drafts'
               ? fr
-                ? 'Aucun brouillon pour le moment.'
-                : 'No drafts yet.'
+                ? 'Aucun brouillon d’organisateur pour le moment.'
+                : 'No organizer drafts yet.'
               : fr
                 ? 'Aucun événement dans cette catégorie.'
                 : 'No events in this category.'}
@@ -194,7 +179,12 @@ export default function LieuxEventsPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { alignItems: 'center', justifyContent: 'center' },
-  pageTitle: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.md },
+  pageTitle: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.sm },
+  subtitle: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
   tabs: { marginBottom: Spacing.lg },
   empty: { marginTop: Spacing.xxl, textAlign: 'center' },
   eventCard: {

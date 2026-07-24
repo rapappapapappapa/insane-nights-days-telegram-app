@@ -19,6 +19,8 @@ import {
   getProfileScreenForProfile,
   isHomeScreenForProfile,
   isProfileScreenForProfile,
+  LIEUX_SCREENS,
+  RADIAL_NAV_HIDDEN_PAGES,
 } from '../../utils/noxRoleNavigation';
 import { getDiscoverScreen } from '../../utils/noxNavigation';
 import Colors, { primaryAlpha } from '../../constants/colors';
@@ -27,6 +29,8 @@ import { Spacing } from '../../constants/theme';
 
 const NAV_SIZE = 48;
 const NX_SIZE = 64;
+/** Décalage NX au-dessus de la barre basse Lieux (Accueil / + / Profil). */
+const LIEUX_BOTTOM_NAV_LIFT = 76;
 /** Distance centre NX → icônes (plus grand = arc plus aéré). */
 const ORBIT_RADIUS = 118;
 /** Arc au-dessus du bouton NX (de gauche à droite). */
@@ -70,50 +74,8 @@ const NAV_ITEM_DEFS = [
   },
 ];
 
-/** Pages où la nav NX flottante est masquée (auth, wizards, dashboards…). */
-export const HIDE_RADIAL_NAV_PAGES = new Set([
-  'onboarding',
-  'login',
-  'accountType',
-  'registerCommunity',
-  'registerDj',
-  'registerBooker',
-  'registerVenue',
-  'registerPrestataire',
-  'home',
-  'createFeedPost',
-  'bookerEventDashboard',
-  'admin',
-  'scanTicket',
-  'eventStaff',
-  'selectDj',
-  'selectVenue',
-  'selectPrestataire',
-  'switchProfile',
-  'legal',
-  'tutorial',
-  'rateEvent',
-  'purchaseSuccess',
-  // LIEUX (nouveau design) — barre de nav basse dédiée
-  'lieuxDashboard',
-  'lieuxProfil',
-  'lieuxAvailability',
-  'lieuxMedia',
-  'lieuxRequestDetail',
-  'lieuxBookingChat',
-  'lieuxEvents',
-  'lieuxEventDetail',
-  'lieuxSettings',
-  'lieuxScanner',
-  'lieuxCreateEvent',
-  'lieuxNotifications',
-  'lieuxFeed',
-  'lieuxStaff',
-  // COMMUNAUTÉ — barre basse dédiée sur onboarding uniquement
-  'communityOnboarding',
-  'communityMyProfile',
-  'communityPushOptIn',
-]);
+/** @deprecated Utiliser RADIAL_NAV_HIDDEN_PAGES depuis noxRoleNavigation.js */
+export { RADIAL_NAV_HIDDEN_PAGES as HIDE_RADIAL_NAV_PAGES } from '../../utils/noxRoleNavigation';
 
 function polarOffset(angleDeg, radius) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -208,7 +170,10 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     [navItems, menuAnim],
   );
 
-  const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
+  const bottom =
+    Math.max(insets.bottom, Spacing.md) +
+    Spacing.sm +
+    (LIEUX_SCREENS.has(currentPage) ? LIEUX_BOTTOM_NAV_LIFT : 0);
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 
@@ -248,7 +213,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
 
   // Masqué : non connecté, drawer ouvert, ou page sans nav flottante.
   const hidden =
-    !user?.isAuthenticated || drawerOpen || HIDE_RADIAL_NAV_PAGES.has(currentPage);
+    !user?.isAuthenticated || drawerOpen || RADIAL_NAV_HIDDEN_PAGES.has(currentPage);
   if (hidden) return null;
 
   const handleNxPress = () => {

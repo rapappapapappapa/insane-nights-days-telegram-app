@@ -33,6 +33,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Notifs** : labels typés feed ; notifs lieu refusées/confirmées.
 - **Chat booking Lieux** : fond sombre, bulles pill Figma.
 
+### Corrigé (mobile — Lieux : pas de création d’événement)
+- **Retrait `lieuxCreateEvent`** et brouillons locaux : seuls les **organisateurs/bookers** créent les événements.
+- **Dashboard / FAB Lieux** : action « Disponibilités » à la place de « Créer un event ».
+- **`lieuxEvents`** : onglet renommé « Brouillons orga » (demandes côté booker), libellés clarifiés.
+- **Nav NX Lieux** : bouton NX réaffiché sur dashboard et écrans Lieux (au-dessus de la barre basse), masqué seulement sur le chat booking.
+- **Nav globale** : politique centralisée (`shouldShowRadialNav` / `shouldShowDrawerMenuButton`) — NX sur la plupart des écrans connectés ; bouton **MENU** (drawer) en secours sur wizards, chat et scan quand NX est masqué.
+
 ---
 
 ## Semaine du 15 au 17 juillet 2026 (mer. - ven.)

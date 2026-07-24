@@ -21,10 +21,10 @@ const OPTIONS = [
     enabled: true,
   },
   {
-    id: 'event',
+    id: 'availability',
     icon: 'calendar-outline',
-    labelFr: 'Créer un événement',
-    labelEn: 'Create event',
+    labelFr: 'Disponibilités',
+    labelEn: 'Availability',
     enabled: true,
   },
   {
@@ -49,8 +49,8 @@ export default function NoxCreateSheet({ visible, onClose, navigate, language = 
     onClose();
     if (option.id === 'media') {
       navigate('lieuxMedia');
-    } else if (option.id === 'event') {
-      navigate('lieuxCreateEvent');
+    } else if (option.id === 'availability') {
+      navigate('lieuxAvailability');
     }
   };
 

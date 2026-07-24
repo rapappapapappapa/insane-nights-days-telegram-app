@@ -19,7 +19,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
-import { getHomeScreenForProfile } from './utils/noxRoleNavigation';
+import { getHomeScreenForProfile, shouldShowDrawerMenuButton } from './utils/noxRoleNavigation';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -91,7 +91,6 @@ import LieuxEventsPage from './screens/lieux/LieuxEventsPage';
 import LieuxEventDetailPage from './screens/lieux/LieuxEventDetailPage';
 import LieuxSettingsPage from './screens/lieux/LieuxSettingsPage';
 import LieuxScannerPage from './screens/lieux/LieuxScannerPage';
-import LieuxCreateEventPage from './screens/lieux/LieuxCreateEventPage';
 import LieuxNotificationsPage from './screens/lieux/LieuxNotificationsPage';
 import LieuxFeedPage from './screens/lieux/LieuxFeedPage';
 import LieuxStaffPage from './screens/lieux/LieuxStaffPage';
@@ -164,7 +163,6 @@ const SCREENS = {
   lieuxEventDetail: LieuxEventDetailPage,
   lieuxSettings: LieuxSettingsPage,
   lieuxScanner: LieuxScannerPage,
-  lieuxCreateEvent: LieuxCreateEventPage,
   lieuxNotifications: LieuxNotificationsPage,
   lieuxFeed: LieuxFeedPage,
   lieuxStaff: LieuxStaffPage,
@@ -400,7 +398,9 @@ function AppContent() {
         isOpen={drawerOpen}
         onOpen={() => setDrawerOpen(true)}
         onClose={() => setDrawerOpen(false)}
-        showFloatingButton={!user?.isAuthenticated}
+        showFloatingButton={
+          !user?.isAuthenticated || shouldShowDrawerMenuButton(currentPage, !!user?.isAuthenticated)
+        }
       >
         {isCreateFeedPost ? (
           <ErrorBoundary

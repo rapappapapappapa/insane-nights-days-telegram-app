@@ -20,9 +20,11 @@ import { useVenueBookingChat } from '../../hooks/useVenueBookingChat';
 import { useToast } from '../../hooks/useToast';
 import { NoxText } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
-import { Spacing, Radius } from '../../constants/theme';
+import { Spacing } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 import { findBookingByEventVenueId } from '../../utils/lieuxEventUtils';
+
+const CHAT_BG = '#0a0a0c';
 
 function MessageBubble({ message, fr }) {
   const own = message.isOwn;
@@ -43,6 +45,14 @@ function MessageBubble({ message, fr }) {
         <NoxText variant="form" style={own ? styles.bubbleTextOwn : styles.bubbleTextOther}>
           {content}
         </NoxText>
+        {!message.deleted && message.createdAt ? (
+          <NoxText variant="secondary" style={[styles.bubbleTime, own && styles.bubbleTimeOwn]}>
+            {new Date(message.createdAt).toLocaleTimeString(fr ? 'fr-FR' : 'en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </NoxText>
+        ) : null}
       </View>
     </View>
   );
@@ -120,7 +130,7 @@ export default function LieuxBookingChatPage() {
         ) : (
           <ScrollView
             ref={scrollRef}
-            style={styles.flex}
+            style={[styles.flex, styles.messagesScroll]}
             contentContainerStyle={styles.messagesContent}
             keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollRef.current?.scrollToEnd?.({ animated: true })}
@@ -166,8 +176,9 @@ export default function LieuxBookingChatPage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: CHAT_BG },
   flex: { flex: 1 },
+  messagesScroll: { backgroundColor: CHAT_BG },
   centered: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl },
   centeredFlex: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
@@ -177,6 +188,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderSubtle,
+    backgroundColor: CHAT_BG,
   },
   headerBtn: {
     width: 40,
@@ -207,13 +219,20 @@ const styles = StyleSheet.create({
   bubble: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderRadius: Radius.card,
+    borderRadius: 999,
     maxWidth: '100%',
   },
-  bubbleOwn: { backgroundColor: Colors.primary },
-  bubbleOther: { backgroundColor: Colors.backgroundElevated, borderWidth: 1, borderColor: Colors.borderSubtle },
+  bubbleOwn: { backgroundColor: Colors.primary, borderBottomRightRadius: Spacing.sm },
+  bubbleOther: {
+    backgroundColor: '#1a1a1f',
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderBottomLeftRadius: Spacing.sm,
+  },
   bubbleTextOwn: { color: '#000' },
   bubbleTextOther: { color: Colors.text },
+  bubbleTime: { fontSize: 10, marginTop: 4, opacity: 0.65 },
+  bubbleTimeOwn: { color: 'rgba(0,0,0,0.55)' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -222,7 +241,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.borderSubtle,
-    backgroundColor: Colors.background,
+    backgroundColor: '#111114',
   },
   input: {
     flex: 1,
@@ -235,6 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     color: Colors.text,
     fontSize: 15,
+    backgroundColor: '#1a1a1f',
   },
   sendBtn: {
     width: 44,

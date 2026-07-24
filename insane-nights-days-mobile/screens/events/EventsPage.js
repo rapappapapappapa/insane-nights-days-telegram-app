@@ -91,6 +91,12 @@ export default function EventsPage() {
   }, [routeParams?.tab]);
 
   useEffect(() => {
+    if (user?.activeProfileType === 'COMMUNITY') {
+      navigate('communityDiscover', routeParams?.tab ? { tab: routeParams.tab } : undefined);
+    }
+  }, [user?.activeProfileType, navigate, routeParams?.tab]);
+
+  useEffect(() => {
     if (!user?.isAuthenticated) {
       navigate('home');
     }

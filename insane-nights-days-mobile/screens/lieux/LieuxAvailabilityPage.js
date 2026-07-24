@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
+import { useLieuxBlockedDates } from '../../hooks/useLieuxBlockedDates';
 import { NoxText, NoxCard, NoxButton, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -31,16 +33,20 @@ const LEGEND = [
   { key: 'off', label: 'Pas dispo (perso)' },
 ];
 
-function Day({ item }) {
+function Day({ item, onPress, selectable }) {
   const color = item.status ? calendarStatusColor(item.status) : null;
+  const Wrapper = selectable && !item.muted ? TouchableOpacity : View;
   return (
     <View style={styles.dayCell}>
-      <View
+      <Wrapper
         style={[
           styles.dayInner,
           color && item.status === 'booked' && { backgroundColor: color },
           item.status === 'pending' && styles.dayPending,
+          item.status === 'off' && styles.dayOffBg,
         ]}
+        activeOpacity={0.75}
+        onPress={selectable && !item.muted ? onPress : undefined}
       >
         <NoxText
           variant="secondary"
@@ -53,7 +59,7 @@ function Day({ item }) {
         >
           {item.d}
         </NoxText>
-      </View>
+      </Wrapper>
     </View>
   );
 }
@@ -67,15 +73,19 @@ export default function LieuxAvailabilityPage() {
 
   const focusPending = !!routeParams?.focusPending;
   const [viewMonth, setViewMonth] = useState(() => new Date());
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const { loading, refreshing, bookings, pendingBookings, refresh, statusLabel } = useLieuxData(
     user?.token,
     language,
   );
 
+  const { blockedDates, toggleBlockedDate } = useLieuxBlockedDates(user?.id);
+
   const { rows: calendarRows, weekDays } = useMemo(
-    () => buildCalendarRowsFromBookings(viewMonth, bookings),
-    [viewMonth, bookings],
+    () => buildCalendarRowsFromBookings(viewMonth, bookings, blockedDates),
+    [viewMonth, bookings, blockedDates],
   );
 
   const monthLabel = viewMonth.toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
@@ -85,6 +95,23 @@ export default function LieuxAvailabilityPage() {
 
   const shiftMonth = (delta) => {
     setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+  };
+
+  const handleDayPress = (item) => {
+    if (item.muted || item.status === 'booked' || !item.dateKey) return;
+    setSelectedDay({
+      dateKey: item.dateKey,
+      dayNum: item.day,
+      blocked: item.status === 'off',
+    });
+    setBlockModalOpen(true);
+  };
+
+  const confirmToggleBlock = async () => {
+    if (!selectedDay?.dateKey) return;
+    await toggleBlockedDate(selectedDay.dateKey);
+    setBlockModalOpen(false);
+    setSelectedDay(null);
   };
 
   const sortedBookings = useMemo(() => {
@@ -154,11 +181,26 @@ export default function LieuxAvailabilityPage() {
           {calendarRows.map((row, ri) => (
             <View key={ri} style={styles.weekRow}>
               {row.map((item, ci) => (
-                <Day key={`${ri}-${ci}`} item={item} />
+                <Day
+                  key={`${ri}-${ci}`}
+                  item={item}
+                  selectable
+                  onPress={() => handleDayPress(item)}
+                />
               ))}
             </View>
           ))}
         </NoxCard>
+
+        <NoxButton
+          label={fr ? 'Bloquer des dates' : 'Block dates'}
+          variant="secondary"
+          onPress={() => {
+            setSelectedDay(null);
+            setBlockModalOpen(true);
+          }}
+          style={{ marginHorizontal: Spacing.xl, marginBottom: Spacing.lg }}
+        />
 
         <NoxText variant="titleSecondary" style={[styles.listTitle, focusPending && styles.listTitleFocus]}>
           {focusPending && pendingBookings.length > 0
@@ -220,6 +262,47 @@ export default function LieuxAvailabilityPage() {
         ) : null}
       </ScrollView>
 
+      <Modal visible={blockModalOpen} transparent animationType="fade" onRequestClose={() => setBlockModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <NoxText variant="titleSecondary" style={styles.modalTitle}>
+              {fr ? 'Bloquer des dates' : 'Block dates'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.modalBody}>
+              {selectedDay
+                ? selectedDay.blocked
+                  ? fr
+                    ? `Réouvrir le ${selectedDay.dayNum}/${viewMonth.getMonth() + 1} ?`
+                    : `Re-open ${selectedDay.dayNum}/${viewMonth.getMonth() + 1}?`
+                  : fr
+                    ? `Marquer le ${selectedDay.dayNum}/${viewMonth.getMonth() + 1} comme indisponible ?`
+                    : `Mark ${selectedDay.dayNum}/${viewMonth.getMonth() + 1} as unavailable?`
+                : fr
+                  ? 'Appuie sur un jour du calendrier (hors réservation) pour le bloquer ou le débloquer.'
+                  : 'Tap a calendar day (except booked) to block or unblock it.'}
+            </NoxText>
+            <View style={styles.modalActions}>
+              <NoxButton
+                label={fr ? 'Fermer' : 'Close'}
+                variant="ghost"
+                onPress={() => {
+                  setBlockModalOpen(false);
+                  setSelectedDay(null);
+                }}
+                style={{ flex: 1 }}
+              />
+              {selectedDay ? (
+                <NoxButton
+                  label={selectedDay.blocked ? (fr ? 'Débloquer' : 'Unblock') : fr ? 'Bloquer' : 'Block'}
+                  onPress={confirmToggleBlock}
+                  style={{ flex: 1 }}
+                />
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
@@ -255,6 +338,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: AVAILABILITY_STATUS.pending,
   },
+  dayOffBg: {
+    backgroundColor: 'rgba(120,120,120,0.25)',
+  },
   dayText: { fontSize: 12 },
   dayMuted: { opacity: 0.35 },
   dayTextOnColor: { color: '#000', fontWeight: '700' },
@@ -279,4 +365,23 @@ const styles = StyleSheet.create({
   },
   eventName: { fontWeight: '700', marginBottom: 2 },
   status: { color: Colors.primary, marginTop: 2 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  modalTitle: { marginBottom: Spacing.md, textAlign: 'center' },
+  modalBody: { textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 20 },
+  modalActions: { flexDirection: 'row', gap: Spacing.md },
 });

@@ -205,7 +205,6 @@ export default function CommunityDiscoverPage() {
                         </NoxText>
                       ) : null}
                     </View>
-                    <Ionicons name="bookmark-outline" size={18} color={Colors.textTertiary} />
                   </NoxCard>
                 </TouchableOpacity>
               );

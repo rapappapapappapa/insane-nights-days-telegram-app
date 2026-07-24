@@ -1,4 +1,4 @@
-# Changelog
+  # Changelog
 
 Toutes les modifications notables du projet sont documentées par semaine.
 
@@ -6,12 +6,32 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 21 au 24 juillet 2026 (mar. - ven.)
 
-### Modifié (mobile — Option A Lieux : B5–B7, B9) — 21 juil.
+### Modifié (mobile — Option A Lieux : B5–B7, B9) 
 - **`lieuxSettings`** : hub réglages NOX (profil, dispos, médias, scanner, notifications, légal).
 - **`lieuxScanner`** : scan QR skin NOX avec sélecteur d’événement confirmé (`useLieuxData`).
 - **`lieuxCreateEvent`** : formulaire brouillon local (`useLieuxEventDrafts` + onglet Brouillons).
 - **`lieuxNotifications`** : centre de notifs métier lieu dérivé des bookings.
 - **Dashboard / profil Lieux** : cloche → `lieuxNotifications`, engrenage → `lieuxSettings`, quick actions mises à jour ; FAB « Créer un événement » activé.
+
+### Modifié (mobile — Phase C Communauté : C1–C5) 
+- **`communityMyProfile`** : profil NOX avec onglets Aperçu / Events / Mur / Amis (`CommunityProfileShell`).
+- **NX Profil (COMMUNITY)** → `communityMyProfile` ; tap avatar Home → profil.
+- **`communityPushOptIn`** : opt-in push Figma (1× après onboarding) ; stockage `@nox_community_push_optin_v1`.
+- **Notifications feed** : deep link → `communityHome` (posts) pour profil COMMUNITY (`communityNotificationRouting.js`).
+- **`CommunityProfilePage`** : shell NOX lecture seule ; **`events` legacy** redirige COMMUNITY → `communityDiscover`.
+- **Bookmarks** retirés (Discover + détail event) — pas d’API favoris.
+- **Script OTA** : `EAS_SKIP_AUTO_FINGERPRINT=1` + `--platform` par canal (publication allégée).
+
+### Modifié (mobile — Polish Figma Lieux + Communauté)
+- **Dashboard Lieux** : pills statut booking + stats dernier event (fill rate, genre) ; API bookings enrichie (`eventGenre`, `eventSold`, `eventCapacity`).
+- **Profil Lieu** : stats Capacité / Surface / Sound system ; liens Feed & Médias.
+- **Event detail COMMUNITY** : cartes organisateur + lieu (`NoxEntityCard`).
+- **Profil communauté** : stats Events / Abonnements / Amis ; sous-onglets Events (À venir / Passés / Prévus).
+- **`lieuxFeed`** : publications événements confirmés (posts lieu = prochaine API).
+- **`lieuxStaff`** : staff par événement + onglet accès scanner.
+- **Disponibilités** : bloquer/débloquer des dates (stockage local `useLieuxBlockedDates`).
+- **Notifs** : labels typés feed ; notifs lieu refusées/confirmées.
+- **Chat booking Lieux** : fond sombre, bulles pill Figma.
 
 ---
 

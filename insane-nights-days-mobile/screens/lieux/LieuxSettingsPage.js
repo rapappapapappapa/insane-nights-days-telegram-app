@@ -97,9 +97,20 @@ export default function LieuxSettingsPage() {
             label={fr ? 'Médias' : 'Media'}
             onPress={() => navigate('lieuxMedia')}
           />
+          <SettingsRow
+            icon="newspaper-outline"
+            label={fr ? 'Feed lieu' : 'Venue feed'}
+            onPress={() => navigate('lieuxFeed')}
+          />
         </Section>
 
         <Section title={fr ? 'Staff & accès' : 'Staff & access'}>
+          <SettingsRow
+            icon="people-outline"
+            label={fr ? 'Gérer le staff' : 'Manage staff'}
+            subtitle={fr ? 'Par événement + accès scanner' : 'Per event + scanner access'}
+            onPress={() => navigate('lieuxStaff')}
+          />
           <SettingsRow
             icon="qr-code-outline"
             label={fr ? 'Scanner billets' : 'Scan tickets'}

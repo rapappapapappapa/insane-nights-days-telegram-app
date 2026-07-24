@@ -108,8 +108,8 @@ export default function LieuxProfilPage() {
             value={venueProfile?.maxCapacity ?? '—'}
             label={fr ? 'Capacité (pers.)' : 'Capacity'}
           />
-          <Stat value={upcomingBookings.length} label={fr ? 'À venir' : 'Upcoming'} />
-          <Stat value={venueProfile?.siret ? '✓' : '—'} label="SIRET" />
+          <Stat value="—" label={fr ? 'Surface (m²)' : 'Surface (m²)'} />
+          <Stat value="—" label={fr ? 'Sound system' : 'Sound system'} />
         </View>
 
         {genres.length > 0 ? (
@@ -128,6 +128,24 @@ export default function LieuxProfilPage() {
           {venueProfile?.address ||
             (fr ? 'Complète ton profil lieu depuis les paramètres.' : 'Complete your venue profile in settings.')}
         </NoxText>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              {fr ? 'Feed & médias' : 'Feed & media'}
+            </NoxText>
+          </View>
+          <View style={styles.quickLinks}>
+            <TouchableOpacity style={styles.quickLink} onPress={() => navigate('lieuxFeed')}>
+              <Ionicons name="newspaper-outline" size={18} color={Colors.primary} />
+              <NoxText variant="form">{fr ? 'Feed' : 'Feed'}</NoxText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickLink} onPress={() => navigate('lieuxMedia')}>
+              <Ionicons name="images-outline" size={18} color={Colors.primary} />
+              <NoxText variant="form">{fr ? 'Médias' : 'Media'}</NoxText>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
@@ -234,6 +252,23 @@ const styles = StyleSheet.create({
   genreText: { fontSize: 12 },
   description: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
   section: { paddingHorizontal: Spacing.xl },
+  quickLinks: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  quickLink: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.card,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',

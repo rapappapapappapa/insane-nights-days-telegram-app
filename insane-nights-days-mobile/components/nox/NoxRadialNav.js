@@ -107,8 +107,12 @@ export const HIDE_RADIAL_NAV_PAGES = new Set([
   'lieuxScanner',
   'lieuxCreateEvent',
   'lieuxNotifications',
+  'lieuxFeed',
+  'lieuxStaff',
   // COMMUNAUTÉ — barre basse dédiée sur onboarding uniquement
   'communityOnboarding',
+  'communityMyProfile',
+  'communityPushOptIn',
 ]);
 
 function polarOffset(angleDeg, radius) {

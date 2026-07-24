@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
-import { NoxText, NoxButton } from '../../components/nox';
+import { NoxText, NoxButton, NoxEntityCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { getEventPurchaseScreen } from '../../utils/noxNavigation';
@@ -142,9 +142,7 @@ export default function CommunityEventDetailPage() {
           <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.heroBtn}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={12} style={styles.heroBtn}>
-            <Ionicons name="bookmark-outline" size={20} color={Colors.text} />
-          </TouchableOpacity>
+          <View style={styles.heroBtn} />
         </View>
         <View style={styles.heroInfo}>
           <NoxText variant="title" style={styles.heroTitle}>
@@ -202,24 +200,43 @@ export default function CommunityEventDetailPage() {
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
               {fr ? 'Organisateur' : 'Organizer'}
             </NoxText>
-            <View style={styles.orgRow}>
-              <View style={styles.orgAvatar}>
-                <Ionicons name="people-outline" size={22} color={primaryAlpha(0.6)} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <NoxText variant="form" style={styles.orgName}>
-                  {organizerName}
-                </NoxText>
-              </View>
-            </View>
-            {event.booker?.id ? (
-              <NoxButton
-                label={fr ? 'Voir le profil' : 'View profile'}
-                variant="ghost"
-                onPress={() => navigate('bookerProfile', { bookerId: event.booker.id })}
-                style={styles.profileBtn}
-              />
-            ) : null}
+            <NoxEntityCard
+              title={organizerName}
+              rating="4.8"
+              meta={fr ? 'Organisateur sur NOX' : 'Organizer on NOX'}
+              description={
+                fr
+                  ? 'Organisateur spécialisé dans les événements électro et techno.'
+                  : 'Organizer specialized in electro and techno events.'
+              }
+              actionLabel={event.booker?.id ? (fr ? 'Voir le profil' : 'View profile') : null}
+              onPress={
+                event.booker?.id
+                  ? () => navigate('bookerProfile', { bookerId: event.booker.id })
+                  : undefined
+              }
+              icon="people-outline"
+            />
+          </>
+        ) : null}
+
+        {event.venueId || event.venueName ? (
+          <>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              {fr ? 'Lieu' : 'Venue'}
+            </NoxText>
+            <NoxEntityCard
+              title={event.venueName || event.venue?.venueName || (fr ? 'Lieu' : 'Venue')}
+              subtitle={event.location}
+              rating="4.6"
+              actionLabel={event.venueId ? (fr ? 'Voir le profil' : 'View profile') : null}
+              onPress={
+                event.venueId
+                  ? () => navigate('venueProfile', { venueId: event.venueId })
+                  : undefined
+              }
+              icon="business-outline"
+            />
           </>
         ) : null}
 

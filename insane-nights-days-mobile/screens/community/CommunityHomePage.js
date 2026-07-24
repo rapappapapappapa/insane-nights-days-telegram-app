@@ -28,6 +28,7 @@ import {
   getFeaturedEvent,
 } from '../../utils/noxDiscoverUtils';
 import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
+import { shouldShowPushOptIn } from '../../utils/communityPushOptInStorage';
 
 function buildTabs(fr) {
   return [
@@ -38,7 +39,7 @@ function buildTabs(fr) {
 }
 
 export default function CommunityHomePage() {
-  const { navigate } = useNavigation();
+  const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -47,7 +48,7 @@ export default function CommunityHomePage() {
   const fr = language === 'fr';
   const tabs = useMemo(() => buildTabs(fr), [fr]);
 
-  const [activeTab, setActiveTab] = useState('events');
+  const [activeTab, setActiveTab] = useState(routeParams?.feedTab || 'events');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -60,6 +61,22 @@ export default function CommunityHomePage() {
   const featured = useMemo(() => getFeaturedEvent(events), [events]);
   const upcoming = useMemo(() => filterUpcomingEvents(events, 8), [events]);
   const suggestedDjs = useMemo(() => djs.slice(0, 8), [djs]);
+
+  useEffect(() => {
+    if (routeParams?.feedTab) setActiveTab(routeParams.feedTab);
+  }, [routeParams?.feedTab]);
+
+  useEffect(() => {
+    if (!user?.isAuthenticated || user?.activeProfileType !== 'COMMUNITY') return;
+    let cancelled = false;
+    (async () => {
+      const show = await shouldShowPushOptIn(user.activeProfileType);
+      if (!cancelled && show) navigate('communityPushOptIn');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.isAuthenticated, user?.activeProfileType, navigate]);
 
   const loadDiscovery = useCallback(
     async (isRefresh = false) => {
@@ -131,7 +148,11 @@ export default function CommunityHomePage() {
   const renderHeader = () => (
     <>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
+        <TouchableOpacity
+          style={styles.headerLeft}
+          activeOpacity={0.85}
+          onPress={() => navigate('communityMyProfile')}
+        >
           <View style={styles.avatar}>
             {profile?.profileImage && !brokenImages.profile ? (
               <Image
@@ -149,7 +170,7 @@ export default function CommunityHomePage() {
               {fr ? 'Découvre ton prochain événement' : 'Discover your next event'}
             </NoxText>
           </View>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.bell} onPress={() => navigate('notifications')} hitSlop={10}>
           <Ionicons name="notifications-outline" size={22} color={Colors.text} />
           {feedNotificationsCount > 0 ? <View style={styles.notifDot} /> : null}

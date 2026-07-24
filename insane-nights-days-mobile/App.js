@@ -93,10 +93,14 @@ import LieuxSettingsPage from './screens/lieux/LieuxSettingsPage';
 import LieuxScannerPage from './screens/lieux/LieuxScannerPage';
 import LieuxCreateEventPage from './screens/lieux/LieuxCreateEventPage';
 import LieuxNotificationsPage from './screens/lieux/LieuxNotificationsPage';
+import LieuxFeedPage from './screens/lieux/LieuxFeedPage';
+import LieuxStaffPage from './screens/lieux/LieuxStaffPage';
 
 // COMMUNAUTÉ (nouveau design, UI-first)
 import CommunityOnboardingPage from './screens/community/CommunityOnboardingPage';
 import CommunityHomePage from './screens/community/CommunityHomePage';
+import CommunityMyProfilePage from './screens/community/CommunityMyProfilePage';
+import CommunityPushOptInPage from './screens/community/CommunityPushOptInPage';
 import CommunityEventDetailPage from './screens/community/CommunityEventDetailPage';
 import CommunityDiscoverPage from './screens/community/CommunityDiscoverPage';
 
@@ -162,9 +166,13 @@ const SCREENS = {
   lieuxScanner: LieuxScannerPage,
   lieuxCreateEvent: LieuxCreateEventPage,
   lieuxNotifications: LieuxNotificationsPage,
+  lieuxFeed: LieuxFeedPage,
+  lieuxStaff: LieuxStaffPage,
   // COMMUNAUTÉ (nouveau design)
   communityOnboarding: CommunityOnboardingPage,
   communityHome: CommunityHomePage,
+  communityMyProfile: CommunityMyProfilePage,
+  communityPushOptIn: CommunityPushOptInPage,
   communityEventDetail: CommunityEventDetailPage,
   communityDiscover: CommunityDiscoverPage,
 };

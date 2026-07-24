@@ -70,13 +70,14 @@ const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
  * @param {Date} viewDate — mois affiché
  * @param {Array} bookings
  */
-export function buildCalendarRowsFromBookings(viewDate = new Date(), bookings = []) {
+export function buildCalendarRowsFromBookings(viewDate = new Date(), bookings = [], blockedDates = []) {
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const firstDay = new Date(year, month, 1);
   const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const blockedSet = new Set(blockedDates || []);
   const statusByDay = {};
   bookings.forEach((b) => {
     const d = parseEventDate(b.eventDate);
@@ -88,6 +89,13 @@ export function buildCalendarRowsFromBookings(viewDate = new Date(), bookings = 
     statusByDay[day] = st;
   });
 
+  blockedSet.forEach((dateKey) => {
+    const d = parseEventDate(dateKey);
+    if (!d || d.getFullYear() !== year || d.getMonth() !== month) return;
+    const day = d.getDate();
+    if (statusByDay[day] !== 'booked') statusByDay[day] = 'off';
+  });
+
   const rows = [];
   let day = 1 - startOffset;
   for (let r = 0; r < 6; r += 1) {
@@ -95,9 +103,15 @@ export function buildCalendarRowsFromBookings(viewDate = new Date(), bookings = 
     for (let c = 0; c < 7; c += 1) {
       const muted = day < 1 || day > daysInMonth;
       const displayDay = muted ? ((day - 1 + daysInMonth) % daysInMonth) + 1 : day;
+      const dateKey =
+        !muted
+          ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          : null;
       row.push({
         d: displayDay,
         muted,
+        day: muted ? null : day,
+        dateKey,
         status: !muted ? statusByDay[day] || null : null,
       });
       day += 1;

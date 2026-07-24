@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { resolveFeedNotificationNavigation } from '../../utils/communityNotificationRouting';
 import { api } from '../../api/config';
 import Colors from '../../constants/colors';
 import { NoxText, NoxCard, NoxScreenHeader } from '../../components/nox';
@@ -47,16 +48,20 @@ function notifIcon(type) {
   const t = (type || '').toLowerCase();
   if (t === 'like') return 'heart';
   if (t === 'comment' || t === 'reply') return 'chatbubble-ellipses';
-  if (t === 'follow_post' || t === 'new_post') return 'sparkles';
+  if (t === 'follow' || t === 'follow_post' || t === 'new_post') return 'person-add';
+  if (t === 'mention') return 'at';
   return 'notifications';
 }
 
 function notifLabel(type, language) {
   const t = (type || '').toLowerCase();
-  if (t === 'like') return language === 'fr' ? 'a aimé ton post' : 'liked your post';
-  if (t === 'comment' || t === 'reply') return language === 'fr' ? 'a commenté' : 'commented';
-  if (t === 'follow_post' || t === 'new_post') return language === 'fr' ? 'nouveau post' : 'new post';
-  return language === 'fr' ? 'interaction' : 'interaction';
+  if (t === 'like') return language === 'fr' ? 'A aimé ton post' : 'Liked your post';
+  if (t === 'comment') return language === 'fr' ? 'A commenté ton post' : 'Commented on your post';
+  if (t === 'reply') return language === 'fr' ? 'A répondu à ton commentaire' : 'Replied to your comment';
+  if (t === 'follow') return language === 'fr' ? 'T’a suivi' : 'Followed you';
+  if (t === 'follow_post' || t === 'new_post') return language === 'fr' ? 'Nouveau post' : 'New post';
+  if (t === 'mention') return language === 'fr' ? 'T’a mentionné' : 'Mentioned you';
+  return language === 'fr' ? 'Interaction' : 'Interaction';
 }
 
 function groupNotifications(items) {
@@ -152,7 +157,8 @@ export default function NotificationsPage() {
     } catch {
       // ignore
     }
-    navigate('welcome', { highlightPostId: notif?.post?.id || null });
+    const { screen, params } = resolveFeedNotificationNavigation(notif, user?.activeProfileType);
+    navigate(screen, params);
   };
 
   const renderNotif = (n) => {

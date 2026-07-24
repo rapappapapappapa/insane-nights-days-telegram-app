@@ -12,7 +12,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 export CI=1
-# export EAS_SKIP_AUTO_FINGERPRINT=1
+export EAS_SKIP_AUTO_FINGERPRINT=1
 
 MESSAGE="${1:-Update automatique}"
 
@@ -27,11 +27,11 @@ if [ -x "./node_modules/.bin/eas" ]; then
 fi
 
 echo "🔵 Publication sur canal PREVIEW (Android)..."
-"${EAS[@]}" update --branch preview --environment preview --message "$MESSAGE (Android)"
+"${EAS[@]}" update --branch preview --environment preview --platform android --message "$MESSAGE (Android)"
 
 echo ""
 echo "🟢 Publication sur canal PRODUCTION (iOS)..."
-"${EAS[@]}" update --branch production --environment production --message "$MESSAGE (iOS)"
+"${EAS[@]}" update --branch production --environment production --platform ios --message "$MESSAGE (iOS)"
 
 echo ""
 echo "✅ Updates publiées sur les deux canaux !"

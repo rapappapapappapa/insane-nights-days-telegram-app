@@ -55,6 +55,21 @@ export function buildVenueNotifications(bookings = [], language = 'fr') {
         subtitle: b.eventLocation,
         action: 'lieuxEventDetail',
       });
+      return;
+    }
+
+    if (st === 'REJECTED' || st === 'DECLINED') {
+      items.push({
+        id: `venue-rejected-${eventVenueId}`,
+        type: 'booking_rejected',
+        read: true,
+        createdAt,
+        eventVenueId,
+        title: fr ? 'Demande refusée' : 'Request declined',
+        body: b.eventTitle,
+        subtitle: b.booker?.name,
+        action: 'lieuxRequestDetail',
+      });
     }
   });
 
@@ -91,6 +106,10 @@ export function venueNotifIcon(type) {
       return 'mail-unread-outline';
     case 'booking_confirmed':
       return 'checkmark-circle-outline';
+    case 'booking_rejected':
+      return 'close-circle-outline';
+    case 'booking_message':
+      return 'chatbubble-ellipses-outline';
     default:
       return 'notifications-outline';
   }

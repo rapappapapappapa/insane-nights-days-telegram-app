@@ -21,6 +21,8 @@ export function getProfileScreenForProfile(activeProfileType) {
   switch (activeProfileType) {
     case 'VENUE':
       return 'lieuxProfil';
+    case 'COMMUNITY':
+      return 'communityMyProfile';
     default:
       return 'profile';
   }
@@ -32,6 +34,8 @@ export const NOX_THEMED_SCREENS = new Set([
   'communityDiscover',
   'communityEventDetail',
   'communityOnboarding',
+  'communityMyProfile',
+  'communityPushOptIn',
   'lieuxDashboard',
   'lieuxProfil',
   'lieuxAvailability',

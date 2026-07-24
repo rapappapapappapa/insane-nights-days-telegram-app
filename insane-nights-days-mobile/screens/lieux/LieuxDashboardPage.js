@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -19,7 +19,13 @@ import { useLieuxData } from '../../hooks/useLieuxData';
 import { NoxText, NoxCard, NoxLieuxBottomNav } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
+import { formatEventDateLabel, mapBookingStatusLabel } from '../../utils/noxDiscoverUtils';
+import {
+  getDashboardEventRows,
+  getLastPastEvent,
+  formatFillRate,
+} from '../../utils/lieuxDashboardUtils';
+import { isAcceptedBooking } from '../../utils/lieuxEventUtils';
 
 function EventThumb({ uri, broken, onError }) {
   const normalized = uri ? normalizeMediaUrl(uri) : null;
@@ -45,10 +51,17 @@ export default function LieuxDashboardPage() {
     loading,
     refreshing,
     venueProfile,
+    bookings,
     pendingBookings,
-    upcomingBookings,
     refresh,
   } = useLieuxData(user?.token, language);
+
+  const dashboardEvents = useMemo(() => getDashboardEventRows(bookings, 5), [bookings]);
+  const lastPastEvent = useMemo(() => getLastPastEvent(bookings), [bookings]);
+  const lastFillRate = useMemo(
+    () => formatFillRate(lastPastEvent?.eventSold, lastPastEvent?.eventCapacity),
+    [lastPastEvent],
+  );
 
   const [brokenImages, setBrokenImages] = useState({});
 
@@ -163,36 +176,91 @@ export default function LieuxDashboardPage() {
             </TouchableOpacity>
           </View>
 
-          {upcomingBookings.length === 0 ? (
-            <NoxText variant="secondary">{fr ? 'Aucun événement confirmé.' : 'No confirmed events.'}</NoxText>
+          {dashboardEvents.length === 0 ? (
+            <NoxText variant="secondary">{fr ? 'Aucun événement à afficher.' : 'No events to show.'}</NoxText>
           ) : (
-            upcomingBookings.map((ev) => (
-              <TouchableOpacity
-                key={ev.id}
-                activeOpacity={0.85}
-                onPress={() => navigate('lieuxEventDetail', { eventVenueId: ev.id })}
-              >
-                <NoxCard style={styles.eventCard} padded={false}>
-                  <EventThumb
-                    uri={null}
-                    broken={brokenImages[`ev-${ev.id}`]}
-                    onError={() => setBrokenImages((p) => ({ ...p, [`ev-${ev.id}`]: true }))}
-                  />
-                  <View style={styles.eventInfo}>
-                    <NoxText variant="form" style={styles.eventName}>
-                      {ev.title}
-                    </NoxText>
-                    <NoxText variant="secondary">
-                      {formatEventDateLabel(ev.date, language, { shortMonth: true, withYear: true })}
-                      {ev.location ? ` • ${ev.location}` : ''}
-                    </NoxText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-                </NoxCard>
-              </TouchableOpacity>
-            ))
+            dashboardEvents.map(({ booking, status }) => {
+              const eventVenueId = booking.eventVenueId || booking.id;
+              const pending = String(status || '').toUpperCase() === 'PENDING';
+              return (
+                <TouchableOpacity
+                  key={eventVenueId}
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    navigate(pending ? 'lieuxRequestDetail' : 'lieuxEventDetail', { eventVenueId })
+                  }
+                >
+                  <NoxCard style={styles.eventCard} padded={false}>
+                    <EventThumb
+                      uri={null}
+                      broken={brokenImages[`ev-${eventVenueId}`]}
+                      onError={() => setBrokenImages((p) => ({ ...p, [`ev-${eventVenueId}`]: true }))}
+                    />
+                    <View style={styles.eventInfo}>
+                      <NoxText variant="form" style={styles.eventName}>
+                        {booking.eventTitle}
+                      </NoxText>
+                      <NoxText variant="secondary">
+                        {formatEventDateLabel(booking.eventDate, language, { shortMonth: true, withYear: true })}
+                        {booking.eventLocation ? ` • ${booking.eventLocation}` : ''}
+                      </NoxText>
+                      {booking.eventGenre ? (
+                        <NoxText variant="secondary" style={styles.genreTag}>
+                          {String(booking.eventGenre).toUpperCase()}
+                        </NoxText>
+                      ) : null}
+                      <View style={[styles.statusPill, pending && styles.statusPillPending]}>
+                        <NoxText variant="secondary" style={styles.statusPillText}>
+                          {mapBookingStatusLabel(status, language)}
+                        </NoxText>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+                  </NoxCard>
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
+
+        {lastPastEvent ? (
+          <View style={styles.section}>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              {fr ? 'Statistiques du dernier événement' : 'Last event statistics'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.lastEventName}>
+              {lastPastEvent.eventTitle}
+            </NoxText>
+            <View style={styles.statRingRow}>
+              <View style={styles.statRing}>
+                <NoxText variant="titleSecondary" style={styles.ringValue}>
+                  {lastPastEvent.eventSold ?? '—'}
+                </NoxText>
+                <NoxText variant="secondary" style={styles.ringLabel}>
+                  {fr ? 'Billets vendus' : 'Tickets sold'}
+                </NoxText>
+              </View>
+              <View style={styles.statRing}>
+                <NoxText variant="titleSecondary" style={styles.ringValue}>
+                  {lastFillRate != null ? `${lastFillRate}%` : '—'}
+                </NoxText>
+                <NoxText variant="secondary" style={styles.ringLabel}>
+                  {fr ? 'Remplissage' : 'Fill rate'}
+                </NoxText>
+              </View>
+              <View style={styles.statRing}>
+                <NoxText variant="titleSecondary" style={styles.ringValue}>
+                  {lastPastEvent.paymentAmount
+                    ? `${Math.round(lastPastEvent.paymentAmount)}€`
+                    : '—'}
+                </NoxText>
+                <NoxText variant="secondary" style={styles.ringLabel}>
+                  {fr ? 'Budget' : 'Budget'}
+                </NoxText>
+              </View>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <NoxText variant="titleSecondary" style={styles.sectionTitle}>
@@ -209,9 +277,9 @@ export default function LieuxDashboardPage() {
             <NoxCard style={styles.statCard}>
               <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
               <NoxText variant="title" style={styles.statValue}>
-                {upcomingBookings.length}
+                {dashboardEvents.filter((r) => isAcceptedBooking(r.booking)).length}
               </NoxText>
-              <NoxText variant="secondary">{fr ? 'À venir' : 'Upcoming'}</NoxText>
+              <NoxText variant="secondary">{fr ? 'Confirmés' : 'Confirmed'}</NoxText>
             </NoxCard>
           </View>
         </View>
@@ -325,6 +393,30 @@ const styles = StyleSheet.create({
   thumbImage: { width: '100%', height: '100%' },
   eventInfo: { flex: 1 },
   eventName: { fontWeight: '700', marginBottom: 2 },
+  genreTag: { fontSize: 10, marginTop: 2, color: Colors.primary },
+  statusPill: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+    backgroundColor: primaryAlpha(0.15),
+  },
+  statusPillPending: { backgroundColor: 'rgba(245,158,11,0.2)' },
+  statusPillText: { fontSize: 11, color: Colors.primary },
+  lastEventName: { marginBottom: Spacing.md },
+  statRingRow: { flexDirection: 'row', gap: Spacing.md },
+  statRing: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.card,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  ringValue: { fontSize: 20, marginBottom: 4 },
+  ringLabel: { fontSize: 10, textAlign: 'center' },
   statRow: { flexDirection: 'row', gap: Spacing.md },
   statCard: { flex: 1, alignItems: 'flex-start', gap: Spacing.xs },
   statValue: { fontSize: 22 },

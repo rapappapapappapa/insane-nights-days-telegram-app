@@ -66,13 +66,17 @@ export default function LieuxDashboardPage() {
   const [brokenImages, setBrokenImages] = useState({});
 
   useEffect(() => {
-    if (routeParams?.openBookings) {
-      navigate('lieuxAvailability', { focusPending: true });
+    if (routeParams?.openChatEventVenueId) {
+      navigate('lieuxBookingChat', { eventVenueId: routeParams.openChatEventVenueId });
+      return;
     }
-  }, [routeParams?.openBookings, navigate]);
+    if (routeParams?.openBookings) {
+      navigate('lieuxDemandes', { filter: 'pending' });
+    }
+  }, [routeParams?.openChatEventVenueId, routeParams?.openBookings, navigate]);
 
   const openPendingList = () => {
-    navigate('lieuxAvailability', { focusPending: true });
+    navigate('lieuxDemandes', { filter: 'pending' });
   };
 
   const greetingName = venueProfile?.venueName || (fr ? 'Lieu' : 'Venue');

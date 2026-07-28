@@ -60,7 +60,11 @@ export default function LieuxNotificationsPage() {
   const handlePress = (notif) => {
     setReadIds((prev) => new Set(prev).add(notif.id));
     const screen = notif.action || 'lieuxRequestDetail';
-    navigate(screen, { eventVenueId: notif.eventVenueId });
+    const params = { eventVenueId: notif.eventVenueId };
+    if (screen === 'lieuxDemandes') {
+      params.filter = notif.type === 'booking_pending' ? 'pending' : 'all';
+    }
+    navigate(screen, params);
   };
 
   const renderNotif = (n) => {

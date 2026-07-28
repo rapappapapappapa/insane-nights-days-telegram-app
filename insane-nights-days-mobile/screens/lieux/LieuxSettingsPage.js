@@ -83,6 +83,12 @@ export default function LieuxSettingsPage() {
 
         <Section title={fr ? 'Bookings & événements' : 'Bookings & events'}>
           <SettingsRow
+            icon="mail-outline"
+            label={fr ? 'Demandes' : 'Requests'}
+            subtitle={fr ? 'Propositions organisateurs' : 'Organizer proposals'}
+            onPress={() => navigate('lieuxDemandes')}
+          />
+          <SettingsRow
             icon="calendar-outline"
             label={fr ? 'Mes événements' : 'My events'}
             onPress={() => navigate('lieuxEvents')}

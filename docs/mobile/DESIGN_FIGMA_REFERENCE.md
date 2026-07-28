@@ -166,7 +166,7 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 | `08_Notification` | Demandes collaboration, contrats, confirmations |
 | `08_Reglage` | Compte, bookings, notifications, confidentialité |
 | `08_Create_Event` | Nom, date, heure, description, line-up |
-| `08_DEMANDES` | Propositions artistes + statuts |
+| `08_DEMANDES` | Propositions artistes + statuts | `screens/lieux/LieuxDemandesPage.js` |
 | `12_Events` | Passés, Brouillons, opt-in notifications |
 
 ### Messagerie booking

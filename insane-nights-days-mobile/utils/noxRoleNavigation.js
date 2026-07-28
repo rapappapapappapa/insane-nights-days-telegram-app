@@ -42,6 +42,7 @@ export const LIEUX_SCREENS = new Set([
   'lieuxNotifications',
   'lieuxFeed',
   'lieuxStaff',
+  'lieuxDemandes',
 ]);
 
 /** Auth / onboarding — pas de NX ni bouton menu drawer. */

@@ -20,6 +20,7 @@ import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
 import { getHomeScreenForProfile, shouldShowDrawerMenuButton } from './utils/noxRoleNavigation';
+import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -94,6 +95,7 @@ import LieuxScannerPage from './screens/lieux/LieuxScannerPage';
 import LieuxNotificationsPage from './screens/lieux/LieuxNotificationsPage';
 import LieuxFeedPage from './screens/lieux/LieuxFeedPage';
 import LieuxStaffPage from './screens/lieux/LieuxStaffPage';
+import LieuxDemandesPage from './screens/lieux/LieuxDemandesPage';
 
 // COMMUNAUTÉ (nouveau design, UI-first)
 import CommunityOnboardingPage from './screens/community/CommunityOnboardingPage';
@@ -166,6 +168,7 @@ const SCREENS = {
   lieuxNotifications: LieuxNotificationsPage,
   lieuxFeed: LieuxFeedPage,
   lieuxStaff: LieuxStaffPage,
+  lieuxDemandes: LieuxDemandesPage,
   // COMMUNAUTÉ (nouveau design)
   communityOnboarding: CommunityOnboardingPage,
   communityHome: CommunityHomePage,
@@ -287,7 +290,8 @@ function AppContent() {
       if (targetProfile === 'DJ') {
         navigate('djDashboard', params);
       } else if (targetProfile === 'VENUE') {
-        navigate('venueDashboard', params);
+        const { screen, routeParams: venueParams } = resolveVenuePushNavigation(params);
+        navigate(screen, venueParams);
       } else if (targetProfile === 'PRESTATAIRE') {
         navigate('prestataireDashboard', params);
       } else {
@@ -332,7 +336,8 @@ function AppContent() {
       if (targetProfile === 'DJ') {
         navigate('djDashboard', params);
       } else if (targetProfile === 'VENUE') {
-        navigate('venueDashboard', params);
+        const { screen, routeParams: venueParams } = resolveVenuePushNavigation(params);
+        navigate(screen, venueParams);
       } else if (targetProfile === 'PRESTATAIRE') {
         navigate('prestataireDashboard', params);
       } else {

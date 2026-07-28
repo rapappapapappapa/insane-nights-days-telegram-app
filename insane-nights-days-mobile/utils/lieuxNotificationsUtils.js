@@ -38,7 +38,7 @@ export function buildVenueNotifications(bookings = [], language = 'fr') {
         title: fr ? 'Nouvelle demande de collaboration' : 'New collaboration request',
         body: b.eventTitle,
         subtitle: b.booker?.name || b.eventLocation,
-        action: 'lieuxRequestDetail',
+        action: 'lieuxDemandes',
       });
       return;
     }

@@ -4,6 +4,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
+
+### Ajouté (mobile — Lieux Figma 08_DEMANDES)
+- **`lieuxDemandes`** : liste des propositions organisateurs avec filtres En attente / Confirmé / À négocier / Refusé (`lieuxDemandesUtils.js`).
+- **Navigation** : dashboard Lieux (bandeau pending), réglages, dispos et notifs → `lieuxDemandes` ; détail confirmé → `lieuxEventDetail`, sinon → `lieuxRequestDetail`.
+- **Push notifs VENUE** : chat → `lieuxBookingChat`, demandes → `lieuxDemandes` (plus de passage par `venueDashboard`).
+
+---
+
 ## Semaine du 21 au 24 juillet 2026 (mar. - ven.)
 
 ### Modifié (mobile — Option A Lieux : B5–B7, B9) 

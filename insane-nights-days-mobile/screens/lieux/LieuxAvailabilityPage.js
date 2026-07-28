@@ -253,9 +253,7 @@ export default function LieuxAvailabilityPage() {
           <NoxButton
             label={fr ? 'Traiter les demandes en attente' : 'Handle pending requests'}
             onPress={() =>
-              navigate('lieuxRequestDetail', {
-                eventVenueId: pendingBookings[0].eventVenueId || pendingBookings[0].id,
-              })
+              navigate('lieuxDemandes', { filter: 'pending' })
             }
             style={{ marginHorizontal: Spacing.xl, marginTop: Spacing.lg }}
           />

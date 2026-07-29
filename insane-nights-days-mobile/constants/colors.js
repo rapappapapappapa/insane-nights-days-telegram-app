@@ -4,47 +4,51 @@
  */
 
 export const Colors = {
-  // === ACCENT PRINCIPAL (bleu Figma) ===
-  primary: '#4DA3FF',
-  primaryDark: '#2E7FD4',
-  primaryLight: '#7BB8FF',
+  // === ACCENT PRINCIPAL (variables Figma : Primaire / Hover / Ombre) ===
+  primary: '#2852E8',
+  primaryDark: '#206ED1',
+  primaryLight: '#81B9FF',
 
   /** RGB sans alpha — pour rgba(${Colors.primaryRgb}, 0.5) dans les styles */
-  primaryRgb: '77, 163, 255',
+  primaryRgb: '40, 82, 232',
 
   // Legacy cyberpunk (cyan) — conservé pour quelques accents optionnels
-  cyan: '#4DA3FF',
-  cyanDark: '#2E7FD4',
-  cyanLight: '#7BB8FF',
+  cyan: '#2852E8',
+  cyanDark: '#206ED1',
+  cyanLight: '#81B9FF',
 
-  // === FONDS ===
-  background: '#000000',
-  backgroundCard: '#14141a',
-  backgroundElevated: '#1c1c22',
+  // === FONDS (Figma : Background #0A0A09, Menu-Back #20201E) ===
+  background: '#0A0A09',
+  backgroundCard: 'rgba(32,32,30,0.55)',
+  backgroundElevated: '#20201E',
   backgroundInput: 'rgba(255,255,255,0.08)',
 
-  // === TEXTES ===
-  text: '#ffffff',
-  textSecondary: 'rgba(255,255,255,0.72)',
-  textTertiary: 'rgba(255,255,255,0.5)',
-  textMuted: 'rgba(255,255,255,0.35)',
+  // === TEXTES (Figma : Secondaire #FEFEFD, Secondaire-2 #D9D9D9) ===
+  text: '#FEFEFD',
+  textSecondary: '#D9D9D9',
+  textTertiary: 'rgba(217,217,217,0.5)',
+  textMuted: 'rgba(217,217,217,0.35)',
 
   // === BORDURES ===
-  border: 'rgba(77,163,255,0.35)',
-  borderActive: 'rgba(77,163,255,0.55)',
-  borderSubtle: 'rgba(255,255,255,0.12)',
-  borderCyan: 'rgba(77,163,255,0.35)',
+  border: 'rgba(40,82,232,0.35)',
+  borderActive: 'rgba(40,82,232,0.55)',
+  borderSubtle: 'rgba(254,254,253,0.16)',
+  borderCyan: 'rgba(40,82,232,0.35)',
+  /** Bordure de carte Figma : #FEFEFD à 0.5px */
+  borderCard: '#FEFEFD',
 
   // === ÉTATS ===
   success: '#10b981',
   warning: '#f59e0b',
   error: '#EF4444',
-  info: '#4DA3FF',
+  info: '#2852E8',
 
-  // === OMBRES / GLOW ===
-  shadow: 'rgba(77,163,255,0.25)',
-  glow: 'rgba(77,163,255,0.45)',
-  glowCyan: 'rgba(77,163,255,0.35)',
+  // === OMBRES / GLOW (Figma : Ombre #206ED1, ombre carte #72C2F4) ===
+  shadow: 'rgba(32,110,209,0.25)',
+  glow: 'rgba(32,110,209,0.45)',
+  glowCyan: 'rgba(32,110,209,0.35)',
+  /** Ombre portée des cartes Figma : 2px 5px 8px rgba(114,194,244,0.5) */
+  cardShadow: 'rgba(114,194,244,0.5)',
 };
 
 export const withOpacity = (color, opacity) => {

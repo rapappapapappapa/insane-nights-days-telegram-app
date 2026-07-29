@@ -18,9 +18,12 @@ export const Radius = {
   lg: 16,
   xl: 20,
   pill: 999,
-  button: 14,
-  input: 12,
-  card: 16,
+  // Figma : Bouton-Principal entièrement arrondi (h40 / r40)
+  button: 999,
+  // Figma : barre de recherche / inputs r25
+  input: 25,
+  // Figma : cartes r25 (bordure 0.5 #FEFEFD + ombre bleutée)
+  card: 25,
 };
 
 export const Layout = {

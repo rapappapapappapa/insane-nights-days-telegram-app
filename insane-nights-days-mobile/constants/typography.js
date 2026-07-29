@@ -41,7 +41,8 @@ export const Typography = {
     fontFamily: FontFamily.bold,
     fontSize: 16,
     lineHeight: 20,
-    color: '#000000',
+    // Figma « Bouton » : Satoshi Bold 16 blanc sur fond Primaire
+    color: '#FEFEFD',
   },
   buttonSecondary: {
     fontFamily: FontFamily.bold,

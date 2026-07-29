@@ -29,3 +29,9 @@ export function formatFillRate(sold, capacity) {
   const s = Number(sold) || 0;
   return Math.min(100, Math.round((s / capacity) * 100));
 }
+
+/** Nombre d'events passés confirmés (stat « Events réalisés » Figma 08_Dashboard). */
+export function getRealizedEventsCount(bookings = []) {
+  const { past } = categorizeVenueBookings(bookings);
+  return past.filter(isAcceptedBooking).length;
+}

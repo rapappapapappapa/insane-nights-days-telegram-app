@@ -45,7 +45,7 @@ export default function NoxButton({
       activeOpacity={0.85}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? '#000' : Colors.primary} />
+        <ActivityIndicator color={isPrimary ? Colors.text : Colors.primary} />
       ) : (
         <View style={styles.row}>
           {iconLeft}
@@ -80,10 +80,11 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    // Figma Bouton-Principal : 0px 10px 25px rgba(32,110,209,0.25)
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 25,
     elevation: 6,
   },
   secondary: {
@@ -109,10 +110,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   labelPrimary: {
-    color: '#000000',
+    color: Colors.text,
   },
   labelSecondary: {
-    color: '#ffffff',
+    color: Colors.text,
   },
   labelGhost: {
     color: Colors.primary,

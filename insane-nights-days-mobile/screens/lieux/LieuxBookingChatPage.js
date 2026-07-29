@@ -224,15 +224,15 @@ const styles = StyleSheet.create({
   },
   bubbleOwn: { backgroundColor: Colors.primary, borderBottomRightRadius: Spacing.sm },
   bubbleOther: {
-    backgroundColor: '#1a1a1f',
+    backgroundColor: Colors.backgroundElevated,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
     borderBottomLeftRadius: Spacing.sm,
   },
-  bubbleTextOwn: { color: '#000' },
+  bubbleTextOwn: { color: Colors.text },
   bubbleTextOther: { color: Colors.text },
   bubbleTime: { fontSize: 10, marginTop: 4, opacity: 0.65 },
-  bubbleTimeOwn: { color: 'rgba(0,0,0,0.55)' },
+  bubbleTimeOwn: { color: 'rgba(254,254,253,0.75)' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

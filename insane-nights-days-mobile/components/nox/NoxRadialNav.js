@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   nxLabel: {
     fontFamily: FontFamily.black,
     fontSize: 20,
-    color: '#000',
+    color: '#FEFEFD',
     letterSpacing: 0.5,
   },
 });

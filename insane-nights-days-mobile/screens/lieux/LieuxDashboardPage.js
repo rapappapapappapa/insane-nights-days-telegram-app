@@ -24,6 +24,7 @@ import {
   getDashboardEventRows,
   getLastPastEvent,
   formatFillRate,
+  getRealizedEventsCount,
 } from '../../utils/lieuxDashboardUtils';
 import { isAcceptedBooking } from '../../utils/lieuxEventUtils';
 
@@ -62,6 +63,7 @@ export default function LieuxDashboardPage() {
     () => formatFillRate(lastPastEvent?.eventSold, lastPastEvent?.eventCapacity),
     [lastPastEvent],
   );
+  const realizedCount = useMemo(() => getRealizedEventsCount(bookings), [bookings]);
 
   const [brokenImages, setBrokenImages] = useState({});
 
@@ -237,29 +239,29 @@ export default function LieuxDashboardPage() {
             </NoxText>
             <View style={styles.statRingRow}>
               <View style={styles.statRing}>
-                <NoxText variant="titleSecondary" style={styles.ringValue}>
-                  {lastPastEvent.eventSold ?? '—'}
-                </NoxText>
                 <NoxText variant="secondary" style={styles.ringLabel}>
-                  {fr ? 'Billets vendus' : 'Tickets sold'}
+                  {fr ? 'Revenus estimés' : 'Estimated revenue'}
                 </NoxText>
-              </View>
-              <View style={styles.statRing}>
-                <NoxText variant="titleSecondary" style={styles.ringValue}>
-                  {lastFillRate != null ? `${lastFillRate}%` : '—'}
-                </NoxText>
-                <NoxText variant="secondary" style={styles.ringLabel}>
-                  {fr ? 'Remplissage' : 'Fill rate'}
-                </NoxText>
-              </View>
-              <View style={styles.statRing}>
                 <NoxText variant="titleSecondary" style={styles.ringValue}>
                   {lastPastEvent.paymentAmount
                     ? `${Math.round(lastPastEvent.paymentAmount)}€`
                     : '—'}
                 </NoxText>
+              </View>
+              <View style={styles.statRing}>
                 <NoxText variant="secondary" style={styles.ringLabel}>
-                  {fr ? 'Budget' : 'Budget'}
+                  {fr ? 'Taux de participation' : 'Participation rate'}
+                </NoxText>
+                <NoxText variant="titleSecondary" style={styles.ringValue}>
+                  {lastFillRate != null ? `${lastFillRate} %` : '—'}
+                </NoxText>
+              </View>
+              <View style={styles.statRing}>
+                <NoxText variant="secondary" style={styles.ringLabel}>
+                  {fr ? 'Events réalisés' : 'Events hosted'}
+                </NoxText>
+                <NoxText variant="titleSecondary" style={styles.ringValue}>
+                  {realizedCount}
                 </NoxText>
               </View>
             </View>
@@ -348,8 +350,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  pendingLabel: { color: '#000' },
-  pendingHint: { color: 'rgba(0,0,0,0.6)', marginTop: 2 },
+  pendingLabel: { color: Colors.text },
+  pendingHint: { color: 'rgba(254,254,253,0.7)', marginTop: 2 },
   section: { paddingHorizontal: Spacing.xl, marginTop: Spacing.xxl },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -419,8 +421,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
   },
-  ringValue: { fontSize: 20, marginBottom: 4 },
-  ringLabel: { fontSize: 10, textAlign: 'center' },
+  // Figma : libellé (Regular 12) au-dessus, valeur en Primaire (Black 16) dessous
+  ringValue: { fontSize: 16, color: Colors.primary, textAlign: 'center' },
+  ringLabel: { fontSize: 11, textAlign: 'center', marginBottom: Spacing.sm },
   statRow: { flexDirection: 'row', gap: Spacing.md },
   statCard: { flex: 1, alignItems: 'flex-start', gap: Spacing.xs },
   statValue: { fontSize: 22 },

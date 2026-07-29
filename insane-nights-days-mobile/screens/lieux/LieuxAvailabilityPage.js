@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   dayText: { fontSize: 12 },
   dayMuted: { opacity: 0.35 },
-  dayTextOnColor: { color: '#000', fontWeight: '700' },
+  dayTextOnColor: { color: Colors.text, fontWeight: '700' },
   dayOff: { textDecorationLine: 'line-through' },
   listTitle: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.md },
   listTitleFocus: { color: Colors.primary },

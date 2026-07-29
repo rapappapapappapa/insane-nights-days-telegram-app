@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl,
     borderRadius: Radius.button,
   },
-  permissionBtnText: { color: '#000' },
+  permissionBtnText: { color: Colors.text },
   backLink: { marginTop: Spacing.lg },
   emptyWrap: { flex: 1, justifyContent: 'center', padding: Spacing.xl },
   emptyCard: { alignItems: 'center', gap: Spacing.md, padding: Spacing.xxl },

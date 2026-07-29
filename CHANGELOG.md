@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
 
+### Corrigé (mobile — crash au boot des OTA depuis le 18 juil.) — 29 juil.
+- **`LieuxBookingChatPage`** : `Radius.pill` utilisé sans importer `Radius` (`constants/theme`) → `ReferenceError` à l'évaluation du module, crash au lancement de chaque bundle OTA publié depuis `bb039cf`. expo-updates blacklistait l'update et retombait sur le bundle intégré (ancien design rouge) — symptôme « appli revenue au design d'avant » sur iOS.
+- **Outils diagnostic** : `scripts/check-imports.js` (imports relatifs + exports nommés) et `scripts/fetch-ota-bundle.js` (télécharge/inspecte le bundle réellement servi par EAS Update).
+
 ### Ajouté (mobile — Lieux Figma 08_DEMANDES)
 - **`lieuxDemandes`** : liste des propositions organisateurs avec filtres En attente / Confirmé / À négocier / Refusé (`lieuxDemandesUtils.js`).
 - **Navigation** : dashboard Lieux (bandeau pending), réglages, dispos et notifs → `lieuxDemandes` ; détail confirmé → `lieuxEventDetail`, sinon → `lieuxRequestDetail`.

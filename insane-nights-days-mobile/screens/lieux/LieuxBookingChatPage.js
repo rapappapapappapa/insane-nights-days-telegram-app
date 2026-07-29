@@ -20,7 +20,7 @@ import { useVenueBookingChat } from '../../hooks/useVenueBookingChat';
 import { useToast } from '../../hooks/useToast';
 import { NoxText } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
-import { Spacing } from '../../constants/theme';
+import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 import { findBookingByEventVenueId } from '../../utils/lieuxEventUtils';
 

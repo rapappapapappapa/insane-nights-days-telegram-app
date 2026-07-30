@@ -7,7 +7,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
 
 ### Modifié (mobile — nav radiale) — 30 juil.
-- **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`).
+- **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`), en **plein cercle** (cover + clip) avec bordure bleue.
 
 ### Corrigé (mobile — OTA retombée design rouge) — 30 juil.
 - **`PurchaseSuccessPage`** : import `Colors` manquant après Phase D → `ReferenceError` à l’évaluation du module, crash au boot OTA et retour au bundle intégré rouge. Même classe de bug que `Radius.pill` (29 juil.).

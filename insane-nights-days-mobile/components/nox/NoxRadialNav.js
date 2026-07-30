@@ -303,11 +303,11 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
             language === 'fr' ? 'Appui long pour le menu latéral' : 'Long press for side menu'
           }
         >
-          <Animated.View style={{ transform: [{ rotate: nxRotate }] }}>
+          <Animated.View style={[styles.nxLogoWrap, { transform: [{ rotate: nxRotate }] }]}>
             <Image
               source={require('../../assets/noxlogo.png')}
               style={styles.nxLogo}
-              resizeMode="contain"
+              resizeMode="cover"
               accessibilityIgnoresInvertColors
             />
           </Animated.View>
@@ -391,11 +391,12 @@ const styles = StyleSheet.create({
     width: NX_SIZE,
     height: NX_SIZE,
     borderRadius: NX_SIZE / 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: Colors.primary,
     shadowColor: Colors.primary,
     shadowOpacity: 0.45,
     shadowRadius: 14,
@@ -403,8 +404,16 @@ const styles = StyleSheet.create({
     elevation: 24,
     zIndex: 100,
   },
+  nxLogoWrap: {
+    width: NX_SIZE,
+    height: NX_SIZE,
+    borderRadius: NX_SIZE / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   nxLogo: {
-    width: 36,
-    height: 36,
+    width: NX_SIZE,
+    height: NX_SIZE,
   },
 });

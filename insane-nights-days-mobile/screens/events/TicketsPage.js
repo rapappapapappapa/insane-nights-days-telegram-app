@@ -21,6 +21,7 @@ import { NoxText, NoxTabs, NoxButton, NoxCard, NoxScreenHeader } from '../../com
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { openDiscover } from '../../utils/noxNavigation';
 import {
   addNoxEventToDeviceCalendar,
   isDeviceCalendarExportSupported,
@@ -363,7 +364,7 @@ export default function TicketsPage() {
         {isActiveTab ? (
           <NoxButton
             label={fr ? 'Découvrir les événements' : 'Discover events'}
-            onPress={() => navigate('events')}
+            onPress={() => openDiscover(navigate, user?.activeProfileType)}
             style={styles.emptyCta}
             fullWidth={false}
           />

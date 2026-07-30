@@ -23,6 +23,7 @@ import NotificationBadge from '../../components/NotificationBadge';
 import EmptyState from '../../components/EmptyState';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
+import { openDiscover } from '../../utils/noxNavigation';
 import { formatFeedRelativeDate } from '../../utils/feedPageUtils';
 import { styles } from './WelcomePage.styles';
 
@@ -465,7 +466,7 @@ export default function WelcomePage() {
 
             <NoxSearchBar
               placeholder={language === 'fr' ? 'Rechercher artistes, lieux, events…' : 'Search artists, venues, events…'}
-              onPress={() => navigate('events')}
+              onPress={() => openDiscover(navigate, user?.activeProfileType)}
               style={styles.searchBar}
             />
           </View>

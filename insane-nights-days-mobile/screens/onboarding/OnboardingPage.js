@@ -59,7 +59,15 @@ export default function OnboardingPage() {
               <Ionicons name="chevron-back" size={26} color={Colors.text} />
             </TouchableOpacity>
           ) : (
-            <View style={styles.backBtn} />
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigate('splash')}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+            >
+              <Ionicons name="chevron-back" size={26} color={Colors.text} />
+            </TouchableOpacity>
           )}
           <NoxText variant="secondary" style={styles.stepLabel}>
             {step + 1}/{SLIDES.length}

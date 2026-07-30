@@ -22,7 +22,21 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Navigation** : dashboard Lieux (bandeau pending), réglages, dispos et notifs → `lieuxDemandes` ; détail confirmé → `lieuxEventDetail`, sinon → `lieuxRequestDetail`.
 - **Push notifs VENUE** : chat → `lieuxBookingChat`, demandes → `lieuxDemandes` (plus de passage par `venueDashboard`).
 
----
+### Modifié (mobile — Phase D navigation legacy) — 30 juil.
+- **`noxNavigation`** : `navigateToHome()` + discover selon profil sur **Tickets**, **Purchases**, **PurchaseSuccess**, **Welcome** (plus de `welcome` / `events` en dur).
+- **`venueDashboard`** : déjà marqué deprecated ; push VENUE et home Lieux passent par stack `lieux*`.
+
+### Ajouté (mobile — Auth Figma splash + OTP) — 30 juil.
+- **`splash`** : logo NOX + glow, auto → onboarding.
+- **`authVerifyEmail`** : OTP 6 chiffres (`sendEmailVerificationCode` / `confirmEmailVerificationCode`) après inscription ou login si email non vérifié.
+- **Flux** : splash → onboarding → accountType → login/register → OTP → profil / home.
+- **Guide test** : `docs/mobile/GUIDE_TEST_NOX.md`.
+
+### Corrigé (mobile — onboarding communauté) — 30 juil.
+- **Pseudo demandé 3 fois** : inscription compte → profil communauté (affiché en lecture seule si déjà saisi) → étape « Quel est ton nom ? » **supprimée** si le pseudo existe déjà ; onboarding démarre sur la photo.
+- **Artistes / lieux à suivre** : plus de mock Figma (Amelie Lens, Le Sucre…) — suggestions depuis **`api.getDjs()`** et **`api.getVenues()`** ; follow DJ réel via `followDj` à la fin.
+
+--- 
 
 ## Semaine du 21 au 24 juillet 2026 (mar. - ven.)
 

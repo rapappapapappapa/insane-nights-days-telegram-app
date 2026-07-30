@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { openDiscover, navigateToHome, openEventPreview } from '../../utils/noxNavigation';
 import { api } from '../../api/config';
 import Colors from '../../constants/colors';
 import Toast from '../../components/Toast';
@@ -91,7 +92,7 @@ export default function PurchasesPage() {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backButtonTop}
-          onPress={() => navigate('welcome')}
+          onPress={() => navigateToHome(navigate, user?.activeProfileType)}
           accessibilityRole="button"
           accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
         >
@@ -125,7 +126,7 @@ export default function PurchasesPage() {
             </Text>
             <TouchableOpacity
               style={styles.primaryCta}
-              onPress={() => navigate('events')}
+              onPress={() => openDiscover(navigate, user?.activeProfileType)}
               accessibilityRole="button"
               accessibilityLabel={language === 'fr' ? 'Voir les événements' : 'Browse events'}
             >

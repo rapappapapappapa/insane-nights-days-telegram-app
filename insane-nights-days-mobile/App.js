@@ -19,7 +19,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
-import { getHomeScreenForProfile, shouldShowDrawerMenuButton } from './utils/noxRoleNavigation';
+import { getHomeScreenForProfile, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import HomePage from './screens/feed/HomePage';
@@ -29,6 +29,8 @@ import FeedPage from './screens/feed/FeedPage';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
 
 import LoginPage from './screens/auth/LoginPage';
+import SplashPage from './screens/auth/SplashPage';
+import AuthVerifyEmailPage from './screens/auth/AuthVerifyEmailPage';
 import AccountTypePage from './screens/auth/AccountTypePage';
 import RegisterCommunityPage from './screens/auth/RegisterCommunityPage';
 import RegisterDjPage from './screens/auth/RegisterDjPage';
@@ -106,9 +108,11 @@ import CommunityEventDetailPage from './screens/community/CommunityEventDetailPa
 import CommunityDiscoverPage from './screens/community/CommunityDiscoverPage';
 
 const SCREENS = {
+  splash: SplashPage,
   onboarding: OnboardingPage,
   home: HomePage,
   login: LoginPage,
+  authVerifyEmail: AuthVerifyEmailPage,
   accountType: AccountTypePage,
   registerCommunity: RegisterCommunityPage,
   registerDj: RegisterDjPage,
@@ -209,7 +213,7 @@ function AppContent() {
     if (user?.isAuthenticated) {
       setBackFallback(getHomeScreenForProfile(user?.activeProfileType));
     } else {
-      setBackFallback('onboarding');
+      setBackFallback('splash');
     }
   }, [user?.isAuthenticated, user?.activeProfileType, setBackFallback]);
 
@@ -218,12 +222,17 @@ function AppContent() {
   useEffect(() => {
     if (!isInitializing) {
       const homeScreen = getHomeScreenForProfile(user?.activeProfileType);
-      if (user?.isAuthenticated && (currentPage === 'home' || currentPage === 'onboarding')) {
-        navigate(homeScreen);
-      } else if (user?.isAuthenticated && currentPage === 'login') {
-        navigate(homeScreen);
+      if (user?.isAuthenticated) {
+        if (needsEmailVerification(user) && currentPage !== 'authVerifyEmail') {
+          navigate('authVerifyEmail');
+        } else if (
+          !needsEmailVerification(user) &&
+          (currentPage === 'home' || currentPage === 'onboarding' || currentPage === 'splash' || currentPage === 'login')
+        ) {
+          navigate(homeScreen);
+        }
       } else if (!user?.isAuthenticated && currentPage === 'welcome') {
-        navigate('onboarding');
+        navigate('splash');
       }
     }
   }, [user?.isAuthenticated, user?.activeProfileType, currentPage, navigate, isInitializing]);
@@ -237,10 +246,10 @@ function AppContent() {
     if (Platform.OS !== 'android') return undefined;
     const homeScreen = user?.isAuthenticated
       ? getHomeScreenForProfile(user?.activeProfileType)
-      : 'onboarding';
+      : 'splash';
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tryHardwareBack()) return true;
-      if (currentPage !== 'onboarding' && currentPage !== homeScreen) return false;
+      if (currentPage !== 'onboarding' && currentPage !== homeScreen && currentPage !== 'splash') return false;
       const now = Date.now();
       if (now - androidExitPressRef.current < 2500) {
         BackHandler.exitApp();

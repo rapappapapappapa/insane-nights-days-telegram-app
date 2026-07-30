@@ -3,11 +3,13 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
-import Colors from '../../constants/colors';
+import { useAuth } from '../../contexts/AuthContext';
+import { openDiscover, navigateToHome, openEventPreview } from '../../utils/noxNavigation';
 
 export default function PurchaseSuccessPage() {
   const { language } = useLanguage();
   const { navigate, routeParams } = useNavigation();
+  const { user } = useAuth();
 
   const eventId = routeParams?.eventId ?? null;
   const eventTitle = routeParams?.eventTitle ?? null;
@@ -68,9 +70,9 @@ export default function PurchaseSuccessPage() {
             style={styles.secondaryButton}
             onPress={() => {
               if (eventId) {
-                navigate('eventDetail', { eventId });
+                openEventPreview(navigate, user?.activeProfileType, eventId);
               } else {
-                navigate('events');
+                openDiscover(navigate, user?.activeProfileType);
               }
             }}
           >
@@ -78,7 +80,7 @@ export default function PurchaseSuccessPage() {
               {language === 'fr' ? "Retour à l'événement" : 'Back to event'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigate('welcome')}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigateToHome(navigate, user?.activeProfileType)}>
             <Text style={styles.secondaryButtonText}>
               {language === 'fr' ? 'Accueil' : 'Home'}
             </Text>

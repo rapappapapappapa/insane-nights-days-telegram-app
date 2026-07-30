@@ -24,7 +24,7 @@ import GoogleSignInSection, { isGoogleOAuthConfigured } from '../../components/G
 import AppleSignInSection from '../../components/AppleSignInSection';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { styles } from './LoginPage.styles';
-import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { resolvePostAuthNavigation } from '../../utils/noxRoleNavigation';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
@@ -69,9 +69,10 @@ export default function LoginPage() {
   // ✅ Si déjà connecté, rediriger (mais PAS pendant le render)
   useEffect(() => {
     if (user?.isAuthenticated) {
-      navigate(getPostAuthScreen(user?.activeProfileType, nextScreen));
+      const { screen, params } = resolvePostAuthNavigation(user, nextScreen);
+      navigate(screen, params);
     }
-  }, [user?.isAuthenticated, user?.activeProfileType, navigate, nextScreen]);
+  }, [user?.isAuthenticated, user?.activeProfileType, user?.emailVerified, navigate, nextScreen]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') {
@@ -104,7 +105,10 @@ export default function LoginPage() {
       setEmail('');
       setPassword('');
       showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
-      setTimeout(() => navigate(getPostAuthScreen(result.user?.activeProfileType, nextScreen)), 300);
+      setTimeout(() => {
+        const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+        navigate(screen, params);
+      }, 300);
     } else {
       showError(result.error || (language === 'fr' ? 'Erreur de connexion.' : 'Login error.'));
     }
@@ -156,7 +160,10 @@ export default function LoginPage() {
       setBirthDate('');
       setCertifiedMajor(false);
       setAcceptedCgu(false);
-      setTimeout(() => navigate(getPostAuthScreen(result.user?.activeProfileType, nextScreen)), 300);
+      setTimeout(() => {
+        const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+        navigate(screen, params);
+      }, 300);
     } else {
       showError(result.error || (language === 'fr' ? "Erreur d'inscription." : 'Registration error.'));
     }

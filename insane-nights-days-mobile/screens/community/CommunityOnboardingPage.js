@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -19,9 +19,10 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxInput, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { GENRES, CITIES, ARTISTS, VENUES, EVENT_TYPES } from './mockData';
+import { GENRES, CITIES, EVENT_TYPES } from './mockData';
 
-const STEPS = ['name', 'photo', 'genres', 'cities', 'artists', 'venues', 'events', 'welcome'];
+const BASE_STEPS = ['photo', 'genres', 'cities', 'artists', 'venues', 'events', 'welcome'];
+const SUGGEST_LIMIT = 18;
 
 function useToggleSet() {
   const [set, setSet] = useState([]);
@@ -30,7 +31,7 @@ function useToggleSet() {
   return [set, toggle];
 }
 
-function SelectableCard({ label, selected, onPress, width }) {
+function SelectableCard({ label, selected, onPress, width, imageUri }) {
   return (
     <TouchableOpacity
       style={[styles.card, { width }, selected && styles.cardSelected]}
@@ -38,10 +39,14 @@ function SelectableCard({ label, selected, onPress, width }) {
       activeOpacity={0.85}
     >
       <View style={styles.cardImage}>
-        <Ionicons name="musical-notes-outline" size={22} color={primaryAlpha(0.5)} />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.cardImageFill} />
+        ) : (
+          <Ionicons name="musical-notes-outline" size={22} color={primaryAlpha(0.5)} />
+        )}
         {selected ? (
           <View style={styles.cardCheck}>
-            <Ionicons name="checkmark" size={14} color="#000" />
+            <Ionicons name="checkmark" size={14} color="#fff" />
           </View>
         ) : null}
       </View>
@@ -69,8 +74,18 @@ export default function CommunityOnboardingPage() {
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+
+  const [profilePseudo, setProfilePseudo] = useState(
+    (user?.pseudo || user?.username || '').trim(),
+  );
+  const [needsNameStep, setNeedsNameStep] = useState(!(user?.pseudo || user?.username));
+  const [bootLoading, setBootLoading] = useState(true);
+  const [suggestLoading, setSuggestLoading] = useState(true);
+  const [djSuggestions, setDjSuggestions] = useState([]);
+  const [venueSuggestions, setVenueSuggestions] = useState([]);
+
   const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
+  const [name, setName] = useState((user?.pseudo || user?.username || '').trim());
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -83,8 +98,98 @@ export default function CommunityOnboardingPage() {
 
   const fr = language === 'fr';
   const cardWidth = (width - Spacing.xl * 2 - Spacing.md * 2) / 3;
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+
+  const steps = useMemo(
+    () => (needsNameStep ? ['name', ...BASE_STEPS] : BASE_STEPS),
+    [needsNameStep],
+  );
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.token) {
+        setBootLoading(false);
+        return;
+      }
+      try {
+        const res = await api.getCommunityProfile(user.token);
+        if (cancelled) return;
+        const pseudo = (res?.profile?.pseudo || user?.pseudo || user?.username || '').trim();
+        if (pseudo) {
+          setProfilePseudo(pseudo);
+          setName(pseudo);
+          setNeedsNameStep(false);
+          setStep(0);
+        } else {
+          setNeedsNameStep(true);
+        }
+        if (res?.profile?.profileImage) setProfileImage(res.profile.profileImage);
+        if (res?.profile?.bannerImage) setBannerImage(res.profile.bannerImage);
+      } catch {
+        const fallback = (user?.pseudo || user?.username || '').trim();
+        if (fallback) {
+          setProfilePseudo(fallback);
+          setName(fallback);
+          setNeedsNameStep(false);
+        }
+      } finally {
+        if (!cancelled) setBootLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.token, user?.pseudo, user?.username]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setSuggestLoading(true);
+      try {
+        const [djsRes, venuesRes] = await Promise.all([
+          api.getDjs(),
+          user?.token ? api.getVenues(user.token).catch(() => null) : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+
+        const djs = Array.isArray(djsRes?.djs) ? djsRes.djs : [];
+        setDjSuggestions(
+          djs
+            .filter((d) => d?.id && (d.artistName || d.name))
+            .slice(0, SUGGEST_LIMIT)
+            .map((d) => ({
+              id: String(d.id),
+              label: d.artistName || d.name,
+              imageUri: d.profileImage ? normalizeMediaUrl(d.profileImage) : null,
+            })),
+        );
+
+        const venuesList = Array.isArray(venuesRes?.venues) ? venuesRes.venues : [];
+        setVenueSuggestions(
+          venuesList
+            .filter((v) => v?.id && (v.venueName || v.name))
+            .slice(0, SUGGEST_LIMIT)
+            .map((v) => ({
+              id: String(v.id),
+              label: v.venueName || v.name,
+              imageUri: v.profileImage ? normalizeMediaUrl(v.profileImage) : null,
+            })),
+        );
+      } catch {
+        if (!cancelled) {
+          setDjSuggestions([]);
+          setVenueSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) setSuggestLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.token]);
 
   const pickImage = async (type) => {
     if (!user?.token) return;
@@ -109,32 +214,66 @@ export default function CommunityOnboardingPage() {
     }
   };
 
-  const saveProfile = async () => {
+  const selectedArtistLabels = useMemo(
+    () =>
+      artists
+        .map((id) => djSuggestions.find((d) => d.id === id)?.label)
+        .filter(Boolean),
+    [artists, djSuggestions],
+  );
+
+  const selectedVenueLabels = useMemo(
+    () =>
+      venues
+        .map((id) => venueSuggestions.find((v) => v.id === id)?.label)
+        .filter(Boolean),
+    [venues, venueSuggestions],
+  );
+
+  const saveProfile = useCallback(async () => {
     if (!user?.token || saving) return false;
     setSaving(true);
     try {
       const genreParts = [...genres, ...eventTypes].filter(Boolean);
       const preferenceNote = [
         cities.length ? `Villes: ${cities.join(', ')}` : null,
-        artists.length ? `Artistes: ${artists.join(', ')}` : null,
-        venues.length ? `Lieux: ${venues.join(', ')}` : null,
+        selectedArtistLabels.length ? `Artistes: ${selectedArtistLabels.join(', ')}` : null,
+        selectedVenueLabels.length ? `Lieux: ${selectedVenueLabels.join(', ')}` : null,
       ]
         .filter(Boolean)
         .join(' | ');
 
       const genresPayload = [genreParts.join(', '), preferenceNote].filter(Boolean).join(' · ');
+      const pseudoToSave = (name.trim() || profilePseudo || user?.username || '').trim();
 
       await api.updateCommunityProfile(user.token, {
-        pseudo: name.trim(),
+        pseudo: pseudoToSave || null,
         genres: genresPayload || null,
       });
+
+      await Promise.allSettled(
+        artists.map((djId) => api.followDj(user.token, djId).catch(() => null)),
+      );
+
       return true;
     } catch {
       return false;
     } finally {
       setSaving(false);
     }
-  };
+  }, [
+    user?.token,
+    user?.username,
+    saving,
+    genres,
+    eventTypes,
+    cities,
+    selectedArtistLabels,
+    selectedVenueLabels,
+    name,
+    profilePseudo,
+    artists,
+  ]);
 
   const next = async () => {
     if (isLast) {
@@ -142,10 +281,17 @@ export default function CommunityOnboardingPage() {
       if (ok) navigate('communityHome');
       return;
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   const back = () => setStep((s) => Math.max(s - 1, 0));
+
+  const canSkip =
+    current === 'artists' ||
+    current === 'venues' ||
+    current === 'events' ||
+    current === 'photo' ||
+    current === 'cities';
 
   const renderStep = () => {
     switch (current) {
@@ -153,10 +299,12 @@ export default function CommunityOnboardingPage() {
         return (
           <View style={styles.center}>
             <NoxText variant="title" style={styles.heading}>
-              {fr ? 'Quel est ton nom ?' : 'What is your name?'}
+              {fr ? 'Quel est ton pseudo ?' : 'What is your username?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              {fr ? 'Ce nom est visible sur ton profil.' : 'This name is visible on your profile.'}
+              {fr
+                ? 'Uniquement si tu n’en as pas encore défini à l’inscription.'
+                : 'Only if you haven’t set one at signup yet.'}
             </NoxText>
             <NoxInput
               placeholder="Ex : NOXKID"
@@ -173,11 +321,17 @@ export default function CommunityOnboardingPage() {
             <NoxText variant="title" style={styles.heading}>
               {fr ? 'Construis ton identité.' : 'Build your identity.'}
             </NoxText>
-            <NoxText variant="secondary" style={styles.sub}>
-              {fr
-                ? 'Ajoute une photo de profil et une cover pour personnaliser ton espace.'
-                : 'Add a profile photo and cover to personalize your space.'}
-            </NoxText>
+            {profilePseudo ? (
+              <NoxText variant="secondary" style={styles.sub}>
+                {fr ? `Salut ${profilePseudo} — ajoute une photo.` : `Hey ${profilePseudo} — add a photo.`}
+              </NoxText>
+            ) : (
+              <NoxText variant="secondary" style={styles.sub}>
+                {fr
+                  ? 'Ajoute une photo de profil et une cover pour personnaliser ton espace.'
+                  : 'Add a profile photo and cover to personalize your space.'}
+              </NoxText>
+            )}
             <TouchableOpacity
               style={styles.avatarUpload}
               activeOpacity={0.85}
@@ -239,7 +393,7 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              {fr ? 'Quelles scènes t\'inspirent ?' : 'Which scenes inspire you?'}
+              {fr ? "Quelles scènes t'inspirent ?" : 'Which scenes inspire you?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
               {fr ? 'Sélectionne les villes que tu suis.' : 'Select cities you follow.'}
@@ -264,19 +418,32 @@ export default function CommunityOnboardingPage() {
               {fr ? 'Suis quelques artistes' : 'Follow some artists'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              {fr ? 'Nous personnaliserons ton fil.' : 'We will personalize your feed.'}
+              {fr
+                ? 'Artistes réellement présents sur NOX.'
+                : 'Artists actually on NOX.'}
             </NoxText>
-            <View style={styles.grid}>
-              {ARTISTS.map((a) => (
-                <SelectableCard
-                  key={a}
-                  label={a}
-                  width={cardWidth}
-                  selected={artists.includes(a)}
-                  onPress={() => toggleArtist(a)}
-                />
-              ))}
-            </View>
+            {suggestLoading ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xl }} />
+            ) : djSuggestions.length === 0 ? (
+              <NoxText variant="secondary" style={[styles.sub, { marginTop: Spacing.xl }]}>
+                {fr
+                  ? 'Aucun artiste à suggérer pour le moment — tu pourras en suivre plus tard.'
+                  : 'No artists to suggest yet — you can follow some later.'}
+              </NoxText>
+            ) : (
+              <View style={styles.grid}>
+                {djSuggestions.map((a) => (
+                  <SelectableCard
+                    key={a.id}
+                    label={a.label}
+                    imageUri={a.imageUri}
+                    width={cardWidth}
+                    selected={artists.includes(a.id)}
+                    onPress={() => toggleArtist(a.id)}
+                  />
+                ))}
+              </View>
+            )}
           </>
         );
 
@@ -284,22 +451,35 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              {fr ? 'Suis des lieux et collectifs' : 'Follow venues and collectives'}
+              {fr ? 'Suis des lieux' : 'Follow venues'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
-              {fr ? 'Retrouve leurs événements sur ton fil.' : 'Find their events on your feed.'}
+              {fr
+                ? 'Lieux inscrits sur la plateforme.'
+                : 'Venues registered on the platform.'}
             </NoxText>
-            <View style={styles.grid}>
-              {VENUES.map((v) => (
-                <SelectableCard
-                  key={v}
-                  label={v}
-                  width={cardWidth}
-                  selected={venues.includes(v)}
-                  onPress={() => toggleVenue(v)}
-                />
-              ))}
-            </View>
+            {suggestLoading ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xl }} />
+            ) : venueSuggestions.length === 0 ? (
+              <NoxText variant="secondary" style={[styles.sub, { marginTop: Spacing.xl }]}>
+                {fr
+                  ? 'Aucun lieu à suggérer pour le moment — passe cette étape.'
+                  : 'No venues to suggest yet — you can skip this step.'}
+              </NoxText>
+            ) : (
+              <View style={styles.grid}>
+                {venueSuggestions.map((v) => (
+                  <SelectableCard
+                    key={v.id}
+                    label={v.label}
+                    imageUri={v.imageUri}
+                    width={cardWidth}
+                    selected={venues.includes(v.id)}
+                    onPress={() => toggleVenue(v.id)}
+                  />
+                ))}
+              </View>
+            )}
           </>
         );
 
@@ -307,7 +487,7 @@ export default function CommunityOnboardingPage() {
         return (
           <>
             <NoxText variant="title" style={styles.heading}>
-              {fr ? 'Qu\'est-ce qui te fait sortir ?' : 'What gets you going out?'}
+              {fr ? "Qu'est-ce qui te fait sortir ?" : 'What gets you going out?'}
             </NoxText>
             <NoxText variant="secondary" style={styles.sub}>
               {fr ? 'Choisis les événements qui te ressemblent.' : 'Pick events that match you.'}
@@ -348,6 +528,14 @@ export default function CommunityOnboardingPage() {
     }
   };
 
+  if (bootLoading) {
+    return (
+      <View style={[styles.container, styles.centeredBoot]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -357,7 +545,7 @@ export default function CommunityOnboardingPage() {
           {step > 0 ? <Ionicons name="chevron-back" size={24} color={Colors.text} /> : null}
         </TouchableOpacity>
         <View style={styles.dots}>
-          {STEPS.map((_, i) => (
+          {steps.map((_, i) => (
             <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
           ))}
         </View>
@@ -369,7 +557,7 @@ export default function CommunityOnboardingPage() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
-        {current === 'events' ? (
+        {canSkip ? (
           <TouchableOpacity onPress={next} style={styles.skip}>
             <NoxText variant="secondary" style={styles.skipText}>
               {fr ? 'Passer' : 'Skip'}
@@ -389,6 +577,7 @@ export default function CommunityOnboardingPage() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  centeredBoot: { alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,7 +622,9 @@ const styles = StyleSheet.create({
     backgroundColor: primaryAlpha(0.1),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  cardImageFill: { width: '100%', height: '100%' },
   cardCheck: {
     position: 'absolute',
     top: 6,

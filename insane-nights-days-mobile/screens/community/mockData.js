@@ -19,23 +19,11 @@ export const GENRES = [
 
 export const CITIES = ['Lyon', 'Paris', 'Berlin', 'Bruxelles'];
 
-export const ARTISTS = [
-  'Amelie Lens',
-  'I Hate Models',
-  'Charlotte de Witte',
-  '999999999',
-  'Rebekah',
-  'SNTS',
-];
+/** @deprecated Onboarding charge les vrais DJ via api.getDjs() */
+export const ARTISTS = [];
 
-export const VENUES = [
-  'Le Sucre',
-  'Petit Salon',
-  'Ninkasi',
-  'VOID Collective',
-  'Warehouse X',
-  'Techno Room',
-];
+/** @deprecated Onboarding charge les vrais lieux via api.getVenues() */
+export const VENUES = [];
 
 export const EVENT_TYPES = [
   'Raves',

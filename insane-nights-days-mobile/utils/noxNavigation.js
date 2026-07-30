@@ -3,6 +3,8 @@
  * @see docs/mobile/PLAN_MIGRATION_NOX_LEGACY.md
  */
 
+import { getHomeScreenForProfile } from './noxRoleNavigation';
+
 export function getDiscoverScreen(activeProfileType) {
   if (activeProfileType === 'COMMUNITY') return 'communityDiscover';
   if (activeProfileType === 'VENUE') return 'lieuxEvents';
@@ -26,4 +28,9 @@ export function openEventPreview(navigate, activeProfileType, eventId, extraPara
 
 export function openDiscover(navigate, activeProfileType, params = {}) {
   navigate(getDiscoverScreen(activeProfileType), params);
+}
+
+/** Home du profil actif (remplace les `navigate('welcome')` legacy). */
+export function navigateToHome(navigate, activeProfileType) {
+  navigate(getHomeScreenForProfile(activeProfileType));
 }

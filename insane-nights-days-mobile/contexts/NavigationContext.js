@@ -3,12 +3,12 @@ import React, { createContext, useContext, useState, useCallback, useRef } from 
 const NavigationContext = createContext();
 
 export function NavigationProvider({ children }) {
-  const [currentPage, setCurrentPage] = useState('onboarding');
+  const [currentPage, setCurrentPage] = useState('splash');
   const [routeParams, setRouteParams] = useState(undefined);
   /** Pile vide au départ : le bouton retour matériel Android ne « recule » pas sur une fausse entrée. */
   const historyRef = useRef([]);
   /** Page de repli quand goBack() est appelé sans historique (définie par App.js selon auth + rôle). */
-  const backFallbackRef = useRef('onboarding');
+  const backFallbackRef = useRef('splash');
 
   const setBackFallback = useCallback((page) => {
     if (page) backFallbackRef.current = page;

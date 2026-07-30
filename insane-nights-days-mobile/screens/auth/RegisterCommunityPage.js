@@ -27,8 +27,9 @@ export default function RegisterCommunityPage() {
   const { toast, showError, showSuccess, hideToast } = useToast();
 
   // Drawer global géré dans App.js
+  const accountPseudo = (user?.username || '').trim();
   const [formData, setFormData] = useState({
-    pseudo: user?.username || '',
+    pseudo: accountPseudo,
     nom: '',
     prenom: '',
     email: user?.email || '',
@@ -37,6 +38,8 @@ export default function RegisterCommunityPage() {
   });
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef(null);
+  /** Pseudo déjà saisi à la création de compte → ne pas redemander. */
+  const pseudoLocked = !!accountPseudo;
 
   const handleChange = (field, value) => {
     // Validation spéciale pour la date de naissance
@@ -107,8 +110,10 @@ export default function RegisterCommunityPage() {
   const handleSubmit = async () => {
     if (loading) return;
 
+    const pseudo = (pseudoLocked ? accountPseudo : formData.pseudo).trim();
+
     // Validation
-    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
+    if (!pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
       showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
@@ -142,7 +147,7 @@ export default function RegisterCommunityPage() {
 
       const response = await api.createCommunityProfile({
         token: user.token,
-        pseudo: formData.pseudo,
+        pseudo,
         nom: formData.nom,
         prenom: formData.prenom,
         email: formData.email,
@@ -223,17 +228,33 @@ export default function RegisterCommunityPage() {
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Pseudo' : 'Username'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              autoCapitalize="words"
-              value={formData.pseudo}
-              onChangeText={(value) => handleChange('pseudo', value)}
-            />
+            {pseudoLocked ? (
+              <View style={styles.pseudoLockedBox}>
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Pseudo' : 'Username'}
+                </Text>
+                <Text style={styles.pseudoLockedValue}>{accountPseudo}</Text>
+                <Text style={styles.pseudoLockedHint}>
+                  {language === 'fr'
+                    ? 'Repris depuis ton compte — pas besoin de le resaisir.'
+                    : 'Taken from your account — no need to enter it again.'}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.label}>
+                  {language === 'fr' ? 'Pseudo' : 'Username'}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  autoCapitalize="none"
+                  value={formData.pseudo}
+                  onChangeText={(value) => handleChange('pseudo', value)}
+                />
+              </>
+            )}
 
             <Text style={styles.label}>
               {language === 'fr' ? 'Nom' : 'Last name'}
@@ -405,6 +426,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  pseudoLockedBox: {
+    gap: 6,
+  },
+  pseudoLockedValue: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  pseudoLockedHint: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    lineHeight: 18,
   },
   input: {
     backgroundColor: '#1a1a1f',

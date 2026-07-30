@@ -47,8 +47,10 @@ export const LIEUX_SCREENS = new Set([
 
 /** Auth / onboarding — pas de NX ni bouton menu drawer. */
 export const AUTH_FLOW_PAGES = new Set([
+  'splash',
   'onboarding',
   'login',
+  'authVerifyEmail',
   'accountType',
   'registerCommunity',
   'registerDj',
@@ -136,4 +138,16 @@ export function getProDashboardScreen(activeProfileType) {
 export function getPostAuthScreen(activeProfileType, nextScreen) {
   if (nextScreen) return nextScreen;
   return getHomeScreenForProfile(activeProfileType);
+}
+
+export function needsEmailVerification(user) {
+  return !!user?.isAuthenticated && user?.emailVerified === false;
+}
+
+/** Après login/register : OTP si email non vérifié, sinon home ou nextScreen. */
+export function resolvePostAuthNavigation(user, nextScreen) {
+  if (needsEmailVerification(user)) {
+    return { screen: 'authVerifyEmail', params: { nextScreen: nextScreen || null } };
+  }
+  return { screen: getPostAuthScreen(user?.activeProfileType, nextScreen), params: undefined };
 }

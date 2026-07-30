@@ -5,6 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { openDiscover, navigateToHome, openEventPreview } from '../../utils/noxNavigation';
+import Colors from '../../constants/colors';
 
 export default function PurchaseSuccessPage() {
   const { language } = useLanguage();

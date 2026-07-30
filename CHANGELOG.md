@@ -9,6 +9,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (mobile — nav radiale) — 30 juil.
 - **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`).
 
+### Corrigé (mobile — OTA retombée design rouge) — 30 juil.
+- **`PurchaseSuccessPage`** : import `Colors` manquant après Phase D → `ReferenceError` à l’évaluation du module, crash au boot OTA et retour au bundle intégré rouge. Même classe de bug que `Radius.pill` (29 juil.).
+
 ### Modifié (mobile — alignement tokens Figma NOX) — 29 juil.
 - **`constants/colors.js`** : palette réalignée sur les variables Figma — Primaire `#2852E8` (au lieu de `#4DA3FF`), Background `#0A0A09`, textes `#FEFEFD` / `#D9D9D9`, ombres bleues `#206ED1`. S'applique à toute l'appli NOX via les tokens.
 - **`constants/theme.js`** : rayons Figma — cartes r25, boutons pill, inputs r25.

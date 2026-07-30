@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — nav radiale) — 30 juil.
+- **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`).
+
 ### Modifié (mobile — alignement tokens Figma NOX) — 29 juil.
 - **`constants/colors.js`** : palette réalignée sur les variables Figma — Primaire `#2852E8` (au lieu de `#4DA3FF`), Background `#0A0A09`, textes `#FEFEFD` / `#D9D9D9`, ombres bleues `#206ED1`. S'applique à toute l'appli NOX via les tokens.
 - **`constants/theme.js`** : rayons Figma — cartes r25, boutons pill, inputs r25.

@@ -3,6 +3,7 @@ import {
   View,
   TouchableOpacity,
   Text,
+  Image,
   Animated,
   Easing,
   StyleSheet,
@@ -297,13 +298,18 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
           delayLongPress={350}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={open ? 'Fermer le menu NX' : 'Ouvrir le menu NX'}
+          accessibilityLabel={open ? 'Fermer le menu NOX' : 'Ouvrir le menu NOX'}
           accessibilityHint={
             language === 'fr' ? 'Appui long pour le menu latéral' : 'Long press for side menu'
           }
         >
           <Animated.View style={{ transform: [{ rotate: nxRotate }] }}>
-            <Text style={styles.nxLabel}>NX</Text>
+            <Image
+              source={require('../../assets/noxlogo.png')}
+              style={styles.nxLogo}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
           </Animated.View>
         </Pressable>
       </View>
@@ -397,10 +403,8 @@ const styles = StyleSheet.create({
     elevation: 24,
     zIndex: 100,
   },
-  nxLabel: {
-    fontFamily: FontFamily.black,
-    fontSize: 20,
-    color: '#FEFEFD',
-    letterSpacing: 0.5,
+  nxLogo: {
+    width: 36,
+    height: 36,
   },
 });

@@ -475,12 +475,12 @@ export default function WelcomePage() {
             tabs={[
               {
                 id: 'all',
-                label: 'Events feed',
+                label: language === 'fr' ? 'Fil events' : 'Events feed',
                 accessibilityLabel: language === 'fr' ? 'Fil événements' : 'Events feed',
               },
               {
                 id: 'following',
-                label: 'Following feed',
+                label: language === 'fr' ? 'Abonnements' : 'Following feed',
                 accessibilityLabel: language === 'fr' ? 'Fil abonnements' : 'Following feed',
               },
             ]}

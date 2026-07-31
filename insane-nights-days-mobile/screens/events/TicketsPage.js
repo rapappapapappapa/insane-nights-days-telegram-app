@@ -134,11 +134,13 @@ export default function TicketsPage() {
     () => [
       {
         id: 'active',
-        label: fr ? `Mes tickets (${activeTickets.length})` : `My tickets (${activeTickets.length})`,
+        label: fr ? `Mes billets (${activeTickets.length})` : `My tickets (${activeTickets.length})`,
       },
       {
         id: 'history',
-        label: fr ? `Historique (${historyTickets.length})` : `History (${historyTickets.length})`,
+        label: fr
+          ? `Historique d’achat (${historyTickets.length})`
+          : `Purchase history (${historyTickets.length})`,
       },
     ],
     [fr, activeTickets.length, historyTickets.length],
@@ -259,12 +261,12 @@ export default function TicketsPage() {
                 </NoxText>
               ) : null}
               <View style={styles.ticketFooterRow}>
-                <NoxText variant="label" style={styles.ticketPrice}>
-                  {ticket.price}€
+                <NoxText variant="label" style={styles.ticketTier}>
+                  {ticket.tierLabel || (fr ? 'Entrée générale' : 'General admission')}
                 </NoxText>
-                {ticket.tierLabel ? (
-                  <NoxText variant="secondary" style={styles.ticketTier}>
-                    {ticket.tierLabel}
+                {ticket.price != null ? (
+                  <NoxText variant="label" style={styles.ticketPrice}>
+                    {ticket.price}€
                   </NoxText>
                 ) : null}
               </View>
@@ -324,15 +326,15 @@ export default function TicketsPage() {
           </View>
         )}
 
-        {user?.isAuthenticated ? (
+        {user?.isAuthenticated && !past ? (
           <TouchableOpacity
             style={styles.deleteLink}
             onPress={() => handleDeleteTicket(ticket.id)}
             accessibilityRole="button"
-            accessibilityLabel={fr ? 'Supprimer le ticket' : 'Delete ticket'}
+            accessibilityLabel={fr ? 'Retirer le billet' : 'Remove ticket'}
           >
             <NoxText variant="secondary" style={styles.deleteLinkText}>
-              {fr ? 'Supprimer (temporaire)' : 'Delete (temporary)'}
+              {fr ? 'Retirer' : 'Remove'}
             </NoxText>
           </TouchableOpacity>
         ) : null}
@@ -349,8 +351,8 @@ export default function TicketsPage() {
         </View>
         <NoxText variant="titleSecondary" style={styles.emptyTitle}>
           {isActiveTab
-            ? fr ? 'Aucun ticket actif' : 'No active tickets'
-            : fr ? 'Aucun historique' : 'No history yet'}
+            ? fr ? 'Aucun billet actif' : 'No active tickets'
+            : fr ? 'Aucun historique d’achat' : 'No purchase history'}
         </NoxText>
         <NoxText variant="secondary" style={styles.emptyText}>
           {isActiveTab
@@ -358,8 +360,8 @@ export default function TicketsPage() {
               ? 'Explore les événements pour acheter tes premiers billets.'
               : 'Explore events to buy your first tickets.'
             : fr
-              ? 'Tes événements passés apparaîtront ici.'
-              : 'Your past events will show up here.'}
+              ? 'Tes billets passés apparaîtront ici.'
+              : 'Your past tickets will show up here.'}
         </NoxText>
         {isActiveTab ? (
           <NoxButton
@@ -384,8 +386,8 @@ export default function TicketsPage() {
       <StatusBar style="light" />
 
       <NoxScreenHeader
-        title={fr ? 'Tickets' : 'Tickets'}
-        subtitle={fr ? 'Tes billets pour les événements' : 'Your event tickets'}
+        title={fr ? 'Billets' : 'Tickets'}
+        subtitle={fr ? 'Wallet & historique d’achat' : 'Wallet & purchase history'}
         onBack={goBack}
       />
 
@@ -430,49 +432,53 @@ export default function TicketsPage() {
             </View>
 
             <ScrollView contentContainerStyle={styles.qrModalContent} showsVerticalScrollIndicator={false}>
-              <NoxText variant="title" style={styles.qrEventTitle}>
-                {selectedTicket.eventTitle}
-              </NoxText>
-              <NoxText variant="secondary" style={styles.qrEventMeta}>
-                {formatEventDate(selectedTicket.eventDate, language)}
-                {selectedTicket.eventTime ? ` · ${selectedTicket.eventTime}` : ''}
-              </NoxText>
-              {selectedTicket.eventLocation ? (
-                <NoxText variant="secondary" style={styles.qrEventLocation}>
-                  {selectedTicket.eventLocation}
+              <NoxCard style={styles.walletCard}>
+                <NoxText variant="titleSecondary" style={styles.qrEventTitle}>
+                  {selectedTicket.eventTitle}
                 </NoxText>
-              ) : null}
-
-              <View style={styles.qrLargeWrap}>
-                <QRCode
-                  value={buildQrPayload(selectedTicket)}
-                  size={260}
-                  color="#000000"
-                  backgroundColor="#FFFFFF"
-                />
-              </View>
-
-              <NoxText variant="label" style={styles.qrCodeLabel}>
-                {selectedTicket.qrCode}
-              </NoxText>
-
-              {holderName ? (
-                <NoxText variant="description" style={styles.qrHolder}>
-                  {holderName}
+                <NoxText variant="secondary" style={styles.qrEventMeta}>
+                  {formatEventDate(selectedTicket.eventDate, language)}
+                  {selectedTicket.eventTime ? ` · ${selectedTicket.eventTime}` : ''}
                 </NoxText>
-              ) : null}
-
-              {selectedTicket.purchaseDate ? (
-                <NoxText variant="secondary" style={styles.qrPurchaseDate}>
-                  {fr ? 'Acheté le ' : 'Purchased on '}
-                  {formatPurchaseDate(selectedTicket.purchaseDate)}
+                {selectedTicket.eventLocation ? (
+                  <NoxText variant="secondary" style={styles.qrEventLocation}>
+                    {selectedTicket.eventLocation}
+                  </NoxText>
+                ) : null}
+                <NoxText variant="label" style={styles.walletTier}>
+                  {selectedTicket.tierLabel || (fr ? 'Entrée générale' : 'General admission')}
+                  {selectedTicket.price != null ? ` · ${selectedTicket.price}€` : ''}
                 </NoxText>
-              ) : null}
+
+                <View style={styles.qrLargeWrap}>
+                  <QRCode
+                    value={buildQrPayload(selectedTicket)}
+                    size={240}
+                    color="#000000"
+                    backgroundColor="#FFFFFF"
+                  />
+                </View>
+
+                <NoxText variant="label" style={styles.qrCodeLabel}>
+                  {selectedTicket.qrCode}
+                </NoxText>
+                {holderName ? (
+                  <NoxText variant="description" style={styles.qrHolder}>
+                    {holderName}
+                  </NoxText>
+                ) : null}
+                {selectedTicket.purchaseDate ? (
+                  <NoxText variant="secondary" style={styles.qrPurchaseDate}>
+                    {fr ? 'Acheté le ' : 'Purchased on '}
+                    {formatPurchaseDate(selectedTicket.purchaseDate)}
+                  </NoxText>
+                ) : null}
+              </NoxCard>
 
               <NoxText variant="secondary" style={styles.qrHint}>
                 {fr
-                  ? 'Présente ce QR code à l’entrée de l’événement.'
-                  : 'Show this QR code at the event entrance.'}
+                  ? 'Présente ce QR à l’entrée. Ajoute-le à ton agenda pour ne pas le manquer.'
+                  : 'Show this QR at the entrance. Add it to your calendar so you don’t miss it.'}
               </NoxText>
 
               <View style={styles.qrModalActions}>
@@ -480,20 +486,23 @@ export default function TicketsPage() {
                 API_TICKET_DATE_RE.test(String(selectedTicket.eventDate || '')) ? (
                   <NoxButton
                     label={fr ? 'Ajouter à mon agenda' : 'Add to calendar'}
-                    variant="secondary"
                     loading={calendarBusyTicketId === selectedTicket.id}
                     onPress={() => handleAddTicketToCalendar(selectedTicket)}
                   />
                 ) : null}
                 <NoxButton
                   label={fr ? 'Voir l’événement' : 'View event'}
-                  variant="ghost"
+                  variant="secondary"
                   onPress={() => {
                     setSelectedTicket(null);
                     navigate('eventDetail', { eventId: selectedTicket.eventId });
                   }}
                 />
-                <NoxButton label={fr ? 'Fermer' : 'Close'} onPress={() => setSelectedTicket(null)} />
+                <NoxButton
+                  label={fr ? 'Fermer' : 'Close'}
+                  variant="ghost"
+                  onPress={() => setSelectedTicket(null)}
+                />
               </View>
             </ScrollView>
           </SafeAreaView>
@@ -601,10 +610,25 @@ const styles = StyleSheet.create({
   },
   ticketPrice: {
     color: Colors.primary,
-    fontSize: 16,
+    fontSize: 14,
   },
   ticketTier: {
     flex: 1,
+    color: Colors.textSecondary,
+    textTransform: 'none',
+    letterSpacing: 0,
+  },
+  walletCard: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  walletTier: {
+    marginTop: Spacing.sm,
+    color: Colors.primary,
+    textTransform: 'none',
+    letterSpacing: 0,
   },
   qrPreview: {
     padding: 6,
@@ -685,24 +709,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   qrLargeWrap: {
-    marginTop: Spacing.xxxl,
-    marginBottom: Spacing.lg,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.md,
     padding: Spacing.lg,
     backgroundColor: '#FFFFFF',
-    borderRadius: Radius.lg,
+    borderRadius: Radius.card,
   },
   qrCodeLabel: {
     fontFamily: 'monospace',
     letterSpacing: 1,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   qrHolder: {
     textAlign: 'center',
-    marginBottom: Spacing.xs,
   },
   qrPurchaseDate: {
     textAlign: 'center',
-    marginBottom: Spacing.lg,
   },
   qrHint: {
     textAlign: 'center',

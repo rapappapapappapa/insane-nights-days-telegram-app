@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Image,
-  Dimensions,
 } from 'react-native';
-import Colors from '../../constants/colors';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Spacing, Radius } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -19,17 +18,7 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
-
-const getBookerPlaceholderImage = (name) => {
-  const hash = (name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const images = [
-    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop',
-  ];
-  return images[hash % images.length];
-};
+import { NoxText, NoxButton } from '../../components/nox';
 
 export default function BookerProfilePage() {
   const insets = useSafeAreaInsets();
@@ -43,6 +32,8 @@ export default function BookerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
+  const [bannerBroken, setBannerBroken] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   useEffect(() => {
     if (bookerId) {
@@ -61,11 +52,15 @@ export default function BookerProfilePage() {
         if (mounted) setFollowing(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [user?.token, user?.id, booker?.id, booker?.userId]);
 
   const fetchBookerProfile = async () => {
     setLoading(true);
+    setBannerBroken(false);
+    setAvatarBroken(false);
     try {
       const res = await api.getBookerProfileById(bookerId);
       if (res?.success && res.booker) {
@@ -107,11 +102,11 @@ export default function BookerProfilePage() {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        <View style={styles.loadingContainer}>
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>
+          <NoxText variant="secondary" style={{ marginTop: Spacing.md }}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
-          </Text>
+          </NoxText>
         </View>
       </View>
     );
@@ -121,102 +116,149 @@ export default function BookerProfilePage() {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
-        <TouchableOpacity style={[styles.backButton, { top: (insets?.top ?? 0) + 10 }]} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
+        <View style={[styles.topBar, { paddingTop: (insets?.top ?? 0) + Spacing.sm }]}>
+          <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.topBarBtn}>
+            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <View style={styles.topBarCenter}>
+            <NoxText variant="titleSecondary">
+              {language === 'fr' ? 'Organisateur' : 'Organizer'}
+            </NoxText>
+          </View>
+          <View style={styles.topBarBtn} />
+        </View>
+        <View style={styles.centered}>
+          <NoxText variant="secondary">
             {language === 'fr' ? 'Profil non trouvé' : 'Profile not found'}
-          </Text>
+          </NoxText>
+          <NoxButton
+            label={language === 'fr' ? 'Retour' : 'Back'}
+            onPress={goBack}
+            style={{ marginTop: Spacing.lg }}
+          />
         </View>
       </View>
     );
   }
 
-  const displayName = booker.name || booker.pseudo || `${booker.nom || ''} ${booker.prenom || ''}`.trim() || 'Organisateur';
+  const displayName =
+    booker.name ||
+    booker.pseudo ||
+    `${booker.nom || ''} ${booker.prenom || ''}`.trim() ||
+    (language === 'fr' ? 'Organisateur' : 'Organizer');
   const avatarUri = normalizeMediaUrl(booker.profileImage);
+  const bannerUri = normalizeMediaUrl(booker.bannerImage || booker.coverImage);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 140 }}
+      showsVerticalScrollIndicator={false}
+    >
       <StatusBar style="light" />
 
-      <TouchableOpacity style={[styles.backButton, { top: (insets?.top ?? 0) + 10 }]} onPress={goBack}>
-        <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-      </TouchableOpacity>
-
-      <View style={[styles.header, { paddingTop: (insets?.top ?? 0) + 70 }]}>
-        <View style={styles.backgroundImage}>
-          <Image
-            source={{ uri: getBookerPlaceholderImage(displayName) }}
-            style={styles.backgroundImageContent}
-            blurRadius={3}
-          />
+      <View style={[styles.topBar, { paddingTop: (insets?.top ?? 0) + Spacing.sm }]}>
+        <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.topBarBtn}>
+          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <View style={styles.topBarCenter}>
+          <NoxText variant="titleSecondary">{displayName}</NoxText>
+          <NoxText variant="secondary">
+            {language === 'fr' ? 'Organisateur' : 'Organizer'}
+          </NoxText>
         </View>
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.profileImage} />
-            ) : (
-              <View style={[styles.profileImage, styles.avatarPlaceholder]}>
-                <Text style={styles.avatarText}>{displayName?.charAt(0)?.toUpperCase() || 'B'}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.bookerName}>{displayName}</Text>
-          {booker.bookerType ? (
-            <View style={styles.badgeRow}>
-              <View style={styles.badgeBooker}>
-                <Ionicons name="calendar-outline" size={14} color="#fff" />
-                <Text style={styles.badgeText}>{booker.bookerType}</Text>
-              </View>
-            </View>
-          ) : null}
+        <View style={styles.topBarBtn} />
+      </View>
 
-          <View style={styles.quickStatsRow}>
-            <View style={styles.quickStatPill}>
-              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Événements' : 'Events'}</Text>
-              <Text style={styles.quickStatValue}>{booker.eventsCount ?? 0}</Text>
+      <View style={styles.profileHero}>
+        <View style={styles.banner}>
+          {bannerUri && !bannerBroken ? (
+            <Image
+              source={{ uri: bannerUri }}
+              style={StyleSheet.absoluteFillObject}
+              resizeMode="cover"
+              onError={() => setBannerBroken(true)}
+            />
+          ) : (
+            <Ionicons name="calendar-outline" size={32} color={primaryAlpha(0.45)} />
+          )}
+        </View>
+        <View style={styles.avatarWrap}>
+          {avatarUri && !avatarBroken ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatar}
+              onError={() => setAvatarBroken(true)}
+            />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <NoxText variant="title">{displayName?.charAt(0)?.toUpperCase() || 'B'}</NoxText>
             </View>
-            <View style={styles.quickStatPill}>
-              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Posts' : 'Posts'}</Text>
-              <Text style={styles.quickStatValue}>{booker.postsCount ?? 0}</Text>
-            </View>
-          </View>
-
-          {user?.token && booker.userId === user?.id ? (
-            <TouchableOpacity
-              style={styles.followButton}
-              onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
-            >
-              <Text style={styles.followButtonText}>
-                {language === 'fr' ? 'Modifier mon profil' : 'Edit my profile'}
-              </Text>
-            </TouchableOpacity>
-          ) : user?.token && booker.userId !== user?.id ? (
-            <TouchableOpacity
-              style={[styles.followButton, following && styles.followButtonActive]}
-              onPress={handleFollowToggle}
-              disabled={loadingFollow}
-            >
-              {loadingFollow ? (
-                <Text style={styles.followButtonText}>...</Text>
-              ) : (
-                <Text style={[styles.followButtonText, following && styles.followButtonTextActive]}>
-                  {following ? (language === 'fr' ? 'Abonné ✓' : 'Following ✓') : (language === 'fr' ? 'Suivre' : 'Follow')}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ) : null}
+          )}
         </View>
       </View>
 
-      {toast.visible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onHide={hideToast}
-        />
-      )}
+      <View style={styles.identityBlock}>
+        <NoxText variant="title" style={styles.bookerName}>
+          {displayName}
+        </NoxText>
+
+        {booker.bookerType ? (
+          <View style={styles.badge}>
+            <Ionicons name="calendar-outline" size={14} color={Colors.primary} />
+            <NoxText variant="secondary">{booker.bookerType}</NoxText>
+          </View>
+        ) : null}
+
+        <View style={styles.quickStatsRow}>
+          <View style={styles.quickStatPill}>
+            <NoxText variant="secondary" style={styles.quickStatLabel}>
+              {language === 'fr' ? 'Événements' : 'Events'}
+            </NoxText>
+            <NoxText variant="titleSecondary" style={styles.quickStatValue}>
+              {booker.eventsCount ?? 0}
+            </NoxText>
+          </View>
+          <View style={styles.quickStatPill}>
+            <NoxText variant="secondary" style={styles.quickStatLabel}>
+              {language === 'fr' ? 'Posts' : 'Posts'}
+            </NoxText>
+            <NoxText variant="titleSecondary" style={styles.quickStatValue}>
+              {booker.postsCount ?? 0}
+            </NoxText>
+          </View>
+        </View>
+
+        {user?.token && booker.userId === user?.id ? (
+          <NoxButton
+            label={language === 'fr' ? 'Modifier mon profil' : 'Edit my profile'}
+            style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
+            onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
+          />
+        ) : user?.token && booker.userId !== user?.id ? (
+          <NoxButton
+            label={
+              loadingFollow
+                ? '…'
+                : following
+                  ? language === 'fr'
+                    ? 'Abonné'
+                    : 'Following'
+                  : language === 'fr'
+                    ? 'Suivre'
+                    : 'Follow'
+            }
+            variant={following ? 'secondary' : 'primary'}
+            disabled={loadingFollow}
+            style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
+            onPress={handleFollowToggle}
+          />
+        ) : null}
+      </View>
+
+      {toast.visible ? (
+        <Toast message={toast.message} type={toast.type} onHide={hideToast} />
+      ) : null}
     </ScrollView>
   );
 }
@@ -224,144 +266,105 @@ export default function BookerProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: Colors.background,
   },
-  loadingContainer: {
+  centered: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
   },
-  loadingText: {
-    color: '#888',
-    marginTop: 12,
-    fontSize: 16,
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
-  errorContainer: {
+  topBarBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarCenter: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    gap: 4,
   },
-  errorText: {
-    color: '#fff',
-    fontSize: 18,
+  profileHero: {
+    marginBottom: Spacing.lg,
   },
-  backButton: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 10,
-    padding: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  header: {
-    paddingBottom: 24,
-  },
-  backgroundImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 180,
+  banner: {
+    height: 120,
+    marginHorizontal: Spacing.xl,
+    borderRadius: Radius.card,
+    backgroundColor: primaryAlpha(0.1),
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
-  backgroundImageContent: {
-    width: '100%',
-    height: '100%',
-  },
-  profileSection: {
+  avatarWrap: {
     alignItems: 'center',
-    paddingHorizontal: 20,
+    marginTop: -40,
   },
-  profileImageContainer: {
-    marginBottom: 12,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: Colors.background,
   },
   avatarPlaceholder: {
-    backgroundColor: Colors.primary,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: primaryAlpha(0.2),
+    alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: Colors.background,
+  },
+  identityBlock: {
+    paddingHorizontal: Spacing.xl,
     alignItems: 'center',
   },
-  avatarText: {
-    color: '#fff',
-    fontSize: 40,
-    fontWeight: 'bold',
-  },
   bookerName: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  badgeBooker: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 23, 68, 0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 13,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.pill,
+    backgroundColor: primaryAlpha(0.16),
+    borderWidth: 1,
+    borderColor: primaryAlpha(0.28),
+    marginBottom: Spacing.md,
   },
   quickStatsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    gap: Spacing.sm,
+    alignSelf: 'stretch',
   },
   quickStatPill: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: Colors.backgroundElevated,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     alignItems: 'center',
-    minWidth: 90,
   },
   quickStatLabel: {
-    color: '#888',
-    fontSize: 12,
-    marginBottom: 4,
+    textTransform: 'uppercase',
+    fontSize: 11,
+    marginBottom: Spacing.xs,
   },
   quickStatValue: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  followButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  followButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  followButtonText: {
     color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  followButtonTextActive: {
-    color: '#fff',
   },
 });

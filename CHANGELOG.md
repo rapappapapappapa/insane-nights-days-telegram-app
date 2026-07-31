@@ -6,6 +6,25 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
 
+### Modifié (mobile — wallet / compte / notifs / welcome pro) — 31 juil.
+- **`TicketsPage`** : copy Figma wireframe (« Mes billets », « Historique d’achat »), carte QR type wallet, tier « Entrée générale », retrait moins agressif.
+- **`ProfilePage`** : hub Compte inspiré réglages Lieux — raccourcis Billets / Notifs / Switch / Légal ; stats réelles (plus de badges hardcodés « 3 »).
+- **`NotificationsPage`** : point non-lu à gauche (Figma 08), header épuré.
+- **`WelcomePage`** (accueil DJ/Booker/Prestataire) : onglets FR, cartes events aux tokens NOX (pas de maquette ARTIST/ORGA dédiée → **inspiré** wireframe communauté).
+
+### Manques Figma à noter (pas de maquette HD dans `docs/mobile/design-figma/`)
+- **COMMUNAUTÉ / 04_Tickets** & **Ticket QR** : uniquement wireframe 05 — skin wallet livré par inspiration ; pas de hi-fi.
+- **COMMUNAUTÉ / 05_Profile** (social) : couvert par `CommunityProfileShell` ; le hub **Compte** (`ProfilePage`) n’a pas de maquette settings communauté dédiée → calqué sur `08_Reglage` Lieux.
+- **Dashboards / home ARTIST (DJ) & ORGANIZER (Booker)** : absents du pack → `WelcomePage` + dashboards legacy restent provisoires (tokens NOX seulement).
+- **03_Artist / Venue / Collective Profile** (labels Figma) : profils publics skinnés le 31 juil. sans planche HD dédiée.
+- **Repost / mur profil** (wireframe 05 WALL) : feature non démarrée (volontairement après Figma).
+- **Apple/Google Wallet « Add to wallet »** : non branché — agenda appareil en substitution.
+
+### Modifié (mobile — profils publics Figma) — 31 juil.
+- **`DjProfilePage`** : habillage NOX (top bar, hero bannière/avatar, `NoxCard` / `NoxButton` / `NoxText`, tokens Spacing/Radius) ; retrait des fallbacks Unsplash.
+- **`VenueProfilePage`** : même shell NOX (plus de fond Unsplash), sélection booker conservée, infos + médias en cartes Figma.
+- **`BookerProfilePage`** : shell NOX + follow / édition ; plus de placeholder Unsplash.
+
 ### Modifié (mobile — nav radiale) — 30 juil.
 - **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`), en **plein cercle** (cover + clip) avec bordure bleue.
 

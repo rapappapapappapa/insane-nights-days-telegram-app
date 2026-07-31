@@ -173,16 +173,14 @@ export default function NotificationsPage() {
     return (
       <TouchableOpacity key={n.id} activeOpacity={0.85} onPress={() => handlePress(n)}>
         <NoxCard style={[styles.notifCard, unread && styles.notifUnread]} padded={false}>
+          {unread ? <View style={styles.unreadDot} /> : <View style={styles.unreadDotSpacer} />}
           <View style={styles.avatar}>
             <Ionicons name={icon} size={18} color={iconColor} />
           </View>
           <View style={styles.notifBody}>
-            <View style={styles.notifTopRow}>
-              <NoxText variant="form" style={styles.notifTitle} numberOfLines={2}>
-                {actorName} {notifLabel(type, language)}
-              </NoxText>
-              {unread ? <View style={styles.unreadDot} /> : null}
-            </View>
+            <NoxText variant="form" style={styles.notifTitle} numberOfLines={2}>
+              {actorName} {notifLabel(type, language)}
+            </NoxText>
             {postExcerpt ? (
               <NoxText variant="secondary" style={styles.notifExcerpt} numberOfLines={2}>
                 « {postExcerpt} »
@@ -206,7 +204,6 @@ export default function NotificationsPage() {
 
       <NoxScreenHeader
         title={fr ? 'Notifications' : 'Notifications'}
-        subtitle={fr ? 'Activité sur ton fil' : 'Your feed activity'}
         onBack={goBack}
       />
 

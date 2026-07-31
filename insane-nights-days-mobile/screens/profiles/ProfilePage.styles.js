@@ -49,6 +49,48 @@ export const styles = StyleSheet.create({
   subtitle: {
     textAlign: 'center',
   },
+  hubSection: {
+    gap: Spacing.sm,
+  },
+  hubSectionTitle: {
+    textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: 0.6,
+  },
+  hubCard: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.borderSubtle,
+    overflow: 'hidden',
+  },
+  hubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  hubRowLast: {
+    borderBottomWidth: 0,
+  },
+  hubRowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: primaryAlpha(0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubRowText: {
+    flex: 1,
+  },
+  hubRowSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   card: {
     gap: Spacing.md,
   },

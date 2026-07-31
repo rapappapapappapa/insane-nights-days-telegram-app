@@ -56,9 +56,9 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `communityEventDetail` | `CommunityEventDetailPage.js` | **Garder NOX** | **Doit remplacer** `eventDetail` pour la vue sociale |
 | `events` | `EventsPage.js` | **Supprimer plus tard** | Alias temporaire → rediriger vers `communityDiscover` |
 | `eventDetail` | `EventDetailPage.js` | **Réutiliser tel quel** | **Uniquement** flux achat / billet / post-achat / staff public |
-| `tickets` | `TicketsPage.js` | **Migrer UI** | Logique OK, habillage NOX + wallet Figma |
-| `notifications` | `NotificationsPage.js` | **Migrer UI** | Types métier + deep links |
-| `profile` | `ProfilePage.js` | **Migrer UI** | Hub compte ; profil social → nouvel écran |
+| `tickets` | `TicketsPage.js` | **NOX wallet (31 juil.)** | Wireframe 05 ; pas de maquette HD |
+| `notifications` | `NotificationsPage.js` | **NOX (31 juil.)** | Aligné Figma 08 communauté |
+| `profile` | `ProfilePage.js` | **Hub compte NOX (31 juil.)** | Inspiré 08_Reglage Lieux ; pas de maquette HD compte |
 | — | `CommunityProfilePage.js` | **Migrer UI** | Profil public + onglets Events/Wall (Figma 05) |
 | `communityFriends` | `CommunityFriendsPage.js` | **Migrer UI** | Entrée NX ou profil, pas drawer seul |
 | `welcome` | `WelcomePage.js` | **Supprimer plus tard** | Plus d’accueil COMMUNITY |
@@ -94,18 +94,18 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 
 | Clé | Fichier | Décision | Notes |
 |-----|---------|----------|-------|
-| `welcome` | `WelcomePage.js` | **Migrer UI** | Accueil pro temporaire ; refonte Figma future |
+| `welcome` | `WelcomePage.js` | **Inspiré NOX (31 juil.)** | Accueil pro temporaire — **pas de maquette ARTIST/ORGA** |
 | `djDashboard` | `DjDashboardPage.js` | **Migrer UI** | Dashboard secondaire (drawer/NX) |
 | `bookerDashboard` | `BookerDashboardPage.js` | **Migrer UI** | Idem |
 | `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Migrer UI** | Wizard event booker |
 | `prestataireDashboard` | `PrestataireDashboardPage.js` | **Migrer UI** | Hors maquettes actuelles |
-| Profils publics | `DjProfilePage`, `BookerProfilePage`, `VenueProfilePage` | **Migrer UI** | Réutiliser API, habillage NOX |
+| Profils publics | `DjProfilePage`, `VenueProfilePage`, `BookerProfilePage` | **NOX (31 juil.)** | Shell Figma + API inchangée |
 
 ### 3.5 Transversal (tous profils)
 
 | Clé | Fichier | Décision |
 |-----|---------|----------|
-| `tickets` | `TicketsPage.js` | **Migrer UI** — garder logique QR / historique |
+| `tickets` | `TicketsPage.js` | **NOX wallet (31 juil.)** — garder logique QR / historique |
 | `purchases` / `purchaseSuccess` | `PurchasesPage.js` | **Migrer UI** |
 | `scanTicket` / `staffEvents` | Scan + liste events staff | **Migrer UI** — accès staff |
 | `switchProfile` | `SwitchProfilePage.js` | **Garder NOX** |

@@ -198,4 +198,21 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ---
 
-*Dernière mise à jour : juillet 2026 — maquettes importées depuis Figma.*
+## Maquettes manquantes (à demander / à livrer côté design)
+
+Écrans cités dans Figma ou le wireframe **sans** planche HD dans `docs/mobile/design-figma/` :
+
+| Besoin | Statut code (juil. 2026) |
+|--------|--------------------------|
+| `COMMUNAUTÉ / 04_Tickets` + QR plein écran | Skin wallet inspiré wireframe 05 |
+| `COMMUNAUTÉ / 05_Profile` (social) | `CommunityProfileShell` |
+| Hub compte / réglages communauté | `ProfilePage` calqué sur réglages Lieux |
+| Home / dashboard **Artiste (DJ)** | `WelcomePage` + `djDashboard` provisoires |
+| Home / dashboard **Organisateur** | `WelcomePage` + `bookerDashboard` provisoires |
+| `03_Artist / Venue / Collective_Profile` HD | Profils publics skinnés sans HD |
+| Mur / **repost** | Non démarré |
+| Add to Apple/Google Wallet | Non branché (agenda à la place) |
+
+---
+
+*Dernière mise à jour : 31 juillet 2026 — maquettes importées depuis Figma + écarts documentés.*

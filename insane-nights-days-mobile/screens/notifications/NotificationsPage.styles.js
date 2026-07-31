@@ -56,14 +56,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  notifTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
   notifTitle: {
-    flex: 1,
     fontFamily: FontFamily.bold,
     fontSize: 14,
   },
@@ -79,7 +72,10 @@ export const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.primary,
-    marginTop: 6,
+  },
+  unreadDotSpacer: {
+    width: 8,
+    height: 8,
   },
   thumb: {
     width: 44,

@@ -23,9 +23,11 @@ import Colors from '../../constants/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxButton, NoxCard, NoxScreenHeader, NoxInput } from '../../components/nox';
 import { getHomeScreenForProfile } from '../../utils/noxRoleNavigation';
+import { Ionicons } from '@expo/vector-icons';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { styles } from './ProfilePage.styles';
@@ -40,6 +42,8 @@ import { styles } from './ProfilePage.styles';
 export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
   const { user: authUser, updateUser: updateAuthUser, refreshCurrentUser, logout } = useAuth();
   const { navigate, goBack } = useNavigation();
+  const { language } = useLanguage();
+  const fr = language === 'fr';
   const { toast, showError, showSuccess, hideToast } = useToast();
   
   // Utiliser authUser du contexte au lieu des props user (source de vérité)
@@ -212,8 +216,8 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
       <NoxScreenHeader
-        title="Profil"
-        subtitle="Gère tes profils et tes préférences"
+        title={fr ? 'Compte' : 'Account'}
+        subtitle={fr ? 'Réglages, profils et confidentialité' : 'Settings, profiles & privacy'}
         onBack={goBack}
       />
 
@@ -257,21 +261,72 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
             })()}
           </View>
           <NoxText variant="titleSecondary" style={styles.title}>
-            Mes profils
+            {username}
           </NoxText>
           <NoxText variant="secondary" style={styles.subtitle}>
-            Gère tes profils et bascule entre eux
+            {profiles?.activeProfileType || authUser?.activeProfileType || (fr ? 'Compte' : 'Account')}
           </NoxText>
+        </View>
+
+        <View style={styles.hubSection}>
+          <NoxText variant="secondary" style={styles.hubSectionTitle}>
+            {fr ? 'Raccourcis' : 'Shortcuts'}
+          </NoxText>
+          <View style={styles.hubCard}>
+            {[
+              {
+                icon: 'ticket-outline',
+                label: fr ? 'Mes billets' : 'My tickets',
+                sub: fr ? 'Wallet & historique' : 'Wallet & history',
+                onPress: () => navigate('tickets'),
+              },
+              {
+                icon: 'notifications-outline',
+                label: fr ? 'Notifications' : 'Notifications',
+                onPress: () => navigate('notifications'),
+              },
+              {
+                icon: 'swap-horizontal-outline',
+                label: fr ? 'Changer de profil' : 'Switch profile',
+                onPress: () => navigate('switchProfile'),
+              },
+              {
+                icon: 'document-text-outline',
+                label: fr ? 'Informations légales' : 'Legal information',
+                onPress: () => navigate('legal'),
+              },
+            ].map((row, idx, arr) => (
+              <TouchableOpacity
+                key={row.label}
+                style={[styles.hubRow, idx === arr.length - 1 && styles.hubRowLast]}
+                activeOpacity={0.85}
+                onPress={row.onPress}
+              >
+                <View style={styles.hubRowIcon}>
+                  <Ionicons name={row.icon} size={20} color={Colors.primary} />
+                </View>
+                <View style={styles.hubRowText}>
+                  <NoxText variant="form">{row.label}</NoxText>
+                  {row.sub ? (
+                    <NoxText variant="secondary" style={styles.hubRowSub}>
+                      {row.sub}
+                    </NoxText>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <NoxCard style={styles.card}>
           <View style={styles.cardHeader}>
             <NoxText variant="titleSecondary" style={styles.cardTitle}>
-              Informations
+              {fr ? 'Informations' : 'Information'}
             </NoxText>
             {!isEditing ? (
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <NoxText style={styles.editLink}>Modifier</NoxText>
+                <NoxText style={styles.editLink}>{fr ? 'Modifier' : 'Edit'}</NoxText>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -618,20 +673,26 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
 
         <NoxCard style={styles.card}>
           <NoxText variant="titleSecondary" style={styles.cardTitle}>
-            Statistiques
+            {fr ? 'Activité' : 'Activity'}
           </NoxText>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <NoxText style={styles.statValue}>{ticketsCount}</NoxText>
-              <NoxText variant="secondary" style={styles.statLabel}>Tickets</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>
+                {fr ? 'Billets' : 'Tickets'}
+              </NoxText>
             </View>
             <View style={styles.statItem}>
               <NoxText style={styles.statValue}>{eventsParticipated}</NoxText>
-              <NoxText variant="secondary" style={styles.statLabel}>Événements</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>
+                {fr ? 'Events' : 'Events'}
+              </NoxText>
             </View>
             <View style={styles.statItem}>
-              <NoxText style={styles.statValue}>3</NoxText>
-              <NoxText variant="secondary" style={styles.statLabel}>Badges</NoxText>
+              <NoxText style={styles.statValue}>{level}</NoxText>
+              <NoxText variant="secondary" style={styles.statLabel}>
+                {fr ? 'Niveau' : 'Level'}
+              </NoxText>
             </View>
           </View>
         </NoxCard>

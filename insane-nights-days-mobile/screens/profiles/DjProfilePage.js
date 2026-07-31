@@ -6,12 +6,11 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-  Dimensions,
   Linking,
   Modal,
   Alert,
 } from 'react-native';
-import Colors from '../../constants/colors';
+import Colors, { primaryAlpha } from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
 // Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,39 +25,10 @@ import BuiltInStreamPlayerModal from '../../components/BuiltInStreamPlayerModal'
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
+import { NoxText, NoxButton, NoxCard } from '../../components/nox';
+import { Spacing } from '../../constants/theme';
 import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 import { styles } from './DjProfilePage.styles';
-
-const { width } = Dimensions.get('window');
-
-// Générer une image différente basée sur le nom du DJ
-const getDjImage = (djName) => {
-  if (!djName) return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop';
-  // Utiliser le hash du nom pour sélectionner une image différente
-  const hash = djName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const images = [
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop',
-  ];
-  return images[hash % images.length];
-};
-
-// Générer une image de background différente
-const getDjBackgroundImage = (djName) => {
-  if (!djName) return 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop';
-  const hash = djName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const images = [
-    'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1516900557549-41557d405ad2?w=800&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=400&fit=crop',
-  ];
-  return images[hash % images.length];
-};
 
 export default function DjProfilePage() {
   const insets = useSafeAreaInsets();
@@ -273,9 +243,9 @@ export default function DjProfilePage() {
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>
+          <NoxText variant="secondary" style={styles.loadingText}>
             {language === 'fr' ? 'Chargement...' : 'Loading...'}
-          </Text>
+          </NoxText>
         </View>
       </View>
     );
@@ -286,9 +256,9 @@ export default function DjProfilePage() {
       <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
+          <NoxText variant="secondary" style={styles.errorText}>
             {language === 'fr' ? 'Profil non trouvé' : 'Profile not found'}
-          </Text>
+          </NoxText>
         </View>
       </View>
     );
@@ -296,92 +266,153 @@ export default function DjProfilePage() {
 
   return (
     <>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}
+      >
         <StatusBar style="light" />
-      
-        {/* Bouton retour */}
-        <TouchableOpacity style={[styles.backButton, { top: (insets?.top ?? 0) + 10 }]} onPress={handleBack}>
-          <Text style={styles.backButtonText}>
-            ← {language === 'fr' ? 'Retour' : 'Back'}
-          </Text>
-        </TouchableOpacity>
-      
-      {/* Header avec photo de profil et background */}
-      <View style={[styles.header, { paddingTop: (insets?.top ?? 0) + 70 }]}>
-        <View style={styles.backgroundImage}>
-          <Image
-            source={{ uri: bannerImage || getDjBackgroundImage(dj.artistName) }}
-            style={styles.backgroundImageContent}
-            blurRadius={3}
-          />
-        </View>
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
-            <Image
-              source={{ uri: normalizeMediaUrl(profileImage) || getDjImage(dj.artistName) }}
-              style={styles.profileImage}
-            />
-          </View>
-          <Text style={styles.djName}>{dj.artistName}</Text>
-          <Text style={styles.djLocation}>📍 {dj.mainCity || dj.city || 'Ville inconnue'}, France</Text>
 
-          {/* Stats rapides */}
+        <View style={[styles.topBar, { paddingTop: (insets?.top ?? 0) + Spacing.sm }]}>
+          <TouchableOpacity onPress={handleBack} hitSlop={12} style={styles.topBarBtn}>
+            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <View style={styles.topBarCenter}>
+            <NoxText variant="titleSecondary">{dj.artistName}</NoxText>
+            <NoxText variant="secondary">
+              {dj.mainCity || dj.city || (language === 'fr' ? 'Artiste' : 'Artist')}
+            </NoxText>
+          </View>
+          <View style={styles.topBarBtn} />
+        </View>
+
+        <View style={styles.profileHero}>
+          <View style={styles.banner}>
+            {bannerImage ? (
+              <Image
+                source={{ uri: normalizeMediaUrl(bannerImage) }}
+                style={styles.bannerImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="musical-notes-outline" size={32} color={primaryAlpha(0.45)} />
+            )}
+          </View>
+          <View style={styles.avatarWrap}>
+            {normalizeMediaUrl(profileImage) ? (
+              <Image
+                source={{ uri: normalizeMediaUrl(profileImage) }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <NoxText variant="title">
+                  {dj.artistName?.charAt(0)?.toUpperCase() || 'D'}
+                </NoxText>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.identityBlock}>
+          <NoxText variant="title" style={styles.djName}>
+            {dj.artistName}
+          </NoxText>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color={Colors.textTertiary} />
+            <NoxText variant="secondary">
+              {dj.mainCity || dj.city || (language === 'fr' ? 'Ville non renseignée' : 'City not set')}
+            </NoxText>
+          </View>
+
           <View style={styles.quickStatsRow}>
             <View style={styles.quickStatPill}>
-              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Note' : 'Rating'}</Text>
+              <NoxText variant="secondary" style={styles.quickStatLabel}>
+                {language === 'fr' ? 'Note' : 'Rating'}
+              </NoxText>
               <View style={styles.quickStatValueRow}>
-                <Text style={styles.quickStatValue}>
-                  {(ratings?.averageRatingGlobal ?? 0).toFixed ? ratings.averageRatingGlobal.toFixed(1) : (ratings?.averageRatingGlobal ?? '0.0')}
-                </Text>
-                <View style={styles.quickStatStars}>
-                  <StarRating rating={Number(ratings?.averageRatingGlobal || 0)} size={14} showStars={true} showValue={false} />
-                </View>
+                <NoxText variant="titleSecondary" style={styles.quickStatValue}>
+                  {(ratings?.averageRatingGlobal ?? 0).toFixed
+                    ? Number(ratings.averageRatingGlobal).toFixed(1)
+                    : '0.0'}
+                </NoxText>
+                <StarRating
+                  rating={Number(ratings?.averageRatingGlobal || 0)}
+                  size={14}
+                  showStars
+                  showValue={false}
+                />
               </View>
             </View>
-
             <View style={[styles.quickStatPill, dj.availableStatus === false && styles.quickStatPillMuted]}>
-              <Text style={styles.quickStatLabel}>{language === 'fr' ? 'Dispo' : 'Avail.'}</Text>
-              <Text style={styles.quickStatValueSmall}>
+              <NoxText variant="secondary" style={styles.quickStatLabel}>
+                {language === 'fr' ? 'Dispo' : 'Avail.'}
+              </NoxText>
+              <NoxText variant="form" style={styles.quickStatValueSmall}>
                 {dj.availableStatus === false
-                  ? (language === 'fr' ? 'Indisponible' : 'Unavailable')
-                  : (language === 'fr' ? 'Disponible' : 'Available')}
-              </Text>
+                  ? language === 'fr'
+                    ? 'Indisponible'
+                    : 'Unavailable'
+                  : language === 'fr'
+                    ? 'Disponible'
+                    : 'Available'}
+              </NoxText>
             </View>
           </View>
 
-          {/* Badges principaux (style + langues) */}
           <View style={styles.headerBadgesRow}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>🎧 {dj.genre || (language === 'fr' ? 'Style' : 'Style')}</Text>
-            </View>
+            {dj.genre ? (
+              <View style={styles.badge}>
+                <NoxText variant="secondary" style={styles.badgeText}>
+                  {dj.genre}
+                </NoxText>
+              </View>
+            ) : null}
             {dj.languages ? (
               <View style={styles.badgeSecondary}>
-                <Text style={styles.badgeSecondaryText}>🗣️ {dj.languages}</Text>
+                <NoxText variant="secondary" style={styles.badgeSecondaryText}>
+                  {dj.languages}
+                </NoxText>
               </View>
             ) : null}
           </View>
-          {/* Bouton Suivre (profil DJ) - visible si connecté, pas son propre profil, pas en mode sélection */}
-          {!selectionMode && user?.token && dj.userId !== user?.id && (
-            <TouchableOpacity
-              style={[styles.followButton, following && styles.followButtonActive]}
+
+          {!selectionMode && user?.token && dj.userId !== user?.id ? (
+            <NoxButton
+              label={
+                loadingFollow
+                  ? '…'
+                  : following
+                    ? language === 'fr'
+                      ? 'Abonné'
+                      : 'Following'
+                    : language === 'fr'
+                      ? 'Suivre'
+                      : 'Follow'
+              }
+              variant={following ? 'secondary' : 'primary'}
               onPress={handleFollowToggle}
               disabled={loadingFollow}
-            >
-              {loadingFollow ? (
-                <Text style={styles.followButtonText}>...</Text>
-              ) : (
-                <Text style={[styles.followButtonText, following && styles.followButtonTextActive]}>
-                  {following ? (language === 'fr' ? 'Abonné ✓' : 'Following ✓') : (language === 'fr' ? 'Suivre' : 'Follow')}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+              style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
+            />
+          ) : null}
+
           {selectionMode ? (
-            <TouchableOpacity 
-              style={[styles.bookButton, selectedDjIds.includes(dj.userId) && styles.bookButtonSelected]}
+            <NoxButton
+              label={
+                selectedDjIds.includes(dj.userId)
+                  ? language === 'fr'
+                    ? 'Désélectionner'
+                    : 'Deselect'
+                  : language === 'fr'
+                    ? 'Sélectionner'
+                    : 'Select'
+              }
+              variant={selectedDjIds.includes(dj.userId) ? 'secondary' : 'primary'}
+              style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
               onPress={() => {
-                // Retourner au dashboard avec la sélection
-                const slotIndexToPass = (slotIndex !== null && slotIndex !== undefined) ? slotIndex : undefined;
+                const slotIndexToPass =
+                  slotIndex !== null && slotIndex !== undefined ? slotIndex : undefined;
                 const pickToken = `${Date.now()}-${dj.userId}-${slotIndexToPass ?? 'x'}`;
                 navigate(returnTo || 'bookerDashboard', {
                   selectedDjId: dj.userId,
@@ -394,141 +425,112 @@ export default function DjProfilePage() {
                   ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
                 });
               }}
-            >
-            <Text style={styles.bookButtonText}>
-                {selectedDjIds.includes(dj.userId)
-                  ? (language === 'fr' ? '✓ DÉSÉLECTIONNER' : '✓ DESELECT')
-                  : (language === 'fr' ? 'SÉLECTIONNER' : 'SELECT')}
-            </Text>
-          </TouchableOpacity>
+            />
           ) : (
             user?.activeProfileType === 'BOOKER' && (
               <>
-                <TouchableOpacity
-                  style={[
-                    styles.bookButton,
-                    dj.availableStatus === false && styles.bookButtonDisabled,
-                  ]}
+                <NoxButton
+                  label={
+                    dj.availableStatus === false
+                      ? language === 'fr'
+                        ? 'Indisponible'
+                        : 'Unavailable'
+                      : language === 'fr'
+                        ? 'Booker ce DJ'
+                        : 'Book this DJ'
+                  }
                   disabled={dj.availableStatus === false}
+                  style={{ marginTop: Spacing.md, alignSelf: 'stretch' }}
                   onPress={() => {
                     if (dj.availableStatus === false) {
-                      showError(language === 'fr'
-                        ? 'Ce DJ n\'est pas disponible pour le moment.'
-                        : 'This DJ is not available at the moment.');
-                      return;
+                      showError(
+                        language === 'fr'
+                          ? "Ce DJ n'est pas disponible pour le moment."
+                          : 'This DJ is not available at the moment.',
+                      );
                     }
-                    // Ici on pourra brancher le flux de booking direct plus tard
                   }}
-                >
-                  <Text
-                    style={[
-                      styles.bookButtonText,
-                      dj.availableStatus === false && styles.bookButtonTextDisabled,
-                    ]}
-                  >
-                    {dj.availableStatus === false
-                      ? language === 'fr'
-                        ? 'INDISPONIBLE'
-                        : 'UNAVAILABLE'
-                      : language === 'fr'
-                        ? 'BOOKER CE DJ'
-                        : 'BOOK THIS DJ'}
-                  </Text>
-                </TouchableOpacity>
-                {dj.availableStatus === false && (
-                  <Text style={styles.unavailableHint}>
+                />
+                {dj.availableStatus === false ? (
+                  <NoxText variant="secondary" style={styles.unavailableHint}>
                     {language === 'fr'
-                      ? 'Ce DJ est marqué comme indisponible par le DJ.'
+                      ? 'Ce DJ est marqué comme indisponible.'
                       : 'This DJ has marked themselves as unavailable.'}
-                  </Text>
-                )}
+                  </NoxText>
+                ) : null}
               </>
             )
           )}
         </View>
-      </View>
 
-      {/* Bio (simplifiée) */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          {language === 'fr' ? 'BIO' : 'BIO'}
-        </Text>
-        <Text style={[styles.bioText, !dj.bio && styles.bioTextEmpty]}>
-          {dj.bio || (language === 'fr'
-            ? 'Ce DJ n’a pas encore ajouté de bio.'
-            : 'This DJ has not added a bio yet.')}
-        </Text>
-      </View>
+      {/* Bio */}
+      <NoxCard style={styles.card}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {language === 'fr' ? 'Bio' : 'Bio'}
+        </NoxText>
+        <NoxText variant="description" style={[styles.bioText, !dj.bio && styles.bioTextEmpty]}>
+          {dj.bio ||
+            (language === 'fr'
+              ? "Ce DJ n'a pas encore ajouté de bio."
+              : 'This DJ has not added a bio yet.')}
+        </NoxText>
+      </NoxCard>
 
-      {/* SoundCloud + Spotify : lecteur intégré (embed WebView) */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>
-          {language === 'fr' ? 'MUSIQUE' : 'MUSIC'}
-        </Text>
-        <Text style={styles.streamSectionIntro}>
+      {/* SoundCloud + Spotify */}
+      <NoxCard style={styles.card}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {language === 'fr' ? 'Musique' : 'Music'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.streamSectionIntro}>
           {language === 'fr'
-            ? 'Lecture dans l’app via le lecteur intégré (Spotify / SoundCloud) — le bouton vert lance l’embed ; « Ouvrir dans l’app » est optionnel.'
-            : 'In-app playback via the built-in player (Spotify / SoundCloud) — the main button opens the embed; opening the external app is optional.'}
-        </Text>
+            ? 'Lecture dans l’app via le lecteur intégré (Spotify / SoundCloud).'
+            : 'In-app playback via the built-in player (Spotify / SoundCloud).'}
+        </NoxText>
         {!dj.spotifyUrl && !dj.soundcloudUrl ? (
-          <Text style={styles.emptyHint}>
-            {language === 'fr' ? 'Aucun lien Spotify / SoundCloud renseigné.' : 'No Spotify / SoundCloud links yet.'}
-          </Text>
+          <NoxText variant="secondary" style={styles.emptyHint}>
+            {language === 'fr'
+              ? 'Aucun lien Spotify / SoundCloud renseigné.'
+              : 'No Spotify / SoundCloud links yet.'}
+          </NoxText>
         ) : (
           <View style={styles.streamBlock}>
             {dj.spotifyUrl ? (
               <View style={styles.streamProviderBlock}>
-                <Text style={styles.streamProviderLabel}>Spotify</Text>
-                <TouchableOpacity
-                  style={styles.streamPrimaryButton}
+                <NoxText variant="form" style={styles.streamProviderLabel}>
+                  Spotify
+                </NoxText>
+                <NoxButton
+                  label={language === 'fr' ? 'Écouter dans l’app' : 'Listen in app'}
                   onPress={() => openBuiltInStream(dj.spotifyUrl, 'spotify')}
-                  accessibilityRole="button"
-                  accessibilityLabel={language === 'fr' ? 'Écouter Spotify dans l’application' : 'Listen to Spotify in-app'}
-                >
-                  <Text style={styles.streamPrimaryButtonText}>
-                    ▶ {language === 'fr' ? 'Écouter dans l’app (lecteur intégré)' : 'Listen in app (embedded player)'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.streamSecondaryButton}
+                  style={{ marginBottom: Spacing.sm }}
+                />
+                <NoxButton
+                  label={language === 'fr' ? 'Ouvrir Spotify' : 'Open Spotify'}
+                  variant="ghost"
                   onPress={() => Linking.openURL(dj.spotifyUrl)}
-                  accessibilityRole="link"
-                >
-                  <Text style={styles.streamSecondaryButtonText}>
-                    {language === 'fr' ? 'Ouvrir dans l’app Spotify' : 'Open in Spotify app'}
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
             {dj.soundcloudUrl ? (
               <View style={[styles.streamProviderBlock, dj.spotifyUrl ? styles.streamProviderBlockSpaced : null]}>
-                <Text style={styles.streamProviderLabel}>SoundCloud</Text>
-                <TouchableOpacity
-                  style={styles.streamPrimaryButton}
+                <NoxText variant="form" style={styles.streamProviderLabel}>
+                  SoundCloud
+                </NoxText>
+                <NoxButton
+                  label={language === 'fr' ? 'Écouter dans l’app' : 'Listen in app'}
                   onPress={() => openBuiltInStream(dj.soundcloudUrl, 'soundcloud')}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    language === 'fr' ? 'Écouter SoundCloud dans l’application' : 'Listen to SoundCloud in-app'
-                  }
-                >
-                  <Text style={styles.streamPrimaryButtonText}>
-                    ▶ {language === 'fr' ? 'Écouter dans l’app (lecteur intégré)' : 'Listen in app (embedded player)'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.streamSecondaryButton}
+                  style={{ marginBottom: Spacing.sm }}
+                />
+                <NoxButton
+                  label={language === 'fr' ? 'Ouvrir SoundCloud' : 'Open SoundCloud'}
+                  variant="ghost"
                   onPress={() => Linking.openURL(dj.soundcloudUrl)}
-                  accessibilityRole="link"
-                >
-                  <Text style={styles.streamSecondaryButtonText}>
-                    {language === 'fr' ? 'Ouvrir dans SoundCloud' : 'Open in SoundCloud'}
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             ) : null}
           </View>
         )}
-      </View>
+      </NoxCard>
 
       {/* Médias: un seul bouton qui regroupe photos + vidéos */}
       <View style={styles.mediaSection}>
@@ -537,14 +539,14 @@ export default function DjProfilePage() {
           onPress={() => setActiveTab(activeTab === 'media' ? 'none' : 'media')}
           activeOpacity={0.85}
         >
-          <Text style={styles.mediaButtonText}>
-            📸 {language === 'fr' ? 'Médias (photos & vidéos)' : 'Media (photos & videos)'}
-          </Text>
-          <Text style={styles.mediaButtonSub}>
+          <NoxText variant="form" style={styles.mediaButtonText}>
+            {language === 'fr' ? 'Médias (photos & vidéos)' : 'Media (photos & videos)'}
+          </NoxText>
+          <NoxText variant="secondary" style={styles.mediaButtonSub}>
             {language === 'fr'
               ? `${media.photos.length} photo(s) • ${media.videos.length} vidéo(s)`
               : `${media.photos.length} photo(s) • ${media.videos.length} video(s)`}
-          </Text>
+          </NoxText>
         </TouchableOpacity>
 
         {activeTab === 'media' && (
@@ -552,7 +554,9 @@ export default function DjProfilePage() {
             {/* Vidéos */}
             {media.videos && media.videos.length > 0 ? (
               <>
-                <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'VIDÉOS' : 'VIDEOS'}</Text>
+                <NoxText variant="secondary" style={styles.mediaSubtitle}>
+                  {language === 'fr' ? 'Vidéos' : 'Videos'}
+                </NoxText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoRow}>
                   {media.videos
                     .filter(video => {
@@ -621,10 +625,10 @@ export default function DjProfilePage() {
                               />
                             ) : (
                               <View style={styles.videoPlaceholder}>
-                                <Text style={styles.videoPlaceholderIcon}>🎬</Text>
-                                <Text style={styles.videoPlaceholderText} numberOfLines={2}>
+                                <Ionicons name="videocam-outline" size={28} color={Colors.primary} />
+                                <NoxText variant="secondary" style={styles.videoPlaceholderText} numberOfLines={2}>
                                   {videoTitle}
-                                </Text>
+                                </NoxText>
                               </View>
                             )}
                             {!isUnavailable && (
@@ -633,9 +637,13 @@ export default function DjProfilePage() {
                               </View>
                             )}
                           </View>
-                          <Text style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]} numberOfLines={2}>
+                          <NoxText
+                            variant="secondary"
+                            style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]}
+                            numberOfLines={2}
+                          >
                             {videoTitle}
-                          </Text>
+                          </NoxText>
                         </TouchableOpacity>
                       );
                     })}
@@ -646,7 +654,9 @@ export default function DjProfilePage() {
             {/* Photos */}
             {media.photos && media.photos.length > 0 ? (
               <>
-                <Text style={styles.mediaSubtitle}>{language === 'fr' ? 'PHOTOS' : 'PHOTOS'}</Text>
+                <NoxText variant="secondary" style={styles.mediaSubtitle}>
+                  {language === 'fr' ? 'Photos' : 'Photos'}
+                </NoxText>
                 <View style={styles.photoGrid}>
                   {media.photos
                     .filter(photo => {
@@ -680,9 +690,9 @@ export default function DjProfilePage() {
             ) : null}
 
             {(!media.photos?.length && !media.videos?.length) ? (
-              <Text style={styles.noMedia}>
+              <NoxText variant="secondary" style={styles.noMedia}>
                 {language === 'fr' ? 'Aucun média disponible' : 'No media available'}
-              </Text>
+              </NoxText>
             ) : null}
           </View>
         )}
@@ -717,117 +727,111 @@ export default function DjProfilePage() {
       {/* Section Avis et Matériel */}
       <View style={styles.bottomSection}>
         <View style={styles.reviewsColumn}>
-          <Text style={styles.sectionTitle}>
-            {language === 'fr' ? 'Avis au DJ' : 'DJ Reviews'}
-          </Text>
+          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+            {language === 'fr' ? 'Avis' : 'Reviews'}
+          </NoxText>
           {ratings.allRatings && ratings.allRatings.length > 0 ? (
             ratings.allRatings.slice(0, 3).map((review) => (
               <View key={review.id} style={styles.reviewItem}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewIcon}>💬</Text>
-                  <Text style={styles.reviewerName}>
+                  <Ionicons name="chatbubble-outline" size={14} color={Colors.primary} />
+                  <NoxText variant="form" style={styles.reviewerName}>
                     {review.raterType === 'COMMUNITY'
                       ? language === 'fr' ? 'Communauté' : 'Community'
                       : review.raterType === 'BOOKER'
                       ? (language === 'fr' ? 'Organisateur' : 'Organizer')
                       : language === 'fr' ? 'Lieu' : 'Venue'}
-                  </Text>
+                  </NoxText>
                 </View>
                 <StarRating rating={review.rating} size={16} showStars={false} />
-                {review.comment && (
-                  <Text style={styles.reviewComment}>{review.comment}</Text>
-                )}
+                {review.comment ? (
+                  <NoxText variant="secondary" style={styles.reviewComment}>
+                    {review.comment}
+                  </NoxText>
+                ) : null}
               </View>
             ))
           ) : (
-            <Text style={styles.noReviews}>
+            <NoxText variant="secondary" style={styles.noReviews}>
               {language === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'}
-            </Text>
+            </NoxText>
           )}
         </View>
 
         <View style={styles.equipmentColumn}>
-          <Text style={styles.sectionTitle}>
+          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
             {language === 'fr' ? 'Matériel' : 'Equipment'}
-          </Text>
+          </NoxText>
           {dj.equipment ? (
-            <Text style={styles.equipmentText}>{dj.equipment}</Text>
+            <NoxText variant="description" style={styles.equipmentText}>
+              {dj.equipment}
+            </NoxText>
           ) : (
-          <View style={styles.equipmentList}>
-            <Text style={styles.equipmentItem}>• CDJ-3000</Text>
-            <Text style={styles.equipmentItem}>• DJM-900NX32</Text>
-            <Text style={styles.equipmentItem}>• Moniteurs Pioneer</Text>
-          </View>
+            <View style={styles.equipmentList}>
+              <NoxText variant="secondary" style={styles.equipmentItem}>• CDJ-3000</NoxText>
+              <NoxText variant="secondary" style={styles.equipmentItem}>• DJM-900NX32</NoxText>
+              <NoxText variant="secondary" style={styles.equipmentItem}>• Moniteurs Pioneer</NoxText>
+            </View>
           )}
         </View>
       </View>
 
       {/* Calendrier */}
-      <View style={styles.calendarSection}>
-        <View style={styles.calendarHeader}>
-          <TouchableOpacity>
-            <Text style={styles.calendarArrow}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.calendarTitle}>
-            {language === 'fr' ? 'Calendrier' : 'Calendar'}
-          </Text>
-          <TouchableOpacity>
-            <Text style={styles.calendarArrow}>→</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Événements à venir */}
+      <NoxCard style={[styles.card, { marginBottom: Spacing.xl }]}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {language === 'fr' ? 'Calendrier' : 'Calendar'}
+        </NoxText>
+
         {events.upcomingEvents && events.upcomingEvents.length > 0 ? (
           events.upcomingEvents.slice(0, 3).map((event) => {
             const eventDate = new Date(event.date);
-            const monthNames = language === 'fr' 
+            const monthNames = language === 'fr'
               ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
               : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
             const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
-            
+
             return (
               <View key={event.id} style={styles.eventBox}>
-                <Text style={styles.eventDate}>{formattedDate}</Text>
-                <Text style={styles.eventName}>{event.title}</Text>
-                {event.venue && (
-                  <Text style={styles.eventVenue}>{event.venue.name}</Text>
-                )}
+                <NoxText variant="form" style={styles.eventDate}>{formattedDate}</NoxText>
+                <NoxText variant="titleSecondary" style={styles.eventName}>{event.title}</NoxText>
+                {event.venue ? (
+                  <NoxText variant="secondary" style={styles.eventVenue}>{event.venue.name}</NoxText>
+                ) : null}
               </View>
             );
           })
         ) : (
-        <View style={styles.eventBox}>
-            <Text style={styles.eventDate}>
+          <View style={styles.eventBox}>
+            <NoxText variant="secondary" style={styles.eventDate}>
               {language === 'fr' ? 'Aucun événement à venir' : 'No upcoming events'}
-            </Text>
-        </View>
+            </NoxText>
+          </View>
         )}
-        
-        {/* Événements passés */}
-        {events.pastEvents && events.pastEvents.length > 0 && (
+
+        {events.pastEvents && events.pastEvents.length > 0 ? (
           <>
-        <Text style={styles.pastEventsTitle}>
-          {language === 'fr' ? 'ÉVÈNEMENTS PASSÉS' : 'PAST EVENTS'}
-        </Text>
+            <NoxText variant="secondary" style={styles.pastEventsTitle}>
+              {language === 'fr' ? 'Événements passés' : 'Past events'}
+            </NoxText>
             {events.pastEvents.slice(0, 5).map((event) => {
               const eventDate = new Date(event.date);
-              const monthNames = language === 'fr' 
+              const monthNames = language === 'fr'
                 ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
                 : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
               const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
-              
+
               return (
                 <View key={event.id} style={styles.pastEventBox}>
-                  <Text style={styles.pastEventDate}>{formattedDate}</Text>
-                  {event.title && (
-                    <Text style={styles.pastEventName}>{event.title}</Text>
-                  )}
-        </View>
+                  <NoxText variant="secondary" style={styles.pastEventDate}>{formattedDate}</NoxText>
+                  {event.title ? (
+                    <NoxText variant="form" style={styles.pastEventName}>{event.title}</NoxText>
+                  ) : null}
+                </View>
               );
             })}
           </>
-        )}
-      </View>
+        ) : null}
+      </NoxCard>
 
       {/* Lecteur vidéo modal */}
       {selectedVideo && (

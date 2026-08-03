@@ -480,7 +480,7 @@ const sendEmailVerification = async (req, res) => {
     }
 
     const crypto = require('crypto');
-    const { sendMail } = require('../utils/mailer');
+    const { sendMail } = require('../../utils/mailer');
     const salt = (process.env.AUTH_CODE_SALT || '').trim();
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
     const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');

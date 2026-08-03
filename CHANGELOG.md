@@ -4,6 +4,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 3 au 7 août 2026 (lun. - ven.)
+
+### Corrigé (serveur — vérification email en erreur 500) — 3 août
+- **`accountController`** : `require('../utils/mailer')` cassé depuis le déplacement du fichier dans `controllers/user/` (résolvait vers `controllers/utils/mailer`, inexistant) → `MODULE_NOT_FOUND` attrapé par le catch → « Erreur serveur » sur l'écran du code à 6 chiffres dès l'envoi du code. Chemin corrigé en `../../utils/mailer`.
+
+---
+
 ## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
 
 ### Modifié (mobile — wallet / compte / notifs / welcome pro) — 31 juil.

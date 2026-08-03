@@ -48,4 +48,10 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     alignItems: 'center',
   },
+  skipHint: {
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+    fontSize: 12,
+    lineHeight: 17,
+  },
 });

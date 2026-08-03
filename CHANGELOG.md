@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 3 au 7 août 2026 (lun. - ven.)
 
+### Ajouté (mobile — écran vérification email non bloquant) — 3 août
+- **`authVerifyEmail`** : bouton « Continuer sans valider » (le compte reste non vérifié, skip valable pour la session, OTP reproposé à la prochaine connexion et accessible depuis le profil) + bouton « Mauvais email ? Se déconnecter » pour ne plus être coincé si on s'est trompé d'adresse à l'inscription.
+- **`AuthContext.logout`** : reset du skip de vérification pour ne pas le propager à un autre compte.
+
 ### Corrigé (serveur — vérification email en erreur 500) — 3 août
 - **`accountController`** : `require('../utils/mailer')` cassé depuis le déplacement du fichier dans `controllers/user/` (résolvait vers `controllers/utils/mailer`, inexistant) → `MODULE_NOT_FOUND` attrapé par le catch → « Erreur serveur » sur l'écran du code à 6 chiffres dès l'envoi du code. Chemin corrigé en `../../utils/mailer`.
 

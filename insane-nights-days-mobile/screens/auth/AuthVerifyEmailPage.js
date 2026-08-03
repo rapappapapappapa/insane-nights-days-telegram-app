@@ -18,13 +18,13 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
 import { Spacing } from '../../constants/theme';
-import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { getPostAuthScreen, skipEmailVerificationForSession } from '../../utils/noxRoleNavigation';
 import { styles } from './AuthVerifyEmailPage.styles';
 
 export default function AuthVerifyEmailPage() {
   const { language } = useLanguage();
   const { navigate, routeParams } = useNavigation();
-  const { user, refreshCurrentUser } = useAuth();
+  const { user, refreshCurrentUser, logout } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
   const fr = language === 'fr';
 
@@ -38,6 +38,16 @@ export default function AuthVerifyEmailPage() {
 
   const finish = () => {
     navigate(getPostAuthScreen(user?.activeProfileType, nextScreen));
+  };
+
+  const skipForNow = () => {
+    skipEmailVerificationForSession();
+    finish();
+  };
+
+  const logoutWrongEmail = async () => {
+    await logout();
+    navigate('login');
   };
 
   useEffect(() => {
@@ -152,6 +162,25 @@ export default function AuthVerifyEmailPage() {
             onPress={sendCode}
             loading={sending}
             style={{ marginTop: Spacing.md }}
+          />
+
+          <NoxButton
+            label={fr ? 'Continuer sans valider' : 'Continue without verifying'}
+            variant="secondary"
+            onPress={skipForNow}
+            style={{ marginTop: Spacing.md }}
+          />
+          <NoxText variant="secondary" style={styles.skipHint}>
+            {fr
+              ? 'Ton compte restera « non vérifié » — tu pourras valider plus tard depuis ton profil.'
+              : 'Your account will stay unverified — you can verify later from your profile.'}
+          </NoxText>
+
+          <NoxButton
+            label={fr ? 'Mauvais email ? Se déconnecter' : 'Wrong email? Log out'}
+            variant="ghost"
+            onPress={logoutWrongEmail}
+            style={{ marginTop: Spacing.lg }}
           />
 
           {user?.emailVerified ? (

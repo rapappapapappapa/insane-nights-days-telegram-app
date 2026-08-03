@@ -140,7 +140,23 @@ export function getPostAuthScreen(activeProfileType, nextScreen) {
   return getHomeScreenForProfile(activeProfileType);
 }
 
+/**
+ * Skip volontaire de la vérification email (session en cours uniquement).
+ * Le compte reste « non vérifié » ; l'OTP sera reproposé à la prochaine session
+ * et reste accessible depuis le profil.
+ */
+let emailVerificationSkipped = false;
+
+export function skipEmailVerificationForSession() {
+  emailVerificationSkipped = true;
+}
+
+export function resetEmailVerificationSkip() {
+  emailVerificationSkipped = false;
+}
+
 export function needsEmailVerification(user) {
+  if (emailVerificationSkipped) return false;
   return !!user?.isAuthenticated && user?.emailVerified === false;
 }
 

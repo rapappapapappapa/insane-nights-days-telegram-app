@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Modifié (repo — rebrand NOX, retrait Insane Nights & Days)
+- **Dossier app** : `insane-nights-days-mobile/` → **`nox-mobile/`** (`git mv`).
+- **Packages npm** : `nox-platform` (racine), `nox-mobile`, `nox-server`, `nox-client`.
+- **Expo** : slug `nox-mobile`, bundle **`com.nox.mobile`** (iOS/Android), scheme + merchant Stripe alignés.
+- **API par défaut** : `https://api.nox.world` (configurer DNS ou `EXPO_PUBLIC_API_BASE` / Railway en env).
+- **Docs, scripts, client web** : suppression des références Insane / insane-nights-days / telegram-app dans le dépôt.
+- **Guide** : [RENOMMAGE_REPO_NOX.md](./docs/RENOMMAGE_REPO_NOX.md) — renommer le repo GitHub + projet Railway côté ops.
+
 ### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro) — 4 août
 - **`proHome`** : remplace `welcome` comme home DJ / Booker / Prestataire — fil events + raccourcis dashboard NOX (`NoxCard`).
 - **Redirections legacy** : `venueDashboard` → `lieuxDashboard`, `home` / `feed` / `welcome` résolus dans `NavigationContext` via `legacyScreenRedirects.js` + `LegacyScreenRedirect`.
@@ -509,10 +517,10 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
   - Dans **`server/routes/registerBookerOrganizerRoutes.js`** : **`GET /api/booker/rental-equipment-presets`** (query **`lang`** `fr` | `en`) ; **`PUT /api/booker/profile/rental-inventory`** (corps **`{ items }`**) ; **`POST /api/booker/events`** : accepte **`equipmentRental`**, normalise et persiste si non vide ; **`PUT /api/booker/events/:eventId`** : si la clé **`equipmentRental`** est présente dans le body, mise à jour ou **`null`** pour effacer ; **`GET /api/booker/events`** : chaque événement enrichi inclut **`equipmentRental`**.
   - **`GET /api/user/profiles`** ( **`server/controllers/userController.js`** ) : le profil booker expose **`rentalEquipmentInventory`** pour préremplir l’app.
 - **Mobile booker** :
-  - **`insane-nights-days-mobile/api/endpointsConfig.js`** : constantes **`BOOKER_RENTAL_PRESETS`**, **`BOOKER_RENTAL_INVENTORY`**.
-  - **`insane-nights-days-mobile/api/methods/bookerEvents.js`** : **`getRentalEquipmentPresets`**, **`saveBookerRentalInventory`**.
-  - **`insane-nights-days-mobile/contexts/EventFormContext.js`** : champs **`equipmentRentalEnabled`**, **`equipmentRentalPresetIds`**, **`equipmentRentalOrganizerLines`**, **`equipmentRentalNotes`** (+ reset avec le formulaire).
-  - **`insane-nights-days-mobile/screens/dashboard/BookerEventDashboardPage.js`** : chargement presets + inventaire après levée du brouillon (**`draftGate`**) ; **étape détails** — toggle activation, puces presets NOX, édition du catalogue perso + bouton enregistrer le profil, chips pour inclure le matériel sur l’événement, lignes ponctuelles « cet événement seulement », notes ; **`handleCreateEvent`** envoie **`equipmentRental`** lorsque activé ; **étape récap** : section « Location de matériel » texte via **`summarizeEquipmentRentalBlurb`** + rappel non contractuel ; styles dédiés (toggle, puces, catalogue).
+  - **`nox-mobile/api/endpointsConfig.js`** : constantes **`BOOKER_RENTAL_PRESETS`**, **`BOOKER_RENTAL_INVENTORY`**.
+  - **`nox-mobile/api/methods/bookerEvents.js`** : **`getRentalEquipmentPresets`**, **`saveBookerRentalInventory`**.
+  - **`nox-mobile/contexts/EventFormContext.js`** : champs **`equipmentRentalEnabled`**, **`equipmentRentalPresetIds`**, **`equipmentRentalOrganizerLines`**, **`equipmentRentalNotes`** (+ reset avec le formulaire).
+  - **`nox-mobile/screens/dashboard/BookerEventDashboardPage.js`** : chargement presets + inventaire après levée du brouillon (**`draftGate`**) ; **étape détails** — toggle activation, puces presets NOX, édition du catalogue perso + bouton enregistrer le profil, chips pour inclure le matériel sur l’événement, lignes ponctuelles « cet événement seulement », notes ; **`handleCreateEvent`** envoie **`equipmentRental`** lorsque activé ; **étape récap** : section « Location de matériel » texte via **`summarizeEquipmentRentalBlurb`** + rappel non contractuel ; styles dédiés (toggle, puces, catalogue).
 
 ### Ajouté (serveur + mobile — événement : prestataire optionnel, chat, contrat)
 - **Prisma** : lien **`EventPrestataire`** (comme lieu / DJ) ; messages et contrats dédiés ; migration **`20260519140000_event_prestataire_chat_contract`** (à appliquer avec **`prisma migrate deploy`** / politique du projet).
@@ -550,7 +558,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ### Ajouté (auth — connexion Apple)
 - **Prisma / User** : **`appleId`** optionnel unique + migration **`20260513140000_user_apple_oauth`** (à déployer : `prisma migrate deploy`).
-- **Serveur** : **`POST /api/auth/apple`** (corps **`identityToken`**) ; vérification JWKS **`appleid.apple.com`** ; **`jwks-rsa`** ; audience **`APPLE_IOS_BUNDLE_ID`** (sinon défaut **`com.insanenightsdays.mobile`**).
+- **Serveur** : **`POST /api/auth/apple`** (corps **`identityToken`**) ; vérification JWKS **`appleid.apple.com`** ; **`jwks-rsa`** ; audience **`APPLE_IOS_BUNDLE_ID`** (sinon défaut **`com.nox.mobile`**).
 - **Mobile (iOS)** : **`expo-apple-authentication`** ; **`AppleSignInSection`** sur l’écran connexion/inscription ; **`ios.usesAppleSignIn`**, **`buildNumber` 6** ; pas de bouton Apple sur Android (comportement natif Expo).
 
 ### Modifié (auth)
@@ -558,7 +566,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ### Ajouté (auth — connexion Google)
 - **Serveur** : **`POST /api/auth/google`** (corps **`idToken`**) ; vérification du jeton avec **`google-auth-library`** ; champs **`User.googleId`**, **`User.password`** optionnel (migration **`20260507140000_user_google_oauth`**) ; compte email existant : **liaison** `googleId` si absent ; inscription Google : même règles **âge / CGU** que **`/register`** ; connexion mot de passe refusée si **`password`** absent (pointer vers Google).
-- **Mobile** : **`expo-auth-session`** / **`GoogleSignInSection`** ; boutons **Continuer avec Google** / **S'inscrire avec Google** si les **`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`** sont définis ; schéma d’URL **`com.insanenightsdays.mobile`** dans **`app.json`**.
+- **Mobile** : **`expo-auth-session`** / **`GoogleSignInSection`** ; boutons **Continuer avec Google** / **S'inscrire avec Google** si les **`EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`** sont définis ; schéma d’URL **`com.nox.mobile`** dans **`app.json`**.
 
 ### Modifié (outillage dépôt)
 - **`.gitignore`** : **`scripts/local-time.js`** — script perso **`node scripts/local-time.js`** pour afficher l’heure système ; modèle versionné **`scripts/local-time.example.js`** (`cp scripts/local-time.example.js scripts/local-time.js`).
@@ -584,7 +592,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ### Modifié (outillage EAS)
 - **`eas.json`** : contrainte **`cli.version`** portée à **`>=18.11.0`** (alignement avec la CLI recommandée par Expo).
-- **`package.json`** : **`eas-cli`** en **`^18.11.0`** (devDependency) — **`npx eas-cli build`** utilise la même génération que le message « upgrade available » ; le bandeau « Proceeding with outdated version » disparaît après `npm install` dans **`insane-nights-days-mobile`**.
+- **`package.json`** : **`eas-cli`** en **`^18.11.0`** (devDependency) — **`npx eas-cli build`** utilise la même génération que le message « upgrade available » ; le bandeau « Proceeding with outdated version » disparaît après `npm install` dans **`nox-mobile`**.
 
 ### Ajouté (client + serveur — notifications push chat, MVP)
 - **Serveur** : modèle Prisma **`PushDevice`** (token Expo par utilisateur) ; migration **`20260506120000_add_push_device`** ; utilitaires **`server/utils/expoPush.js`** / **`server/utils/chatPush.js`** ; routes **`POST /api/push/register`**, **`POST /api/push/unregister`** ; envoi push après **`POST`** message **DJ/booker**, **lieu**, **groupe** (`registerChatRoutes`).
@@ -627,7 +635,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 - **`server/routes/registerBookerOrganizerRoutes.js`** : **`require('../utils/contractPreview')`** et **`require('../utils/contractEmail')`** (chemins corrects depuis **`routes/`** ; **`./utils/...`** provoquait **`MODULE_NOT_FOUND`**, **500** sur **`POST …/preview-pdf`** et e-mails contrat signé). Logs **`preview-pdf`** (DJ & lieu) avec **`message`** et **stack** pour diagnostic Railway.
 
 ### Modifié (config build)
-- **`insane-nights-days-mobile/app.json`** : **`ios.buildNumber`** porté à **4**.
+- **`nox-mobile/app.json`** : **`ios.buildNumber`** porté à **4**.
 
 ---
 
@@ -792,7 +800,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
   - Quantité tickets : validation entière + plafond 50 par achat — `parseTicketQuantity`
   - Rate limit admin bootstrap/seed : 5 req/heure par IP
   - Messages chat : limite 5000 caractères (anti-abus)
-- **Rebrand Insane → Nox dans les emails** : Sujets des emails (contrats, vérification, mot de passe oublié) et `RESEND_FROM` utilisent désormais « Nox »
+- **Emails transactionnels rebrandés Nox** : Sujets (contrats, vérification, mot de passe oublié) et `RESEND_FROM` utilisent « Nox »
 - **Affichage DJ** : Correction du bug « [object Object] » sur la ligne DJ (EventCard, EventDetailPage, EventsPage client) — support du format `djs` en objets `{ artistName }`
 
 ### Corrigé

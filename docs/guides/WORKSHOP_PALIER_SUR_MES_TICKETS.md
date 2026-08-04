@@ -95,7 +95,7 @@ git checkout -b atelier/tier-label-mes-tickets
 
 ### Étape 4 — Mobile : afficher le palier sur la carte ticket
 
-**Fichier** : `insane-nights-days-mobile/screens/events/TicketsPage.js`
+**Fichier** : `nox-mobile/screens/events/TicketsPage.js`
 
 **À toi**
 

@@ -1,4 +1,4 @@
-# Contexte projet — Insane Nights & Days / NOX
+# Contexte projet — NOX / NOX
 
 Document de référence **pour humains et assistants IA** si l’historique de discussion est perdu. À mettre à jour quand l’architecture ou les règles métier changent notablement.
 
@@ -12,13 +12,13 @@ Objectifs typiques : création d’événements, invitations DJ/lieu, **chat pri
 
 ---
 
-## 2. Structure du dépôt (`/home/ridah/app telegram`)
+## 2. Structure du dépôt (`/home/ridah/nox-mobile`)
 
 | Dossier | Rôle |
 |---------|------|
 | **`server/`** | API principale **Node.js + Express**, **Prisma** (PostgreSQL), JWT, uploads (local ou R2), **PDF** (`pdfkit`), emails (**nodemailer** / **Resend**), **Stripe**. Point d’entrée : `server/index.js` (fichier très volumineux, ~9k+ lignes — beaucoup de routes inline). |
 | **`server/prisma/`** | Schéma `schema.prisma`, migrations SQL. |
-| **`insane-nights-days-mobile/`** | App **Expo / React Native** (~SDK 54), navigation custom via `NavigationContext`, appels API dans `api/config.js`. **EAS** : `eas.json` (profiles `development`, `preview` APK, `production` AAB). |
+| **`nox-mobile/`** | App **Expo / React Native** (~SDK 54), navigation custom via `NavigationContext`, appels API dans `api/config.js`. **EAS** : `eas.json` (profiles `development`, `preview` APK, `production` AAB). |
 | **`client/`** | Ancienne ou complémentaire **SPA React** (voir `package.json` racine : scripts `client:dev` / `build`). |
 | **`package.json` (racine)** | Scripts de convenance (`dev` concurrent server+client, `start` → `node server/index.js`). Dépendances racine peuvent inclure **Telegraf** (héritage « Telegram » — à vérifier si encore utilisé). |
 | **`docs/`** | Documentation / modèles éventuels (ex. maquettes PDF contrats). |
@@ -98,7 +98,7 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
   - **`BookerEventDashboardPage`** : flux création événement (date, **heure début**, **durée heures**, lieu, sélection DJs…).  
   - **`DjDashboardPage`**, **`VenueDashboardPage`** : profil, médias, bookings, chat + contrat + case à cocher **acceptation de bonne foi** avant « Accepter ».
 - **Contrats** : composants `ContractDraftEditorFields`, `DealTypePickerModal`, `CancellationPolicyPickerModal`, `EventEndTimePickerModal`; constantes partagées **`constants/contractPayload.js`** (types d’accord lieu, **grille d’annulation** prédéfinie, helpers fin de prestation basés sur **`eventTime` + `durationHours`**).
-- **API client** : `insane-nights-days-mobile/api/config.js` — base URL via env Expo, méthodes `getBookingContract`, `getVenueContract`, etc.
+- **API client** : `nox-mobile/api/config.js` — base URL via env Expo, méthodes `getBookingContract`, `getVenueContract`, etc.
 
 ---
 
@@ -116,7 +116,7 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
 - **Serveur** : Node, variables d’environnement (`DATABASE_URL`, JWT secret, Stripe, SMTP ou Resend, `PUBLIC_URL`, stockage `MEDIA_STORAGE` local vs R2, etc.).  
 - **Prisma** : `npx prisma migrate deploy` en prod après nouvelles migrations ; `prisma generate` après changement de schéma.  
 - **Mobile** : `eas build` (profils dans `eas.json`), canal **expo-updates** possible pour les OTA.  
-- Branche de travail récente citée dans les conversations : **`railway-phase1`** (GitHub : dépôt type `insane-nights-days-telegram-app`).
+- Branche de travail récente citée dans les conversations : **`railway-phase1`** (GitHub : dépôt type `nox-mobile`).
 
 ---
 
@@ -128,9 +128,9 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
 | Routes & logique métier | `server/index.js` |
 | PDF contrats | `server/utils/contractPdf.js` |
 | Emails contrats | `server/utils/contractEmail.js` |
-| Payload contrat mobile | `insane-nights-days-mobile/constants/contractPayload.js` |
-| Liste écrans mobile | `insane-nights-days-mobile/App.js` |
-| Appels HTTP mobile | `insane-nights-days-mobile/api/config.js` |
+| Payload contrat mobile | `nox-mobile/constants/contractPayload.js` |
+| Liste écrans mobile | `nox-mobile/App.js` |
+| Appels HTTP mobile | `nox-mobile/api/config.js` |
 
 ---
 

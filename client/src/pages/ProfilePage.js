@@ -45,10 +45,10 @@ const ProfilePage = () => {
 
   if (!user?.isAuthenticated) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center px-4">
+      <div className="min-h-screen bg-nox-black flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-insane-white/70 mb-4">Connecte-toi pour accéder à ton profil.</p>
-          <Link to="/login" className="text-insane-orange hover:underline">
+          <p className="text-nox-white/70 mb-4">Connecte-toi pour accéder à ton profil.</p>
+          <Link to="/login" className="text-nox-primary hover:underline">
             Se connecter
           </Link>
         </div>
@@ -57,33 +57,33 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-insane-black py-6 px-4">
+    <div className="min-h-screen bg-nox-black py-6 px-4">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-insane-white mb-6">Mon profil</h1>
+        <h1 className="text-2xl font-bold text-nox-white mb-6">Mon profil</h1>
 
-        <div className="bg-insane-gray border border-insane-orange/30 rounded-xl p-6 mb-6">
-          <div className="w-16 h-16 bg-insane-orange rounded-full flex items-center justify-center mb-4">
-            <span className="text-2xl font-bold text-insane-black">
+        <div className="bg-nox-gray border border-nox-primary/30 rounded-xl p-6 mb-6">
+          <div className="w-16 h-16 bg-nox-primary rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-nox-black">
               {(user.username || user.email || '?').charAt(0).toUpperCase()}
             </span>
           </div>
-          <p className="font-medium text-insane-white">{user.username || 'Utilisateur'}</p>
-          <p className="text-sm text-insane-white/70">{user.email}</p>
+          <p className="font-medium text-nox-white">{user.username || 'Utilisateur'}</p>
+          <p className="text-sm text-nox-white/70">{user.email}</p>
           {user.activeProfileType && (
-            <p className="text-xs text-insane-orange mt-1">Profil actif : {user.activeProfileType}</p>
+            <p className="text-xs text-nox-primary mt-1">Profil actif : {user.activeProfileType}</p>
           )}
         </div>
 
         <div className="space-y-3">
           <Link
             to="/events"
-            className="block w-full bg-insane-gray border border-insane-orange/30 rounded-lg py-3 px-4 text-insane-white hover:border-insane-orange/60 transition text-center"
+            className="block w-full bg-nox-gray border border-nox-primary/30 rounded-lg py-3 px-4 text-nox-white hover:border-nox-primary/60 transition text-center"
           >
             Voir les événements
           </Link>
           <Link
             to="/tickets"
-            className="block w-full bg-insane-gray border border-insane-orange/30 rounded-lg py-3 px-4 text-insane-white hover:border-insane-orange/60 transition text-center"
+            className="block w-full bg-nox-gray border border-nox-primary/30 rounded-lg py-3 px-4 text-nox-white hover:border-nox-primary/60 transition text-center"
           >
             Mes tickets
           </Link>

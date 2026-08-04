@@ -1,5 +1,5 @@
 /**
- * Application web Insane Nights & Days
+ * Application web NOX
  *
  * STRUCTURE DES ROUTES:
  * - /           : Landing (non connecté) ou redirection vers /feed (connecté)
@@ -53,8 +53,8 @@ function ProtectedRoute({ children }) {
   const { user, isInitializing } = useAuth();
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center">
-        <div className="text-insane-white">Chargement...</div>
+      <div className="min-h-screen bg-nox-black flex items-center justify-center">
+        <div className="text-nox-white">Chargement...</div>
       </div>
     );
   }
@@ -99,7 +99,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="App min-h-screen bg-insane-black text-insane-white">
+        <div className="App min-h-screen bg-nox-black text-nox-white">
           <Navigation />
           <main className="flex-1">
             <AppRoutes />

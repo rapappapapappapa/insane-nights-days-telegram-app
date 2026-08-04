@@ -72,9 +72,9 @@ app.post('/api/admin/seed-demo', async (req, res) => {
     const reset = String(req.query?.reset || '').toLowerCase() === 'true';
 
     const demo = {
-      dj: { email: 'demo.dj@insane.test', username: 'demo_dj' },
-      booker: { email: 'demo.booker@insane.test', username: 'demo_booker' },
-      venue: { email: 'demo.venue@insane.test', username: 'demo_venue' },
+      dj: { email: 'demo.dj@nox.test', username: 'demo_dj' },
+      booker: { email: 'demo.booker@nox.test', username: 'demo_booker' },
+      venue: { email: 'demo.venue@nox.test', username: 'demo_venue' },
     };
 
     if (reset) {
@@ -175,7 +175,7 @@ app.post('/api/admin/seed-demo', async (req, res) => {
     const venueProfile = await prisma.userVenue.create({
       data: {
         userId: venueUser.id,
-        venueName: 'Demo Club Insane',
+        venueName: 'Demo Club Nox',
         address: '123 Rue de la Nuit, Paris',
       },
     });
@@ -185,10 +185,10 @@ app.post('/api/admin/seed-demo', async (req, res) => {
     // Create 2 upcoming events so the feed isn't empty
     const e1 = await prisma.event.create({
       data: {
-        title: 'Demo - Insane Night (Techno)',
+        title: 'Demo - Nox Night (Techno)',
         date: daysFromNow(7),
         time: '22:00',
-        location: 'Demo Club Insane, Paris',
+        location: 'Demo Club Nox, Paris',
         price: 25,
         capacity: 200,
         sold: 0,
@@ -206,7 +206,7 @@ app.post('/api/admin/seed-demo', async (req, res) => {
         title: 'Demo - Bass Revolution (D&B)',
         date: daysFromNow(14),
         time: '21:00',
-        location: 'Demo Club Insane, Paris',
+        location: 'Demo Club Nox, Paris',
         price: 30,
         capacity: 150,
         sold: 0,
@@ -234,7 +234,7 @@ app.post('/api/admin/seed-demo', async (req, res) => {
         {
           authorId: djUser.id,
           djId: djProfile.id,
-          content: 'Demo: prêt pour une Insane Night sur Railway. 🔥',
+          content: 'Demo: prêt pour une Nox Night sur Railway. 🔥',
           imageUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&h=800&fit=crop',
         },
         {

@@ -128,4 +128,4 @@ Ces valeurs sont **injectées au moment du build EAS**, pas dans le code source 
 
 ---
 
-*Document généré à partir de la stack du dépôt (backend `server/`, mobile `insane-nights-days-mobile/`). À mettre à jour lors d’un changement de fournisseur ou de tarifs.*
+*Document généré à partir de la stack du dépôt (backend `server/`, mobile `nox-mobile/`). À mettre à jour lors d’un changement de fournisseur ou de tarifs.*

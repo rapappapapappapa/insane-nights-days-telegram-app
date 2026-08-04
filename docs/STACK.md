@@ -9,7 +9,7 @@ Document généré à partir du dépôt (fins 2026) : versions indiquées tell
 | Dossier | Rôle |
 |--------|------|
 | **`server/`** | API HTTP principale (Express), Prisma, logique métier (événements, billetterie, contrats, feed, médias…). |
-| **`insane-nights-days-mobile/`** | Application **mobile Nox** (Expo / React Native) — canal produit principal documenté dans le changelog récent. |
+| **`nox-mobile/`** | Application **mobile Nox** (Expo / React Native) — canal produit principal documenté dans le changelog récent. |
 | **`client/`** | Frontend **web** historical (Create React App, React 18), intégration **Telegram Web App** (`@twa-dev/sdk`), Tailwind ; consomme la même API Railway. |
 | **Racine** | Scripts de convenance (`npm run dev` = client web + nodemon serveur depuis la racine), dépendances héritées dont **Telegraf** (bot Telegram) — usage effectif à vérifier côté déploiement ; le **`server/`** est autonome avec son propre `package.json`. |
 
@@ -23,7 +23,7 @@ Document généré à partir du dépôt (fins 2026) : versions indiquées tell
 
 ---
 
-## 3. Application mobile · **Nox** (`insane-nights-days-mobile/`)
+## 3. Application mobile · **Nox** (`nox-mobile/`)
 
 ### Framework & UI
 
@@ -51,13 +51,13 @@ Document généré à partir du dépôt (fins 2026) : versions indiquées tell
 ### Build & distribution
 
 - **EAS** : `eas.json` (profiles `development` avec dev client, `preview`, `production` avec canaux **`preview`** / **`production`**).
-- **Expo projet** : `app.json` → `extra.eas.projectId`, nom affiché **« Nox »**, scheme `com.insanenightsdays.mobile`, **New Architecture** activée (`newArchEnabled: true`).
+- **Expo projet** : `app.json` → `extra.eas.projectId`, nom affiché **« Nox »**, scheme `com.nox.mobile`, **New Architecture** activée (`newArchEnabled: true`).
 
 ### Client HTTP
 
 - **Axios** `^1.13.2` via couche **`api/`** (`endpointsConfig`, `http`, `apiMethods`).
 - **Base API** : variable d’environnement **`EXPO_PUBLIC_API_BASE`**, défaut codé vers l’instance Railway :  
-  `https://insane-nights-days-telegram-app-production.up.railway.app`  
+  `https://api.nox.world`  
   (voir `api/endpointsConfig.js`).
 
 ---

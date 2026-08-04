@@ -7,7 +7,7 @@
 
 ### Utilisation
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 bash scripts/generate-icons.sh
 ```
 
@@ -38,7 +38,7 @@ Si ImageMagick n'est pas installé, utilisez un outil en ligne :
 ## 📋 Méthode 3 : rn-app-icons (CLI)
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npx rn-app-icons --input assets/vrailogo.png
 ```
 

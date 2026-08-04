@@ -11,7 +11,7 @@ Ce guide vous explique comment configurer Cloudflare R2 pour le stockage permane
 ## 📦 Étape 2 : Créer un bucket R2
 
 1. Cliquez sur **"Create bucket"**
-2. Donnez un nom à votre bucket (ex: `insane-nights-media`)
+2. Donnez un nom à votre bucket (ex: `nox-media`)
 3. Choisissez une localisation (ex: `Europe (Warsaw)` ou `United States of America (Washington, D.C.)`)
 4. Cliquez sur **"Create bucket"**
 
@@ -20,7 +20,7 @@ Ce guide vous explique comment configurer Cloudflare R2 pour le stockage permane
 1. Dans le menu R2, cliquez sur **"Manage R2 API Tokens"** (ou allez dans **"Account Home"** > **"R2 API Tokens"**)
 2. Cliquez sur **"Create API token"**
 3. Configurez le token :
-   - **Token name** : `insane-nights-r2-token` (ou un nom de votre choix)
+   - **Token name** : `nox-r2-token` (ou un nom de votre choix)
    - **Permissions** : Sélectionnez **"Object Read & Write"**
    - **TTL** : Laissez vide (pas d'expiration) ou définissez une date lointaine
    - **Buckets** : Sélectionnez votre bucket spécifique (recommandé) ou "All buckets"
@@ -40,7 +40,7 @@ Vous avez deux options :
 2. Trouvez la section **"Public access"** ou **"Custom Domain"**
 3. Activez **"Public access"** si disponible
 4. Notez l'URL publique de votre bucket (format: `https://<bucket-name>.<account-id>.r2.dev`)
-   - Exemple : `https://insane-nights-media.abc123def456.r2.dev`
+   - Exemple : `https://nox-media.abc123def456.r2.dev`
 
 ### Option B : Utiliser un domaine custom (recommandé pour production)
 
@@ -85,12 +85,12 @@ R2_SECRET_ACCESS_KEY=<VOTRE-SECRET-ACCESS-KEY>
 ```
 R2_BUCKET=<NOM-DE-VOTRE-BUCKET>
 ```
-**Exemple** : `insane-nights-media`
+**Exemple** : `nox-media`
 
 ```
 R2_PUBLIC_BASE_URL=https://<bucket-name>.<account-id>.r2.dev
 ```
-**Exemple** : `https://insane-nights-media.abc123def456.r2.dev`
+**Exemple** : `https://nox-media.abc123def456.r2.dev`
 
 **OU** si vous utilisez un domaine custom :
 ```
@@ -113,8 +113,8 @@ MEDIA_STORAGE=r2
 R2_ENDPOINT=https://abc123def456.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=abc123def456789012345678901234567890
 R2_SECRET_ACCESS_KEY=xyz789abcdef012345678901234567890123456789012345678901234567890
-R2_BUCKET=insane-nights-media
-R2_PUBLIC_BASE_URL=https://insane-nights-media.abc123def456.r2.dev
+R2_BUCKET=nox-media
+R2_PUBLIC_BASE_URL=https://nox-media.abc123def456.r2.dev
 ```
 
 ## ⚠️ Notes importantes

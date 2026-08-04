@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 // ============================================================================
 // Configuration : Resend (prioritaire) ou SMTP
 // ============================================================================
-// Resend : RESEND_API_KEY + RESEND_FROM (ex: "Insane <onboarding@resend.dev>")
+// Resend : RESEND_API_KEY + RESEND_FROM (ex: "Nox <onboarding@resend.dev>")
 // SMTP   : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
 // ============================================================================
 

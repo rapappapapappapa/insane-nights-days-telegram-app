@@ -5,7 +5,7 @@
 // Example:
 //   REACT_APP_API_BASE=http://localhost:5000 npm start
 
-const DEFAULT_API_BASE = 'https://insane-nights-days-telegram-app-production.up.railway.app';
+const DEFAULT_API_BASE = 'https://api.nox.world';
 
 export function getApiBase() {
   const raw = (process.env.REACT_APP_API_BASE || DEFAULT_API_BASE || '').trim();

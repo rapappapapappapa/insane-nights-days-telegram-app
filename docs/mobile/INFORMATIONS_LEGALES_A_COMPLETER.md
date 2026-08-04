@@ -34,14 +34,14 @@ Hébergeur emails        :  Resend
 
 === APPLICATION ===
 Nom affiché store       :  Nox
-Nom long / marque       :  Insane Nights & Days
-Bundle ID iOS           :  com.insanenightsdays.mobile   ← déjà fixé
-Package Android         :  com.insanenightsdays.mobile   ← déjà fixé
+Nom long / marque       :  NOX
+Bundle ID iOS           :  com.nox.mobile   ← déjà fixé
+Package Android         :  com.nox.mobile   ← déjà fixé
 Site web / URL support  :  https://nox.world             (ou URL Railway si pas de site)
 Date mise à jour docs   :  17 juin 2026
 
 === URLS LÉGALES PUBLIQUES (après déploiement serveur) ===
-Base API prod           :  https://insane-nights-days-telegram-app-production.up.railway.app
+Base API prod           :  https://api.nox.world
 Politique confidentialité: {BASE}/legal/privacy.html
 CGU                     :  {BASE}/legal/cgu.html
 CGV                     :  {BASE}/legal/cgv.html
@@ -64,7 +64,7 @@ Index légal             :  {BASE}/legal/
 | **Responsable traitement (RGPD)** | ⚠️ Dérivé de raison sociale + adresse | ① `legalConfig.js` (via placeholders privacy) · ② `privacy.html` (paragraphe §1) |
 | **Hébergeur backend** | ✅ Railway | ① `LEGAL_HOST_NAME` / `LEGAL_HOST_ADDRESS` · ② `mentions.html` |
 | **Nom app** | ✅ Nox | `app.json` → `expo.name` · stores |
-| **Nom long** | ✅ Insane Nights & Days | `LEGAL_APP_NAME_LONG` · textes légaux |
+| **Nom long** | ✅ NOX | `LEGAL_APP_NAME_LONG` · textes légaux |
 | **SIRET / TVA** | ❌ Non dans le code | À ajouter dans `mentions.html` + éventuellement `legalConfig.js` si tu veux l’afficher in-app |
 | **URL politique confidentialité** | ✅ Route serveur prête | App Store Connect + Play Console (champ obligatoire) — voir URLs section A |
 | **CGU / CGV in-app** | ✅ Écrans présents | `LegalPage.js` — contenu rempli via `applyLegalPlaceholders()` |
@@ -80,7 +80,7 @@ Index légal             :  {BASE}/legal/
 
 ### ① Fichier principal (à modifier en premier)
 
-**`insane-nights-days-mobile/constants/legalConfig.js`**
+**`nox-mobile/constants/legalConfig.js`**
 
 | Constante | Valeur actuelle | À mettre |
 |-----------|-----------------|----------|
@@ -116,7 +116,7 @@ Index légal             :  {BASE}/legal/
 
 ### ③ Textes longs in-app (rarement à toucher)
 
-**`insane-nights-days-mobile/screens/legal/LegalPage.js`**
+**`nox-mobile/screens/legal/LegalPage.js`**
 
 Contient le texte intégral CGU / CGV / mentions / confidentialité (FR + EN).  
 Les `[À compléter]` sont remplacés à l’affichage par `legalConfig.js`.  
@@ -128,9 +128,9 @@ Tu n’édites ce fichier **que si** tu changes le fond du contrat (nouvel artic
 
 | Fichier | Usage |
 |---------|--------|
-| `insane-nights-days-mobile/store-metadata/app-store-description-fr.txt` | Description App Store |
-| `insane-nights-days-mobile/store-metadata/play-store-description-fr.txt` | Description Play Store |
-| `insane-nights-days-mobile/store-metadata/whats-new-fr.txt` | Notes de version |
+| `nox-mobile/store-metadata/app-store-description-fr.txt` | Description App Store |
+| `nox-mobile/store-metadata/play-store-description-fr.txt` | Description Play Store |
+| `nox-mobile/store-metadata/whats-new-fr.txt` | Notes de version |
 
 Email support déjà présent — ajouter URL site si tu en as une.
 
@@ -140,10 +140,10 @@ Email support déjà présent — ajouter URL site si tu en as une.
 
 | Fichier | Champ | Valeur |
 |---------|-------|--------|
-| `insane-nights-days-mobile/app.json` | `expo.name` | `Nox` |
-| `insane-nights-days-mobile/app.json` | `expo.ios.bundleIdentifier` | `com.insanenightsdays.mobile` |
-| `insane-nights-days-mobile/app.json` | `expo.android.package` | `com.insanenightsdays.mobile` |
-| `insane-nights-days-mobile/app.json` | `expo.version` | `1.0.0` |
+| `nox-mobile/app.json` | `expo.name` | `Nox` |
+| `nox-mobile/app.json` | `expo.ios.bundleIdentifier` | `com.nox.mobile` |
+| `nox-mobile/app.json` | `expo.android.package` | `com.nox.mobile` |
+| `nox-mobile/app.json` | `expo.version` | `1.0.0` |
 | `server/env.example.txt` | `RESEND_FROM` | `Nox <noreply@nox.world>` |
 
 ---
@@ -195,14 +195,14 @@ Email support déjà présent — ajouter URL site si tu en as une.
 4. **Déployer** le serveur sur Railway.
 5. Tester les 4 URLs dans un navigateur.
 6. Coller l’URL privacy dans **App Store Connect** et **Play Console**.
-7. Lancer `npm run store:check` dans `insane-nights-days-mobile`.
+7. Lancer `npm run store:check` dans `nox-mobile`.
 
 ---
 
 ## F. Vérification rapide
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npm run store:check
 ```
 

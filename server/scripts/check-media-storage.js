@@ -39,7 +39,7 @@ if (MEDIA_STORAGE === 'r2') {
 console.log('\n📝 Recommandations:');
 if (!PUBLIC_URL) {
   console.log('   ❌ PUBLIC_URL n\'est pas configuré sur Railway');
-  console.log('   → Ajoutez PUBLIC_URL=https://insane-nights-days-telegram-app-production.up.railway.app');
+  console.log('   → Ajoutez PUBLIC_URL=https://api.nox.world');
 }
 if (MEDIA_STORAGE === 'local') {
   console.log('   ⚠️  MEDIA_STORAGE=local sur Railway (fichiers éphémères)');

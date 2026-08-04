@@ -1,5 +1,5 @@
 /**
- * Serveur principal Insane Nights & Days
+ * Serveur principal NOX
  * 
  * Ce fichier configure Express et organise toutes les routes de l'API.
  * Les routes d'authentification et utilisateur sont maintenant modulaires
@@ -346,7 +346,7 @@ if (ENABLE_EVENT_STATUS_CRON) {
 
 // Railway expects the app to listen on all interfaces.
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Serveur Insane Nights & Days démarré sur le port ${PORT}`);
+  console.log(`🚀 Serveur NOX démarré sur le port ${PORT}`);
   console.log(`🔗 Test local: http://localhost:${PORT}/api/test`);
   if (ENABLE_EVENT_STATUS_CRON) {
     console.log(`⏰ Mise à jour automatique des statuts d'événements activée (toutes les 5 minutes)`);

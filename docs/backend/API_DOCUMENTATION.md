@@ -1,8 +1,8 @@
-# 📚 Documentation API - Insane Nights & Days
+# 📚 Documentation API - NOX
 
 ## Vue d'ensemble
 
-Cette API REST permet de gérer les utilisateurs, événements, tickets, profils et notes pour l'application Insane Nights & Days.
+Cette API REST permet de gérer les utilisateurs, événements, tickets, profils et notes pour l'application NOX.
 
 **Base URL**: `http://localhost:5000/api` (ou via Cloudflare tunnel)
 
@@ -174,7 +174,7 @@ Crée un profil DJ (nécessite authentification).
 **Body:**
 ```json
 {
-  "artistName": "DJ Insane",
+  "artistName": "DJ Nox",
   "city": "Paris",
   "genre": "Electro"
 }
@@ -198,7 +198,7 @@ Crée un profil Venue (nécessite authentification).
 **Body:**
 ```json
 {
-  "venueName": "Club Insane",
+  "venueName": "Club Nox",
   "address": "123 Rue de la Musique, Paris"
 }
 ```
@@ -320,7 +320,7 @@ Vérifie que le serveur fonctionne.
 **Réponse (200):**
 ```json
 {
-  "message": "🎉 Backend Insane Nights & Days fonctionne parfaitement",
+  "message": "🎉 Backend NOX fonctionne parfaitement",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "walletUsersCount": 50,
   "registeredUsersCount": 100,

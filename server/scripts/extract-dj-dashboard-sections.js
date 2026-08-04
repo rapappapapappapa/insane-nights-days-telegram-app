@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const mobileRoot = path.join(__dirname, '..', '..', 'insane-nights-days-mobile');
+const mobileRoot = path.join(__dirname, '..', '..', 'nox-mobile');
 const pagePath = path.join(mobileRoot, 'screens', 'dashboard', 'DjDashboardPage.js');
 const lines = fs.readFileSync(pagePath, 'utf8').split('\n');
 const sectionsDir = path.join(mobileRoot, 'components', 'djDashboard', 'sections');

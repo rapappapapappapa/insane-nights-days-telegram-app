@@ -200,6 +200,9 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ## Maquettes manquantes (à demander / à livrer côté design)
 
+**Liste des écrans app sans maquette Figma (à demander au design)** : [MANQUES_APP.md](./MANQUES_APP.md)  
+**Matrice Figma ↔ implémentation** : [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md)
+
 Écrans cités dans Figma ou le wireframe **sans** planche HD dans `docs/mobile/design-figma/` :
 
 | Besoin | Statut code (juil. 2026) |
@@ -215,4 +218,4 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ---
 
-*Dernière mise à jour : 31 juillet 2026 — maquettes importées depuis Figma + écarts documentés.*
+*Dernière mise à jour : 4 août 2026 — voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l'inventaire complet.*

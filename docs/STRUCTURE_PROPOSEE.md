@@ -3,7 +3,7 @@
 ## 📁 Structure proposée
 
 ```
-/home/ridah/app telegram/
+/home/ridah/nox-mobile/
 ├── docs/                          # 📚 TOUTE LA DOCUMENTATION
 │   ├── guides/                    # Guides de configuration
 │   │   ├── GUIDE_CONFIGURATION_R2.md
@@ -27,7 +27,7 @@
 │   │   └── TODO_RESTANT.md
 │   └── README.md                  # README principal du projet
 │
-├── insane-nights-days-mobile/
+├── nox-mobile/
 │   ├── screens/                   # Écrans organisés par fonctionnalité
 │   │   ├── auth/                  # Authentification
 │   │   │   ├── LoginPage.js

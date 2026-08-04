@@ -1,4 +1,4 @@
-# 🔍 Analyse Professionnelle - Insane Nights & Days Mobile
+# 🔍 Analyse Professionnelle - NOX Mobile
 
 ## 📊 Vue d'ensemble
 
@@ -408,7 +408,7 @@ const trackEvent = async (eventName, params) => {
 };
 
 // Utilisation
-trackEvent('event_viewed', { eventId: '123', eventName: 'Insane Night' });
+trackEvent('event_viewed', { eventId: '123', eventName: 'Nox Night' });
 ```
 
 **Priorité** : 🟢 BASSE

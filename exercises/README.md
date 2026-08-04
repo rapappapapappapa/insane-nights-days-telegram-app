@@ -1,4 +1,4 @@
-# 🧠 Exercices de Pratique - Insane Nights & Days
+# 🧠 Exercices de Pratique - NOX
 
 Ces exercices vous permettent de rejouer les étapes clés du projet et de comprendre comment les différentes pièces fonctionnent.
 

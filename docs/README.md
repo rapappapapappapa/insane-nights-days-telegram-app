@@ -1,6 +1,6 @@
 # 📚 Documentation du Projet
 
-Bienvenue dans la documentation du projet **Insane Nights & Days**.
+Bienvenue dans la documentation du projet **NOX**.
 
 ## 📁 Structure de la documentation
 
@@ -35,7 +35,7 @@ Documentation mobile :
 
 ## 📂 Structure du projet
 
-### Application Mobile (`/insane-nights-days-mobile/`)
+### Application Mobile (`/nox-mobile/`)
 
 Les screens sont organisés par fonctionnalité :
 

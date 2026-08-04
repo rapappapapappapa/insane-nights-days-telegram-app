@@ -1,6 +1,6 @@
 // Stockage token pour le web (localStorage)
-const TOKEN_KEY = 'insane_token';
-const USER_DATA_KEY = 'insane_user';
+const TOKEN_KEY = 'nox_token';
+const USER_DATA_KEY = 'nox_user';
 
 export function saveToken(token) {
   if (typeof window !== 'undefined') {

@@ -35,20 +35,20 @@ const Navigation = () => {
   }
 
   return (
-    <nav className="bg-insane-dark border-b border-insane-orange/30 sticky top-0 z-50">
+    <nav className="bg-nox-dark border-b border-nox-primary/30 sticky top-0 z-50">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-insane-orange rounded-lg flex items-center justify-center">
-              <span className="text-insane-black font-bold text-sm">I</span>
+            <div className="w-6 h-6 bg-nox-primary rounded-lg flex items-center justify-center">
+              <span className="text-nox-black font-bold text-sm">I</span>
             </div>
-            <span className="text-insane-orange font-bold text-lg">Insane</span>
+            <span className="text-nox-primary font-bold text-lg">Nox</span>
           </Link>
 
           <div className="flex items-center gap-4">
             <Link
               to="/events"
-              className="text-insane-white/70 hover:text-insane-orange transition text-sm"
+              className="text-nox-white/70 hover:text-nox-primary transition text-sm"
             >
               Événements
             </Link>
@@ -56,13 +56,13 @@ const Navigation = () => {
               <>
                 <Link
                   to="/feed"
-                  className="text-insane-white/70 hover:text-insane-orange transition text-sm"
+                  className="text-nox-white/70 hover:text-nox-primary transition text-sm"
                 >
                   Feed
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-insane-white/70 hover:text-insane-orange transition text-sm"
+                  className="text-nox-white/70 hover:text-nox-primary transition text-sm"
                 >
                   Profil
                 </Link>
@@ -70,7 +70,7 @@ const Navigation = () => {
             ) : (
               <Link
                 to="/login"
-                className="text-insane-orange hover:text-orange-400 transition text-sm font-medium"
+                className="text-nox-primary hover:text-orange-400 transition text-sm font-medium"
               >
                 Connexion
               </Link>

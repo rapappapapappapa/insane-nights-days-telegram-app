@@ -3,7 +3,7 @@
 Document de référence pour **terminer la bascule Figma** sans casser la prod.  
 Complète [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) et [SYNTHESE_REFONTE_NOX_JUIN2026.md](./SYNTHESE_REFONTE_NOX_JUIN2026.md).
 
-**Branche cible** : `railway-phase1` · **App** : `insane-nights-days-mobile/`
+**Branche cible** : `railway-phase1` · **App** : `nox-mobile/`
 
 ---
 

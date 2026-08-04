@@ -240,7 +240,7 @@ app.get('/api/test', async (req, res) => {
     ]);
     
     res.json({
-      message: '🎉 Backend Insane Nights & Days fonctionne parfaitement',
+      message: '🎉 Backend NOX fonctionne parfaitement',
       timestamp: new Date().toISOString(),
       walletUsersCount: 0, // Plus utilisé, gardé pour compatibilité
       registeredUsersCount: registeredUsers,

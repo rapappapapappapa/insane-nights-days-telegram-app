@@ -1,10 +1,10 @@
-# 🎨 Configuration du Logo INSANE
+# 🎨 Configuration du Logo NOX
 
 ## 📍 Emplacement du fichier logo
 
 Le logo doit être placé dans :
 ```
-insane-nights-days-mobile/assets/logo.png
+nox-mobile/assets/logo.png
 ```
 
 ## 📋 Format recommandé

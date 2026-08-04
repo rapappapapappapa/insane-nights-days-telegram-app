@@ -4,7 +4,7 @@
  * En dev, un fallback permet de démarrer sans .env.
  */
 const isProduction = process.env.NODE_ENV === 'production';
-const secret = process.env.JWT_SECRET || (isProduction ? null : 'insane-nights-days-secret-key-change-in-production');
+const secret = process.env.JWT_SECRET || (isProduction ? null : 'nox-platform-secret-key-change-in-production');
 
 if (!secret) {
   throw new Error(

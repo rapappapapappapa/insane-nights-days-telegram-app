@@ -43,9 +43,9 @@
 | # | Information | Valeur actuelle | Confirmer ? |
 |---|-------------|-----------------|-------------|
 | 3.1 | Nom affiché sur les stores | **Nox** | ☐ Oui ☐ Non → si non : _______________ |
-| 3.2 | Nom long / marque | **Insane Nights & Days** | ☐ Oui ☐ Non → si non : _______________ |
-| 3.3 | Identifiant iOS (Bundle ID) | com.insanenightsdays.mobile | ☐ Ne pas modifier |
-| 3.4 | Identifiant Android (Package) | com.insanenightsdays.mobile | ☐ Ne pas modifier |
+| 3.2 | Nom long / marque | **NOX** | ☐ Oui ☐ Non → si non : _______________ |
+| 3.3 | Identifiant iOS (Bundle ID) | com.nox.mobile | ☐ Ne pas modifier |
+| 3.4 | Identifiant Android (Package) | com.nox.mobile | ☐ Ne pas modifier |
 
 ---
 
@@ -132,7 +132,7 @@ URL page contact        : _______________________________________________
 
 --- Application (confirmer ou corriger) ---
 Nom store               : Nox → _________________________________________
-Nom long / marque       : Insane Nights & Days → _______________________
+Nom long / marque       : NOX → _______________________
 Date MAJ docs légaux    : _______________________________________________
 
 --- Stores ---
@@ -159,7 +159,7 @@ Quand le formulaire revient complété, reporter les valeurs ici :
 
 | Réponse patron (formulaire §) | Fichier / emplacement |
 |------------------------------|----------------------|
-| Raison sociale (1.1) | `insane-nights-days-mobile/constants/legalConfig.js` → `LEGAL_PUBLISHER_NAME` |
+| Raison sociale (1.1) | `nox-mobile/constants/legalConfig.js` → `LEGAL_PUBLISHER_NAME` |
 | Siège social (1.6) | `legalConfig.js` → `LEGAL_PUBLISHER_ADDRESS` |
 | Directeur de publication (1.8) | `legalConfig.js` → `LEGAL_PUBLISHER_DIRECTOR` |
 | Email support (2.1) | `legalConfig.js` → `LEGAL_SUPPORT_EMAIL` |
@@ -167,15 +167,15 @@ Quand le formulaire revient complété, reporter les valeurs ici :
 | SIRET + forme juridique (1.2–1.4) | `server/public/legal/mentions.html` (section Éditeur) |
 | Responsable RGPD (dérivé 1.1 + 1.6) | `server/public/legal/privacy.html` (§1) — auto via `legalConfig.js` in-app |
 | URL site / support (2.4–2.5) | App Store Connect + Play Console |
-| URL politique confidentialité | `https://insane-nights-days-telegram-app-production.up.railway.app/legal/privacy.html` *(ou domaine nox.world si configuré)* |
+| URL politique confidentialité | `https://api.nox.world/legal/privacy.html` *(ou domaine nox.world si configuré)* |
 | Copyright (6.1) | App Store Connect |
-| Descriptions (6.5–6.6) | `insane-nights-days-mobile/store-metadata/*.txt` |
+| Descriptions (6.5–6.6) | `nox-mobile/store-metadata/*.txt` |
 | Adresse développeur | Play Console (champ public) = siège social (1.6) |
 
 **Commandes après saisie :**
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npm run store:check
 # Déployer server/ sur Railway, puis tester /legal/privacy.html en navigation privée
 ```

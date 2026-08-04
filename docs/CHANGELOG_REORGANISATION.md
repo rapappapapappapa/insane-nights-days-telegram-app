@@ -12,7 +12,7 @@
 - **Déplacés** : Tous les fichiers `.md` depuis la racine et les sous-dossiers
 - **Créé** : `/docs/README.md` - Index de la documentation
 
-#### 📱 Screens (`/insane-nights-days-mobile/screens/`)
+#### 📱 Screens (`/nox-mobile/screens/`)
 - **Réorganisés** : Tous les screens par fonctionnalité
   - `auth/` - Authentification (6 fichiers)
   - `dashboard/` - Dashboards (4 fichiers)
@@ -47,7 +47,7 @@
 
 2. **Vérification** : Tester que l'application compile et fonctionne correctement
    ```bash
-   cd insane-nights-days-mobile
+   cd nox-mobile
    npm start
    ```
 

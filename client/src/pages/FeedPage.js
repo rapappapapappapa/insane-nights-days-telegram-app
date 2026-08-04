@@ -74,26 +74,26 @@ const FeedPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center">
-        <div className="text-insane-white">Chargement du feed...</div>
+      <div className="min-h-screen bg-nox-black flex items-center justify-center">
+        <div className="text-nox-white">Chargement du feed...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-insane-black py-6 px-4">
+    <div className="min-h-screen bg-nox-black py-6 px-4">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-insane-white mb-6">Fil d'actualité</h1>
+        <h1 className="text-2xl font-bold text-nox-white mb-6">Fil d'actualité</h1>
 
         {error && (
           <div className="bg-red-900/30 text-red-400 rounded-lg p-4 mb-6">{error}</div>
         )}
 
         {feed.length === 0 && !error && (
-          <div className="text-center py-12 text-insane-white/70">
+          <div className="text-center py-12 text-nox-white/70">
             <p>Aucun post pour le moment.</p>
             <p className="text-sm mt-2">Les événements à venir s'afficheront ici.</p>
-            <Link to="/events" className="text-insane-orange mt-4 inline-block">
+            <Link to="/events" className="text-nox-primary mt-4 inline-block">
               Voir les événements →
             </Link>
           </div>
@@ -107,7 +107,7 @@ const FeedPage = () => {
                 <Link
                   key={ev.id}
                   to={`/event/${ev.id}`}
-                  className="block bg-insane-gray border border-insane-orange/30 rounded-xl p-4 hover:border-insane-orange/60 transition"
+                  className="block bg-nox-gray border border-nox-primary/30 rounded-xl p-4 hover:border-nox-primary/60 transition"
                 >
                   <div className="flex gap-4">
                     {ev.image && (
@@ -118,10 +118,10 @@ const FeedPage = () => {
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs text-insane-orange">Événement</span>
-                      <h3 className="font-bold text-insane-white truncate">{ev.title}</h3>
-                      <p className="text-sm text-insane-white/70 truncate">{ev.location}</p>
-                      <p className="text-xs text-insane-white/50">
+                      <span className="text-xs text-nox-primary">Événement</span>
+                      <h3 className="font-bold text-nox-white truncate">{ev.title}</h3>
+                      <p className="text-sm text-nox-white/70 truncate">{ev.location}</p>
+                      <p className="text-xs text-nox-white/50">
                         {ev.date ? new Date(ev.date).toLocaleDateString('fr-FR') : ''}
                       </p>
                     </div>
@@ -134,17 +134,17 @@ const FeedPage = () => {
             return (
               <div
                 key={post.id}
-                className="bg-insane-gray border border-insane-orange/30 rounded-xl p-4"
+                className="bg-nox-gray border border-nox-primary/30 rounded-xl p-4"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-insane-orange font-medium">
+                  <span className="text-nox-primary font-medium">
                     {post.author?.username || post.dj?.artistName || post.booker?.name || 'Anonyme'}
                   </span>
-                  <span className="text-xs text-insane-white/50">
+                  <span className="text-xs text-nox-white/50">
                     {post.createdAt ? new Date(post.createdAt).toLocaleDateString('fr-FR') : ''}
                   </span>
                 </div>
-                <p className="text-insane-white/90 whitespace-pre-wrap">{post.content}</p>
+                <p className="text-nox-white/90 whitespace-pre-wrap">{post.content}</p>
                 {post.imageUrl && (
                   <img
                     src={normalizeUrl(post.imageUrl)}

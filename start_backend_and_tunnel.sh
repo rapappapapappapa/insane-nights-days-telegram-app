@@ -84,7 +84,7 @@ if ps -p $TUNNEL_PID > /dev/null 2>&1; then
         # Mettre à jour config.js
         echo ""
         echo "📝 Mise à jour de api/config.js..."
-        cd "$ROOT_DIR/insane-nights-days-mobile/api"
+        cd "$ROOT_DIR/nox-mobile/api"
         # Utiliser un délimiteur différent (#) pour éviter les problèmes avec les URLs
         sed -i "s#BASE_URL: process\.env\.EXPO_PUBLIC_API_BASE || '.*'#BASE_URL: process.env.EXPO_PUBLIC_API_BASE || '${TUNNEL_URL}'#" config.js
         echo "✅ Config mis à jour avec: $TUNNEL_URL"

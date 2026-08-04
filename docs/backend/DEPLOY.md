@@ -81,17 +81,17 @@ Si tu veux garder le backend sur ta machine mais avec une URL fixe :
 
 2. **Créer un tunnel permanent** :
    ```bash
-   cloudflared tunnel create insane-nights-backend
+   cloudflared tunnel create nox-backend
    ```
 
 3. **Configurer le tunnel** :
    ```bash
-   cloudflared tunnel route dns insane-nights-backend api.ton-domaine.com
+   cloudflared tunnel route dns nox-backend api.ton-domaine.com
    ```
 
 4. **Lancer le tunnel** :
    ```bash
-   cloudflared tunnel run insane-nights-backend
+   cloudflared tunnel run nox-backend
    ```
 
 ---
@@ -99,7 +99,7 @@ Si tu veux garder le backend sur ta machine mais avec une URL fixe :
 ## Après le déploiement
 
 1. **Mettre à jour l'URL dans l'app mobile** :
-   - Modifie `insane-nights-days-mobile/api/config.js`
+   - Modifie `nox-mobile/api/config.js`
    - Change `BASE_URL` avec l'URL du backend déployé
 
 2. **Tester l'API** :

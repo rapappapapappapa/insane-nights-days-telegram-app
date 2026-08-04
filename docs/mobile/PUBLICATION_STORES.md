@@ -19,7 +19,7 @@ Checklist pour passer de **TestFlight / builds Expo internes** à une **publicat
 ## Phase 0 — Vérification automatique
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npm run store:check
 ```
 
@@ -32,8 +32,8 @@ Corrige les points ❌ avant de continuer.
 - [ ] **Apple Developer Program** actif (~99 $/an) — [developer.apple.com](https://developer.apple.com/programs/)
 - [ ] **Google Play Console** créé (~25 $ une fois) — [play.google.com/console](https://play.google.com/console)
 - [ ] Compte **Expo** connecté : `eas login` / `eas whoami`
-- [ ] Accès **App Store Connect** à l’app `com.insanenightsdays.mobile`
-- [ ] Accès **Google Play** à l’app `com.insanenightsdays.mobile` (à créer si première fois)
+- [ ] Accès **App Store Connect** à l’app `com.nox.mobile`
+- [ ] Accès **Google Play** à l’app `com.nox.mobile` (à créer si première fois)
 
 ---
 
@@ -51,7 +51,7 @@ Corrige les points ❌ avant de continuer.
 URL prod actuelle (Railway) :
 
 ```
-https://insane-nights-days-telegram-app-production.up.railway.app/legal/privacy.html
+https://api.nox.world/legal/privacy.html
 ```
 
 > Si tu as un domaine `nox.world` pointant vers l’API ou un site vitrine, tu pourras utiliser `https://nox.world/legal/...` à la place — à mettre à jour dans App Store Connect / Play Console.
@@ -60,7 +60,7 @@ https://insane-nights-days-telegram-app-production.up.railway.app/legal/privacy.
 
 Voir le détail champ par champ : **[INFORMATIONS_LEGALES_A_COMPLETER.md](./INFORMATIONS_LEGALES_A_COMPLETER.md)**
 
-- [ ] Renseigner la **raison sociale**, **siège** et **directeur de publication** dans `insane-nights-days-mobile/constants/legalConfig.js`
+- [ ] Renseigner la **raison sociale**, **siège** et **directeur de publication** dans `nox-mobile/constants/legalConfig.js`
 - [ ] Vérifier que `support@nox.world` existe et répond (boîte support)
 - [ ] Déployer le serveur sur Railway (route `/legal`) — **push `server/`** si pas encore déployé
 - [ ] Tester les URLs légales dans un navigateur (sans être connecté à l’app)
@@ -121,7 +121,7 @@ Voir le détail champ par champ : **[INFORMATIONS_LEGALES_A_COMPLETER.md](./INFO
 ### iOS (souvent le plus rapide — build TestFlight déjà proche)
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 
 # Option A : soumettre le dernier build production déjà sur TestFlight
 npm run submit:store:ios
@@ -136,7 +136,7 @@ Puis dans **App Store Connect** → sélectionner le build → **Soumettre pour 
 ### Android (nouveau build production obligatoire)
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npm run build:store:android
 npm run submit:store:android
 ```
@@ -145,7 +145,7 @@ Pour `eas submit` Android en automatique, créer un **compte de service** Google
 
 ```bash
 # une fois la clé obtenue :
-# insane-nights-days-mobile/google-play-service-account.json  (gitignored)
+# nox-mobile/google-play-service-account.json  (gitignored)
 ```
 
 Sinon : télécharger le `.aab` depuis [expo.dev](https://expo.dev) et l’uploader manuellement dans Play Console.
@@ -189,12 +189,12 @@ Aujourd’hui Android utilise le canal `preview`, iOS le canal `production`. **A
 |---------|------|
 | **`docs/mobile/FORMULAIRE_LEGAL_EDITEUR.md`** | **Formulaire / texte à trou pour l’éditeur (patron)** |
 | **`docs/mobile/INFORMATIONS_LEGALES_A_COMPLETER.md`** | **Quoi remplir et où (formulaire + tableau)** |
-| `insane-nights-days-mobile/eas.json` | Profils build + submit |
-| `insane-nights-days-mobile/app.json` | Version, bundle ID, permissions |
-| `insane-nights-days-mobile/constants/legalConfig.js` | Email support, placeholders éditeur |
+| `nox-mobile/eas.json` | Profils build + submit |
+| `nox-mobile/app.json` | Version, bundle ID, permissions |
+| `nox-mobile/constants/legalConfig.js` | Email support, placeholders éditeur |
 | `server/public/legal/*.html` | Pages légales publiques |
-| `insane-nights-days-mobile/store-metadata/` | Descriptions store |
-| `insane-nights-days-mobile/scripts/verify-store-readiness.sh` | Contrôle automatique |
+| `nox-mobile/store-metadata/` | Descriptions store |
+| `nox-mobile/scripts/verify-store-readiness.sh` | Contrôle automatique |
 
 ---
 

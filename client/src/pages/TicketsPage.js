@@ -51,10 +51,10 @@ const TicketsPage = () => {
 
   if (!user?.isAuthenticated) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center px-4">
+      <div className="min-h-screen bg-nox-black flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-insane-white/70 mb-4">Connecte-toi pour voir tes tickets.</p>
-          <Link to="/login" className="text-insane-orange hover:underline">
+          <p className="text-nox-white/70 mb-4">Connecte-toi pour voir tes tickets.</p>
+          <Link to="/login" className="text-nox-primary hover:underline">
             Se connecter
           </Link>
         </div>
@@ -64,21 +64,21 @@ const TicketsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center">
-        <div className="text-insane-white">Chargement...</div>
+      <div className="min-h-screen bg-nox-black flex items-center justify-center">
+        <div className="text-nox-white">Chargement...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-insane-black py-6 px-4">
+    <div className="min-h-screen bg-nox-black py-6 px-4">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-insane-white mb-6">Mes tickets</h1>
+        <h1 className="text-2xl font-bold text-nox-white mb-6">Mes tickets</h1>
 
         {tickets.length === 0 ? (
-          <div className="text-center py-12 text-insane-white/70">
+          <div className="text-center py-12 text-nox-white/70">
             <p>Aucun ticket pour le moment.</p>
-            <Link to="/events" className="text-insane-orange mt-4 inline-block">
+            <Link to="/events" className="text-nox-primary mt-4 inline-block">
               Voir les événements →
             </Link>
           </div>
@@ -88,21 +88,21 @@ const TicketsPage = () => {
               <Link
                 key={ticket.id}
                 to={`/event/${ticket.eventId}`}
-                className="block bg-insane-gray border border-insane-orange/30 rounded-xl p-4 hover:border-insane-orange/60 transition"
+                className="block bg-nox-gray border border-nox-primary/30 rounded-xl p-4 hover:border-nox-primary/60 transition"
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-insane-white">
+                    <h3 className="font-bold text-nox-white">
                       {ticket.eventTitle || 'Événement'}
                     </h3>
-                    <p className="text-sm text-insane-white/70">
+                    <p className="text-sm text-nox-white/70">
                       {ticket.eventDate
                         ? new Date(ticket.eventDate).toLocaleDateString('fr-FR')
                         : ''}{' '}
                       • {ticket.eventLocation || ''}
                     </p>
                   </div>
-                  <span className="text-xs bg-insane-orange/30 text-insane-orange px-2 py-1 rounded">
+                  <span className="text-xs bg-nox-primary/30 text-nox-primary px-2 py-1 rounded">
                     {ticket.status || 'Valide'}
                   </span>
                 </div>

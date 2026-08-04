@@ -1,7 +1,7 @@
 {
-  "name": "insane-nights-days-server",
+  "name": "nox-server",
   "version": "1.0.0",
-  "description": "Backend pour l'app Insane Nights & Days",
+  "description": "Backend pour l'app NOX",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -37,13 +37,12 @@
     "node": ">=20.18.0"
   },
   "keywords": [
-    "telegram",
-    "app",
+    "nox",
+    "api",
     "events",
-    "insane",
-    "ton",
-    "blockchain"
+    "express",
+    "prisma"
   ],
-  "author": "Insane Corporation",
+  "author": "NOX",
   "license": "MIT"
 }

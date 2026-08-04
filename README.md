@@ -1,6 +1,6 @@
-# 🎉 Insane Nights & Days — Nox
+# NOX
 
-**Plateforme événementielle (app mobile Nox, API Railway, client web Telegram)**
+**Plateforme événementielle — app mobile Expo (`nox-mobile/`), API (`server/`), client web legacy (`client/`).**
 
 > **Doc à jour :** voir [`docs/STACK.md`](docs/STACK.md), [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) et [`CHANGELOG.md`](CHANGELOG.md).  
 > Ce README racine est partiellement obsolète (SQLite, port 5000 local, etc.) — la prod tourne sur **PostgreSQL + Railway**.
@@ -12,7 +12,7 @@
 
 ## 🚀 Aperçu
 
-**Insane Nights & Days** est une application Telegram moderne qui révolutionne l'industrie des événements musique en intégrant la blockchain TON. L'app propose une interface mobile-first avec connexion wallet, gestion d'événements et système de tickets.
+**NOX** est la plateforme Nox : application mobile (Expo), API Node/Railway et billetterie événementielle.
 
 ## ✨ Fonctionnalités
 
@@ -35,13 +35,13 @@
 ### 📱 Interface
 - **Design mobile-first** optimisé pour Telegram
 - **Navigation fluide** entre les écrans
-- **Thème sombre** avec couleurs Insane
+- **Thème sombre NOX** (tokens `#2852E8`, fond `#0A0A09`)
 - **Responsive design** pour tous les appareils
 
 ## 🏗️ Architecture
 
 ```
-insane-nights-days-app/
+nox-platform/
 ├── client/                 # Frontend React Web
 │   ├── src/
 │   │   ├── components/    # Composants réutilisables
@@ -52,7 +52,7 @@ insane-nights-days-app/
 ├── server/                # Backend Express
 │   ├── index.js          # Serveur principal
 │   └── package.json      # Dépendances backend
-└── insane-nights-days-mobile/  # Application Mobile React Native
+└── nox-mobile/  # Application Mobile React Native
     ├── screens/          # Écrans de l'application
     ├── api/             # Configuration API
     └── App.js           # Point d'entrée
@@ -88,8 +88,8 @@ insane-nights-days-app/
 
 ### 1. Cloner le projet
 ```bash
-git clone https://github.com/rapappapapappapa/insane-nights-days-telegram-app.git
-cd insane-nights-days-telegram-app
+git clone https://github.com/rapappapapappapa/nox-mobile.git
+cd nox-mobile
 ```
 
 ### 2. Installer les dépendances
@@ -98,7 +98,7 @@ cd insane-nights-days-telegram-app
 npm run install:all
 
 # Pour l'app mobile
-cd insane-nights-days-mobile && npm install
+cd nox-mobile && npm install
 ```
 
 ### 3. Lancer l'application
@@ -115,7 +115,7 @@ npm run client:dev  # Terminal 2
 
 #### Application Mobile
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npx expo start
 ```
 
@@ -142,11 +142,13 @@ npx expo start
 
 ## 🎨 Design System
 
-### Couleurs
-- **Insane Black** : #000000 (Fond principal)
-- **Insane Orange** : #FF6B35 (Accents, boutons)
-- **Insane Gray** : #1A1A1A (Cartes, éléments)
-- **Insane White** : #FFFFFF (Texte principal)
+### Couleurs (client web legacy)
+- **Nox Black** : #000000
+- **Nox Primary** : #FF6B35 (legacy web)
+- **Nox Gray** : #1A1A1A
+- **Nox White** : #FFFFFF
+
+> L’app mobile utilise les tokens dans `nox-mobile/constants/colors.js` (bleu `#2852E8`).
 
 ### Typographie
 - **Fonts** : Système par défaut
@@ -256,12 +258,11 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des modifications. À mettre
 
 ## 👥 Équipe
 
-**Insane Corporation** - Révolutionner l'industrie des événements avec la blockchain
+**NOX** - Révolutionner l'industrie des événements avec la blockchain
 
 ### Contact
-- **Email** : dev@insane-corp.com
-- **Site** : https://insane-corp.com
-- **Telegram** : @InsaneNightsDays
+- **Email** : support@nox.world
+- **Site** : https://nox.world
 
 ## 🙏 Remerciements
 
@@ -272,4 +273,4 @@ Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des modifications. À mettre
 
 ---
 
-**🎵 Révolutionnez l'industrie des événements avec Insane Nights & Days ! 🎵**
+**🎵 Révolutionnez l'industrie des événements avec NOX ! 🎵**

@@ -1,4 +1,4 @@
-# 📋 Liste des Tâches Restantes - Insane Nights & Days Mobile
+# 📋 Liste des Tâches Restantes - NOX Mobile
 
 **Date de mise à jour** : 6 janvier 2026  
 **Statut** : Toutes les hautes priorités sont terminées ✅
@@ -55,7 +55,7 @@ npx expo install @react-native-community/netinfo
 
 **Recherche des occurrences** :
 ```bash
-grep -r "Alert.alert" insane-nights-days-mobile/screens/
+grep -r "Alert.alert" nox-mobile/screens/
 ```
 
 **Priorité** : 🟡 MOYENNE  

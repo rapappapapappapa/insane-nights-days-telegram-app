@@ -94,26 +94,26 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-insane-black flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-nox-black flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-insane-orange rounded-2xl flex items-center justify-center">
-            <span className="text-insane-black font-black text-2xl">I</span>
+          <div className="w-16 h-16 bg-nox-primary rounded-2xl flex items-center justify-center">
+            <span className="text-nox-black font-black text-2xl">I</span>
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-center text-insane-white mb-6">
+        <h1 className="text-2xl font-bold text-center text-nox-white mb-6">
           {mode === 'login' ? 'Connexion' : 'Inscription'}
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-insane-white/70 mb-1">Email</label>
+            <label className="block text-sm text-nox-white/70 mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white focus:outline-none focus:ring-2 focus:ring-insane-orange"
+              className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white focus:outline-none focus:ring-2 focus:ring-nox-primary"
               placeholder="ton@email.com"
               required
             />
@@ -121,12 +121,12 @@ const LoginPage = () => {
 
           {mode === 'register' && (
             <div>
-              <label className="block text-sm text-insane-white/70 mb-1">Pseudo</label>
+              <label className="block text-sm text-nox-white/70 mb-1">Pseudo</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white focus:outline-none focus:ring-2 focus:ring-insane-orange"
+                className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white focus:outline-none focus:ring-2 focus:ring-nox-primary"
                 placeholder="mon_pseudo"
                 required
               />
@@ -134,12 +134,12 @@ const LoginPage = () => {
           )}
 
           <div>
-            <label className="block text-sm text-insane-white/70 mb-1">Mot de passe</label>
+            <label className="block text-sm text-nox-white/70 mb-1">Mot de passe</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white focus:outline-none focus:ring-2 focus:ring-insane-orange"
+              className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white focus:outline-none focus:ring-2 focus:ring-nox-primary"
               placeholder="••••••••"
               required
             />
@@ -148,25 +148,25 @@ const LoginPage = () => {
           {mode === 'register' && (
             <>
               <div>
-                <label className="block text-sm text-insane-white/70 mb-1">Confirmer le mot de passe</label>
+                <label className="block text-sm text-nox-white/70 mb-1">Confirmer le mot de passe</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white focus:outline-none focus:ring-2 focus:ring-insane-orange"
+                  className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white focus:outline-none focus:ring-2 focus:ring-nox-primary"
                   placeholder="••••••••"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm text-insane-white/70 mb-1">Date de naissance (jj/mm/aaaa)</label>
+                <label className="block text-sm text-nox-white/70 mb-1">Date de naissance (jj/mm/aaaa)</label>
                 <input
                   type="text"
                   value={birthDate}
                   onChange={handleBirthDateChange}
                   placeholder="jj/mm/aaaa"
                   maxLength={10}
-                  className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white focus:outline-none focus:ring-2 focus:ring-insane-orange"
+                  className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white focus:outline-none focus:ring-2 focus:ring-nox-primary"
                 />
               </div>
               <div className="flex items-start gap-2">
@@ -175,9 +175,9 @@ const LoginPage = () => {
                   id="certifiedMajor"
                   checked={certifiedMajor}
                   onChange={(e) => setCertifiedMajor(e.target.checked)}
-                  className="mt-1 rounded border-insane-orange"
+                  className="mt-1 rounded border-nox-primary"
                 />
-                <label htmlFor="certifiedMajor" className="text-sm text-insane-white/80">
+                <label htmlFor="certifiedMajor" className="text-sm text-nox-white/80">
                   Je certifie avoir 18 ans ou plus
                 </label>
               </div>
@@ -187,9 +187,9 @@ const LoginPage = () => {
                   id="acceptedCgu"
                   checked={acceptedCgu}
                   onChange={(e) => setAcceptedCgu(e.target.checked)}
-                  className="mt-1 rounded border-insane-orange"
+                  className="mt-1 rounded border-nox-primary"
                 />
-                <label htmlFor="acceptedCgu" className="text-sm text-insane-white/80">
+                <label htmlFor="acceptedCgu" className="text-sm text-nox-white/80">
                   J'accepte les CGU et la politique de confidentialité
                 </label>
               </div>
@@ -203,18 +203,18 @@ const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-insane-orange text-insane-black font-bold py-3 rounded-lg hover:bg-orange-500 transition disabled:opacity-50"
+            className="w-full bg-nox-primary text-nox-black font-bold py-3 rounded-lg hover:bg-orange-500 transition disabled:opacity-50"
           >
             {loading ? 'Chargement...' : mode === 'login' ? 'Se connecter' : "S'inscrire"}
           </button>
         </form>
 
-        <p className="text-center text-insane-white/60 text-sm mt-6">
+        <p className="text-center text-nox-white/60 text-sm mt-6">
           {mode === 'login' ? "Pas encore de compte ?" : "Déjà un compte ?"}{' '}
           <button
             type="button"
             onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-            className="text-insane-orange font-medium hover:underline"
+            className="text-nox-primary font-medium hover:underline"
           >
             {mode === 'login' ? "S'inscrire" : 'Se connecter'}
           </button>

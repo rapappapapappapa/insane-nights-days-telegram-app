@@ -1,7 +1,7 @@
 {
-  "name": "insane-nights-days-app",
+  "name": "nox-platform",
   "version": "1.0.0",
-  "description": "App Telegram moderne pour la plateforme Insane Nights & Days",
+  "description": "Plateforme NOX — API, app mobile Expo et client web",
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
@@ -26,13 +26,12 @@
     "nodemon": "^3.0.2"
   },
   "keywords": [
-    "telegram",
-    "app",
+    "nox",
     "events",
-    "insane",
-    "ton",
-    "blockchain"
+    "mobile",
+    "expo",
+    "nightlife"
   ],
-  "author": "Insane Corporation",
+  "author": "NOX",
   "license": "MIT"
 }

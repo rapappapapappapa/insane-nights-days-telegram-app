@@ -1,4 +1,4 @@
-# 📱 Guide de Setup - Application Mobile Insane Nights & Days
+# 📱 Guide de Setup - Application Mobile NOX
 
 ## 🎯 Objectif
 Transformer votre application React web en application mobile native pour iOS et Android.
@@ -52,10 +52,10 @@ npm install -g @expo/cli
 ```bash
 # Dans le dossier parent de votre projet
 cd ..
-npx create-expo-app insane-nights-days-mobile --template blank
+npx create-expo-app nox-mobile --template blank
 
 # Ou avec TypeScript
-npx create-expo-app insane-nights-days-mobile --template blank-typescript
+npx create-expo-app nox-mobile --template blank-typescript
 ```
 
 ### Option B : Migrer votre code React existant
@@ -79,7 +79,7 @@ Votre code React actuel peut être adapté pour React Native, mais il faudra :
 
 2. **Démarrer le serveur de développement** :
    ```bash
-   cd insane-nights-days-mobile
+   cd nox-mobile
    npx expo start
    ```
 
@@ -89,7 +89,7 @@ Si sur Android tu n’arrives pas à ouvrir le QR code en **Tunnel** avec une er
 ➡️ Solution (automatique) :
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 npm run tunnel:android
 ```
 
@@ -131,7 +131,7 @@ eas build --platform ios
 ### Dans votre nouveau projet Expo :
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 
 # Navigation
 npm install @react-navigation/native @react-navigation/native-stack
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
 
 - [ ] Installer Android Studio (pour Android)
 - [ ] Installer Expo Go sur votre téléphone
-- [ ] Créer le projet Expo : `npx create-expo-app insane-nights-days-mobile`
+- [ ] Créer le projet Expo : `npx create-expo-app nox-mobile`
 - [ ] Installer les dépendances
 - [ ] Démarrer : `npx expo start`
 - [ ] Scanner le QR code avec Expo Go

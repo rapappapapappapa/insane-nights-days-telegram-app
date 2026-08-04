@@ -1,6 +1,6 @@
 /**
  * Vérification du jeton d’identité Sign in with Apple (JWT RS256, JWKS Apple).
- * L’audience attendue est le bundle iOS (ex. com.insanenightsdays.mobile).
+ * L’audience attendue est le bundle iOS (ex. com.nox.mobile).
  */
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
@@ -9,7 +9,7 @@ const JWKS_URI = 'https://appleid.apple.com/auth/keys';
 const ISSUER = 'https://appleid.apple.com';
 
 function getAppleAudience() {
-  return (process.env.APPLE_IOS_BUNDLE_ID || '').trim() || 'com.insanenightsdays.mobile';
+  return (process.env.APPLE_IOS_BUNDLE_ID || '').trim() || 'com.nox.mobile';
 }
 
 function getClient() {

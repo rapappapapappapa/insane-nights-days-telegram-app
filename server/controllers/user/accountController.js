@@ -643,7 +643,7 @@ const exportUserData = async (req, res) => {
       })),
     };
 
-    res.setHeader('Content-Disposition', `attachment; filename="insane-export-${userId.slice(0, 8)}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="nox-export-${userId.slice(0, 8)}.json"`);
     res.setHeader('Content-Type', 'application/json');
     return res.json(exportData);
   } catch (error) {

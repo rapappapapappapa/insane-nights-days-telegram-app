@@ -83,18 +83,18 @@ const EventsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-insane-black flex items-center justify-center">
-        <div className="text-insane-white">Chargement des événements...</div>
+      <div className="min-h-screen bg-nox-black flex items-center justify-center">
+        <div className="text-nox-white">Chargement des événements...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-insane-black py-6 px-4">
+    <div className="min-h-screen bg-nox-black py-6 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-insane-white mb-4 text-center">Événements</h1>
-        <p className="text-insane-white/70 text-sm text-center mb-8">
-          Découvrez tous les événements Insane Nights & Days
+        <h1 className="text-3xl font-bold text-nox-white mb-4 text-center">Événements</h1>
+        <p className="text-nox-white/70 text-sm text-center mb-8">
+          Découvrez tous les événements NOX
         </p>
 
         {/* Recherche */}
@@ -104,7 +104,7 @@ const EventsPage = () => {
             placeholder="Rechercher un événement..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-insane-gray border border-insane-orange/50 rounded-lg px-4 py-3 text-insane-white placeholder-insane-white/40 focus:outline-none focus:ring-2 focus:ring-insane-orange"
+            className="w-full bg-nox-gray border border-nox-primary/50 rounded-lg px-4 py-3 text-nox-white placeholder-nox-white/40 focus:outline-none focus:ring-2 focus:ring-nox-primary"
           />
         </div>
 
@@ -116,8 +116,8 @@ const EventsPage = () => {
               onClick={() => setSelectedGenre(genre)}
               className={`px-3 py-2 rounded-full text-sm font-medium transition ${
                 selectedGenre === genre
-                  ? 'bg-insane-orange text-insane-black'
-                  : 'bg-insane-gray text-insane-white hover:bg-insane-orange/30'
+                  ? 'bg-nox-primary text-nox-black'
+                  : 'bg-nox-gray text-nox-white hover:bg-nox-primary/30'
               }`}
             >
               {genre === 'all' ? 'Tous' : genre}
@@ -131,7 +131,7 @@ const EventsPage = () => {
             <Link
               key={event.id}
               to={`/event/${event.id}`}
-              className="block bg-insane-gray border border-insane-orange/30 rounded-xl p-4 hover:border-insane-orange/60 transition"
+              className="block bg-nox-gray border border-nox-primary/30 rounded-xl p-4 hover:border-nox-primary/60 transition"
             >
               <div className="relative mb-4 overflow-hidden rounded-lg">
                 {event.image ? (
@@ -141,30 +141,30 @@ const EventsPage = () => {
                     className="w-full h-40 object-cover"
                   />
                 ) : (
-                  <div className="w-full h-40 bg-insane-dark flex items-center justify-center">
+                  <div className="w-full h-40 bg-nox-dark flex items-center justify-center">
                     <span className="text-4xl">🎵</span>
                   </div>
                 )}
-                <div className="absolute top-2 right-2 bg-insane-orange text-insane-black px-2 py-1 rounded-full text-sm font-bold">
+                <div className="absolute top-2 right-2 bg-nox-primary text-nox-black px-2 py-1 rounded-full text-sm font-bold">
                   {event.hasMultipleTicketPrices ? `dès ${event.price ?? 0}€` : `${event.price ?? 0}€`}
                 </div>
                 {event.genre && (
-                  <div className="absolute bottom-2 left-2 bg-insane-black/80 text-insane-white px-2 py-1 rounded-full text-xs">
+                  <div className="absolute bottom-2 left-2 bg-nox-black/80 text-nox-white px-2 py-1 rounded-full text-xs">
                     {event.genre}
                   </div>
                 )}
               </div>
-              <h3 className="font-bold text-insane-white mb-1">{event.title}</h3>
-              <p className="text-sm text-insane-white/70 line-clamp-2 mb-2">{event.description}</p>
-              <div className="space-y-1 text-xs text-insane-white/80">
+              <h3 className="font-bold text-nox-white mb-1">{event.title}</h3>
+              <p className="text-sm text-nox-white/70 line-clamp-2 mb-2">{event.description}</p>
+              <div className="space-y-1 text-xs text-nox-white/80">
                 <div>📅 {event.date ? new Date(event.date).toLocaleDateString('fr-FR') : ''} • {event.time || ''}</div>
                 <div>📍 {event.location || ''}</div>
                 {event.djs?.length > 0 && <div>🎤 {event.djs.map(dj => typeof dj === 'object' && dj?.artistName ? dj.artistName : String(dj)).join(', ')}</div>}
               </div>
               {event.capacity != null && (
-                <div className="mt-3 pt-3 border-t border-insane-orange/30">
+                <div className="mt-3 pt-3 border-t border-nox-primary/30">
                   <div className="flex justify-between text-xs">
-                    <span className="text-insane-white/70">Places</span>
+                    <span className="text-nox-white/70">Places</span>
                     <span className={getAvailabilityColor(event.sold || 0, event.capacity)}>
                       {(event.capacity || 0) - (event.sold || 0)} / {event.capacity}
                     </span>
@@ -176,7 +176,7 @@ const EventsPage = () => {
         </div>
 
         {filteredEvents.length === 0 && (
-          <div className="text-center py-16 text-insane-white/70">
+          <div className="text-center py-16 text-nox-white/70">
             Aucun événement trouvé. Modifie tes filtres.
           </div>
         )}

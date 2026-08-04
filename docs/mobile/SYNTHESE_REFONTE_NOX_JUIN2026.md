@@ -3,7 +3,7 @@
 Document de reprise **étape par étape** si tu dois continuer depuis une autre machine, un autre IDE ou sans l’historique du chat.
 
 **Branche Git** : `railway-phase1`  
-**Dossier app mobile** : `insane-nights-days-mobile/`  
+**Dossier app mobile** : `nox-mobile/`  
 **Couleur Figma** : `#4DA3FF` · typo **Satoshi**  
 **Maquettes Figma** : [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) + images dans `design-figma/`  
 **Migration legacy** : [PLAN_MIGRATION_NOX_LEGACY.md](./PLAN_MIGRATION_NOX_LEGACY.md)
@@ -13,11 +13,11 @@ Document de reprise **étape par étape** si tu dois continuer depuis une autre 
 ## 1. Prérequis (autre poste)
 
 ```bash
-cd "/chemin/vers/app telegram"
+cd "/chemin/vers/nox-mobile"
 git fetch origin
 git checkout railway-phase1
 git pull origin railway-phase1
-cd insane-nights-days-mobile
+cd nox-mobile
 npm install
 ```
 
@@ -108,7 +108,7 @@ Affinages : onboarding (titre gauche, compteur), login (icônes champs), welcome
 **Anti-régression** :
 
 ```bash
-cd insane-nights-days-mobile
+cd nox-mobile
 node scripts/find-unbound-refs.js
 ```
 
@@ -176,8 +176,8 @@ Tout le travail NOX est regroupé sous :
 ### A. Commit + push (si tu modifies le code)
 
 ```bash
-cd "/chemin/vers/app telegram"
-git add CHANGELOG.md insane-nights-days-mobile/components/nox/NoxRadialNav.js docs/mobile/SYNTHESE_REFONTE_NOX_JUIN2026.md
+cd "/chemin/vers/nox-mobile"
+git add CHANGELOG.md nox-mobile/components/nox/NoxRadialNav.js docs/mobile/SYNTHESE_REFONTE_NOX_JUIN2026.md
 git status
 git commit -m "$(cat <<'EOF'
 fix(mobile): nav NX — toggle fermeture + arc plus aéré
@@ -190,7 +190,7 @@ git push origin railway-phase1
 
 ### B. OTA (mise à jour sans rebuild store)
 
-Depuis `insane-nights-days-mobile/` :
+Depuis `nox-mobile/` :
 
 ```bash
 npm run update:both -- "fix nav NX toggle + espacement arc"
@@ -214,7 +214,7 @@ Railway déploie **`server/`** depuis Git. Cette refonte NOX est **100 % mobile*
 ## 12. Fichiers clés (checklist rapide)
 
 ```
-insane-nights-days-mobile/
+nox-mobile/
 ├── App.js
 ├── index.js
 ├── constants/colors.js, typography.js, theme.js

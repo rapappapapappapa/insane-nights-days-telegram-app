@@ -7,10 +7,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { NavigationProvider } from './contexts/NavigationContext';
+import { NavigationProvider, useNavigation, setLegacyNavigationContext } from './contexts/NavigationContext';
 import { EventFormProvider } from './contexts/EventFormContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
-import { useNavigation } from './contexts/NavigationContext';
 import { useNotifications } from './hooks/useNotifications';
 import { useExpoPushRegistration } from './hooks/useExpoPushRegistration';
 import * as Notifications from 'expo-notifications';
@@ -22,10 +21,12 @@ import NoxRadialNav from './components/nox/NoxRadialNav';
 import { getHomeScreenForProfile, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
-import HomePage from './screens/feed/HomePage';
+// Landing legacy conservé pour référence — routes `home` / `feed` redirigent (Phase D).
+// import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
-import WelcomePage from './screens/feed/WelcomePage';
-import FeedPage from './screens/feed/FeedPage';
+import ProHomePage from './screens/pro/ProHomePage';
+import LegacyScreenRedirect from './components/LegacyScreenRedirect';
+// import FeedPage from './screens/feed/FeedPage';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
 
 import LoginPage from './screens/auth/LoginPage';
@@ -41,7 +42,7 @@ import RegisterPrestatairePage from './screens/auth/RegisterPrestatairePage';
 import DjDashboardPage from './screens/dashboard/DjDashboardPage';
 import BookerDashboardPage from './screens/dashboard/BookerDashboardPage';
 import BookerEventDashboardPage from './screens/dashboard/BookerEventDashboardPage';
-import VenueDashboardPage from './screens/dashboard/VenueDashboardPage';
+// venueDashboard → lieuxDashboard (Phase D)
 import PrestataireDashboardPage from './screens/dashboard/PrestataireDashboardPage';
 import AdminPage from './screens/dashboard/AdminPage';
 
@@ -110,7 +111,7 @@ import CommunityDiscoverPage from './screens/community/CommunityDiscoverPage';
 const SCREENS = {
   splash: SplashPage,
   onboarding: OnboardingPage,
-  home: HomePage,
+  home: () => <LegacyScreenRedirect legacyKey="home" />,
   login: LoginPage,
   authVerifyEmail: AuthVerifyEmailPage,
   accountType: AccountTypePage,
@@ -119,7 +120,8 @@ const SCREENS = {
   registerBooker: RegisterBookerPage,
   registerVenue: RegisterVenuePage,
   registerPrestataire: RegisterPrestatairePage,
-  welcome: WelcomePage,
+  proHome: ProHomePage,
+  welcome: () => <LegacyScreenRedirect target="proHome" />,
   events: EventsPage,
   eventDetail: EventDetailPage,
   purchaseSuccess: PurchaseSuccessPage,
@@ -134,7 +136,7 @@ const SCREENS = {
   djProfile: DjProfilePage,
   bookerProfile: BookerProfilePage,
   djDashboard: DjDashboardPage,
-  venueDashboard: VenueDashboardPage,
+  venueDashboard: () => <LegacyScreenRedirect target="lieuxDashboard" />,
   prestataireDashboard: PrestataireDashboardPage,
   bookerDashboard: BookerDashboardPage,
   bookerEventDashboard: BookerEventDashboardPage,
@@ -152,7 +154,7 @@ const SCREENS = {
   scanTicket: ScanTicketPage,
   staffEvents: StaffEventsPage,
   venueProfileEdit: VenueProfileEditPage,
-  feed: FeedPage, // ✅ AJOUT: Route pour le feed
+  feed: () => <LegacyScreenRedirect legacyKey="feed" />,
   createFeedPost: CreateFeedPostPage, // ✅ AJOUT: Route pour créer un post
   tutorial: TutorialPage, // ✅ AJOUT: Route pour le tutoriel
   notifications: NotificationsPage, // ✅ AJOUT: Route notifications (feed)
@@ -194,8 +196,14 @@ function AppContent() {
 
   useExpoPushRegistration(user);
 
-  // expo-av Video is deprecated in favor of expo-video, but we use it as a
-  // temporary workaround for Android crashes with expo-video.
+  useEffect(() => {
+    setLegacyNavigationContext(() => ({
+      activeProfileType: user?.activeProfileType,
+      isAuthenticated: !!user?.isAuthenticated,
+    }));
+  }, [user?.activeProfileType, user?.isAuthenticated]);
+
+  // expo-av Video is deprecated
   useEffect(() => {
     LogBox.ignoreLogs([
       '[expo-av]: Video component from `expo-av` is deprecated in favor of `expo-video`.',
@@ -231,7 +239,7 @@ function AppContent() {
         ) {
           navigate(homeScreen);
         }
-      } else if (!user?.isAuthenticated && currentPage === 'welcome') {
+      } else if (!user?.isAuthenticated && (currentPage === 'welcome' || currentPage === 'proHome')) {
         navigate('splash');
       }
     }
@@ -402,7 +410,7 @@ function AppContent() {
     );
   }
   
-  const ScreenComponent = SCREENS[currentPage] || HomePage;
+  const ScreenComponent = SCREENS[currentPage] || SplashPage;
   const isCreateFeedPost = currentPage === 'createFeedPost';
 
   return (

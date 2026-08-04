@@ -114,6 +114,14 @@ export const styles = StyleSheet.create({
     color: Colors.primary,
     marginTop: 4,
   },
+  checkoutBadge: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   heroTime: {
     marginTop: 2,
   },

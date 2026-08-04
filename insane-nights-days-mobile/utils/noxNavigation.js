@@ -16,9 +16,15 @@ export function getEventPreviewScreen(activeProfileType) {
   return activeProfileType === 'COMMUNITY' ? 'communityEventDetail' : 'eventDetail';
 }
 
-/** Flux achat billet — legacy jusqu'à EventCheckout NOX (Phase D). */
+/** Flux achat billet — `eventDetail` en mode checkout (Phase D). */
 export function getEventPurchaseScreen() {
   return 'eventDetail';
+}
+
+/** Ouvre le checkout billet (séparé de la preview NOX communauté). */
+export function openEventPurchase(navigate, eventId, extraParams = {}) {
+  if (!eventId) return;
+  navigate(getEventPurchaseScreen(), { eventId, checkoutOnly: true, ...extraParams });
 }
 
 export function openEventPreview(navigate, activeProfileType, eventId, extraParams = {}) {

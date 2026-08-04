@@ -16,7 +16,7 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxButton, NoxEntityCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
-import { getEventPurchaseScreen } from '../../utils/noxNavigation';
+import { openEventPurchase } from '../../utils/noxNavigation';
 import { formatEventDateLabel, formatEventTimeLabel } from '../../utils/noxDiscoverUtils';
 
 function InfoLine({ label, value }) {
@@ -242,7 +242,7 @@ export default function CommunityEventDetailPage() {
 
         <NoxButton
           label={fr ? 'Acheter des billets' : 'Buy tickets'}
-          onPress={() => navigate(getEventPurchaseScreen(), { eventId: event.id })}
+          onPress={() => openEventPurchase(navigate, event.id)}
           style={{ marginTop: Spacing.xxl }}
         />
       </ScrollView>

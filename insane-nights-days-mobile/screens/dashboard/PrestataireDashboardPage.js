@@ -14,6 +14,7 @@ import PrestataireProfilSection from '../../components/prestataireDashboard/Pres
 import PrestataireBookingsSection from '../../components/prestataireDashboard/PrestataireBookingsSection';
 import PrestataireChatModal from '../../components/prestataireDashboard/PrestataireChatModal';
 import PrestataireContractModals from '../../components/prestataireDashboard/PrestataireContractModals';
+import { NoxProDashboardHeader } from '../../components/nox';
 import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 /**
@@ -92,13 +93,11 @@ export default function PrestataireDashboardPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.topBar}>
-        {!isHome ? (
-          <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-            <Text style={styles.backText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <NoxProDashboardHeader
+        title={language === 'fr' ? 'Dashboard Prestataire' : 'Service provider dashboard'}
+        showBack={!isHome}
+        onBack={goBack}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <PrestataireProfilSection
           language={language}

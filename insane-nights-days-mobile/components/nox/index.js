@@ -12,3 +12,4 @@ export { default as NoxBottomNav } from './NoxBottomNav';
 export { default as NoxCreateSheet } from './NoxCreateSheet';
 export { default as NoxLieuxBottomNav } from './NoxLieuxBottomNav';
 export { default as NoxEntityCard } from './NoxEntityCard';
+export { default as NoxProDashboardHeader } from './NoxProDashboardHeader';

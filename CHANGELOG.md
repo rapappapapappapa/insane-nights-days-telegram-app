@@ -4,7 +4,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 3 au 7 août 2026 (lun. - ven.)
+## Semaine du 4 au 7 août 2026 (lun. - ven.)
+
+### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro) — 4 août
+- **`proHome`** : remplace `welcome` comme home DJ / Booker / Prestataire — fil events + raccourcis dashboard NOX (`NoxCard`).
+- **Redirections legacy** : `venueDashboard` → `lieuxDashboard`, `home` / `feed` / `welcome` résolus dans `NavigationContext` via `legacyScreenRedirects.js` + `LegacyScreenRedirect`.
+- **`eventDetail`** : mode `checkoutOnly` pour l’achat billet ; profil COMMUNITY sans ce flag → `communityEventDetail` (`openEventPurchase`).
+- **Drawer** : entrées Accueil par profil (`proHome` / `communityHome`), Discover dynamique (`getDiscoverScreen`).
+- **Dashboards pro** : en-tête unifié `NoxProDashboardHeader` (DJ, Booker, Prestataire).
+- **Supprimé** : `MenuPageOld.js` ; routes `home` / `feed` / `venueDashboard` retirées du parcours nominal.
 
 ### Ajouté (mobile — écran vérification email non bloquant) — 3 août
 - **`authVerifyEmail`** : bouton « Continuer sans valider » (le compte reste non vérifié, skip valable pour la session, OTP reproposé à la prochaine connexion et accessible depuis le profil) + bouton « Mauvais email ? Se déconnecter » pour ne plus être coincé si on s'est trompé d'adresse à l'inscription.

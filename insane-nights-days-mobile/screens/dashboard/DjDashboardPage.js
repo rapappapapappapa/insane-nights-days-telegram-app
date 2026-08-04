@@ -34,6 +34,7 @@ import DjMediasSection from '../../components/djDashboard/sections/DjMediasSecti
 import DjMediaModals from '../../components/djDashboard/DjMediaModals';
 import DjChatModal from '../../components/djDashboard/DjChatModal';
 import DjContractModals from '../../components/djDashboard/DjContractModals';
+import { NoxProDashboardHeader } from '../../components/nox';
 import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 export default function DjDashboardPage() {
@@ -362,30 +363,19 @@ export default function DjDashboardPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <View style={styles.mainContent}>
-        <View style={styles.topBar}>
-          <View style={{ width: 40 }} />
-          <View style={styles.topBarRight}>
-            <TouchableOpacity
-              style={styles.messagesButton}
-              onPress={() => {
-                setActiveSection('bookings');
-                refreshUnreadCount();
-              }}
-            >
-              <Ionicons name="chatbubbles" size={24} color="#fff" />
-              <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
-            </TouchableOpacity>
-            {!isHome ? (
-              <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ width: 72 }} />
-            )}
-          </View>
-        </View>
+      <NoxProDashboardHeader
+        title={language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
+        showBack={!isHome}
+        onBack={goBack}
+        unreadCount={unreadCount}
+        onMessagesPress={() => {
+          setActiveSection('bookings');
+          refreshUnreadCount();
+        }}
+        onMarkMessagesRead={markAllAsRead}
+      />
 
+      <View style={styles.mainContent}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}

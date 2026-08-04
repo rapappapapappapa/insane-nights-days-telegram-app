@@ -11,9 +11,9 @@ export function getHomeScreenForProfile(activeProfileType) {
     case 'DJ':
     case 'BOOKER':
     case 'PRESTATAIRE':
-      return 'welcome';
+      return 'proHome';
     default:
-      return 'welcome';
+      return 'proHome';
   }
 }
 
@@ -107,6 +107,10 @@ export const NOX_THEMED_SCREENS = new Set([
   'communityOnboarding',
   'communityMyProfile',
   'communityPushOptIn',
+  'proHome',
+  'djDashboard',
+  'bookerDashboard',
+  'prestataireDashboard',
   ...LIEUX_SCREENS,
 ]);
 

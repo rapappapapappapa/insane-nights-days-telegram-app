@@ -96,6 +96,7 @@ export default function EventDetailPage() {
     () => routeParams?.eventId ?? EVENT_DETAIL_MOCK_EVENTS[0].id,
     [routeParams?.eventId],
   );
+  const checkoutOnly = routeParams?.checkoutOnly === true;
 
   const defaultEvent = useMemo(
     () => EVENT_DETAIL_MOCK_EVENTS.find((item) => item.id === eventId) ?? EVENT_DETAIL_MOCK_EVENTS[0],
@@ -110,9 +111,16 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     if (!user?.isAuthenticated) {
-      navigate('home');
+      navigate('splash');
     }
   }, [user?.isAuthenticated, navigate]);
+
+  /** Communauté : preview NOX sauf flux achat explicite (Phase D). */
+  useEffect(() => {
+    if (user?.activeProfileType === 'COMMUNITY' && !checkoutOnly && eventId) {
+      navigate('communityEventDetail', { eventId });
+    }
+  }, [user?.activeProfileType, checkoutOnly, eventId, navigate]);
 
   useEffect(() => {
     setImageBroken(false);
@@ -504,16 +512,20 @@ export default function EventDetailPage() {
             >
               <Ionicons name="chevron-back" size={24} color={Colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleReportEvent}
-              style={[styles.heroBtn, reporting && styles.heroBtnDisabled]}
-              hitSlop={12}
-              disabled={reporting}
-              accessibilityRole="button"
-              accessibilityLabel={fr ? 'Signaler cet événement' : 'Report this event'}
-            >
-              <Ionicons name="flag-outline" size={18} color={Colors.text} />
-            </TouchableOpacity>
+            {!checkoutOnly ? (
+              <TouchableOpacity
+                onPress={handleReportEvent}
+                style={[styles.heroBtn, reporting && styles.heroBtnDisabled]}
+                hitSlop={12}
+                disabled={reporting}
+                accessibilityRole="button"
+                accessibilityLabel={fr ? 'Signaler cet événement' : 'Report this event'}
+              >
+                <Ionicons name="flag-outline" size={18} color={Colors.text} />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.heroBtn} />
+            )}
           </SafeAreaView>
 
           <View style={styles.heroBadges}>
@@ -528,6 +540,11 @@ export default function EventDetailPage() {
           </View>
 
           <View style={styles.heroInfo}>
+            {checkoutOnly ? (
+              <NoxText variant="secondary" style={styles.checkoutBadge}>
+                {fr ? 'Achat billet' : 'Ticket checkout'}
+              </NoxText>
+            ) : null}
             <NoxText variant="title" style={styles.heroTitle}>
               {event.title}
             </NoxText>
@@ -549,6 +566,17 @@ export default function EventDetailPage() {
             </NoxText>
           ) : null}
 
+          {checkoutOnly ? (
+            <>
+              <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+                {fr ? 'Récapitulatif' : 'Summary'}
+              </NoxText>
+              <InfoLine label={fr ? 'Événement' : 'Event'} value={event.title} />
+              <InfoLine label={fr ? 'Date' : 'Date'} value={formattedDate} />
+              <InfoLine label={fr ? 'Lieu' : 'Location'} value={event.location} />
+            </>
+          ) : (
+            <>
           {event.status ? (
             <View style={[styles.statusBadge, { backgroundColor: `${statusColor}20`, borderColor: statusColor }]}>
               <NoxText style={[styles.statusBadgeText, { color: statusColor }]}>
@@ -738,6 +766,8 @@ export default function EventDetailPage() {
               />
             </View>
           ) : null}
+            </>
+          )}
 
           {renderPurchaseSection()}
         </View>

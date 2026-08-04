@@ -13,18 +13,31 @@ import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
 import Colors from '../constants/colors';
-import { getProDashboardScreen } from '../utils/noxRoleNavigation';
+import { getHomeScreenForProfile, getProDashboardScreen } from '../utils/noxRoleNavigation';
+import { getDiscoverScreen } from '../utils/noxNavigation';
 import * as Updates from 'expo-updates';
 
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
 const MENU_DEF = [
   {
-    id: 'welcome',
+    id: 'proHome',
     icon: 'newspaper-outline',
-    titleFr: 'Fil d’actualité',
-    titleEn: 'Feed',
-    descFr: 'Retour au fil d’actualité',
-    descEn: 'Back to the news feed',
+    titleFr: 'Accueil',
+    titleEn: 'Home',
+    descFr: 'Fil pro & raccourcis',
+    descEn: 'Pro feed & shortcuts',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['DJ', 'BOOKER', 'PRESTATAIRE'],
+  },
+  {
+    id: 'communityHome',
+    icon: 'home-outline',
+    titleFr: 'Accueil',
+    titleEn: 'Home',
+    descFr: 'Fil communauté',
+    descEn: 'Community home',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
   },
   {
     id: 'login',
@@ -36,12 +49,13 @@ const MENU_DEF = [
     onlyWhenLoggedOut: true,
   },
   {
-    id: 'events',
+    id: 'discover',
     icon: 'calendar-outline',
     titleFr: 'Événements',
     titleEn: 'Events',
     descFr: 'Découvrir les événements',
     descEn: 'Discover events',
+    resolveDiscover: true,
   },
   {
     id: 'djList',
@@ -268,7 +282,11 @@ export default function DrawerContent({ navigation }) {
   };
 
   const handleMenuItemPress = (itemId, params) => {
-    navigation.closeDrawer(); // Fermer le drawer avant de naviguer
+    navigation.closeDrawer();
+    if (itemId === 'discover') {
+      navigate(getDiscoverScreen(activeProfileType), params);
+      return;
+    }
     navigate(itemId, params);
   };
 

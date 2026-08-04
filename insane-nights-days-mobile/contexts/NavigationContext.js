@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { resolveNavigationTarget } from '../utils/legacyScreenRedirects';
 
 const NavigationContext = createContext();
+
+/** Contexte auth injecté par App.js pour résoudre home / feed / events legacy. */
+let legacyNavigationContextGetter = () => ({});
+
+export function setLegacyNavigationContext(getter) {
+  legacyNavigationContextGetter = typeof getter === 'function' ? getter : () => ({});
+}
 
 export function NavigationProvider({ children }) {
   const [currentPage, setCurrentPage] = useState('splash');
@@ -15,14 +23,16 @@ export function NavigationProvider({ children }) {
   }, []);
 
   const navigate = useCallback((page, params) => {
-    if (currentPage !== page) {
+    const context = legacyNavigationContextGetter();
+    const { page: resolvedPage, params: resolvedParams } = resolveNavigationTarget(page, params, context);
+    if (currentPage !== resolvedPage) {
       historyRef.current.push(currentPage);
       if (historyRef.current.length > 10) {
         historyRef.current.shift();
       }
     }
-    setCurrentPage(page);
-    setRouteParams(params);
+    setCurrentPage(resolvedPage);
+    setRouteParams(resolvedParams);
   }, [currentPage]);
 
   const goBack = useCallback(() => {

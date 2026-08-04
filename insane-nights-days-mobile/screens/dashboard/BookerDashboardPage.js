@@ -34,6 +34,7 @@ import BookerDateTimePickers from '../../components/bookerDashboard/BookerDateTi
 import BookerChatModal from '../../components/bookerDashboard/BookerChatModal';
 import BookerContractModals from '../../components/bookerDashboard/BookerContractModals';
 import BookerEditEventModal from '../../components/bookerDashboard/BookerEditEventModal';
+import { NoxProDashboardHeader } from '../../components/nox';
 import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 export default function BookerDashboardPage() {
@@ -242,36 +243,17 @@ export default function BookerDashboardPage() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <StatusBar style="light" />
-        <View style={styles.header}>
-          {!isHome ? (
-            <TouchableOpacity style={styles.backButton} onPress={goBack}>
-              <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 44 }} />
-          )}
-          <Text
-            style={styles.title}
-            numberOfLines={2}
-            adjustsFontSizeToFit={Platform.OS === 'ios'}
-            minimumFontScale={0.85}
-          >
-            {language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
-          </Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.messagesButton}
-              onPress={() => {
-                setActiveSection('events');
-                refreshUnreadCount();
-              }}
-            >
-              <Ionicons name="chatbubbles" size={24} color="#fff" />
-              <NotificationBadge count={unreadCount} onPress={markAllAsRead} />
-            </TouchableOpacity>
-            <View style={{ width: 44 }} />
-          </View>
-        </View>
+        <NoxProDashboardHeader
+          title={language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
+          showBack={!isHome}
+          onBack={goBack}
+          unreadCount={unreadCount}
+          onMessagesPress={() => {
+            setActiveSection('events');
+            refreshUnreadCount();
+          }}
+          onMarkMessagesRead={markAllAsRead}
+        />
 
       {/* Boutons de navigation */}
       <View style={styles.tabButtons}>

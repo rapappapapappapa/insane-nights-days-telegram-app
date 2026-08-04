@@ -50,6 +50,23 @@ export const styles = StyleSheet.create({
   searchBar: {
     width: '100%',
   },
+  shortcutsRow: {
+    gap: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  shortcutCard: {
+    width: 168,
+    minHeight: 108,
+    gap: Spacing.xs,
+  },
+  shortcutTitle: {
+    fontSize: 14,
+    marginTop: Spacing.xs,
+  },
+  shortcutSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
   feedScroll: {
     flex: 1,
   },

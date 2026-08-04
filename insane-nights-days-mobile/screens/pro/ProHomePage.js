@@ -16,7 +16,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { api, normalizeMediaUrl } from '../../api/config';
-import { NoxSearchBar, NoxTabs, NoxFeedPostCard } from '../../components/nox';
+import { NoxSearchBar, NoxTabs, NoxFeedPostCard, NoxText, NoxCard } from '../../components/nox';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationBadge from '../../components/NotificationBadge';
@@ -25,9 +25,9 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { openDiscover } from '../../utils/noxNavigation';
 import { formatFeedRelativeDate } from '../../utils/feedPageUtils';
-import { styles } from './WelcomePage.styles';
+import { styles } from './ProHomePage.styles';
 
-export default function WelcomePage() {
+export default function ProHomePage() {
   const { language } = useLanguage();
   const { user, updateUser, refreshCurrentUser } = useAuth();
   const { navigate } = useNavigation();
@@ -149,7 +149,7 @@ export default function WelcomePage() {
           }
         } catch (e) {
           // best-effort
-          console.warn('[WelcomePage] Auto switch profile failed:', e?.message ?? e);
+          console.warn('[ProHomePage] Auto switch profile failed:', e?.message ?? e);
         }
       }
 
@@ -188,7 +188,7 @@ export default function WelcomePage() {
       await refreshFeedNotifications();
       navigate('notifications');
     } catch (e) {
-      console.error('[WelcomePage] openFeedNotifications error:', e);
+      console.error('[ProHomePage] openFeedNotifications error:', e);
       // Même si l'UI échoue, tenter de remettre à jour le compteur
       refreshFeedNotifications();
       showError(language === 'fr' ? 'Impossible de charger les notifications.' : 'Unable to load notifications.');
@@ -418,6 +418,59 @@ export default function WelcomePage() {
     return base.charAt(0).toUpperCase() + base.slice(1);
   })();
 
+  const proShortcuts = (() => {
+    const fr = language === 'fr';
+    switch (user?.activeProfileType) {
+      case 'DJ':
+        return [
+          {
+            id: 'dashboard',
+            screen: 'djDashboard',
+            icon: 'headset-outline',
+            title: fr ? 'Dashboard DJ' : 'DJ dashboard',
+            subtitle: fr ? 'Bookings, contrats, médias' : 'Bookings, contracts, media',
+          },
+          {
+            id: 'discover',
+            screen: null,
+            icon: 'compass-outline',
+            title: fr ? 'Découvrir' : 'Discover',
+            subtitle: fr ? 'Events & artistes' : 'Events & artists',
+            onPress: () => openDiscover(navigate, user?.activeProfileType),
+          },
+        ];
+      case 'BOOKER':
+        return [
+          {
+            id: 'dashboard',
+            screen: 'bookerDashboard',
+            icon: 'clipboard-outline',
+            title: fr ? 'Dashboard orga' : 'Organizer dashboard',
+            subtitle: fr ? 'Events, messages, profil' : 'Events, messages, profile',
+          },
+          {
+            id: 'create',
+            screen: 'bookerEventDashboard',
+            icon: 'add-circle-outline',
+            title: fr ? 'Créer un event' : 'Create event',
+            subtitle: fr ? 'Wizard organisateur' : 'Organizer wizard',
+          },
+        ];
+      case 'PRESTATAIRE':
+        return [
+          {
+            id: 'dashboard',
+            screen: 'prestataireDashboard',
+            icon: 'construct-outline',
+            title: fr ? 'Dashboard prestataire' : 'Provider dashboard',
+            subtitle: fr ? 'Missions & contrats' : 'Jobs & contracts',
+          },
+        ];
+      default:
+        return [];
+    }
+  })();
+
   return (
       <View style={styles.container}>
         <StatusBar style="light" />
@@ -425,9 +478,9 @@ export default function WelcomePage() {
         <View style={styles.feedContainer}>
           <View style={styles.screenHeader}>
             <View style={styles.headerRow}>
-              <Text style={styles.helloTitle}>
+              <NoxText variant="title" style={styles.helloTitle}>
                 {language === 'fr' ? `Hello ${displayName} !` : `Hello ${displayName}!`}
-              </Text>
+              </NoxText>
               <View style={styles.headerActions}>
                 {user?.isAuthenticated && chatUnreadCount > 0 ? (
                   <TouchableOpacity
@@ -469,6 +522,35 @@ export default function WelcomePage() {
               onPress={() => openDiscover(navigate, user?.activeProfileType)}
               style={styles.searchBar}
             />
+
+            {proShortcuts.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.shortcutsRow}
+              >
+                {proShortcuts.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.85}
+                    onPress={
+                      item.onPress ||
+                      (item.screen ? () => navigate(item.screen) : undefined)
+                    }
+                  >
+                    <NoxCard style={styles.shortcutCard}>
+                      <Ionicons name={item.icon} size={22} color={Colors.primary} />
+                      <NoxText variant="form" style={styles.shortcutTitle}>
+                        {item.title}
+                      </NoxText>
+                      <NoxText variant="secondary" style={styles.shortcutSubtitle}>
+                        {item.subtitle}
+                      </NoxText>
+                    </NoxCard>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : null}
           </View>
 
           <NoxTabs

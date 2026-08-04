@@ -3,7 +3,7 @@
  */
 
 export function getFeedHomeScreen(activeProfileType) {
-  return activeProfileType === 'COMMUNITY' ? 'communityHome' : 'welcome';
+  return activeProfileType === 'COMMUNITY' ? 'communityHome' : 'proHome';
 }
 
 export function resolveFeedNotificationNavigation(notif, activeProfileType) {

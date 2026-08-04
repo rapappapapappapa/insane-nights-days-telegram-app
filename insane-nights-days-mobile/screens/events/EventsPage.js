@@ -93,6 +93,8 @@ export default function EventsPage() {
   useEffect(() => {
     if (user?.activeProfileType === 'COMMUNITY') {
       navigate('communityDiscover', routeParams?.tab ? { tab: routeParams.tab } : undefined);
+    } else if (user?.activeProfileType === 'VENUE') {
+      navigate('lieuxEvents');
     }
   }, [user?.activeProfileType, navigate, routeParams?.tab]);
 

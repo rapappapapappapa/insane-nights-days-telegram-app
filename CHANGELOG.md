@@ -6,13 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
-### Modifié (repo — rebrand NOX, retrait Insane Nights & Days)
-- **Dossier app** : `insane-nights-days-mobile/` → **`nox-mobile/`** (`git mv`).
+### Modifié (repo — rebrand NOX)
+- **Dossier app** : **`nox-mobile/`** (`git mv` depuis l’ancien dossier mobile).
 - **Packages npm** : `nox-platform` (racine), `nox-mobile`, `nox-server`, `nox-client`.
 - **Expo** : slug `nox-mobile`, bundle **`com.nox.mobile`** (iOS/Android), scheme + merchant Stripe alignés.
 - **API par défaut** : `https://api.nox.world` (configurer DNS ou `EXPO_PUBLIC_API_BASE` / Railway en env).
-- **Docs, scripts, client web** : suppression des références Insane / insane-nights-days / telegram-app dans le dépôt.
-- **Guide** : [RENOMMAGE_REPO_NOX.md](./docs/RENOMMAGE_REPO_NOX.md) — renommer le repo GitHub + projet Railway côté ops.
+- **Docs, scripts, client web** : retrait des anciens noms de marque et du dépôt dans le code versionné.
+- **Guide** : [RENOMMAGE_REPO_NOX.md](./docs/RENOMMAGE_REPO_NOX.md) — checklist ops GitHub / Railway / stores.
+- **Docs (suite)** : guide identifiants NOX et CHANGELOG sans aucune mention des anciens noms de marque ou bundle.
 
 ### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro) — 4 août
 - **`proHome`** : remplace `welcome` comme home DJ / Booker / Prestataire — fil events + raccourcis dashboard NOX (`NoxCard`).

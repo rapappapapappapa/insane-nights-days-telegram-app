@@ -1,35 +1,36 @@
-# Renommage NOX — effectué (4 août 2026)
+# Identifiants NOX — état actuel (4 août 2026)
 
-Le dépôt a été rebaptisé **NOX** côté code. Checklist ops restante.
+Le dépôt utilise exclusivement la marque **NOX**. Checklist ops restante.
 
-## ✅ Fait dans le code
+## Identifiants dans le code
 
-| Élément | Avant | Après |
-|---------|--------|--------|
-| Dossier Expo | `insane-nights-days-mobile/` | **`nox-mobile/`** |
-| Package racine | `insane-nights-days-app` | **`nox-platform`** |
-| Package mobile | `insane-nights-days-mobile` | **`nox-mobile`** |
-| Package serveur | `insane-nights-days-server` | **`nox-server`** |
-| Package client web | `insane-nights-days-client` | **`nox-client`** |
-| Expo slug | `insane-nights-days-mobile` | **`nox-mobile`** |
-| Bundle iOS / Android | `com.insanenightsdays.mobile` | **`com.nox.mobile`** |
-| URL API fallback (code) | `…insane-nights-days-telegram-app…` | **`https://api.nox.world`** |
+| Élément | Valeur |
+|---------|--------|
+| Dossier Expo | **`nox-mobile/`** |
+| Package racine | **`nox-platform`** |
+| Package mobile | **`nox-mobile`** |
+| Package serveur | **`nox-server`** |
+| Package client web | **`nox-client`** |
+| Expo slug | **`nox-mobile`** |
+| Bundle iOS / Android | **`com.nox.mobile`** |
+| URL API fallback (code) | **`https://api.nox.world`** |
+| Remote GitHub (cible) | **`rapappapapappapa/nox-mobile`** |
 
-## ⬜ À faire manuellement (ops)
+## À faire manuellement (ops)
 
-1. **GitHub** : renommer le repo → `nox-mobile`, puis :
+1. **GitHub** : vérifier que le repo s’appelle `nox-mobile`, puis :
    ```bash
-   git remote set-url origin git@github-insane:rapappapapappapa/nox-mobile.git
+   git remote set-url origin git@github.com:rapappapapappapa/nox-mobile.git
    ```
 2. **DNS** : pointer `api.nox.world` vers Railway (ou définir `EXPO_PUBLIC_API_BASE` / `PUBLIC_URL` avec l’URL Railway actuelle jusqu’à migration).
 3. **Railway** : renommer le projet (optionnel) ; mettre à jour les secrets EAS si l’URL change.
-4. **Apple / Google developers** : enregistrer le nouveau bundle **`com.nox.mobile`** → **nouvelle fiche store** (pas une simple MAJ de l’ancien ID).
+4. **Apple / Google developers** : enregistrer le bundle **`com.nox.mobile`** → **nouvelle fiche store** si une app était déjà publiée sous un autre identifiant.
 5. **Stripe / Apple Sign-In / Google OAuth** : mettre à jour bundle ID et redirect URIs.
-6. **Dossier local dev** : renommer `app telegram` → `nox-mobile` sur chaque machine (hors git).
+6. **Dossier local dev** : renommer le dossier de travail si besoin sur chaque machine (hors git).
 
-## ⚠️ Bundle ID
+## Bundle ID store
 
-Le passage à `com.nox.mobile` implique un **nouveau binaire store**. Les installs existantes sous `com.insanenightsdays.mobile` ne recevront pas la mise à jour automatique. Planifier migration ou garder l’ancien ID si une release store est déjà live.
+**`com.nox.mobile`** est un identifiant store distinct : pas de mise à jour automatique pour les utilisateurs d’une app publiée sous un autre bundle. Planifier une nouvelle soumission App Store / Play Store.
 
 ---
 

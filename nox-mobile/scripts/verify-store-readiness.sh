@@ -99,7 +99,7 @@ else
 fi
 
 echo ""
-API_BASE="${EXPO_PUBLIC_API_BASE:-https://api.nox.world}"
+API_BASE="${EXPO_PUBLIC_API_BASE:-https://insane-nights-days-telegram-app-production.up.railway.app}"
 echo "URLs légales à renseigner dans App Store Connect / Play Console :"
 echo "   Politique de confidentialité : ${API_BASE%/}/legal/privacy.html"
 echo "   CGU                         : ${API_BASE%/}/legal/cgu.html"

@@ -1,6 +1,7 @@
 /** Constantes de base URL et chemins d'endpoints (client mobile). */
 export const API_CONFIG = {
-  BASE_URL: (process.env.EXPO_PUBLIC_API_BASE || 'https://api.nox.world').replace(/\/$/, ''),
+  // TODO: repasser à https://api.nox.world quand le DNS du sous-domaine sera configuré (Railway custom domain)
+  BASE_URL: (process.env.EXPO_PUBLIC_API_BASE || 'https://insane-nights-days-telegram-app-production.up.railway.app').replace(/\/$/, ''),
   TIMEOUT: 10000,
   ENDPOINTS: {
     WALLET_CONNECT: '/api/wallet/connect',

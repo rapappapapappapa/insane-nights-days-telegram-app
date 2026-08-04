@@ -10,7 +10,8 @@ const prisma = new PrismaClient();
 
 // URL permanente du backend (Railway)
 // ✅ IMPORTANT: Utiliser l'URL Railway permanente, pas les tunnels temporaires
-const RAILWAY_URL = 'https://api.nox.world';
+// TODO: repasser à https://api.nox.world quand le DNS du sous-domaine sera configuré
+const RAILWAY_URL = 'https://insane-nights-days-telegram-app-production.up.railway.app';
 const PUBLIC_URL_ENV = process.env.PUBLIC_URL || RAILWAY_URL;
 
 // ✅ VÉRIFICATION: S'assurer qu'on n'utilise pas un tunnel temporaire

@@ -1,7 +1,8 @@
 // Configuration API pour le client web
 import { isTokenExpired } from '../utils/tokenStorage';
 
-const API_BASE = (process.env.REACT_APP_API_BASE || 'https://api.nox.world').replace(/\/$/, '');
+// TODO: repasser à https://api.nox.world quand le DNS du sous-domaine sera configuré
+const API_BASE = (process.env.REACT_APP_API_BASE || 'https://insane-nights-days-telegram-app-production.up.railway.app').replace(/\/$/, '');
 const TIMEOUT = 10000;
 
 async function apiRequest(endpoint, options = {}, token = null) {

@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Corrigé (mobile/web — « Backend inaccessible » après le rebrand) — 4 août
+- **URL API par défaut** : le rebrand pointait vers `https://api.nox.world`, dont le DNS n'existe pas encore (`NXDOMAIN`) → l'appli ne joignait plus rien. Retour à l'URL Railway (qui répond bien) dans `nox-mobile/api/endpointsConfig.js`, `client/src/apiBase.js`, `client/src/api/config.js`, `server/scripts/update-feed-post-image-urls.js` et `verify-store-readiness.sh`. À rebasculer une fois le sous-domaine configuré (custom domain Railway + DNS).
+
 ### Modifié (repo — rebrand NOX)
 - **Dossier app** : **`nox-mobile/`** (`git mv` depuis l’ancien dossier mobile).
 - **Packages npm** : `nox-platform` (racine), `nox-mobile`, `nox-server`, `nox-client`.

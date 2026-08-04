@@ -51,7 +51,7 @@ Document généré à partir du dépôt (fins 2026) : versions indiquées tell
 ### Build & distribution
 
 - **EAS** : `eas.json` (profiles `development` avec dev client, `preview`, `production` avec canaux **`preview`** / **`production`**).
-- **Expo projet** : `app.json` → `extra.eas.projectId`, nom affiché **« Nox »**, scheme `com.nox.mobile`, **New Architecture** activée (`newArchEnabled: true`).
+- **Expo projet** : `app.json` → `extra.eas.projectId`, nom affiché **« Nox »**, bundle TestFlight `com.insanenightsdays.mobile`, cible stores `com.nox.mobile`, **New Architecture** activée (`newArchEnabled: true`).
 
 ### Client HTTP
 

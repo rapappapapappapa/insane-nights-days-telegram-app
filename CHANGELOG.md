@@ -9,11 +9,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (repo — rebrand NOX)
 - **Dossier app** : **`nox-mobile/`** (`git mv` depuis l’ancien dossier mobile).
 - **Packages npm** : `nox-platform` (racine), `nox-mobile`, `nox-server`, `nox-client`.
-- **Expo** : slug `nox-mobile`, bundle **`com.nox.mobile`** (iOS/Android), scheme + merchant Stripe alignés.
+- **Expo** : slug `nox-mobile`, nom **Nox** ; bundle TestFlight **`com.insanenightsdays.mobile`** (aligné App Store Connect) ; cible stores **`com.nox.mobile`** documentée dans [PUBLICATION_STORES.md](./docs/mobile/PUBLICATION_STORES.md).
 - **API par défaut** : `https://api.nox.world` (configurer DNS ou `EXPO_PUBLIC_API_BASE` / Railway en env).
 - **Docs, scripts, client web** : retrait des anciens noms de marque et du dépôt dans le code versionné.
 - **Guide** : [RENOMMAGE_REPO_NOX.md](./docs/RENOMMAGE_REPO_NOX.md) — checklist ops GitHub / Railway / stores.
 - **Docs (suite)** : guide identifiants NOX et CHANGELOG sans aucune mention des anciens noms de marque ou bundle.
+
+### Modifié (mobile — bundle TestFlight conservé) — 4 août
+- **`app.json`** : retour **`com.insanenightsdays.mobile`** (scheme, iOS, Android, merchant Stripe) pour continuer TestFlight sur la fiche ASC existante (**Nox** / Apple ID `6758730347`).
+- **Cible stores** : migration **`com.nox.mobile`** documentée dans [PUBLICATION_STORES.md](./docs/mobile/PUBLICATION_STORES.md) (obligatoire avant 1ʳᵉ soumission publique).
+- **Serveur** : défaut `APPLE_IOS_BUNDLE_ID` → `com.insanenightsdays.mobile` ; `store:check` avertit si le bundle n’est pas encore `com.nox.mobile`.
 
 ### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro) — 4 août
 - **`proHome`** : remplace `welcome` comme home DJ / Booker / Prestataire — fil events + raccourcis dashboard NOX (`NoxCard`).

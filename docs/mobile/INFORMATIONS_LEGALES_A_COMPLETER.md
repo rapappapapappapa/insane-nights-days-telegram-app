@@ -35,8 +35,9 @@ Hébergeur emails        :  Resend
 === APPLICATION ===
 Nom affiché store       :  Nox
 Nom long / marque       :  NOX
-Bundle ID iOS           :  com.nox.mobile   ← déjà fixé
-Package Android         :  com.nox.mobile   ← déjà fixé
+Bundle ID iOS           :  com.insanenightsdays.mobile   ← TestFlight actuel (nom affiché : Nox)
+Package Android         :  com.insanenightsdays.mobile   ← idem builds internes
+Cible stores publics    :  com.nox.mobile                ← avant 1ʳᵉ soumission (voir PUBLICATION_STORES.md)
 Site web / URL support  :  https://nox.world             (ou URL Railway si pas de site)
 Date mise à jour docs   :  17 juin 2026
 
@@ -141,8 +142,8 @@ Email support déjà présent — ajouter URL site si tu en as une.
 | Fichier | Champ | Valeur |
 |---------|-------|--------|
 | `nox-mobile/app.json` | `expo.name` | `Nox` |
-| `nox-mobile/app.json` | `expo.ios.bundleIdentifier` | `com.nox.mobile` |
-| `nox-mobile/app.json` | `expo.android.package` | `com.nox.mobile` |
+| `nox-mobile/app.json` | `expo.ios.bundleIdentifier` | `com.insanenightsdays.mobile` (TestFlight) → `com.nox.mobile` (stores) |
+| `nox-mobile/app.json` | `expo.android.package` | idem |
 | `nox-mobile/app.json` | `expo.version` | `1.0.0` |
 | `server/env.example.txt` | `RESEND_FROM` | `Nox <noreply@nox.world>` |
 

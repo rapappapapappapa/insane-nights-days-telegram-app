@@ -19,14 +19,22 @@ echo "=== Checklist technique publication stores — Nox ==="
 echo ""
 
 # --- App identity ---
-if grep -q '"bundleIdentifier": "com.nox.mobile"' app.json 2>/dev/null; then
-  ok "Bundle ID iOS : com.nox.mobile"
+BUNDLE=$(node -e "console.log(require('./app.json').expo.ios.bundleIdentifier||'')")
+PACKAGE=$(node -e "console.log(require('./app.json').expo.android.package||'')")
+if [ -n "$BUNDLE" ]; then
+  ok "Bundle ID iOS : $BUNDLE"
+  if [ "$BUNDLE" = "com.insanenightsdays.mobile" ]; then
+    warn "Bundle TestFlight actuel — passer à com.nox.mobile avant soumission App Store publique (voir docs/mobile/PUBLICATION_STORES.md § Migration bundle)"
+  fi
 else
-  fail "bundleIdentifier iOS manquant ou incorrect dans app.json"
+  fail "bundleIdentifier iOS manquant dans app.json"
 fi
 
-if grep -q '"package": "com.nox.mobile"' app.json 2>/dev/null; then
-  ok "Package Android : com.nox.mobile"
+if [ -n "$PACKAGE" ]; then
+  ok "Package Android : $PACKAGE"
+  if [ "$PACKAGE" = "com.insanenightsdays.mobile" ]; then
+    warn "Package TestFlight / interne — passer à com.nox.mobile avant publication Play Store (voir docs/mobile/PUBLICATION_STORES.md § Migration bundle)"
+  fi
 else
   fail "package Android manquant dans app.json"
 fi

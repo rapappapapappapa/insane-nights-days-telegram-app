@@ -1,6 +1,6 @@
 # Identifiants NOX — état actuel (4 août 2026)
 
-Le dépôt utilise exclusivement la marque **NOX**. Checklist ops restante.
+Le dépôt utilise la marque **NOX** à l’affichage. Les identifiants store suivent une stratégie en deux temps.
 
 ## Identifiants dans le code
 
@@ -12,25 +12,26 @@ Le dépôt utilise exclusivement la marque **NOX**. Checklist ops restante.
 | Package serveur | **`nox-server`** |
 | Package client web | **`nox-client`** |
 | Expo slug | **`nox-mobile`** |
-| Bundle iOS / Android | **`com.nox.mobile`** |
+| Nom affiché (stores) | **Nox** |
+| **Bundle iOS / Android (TestFlight / dev)** | **`com.insanenightsdays.mobile`** |
+| **Bundle cible (App Store / Play publics)** | **`com.nox.mobile`** — voir [PUBLICATION_STORES.md](./mobile/PUBLICATION_STORES.md) |
 | URL API fallback (code) | **`https://api.nox.world`** |
-| Remote GitHub (cible) | **`rapappapapappapa/nox-mobile`** |
+| Remote GitHub | **`rapappapapappapa/insane-nights-days-telegram-app`** (renommage `nox-mobile` optionnel) |
 
-## À faire manuellement (ops)
+## Stratégie bundle ID
 
-1. **GitHub** : vérifier que le repo s’appelle `nox-mobile`, puis :
-   ```bash
-   git remote set-url origin git@github.com:rapappapapappapa/nox-mobile.git
-   ```
-2. **DNS** : pointer `api.nox.world` vers Railway (ou définir `EXPO_PUBLIC_API_BASE` / `PUBLIC_URL` avec l’URL Railway actuelle jusqu’à migration).
-3. **Railway** : renommer le projet (optionnel) ; mettre à jour les secrets EAS si l’URL change.
-4. **Apple / Google developers** : enregistrer le bundle **`com.nox.mobile`** → **nouvelle fiche store** si une app était déjà publiée sous un autre identifiant.
-5. **Stripe / Apple Sign-In / Google OAuth** : mettre à jour bundle ID et redirect URIs.
-6. **Dossier local dev** : renommer le dossier de travail si besoin sur chaque machine (hors git).
+| Phase | Bundle | Raison |
+|-------|--------|--------|
+| **Maintenant** (TestFlight, builds internes) | `com.insanenightsdays.mobile` | Continuité avec la fiche App Store Connect existante (Apple ID `6758730347`) |
+| **Avant sortie stores publics** | `com.nox.mobile` | Rebrand technique complet — **nouvelle fiche** iOS/Android obligatoire |
 
-## Bundle ID store
+Checklist détaillée : **[PUBLICATION_STORES.md § Migration bundle ID](./mobile/PUBLICATION_STORES.md)**.
 
-**`com.nox.mobile`** est un identifiant store distinct : pas de mise à jour automatique pour les utilisateurs d’une app publiée sous un autre bundle. Planifier une nouvelle soumission App Store / Play Store.
+## Ops restants
+
+1. **DNS** : pointer `api.nox.world` vers Railway (ou `EXPO_PUBLIC_API_BASE` en attendant).
+2. **GitHub** : renommer le repo → `nox-mobile` si souhaité.
+3. **Stores** : ne pas soumettre en public sans avoir migré vers `com.nox.mobile`.
 
 ---
 

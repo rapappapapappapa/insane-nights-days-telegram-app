@@ -6,13 +6,35 @@ Checklist pour passer de **TestFlight / builds Expo internes** à une **publicat
 
 | Élément | Statut |
 |--------|--------|
-| iOS TestFlight (canal `production`) | ✅ En place |
+| iOS TestFlight (canal `production`) | ✅ En place — app **Nox**, bundle **`com.insanenightsdays.mobile`** |
 | Android APK interne (canal `preview`) | ✅ En place |
 | Profil EAS `production` → `store` | ✅ Configuré |
 | EAS Submit (`eas.json`) | ✅ Configuré |
 | Pages légales publiques (`/legal/*`) | ✅ Ajoutées côté serveur |
 | Scripts npm build / submit / check | ✅ Ajoutés |
 | Textes store (brouillons FR) | ✅ `store-metadata/` |
+| Bundle ID cible stores publics | ⬜ **`com.nox.mobile`** — **obligatoire avant 1ʳᵉ soumission App Store / Play Store** |
+
+---
+
+## ⚠️ Migration bundle ID (TestFlight → stores publics)
+
+**Décision actuelle (août 2026)** : on garde **`com.insanenightsdays.mobile`** pour continuer TestFlight / builds internes sur la fiche App Store Connect existante (Apple ID `6758730347`).
+
+**Avant la sortie publique sur les stores**, basculer vers **`com.nox.mobile`** :
+
+| Étape | iOS | Android |
+|-------|-----|---------|
+| 1 | Créer App ID **`com.nox.mobile`** sur [developer.apple.com](https://developer.apple.com/account/resources/identifiers/list) | Créer app **`com.nox.mobile`** sur Play Console |
+| 2 | Nouvelle fiche **App Store Connect** (ou abandonner l’ancienne fiche TestFlight) | Nouvelle fiche Play Store |
+| 3 | Mettre à jour `app.json` : `bundleIdentifier`, `scheme`, `merchant.com.nox.mobile` | Mettre à jour `android.package` |
+| 4 | `APPLE_IOS_BUNDLE_ID=com.nox.mobile` sur Railway | Idem OAuth Google (SHA-1 + package) |
+| 5 | Stripe : merchant **`merchant.com.nox.mobile`** | — |
+| 6 | Sign in with Apple + Google OAuth : audiences / redirect URIs alignés | — |
+| 7 | **`eas build --profile production`** (nouveau binaire obligatoire) | idem |
+| 8 | TestFlight / tests internes sur la **nouvelle** app | Tests internes Play |
+
+`npm run store:check` affiche un **avertissement** tant que le bundle reste `com.insanenightsdays.mobile`.
 
 ---
 
@@ -32,8 +54,9 @@ Corrige les points ❌ avant de continuer.
 - [ ] **Apple Developer Program** actif (~99 $/an) — [developer.apple.com](https://developer.apple.com/programs/)
 - [ ] **Google Play Console** créé (~25 $ une fois) — [play.google.com/console](https://play.google.com/console)
 - [ ] Compte **Expo** connecté : `eas login` / `eas whoami`
-- [ ] Accès **App Store Connect** à l’app `com.nox.mobile`
-- [ ] Accès **Google Play** à l’app `com.nox.mobile` (à créer si première fois)
+- [ ] Accès **App Store Connect** à l’app TestFlight actuelle **`com.insanenightsdays.mobile`** (nom affiché **Nox**)
+- [ ] Accès **Google Play** (package actuel ou à créer)
+- [ ] **Avant soumission publique** : checklist § Migration bundle ID → **`com.nox.mobile`**
 
 ---
 

@@ -44,8 +44,8 @@
 |---|-------------|-----------------|-------------|
 | 3.1 | Nom affiché sur les stores | **Nox** | ☐ Oui ☐ Non → si non : _______________ |
 | 3.2 | Nom long / marque | **NOX** | ☐ Oui ☐ Non → si non : _______________ |
-| 3.3 | Identifiant iOS (Bundle ID) | com.nox.mobile | ☐ Ne pas modifier |
-| 3.4 | Identifiant Android (Package) | com.nox.mobile | ☐ Ne pas modifier |
+| 3.3 | Identifiant iOS (Bundle ID) | com.insanenightsdays.mobile (TestFlight) → **com.nox.mobile** avant App Store public | ☐ Ne pas modifier avant migration |
+| 3.4 | Identifiant Android (Package) | com.insanenightsdays.mobile → **com.nox.mobile** avant Play Store public | ☐ Ne pas modifier avant migration |
 
 ---
 

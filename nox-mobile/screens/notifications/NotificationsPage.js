@@ -47,6 +47,7 @@ function formatRelativeDate(dateString, language) {
 function notifIcon(type) {
   const t = (type || '').toLowerCase();
   if (t === 'like') return 'heart';
+  if (t === 'repost') return 'repeat';
   if (t === 'comment' || t === 'reply') return 'chatbubble-ellipses';
   if (t === 'follow' || t === 'follow_post' || t === 'new_post') return 'person-add';
   if (t === 'mention') return 'at';
@@ -56,6 +57,7 @@ function notifIcon(type) {
 function notifLabel(type, language) {
   const t = (type || '').toLowerCase();
   if (t === 'like') return language === 'fr' ? 'A aimé ton post' : 'Liked your post';
+  if (t === 'repost') return language === 'fr' ? 'A reposté ta publication' : 'Reposted your post';
   if (t === 'comment') return language === 'fr' ? 'A commenté ton post' : 'Commented on your post';
   if (t === 'reply') return language === 'fr' ? 'A répondu à ton commentaire' : 'Replied to your comment';
   if (t === 'follow') return language === 'fr' ? 'T’a suivi' : 'Followed you';

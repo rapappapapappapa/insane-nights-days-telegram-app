@@ -5,6 +5,13 @@ const path = require('path');
 const fs = require('fs');
 const prisma = require('../../lib/prisma');
 const SERVER_ROOT = path.join(__dirname, '../..');
+const {
+  FEED_POST_INCLUDE,
+  ORIGINAL_POST_INCLUDE,
+  requireDjOrBookerUser,
+  resolveRootFeedPostId,
+  formatFeedPost,
+} = require('./utils/feedPostHelpers');
 
 module.exports = function registerFeedPostRoutes(app, deps) {
   const {
@@ -325,9 +332,114 @@ app.delete('/api/feed/post/:postId', authenticateToken, async (req, res) => {
 });
 
 /**
- * ✅ Abonnements : suivre / ne plus suivre un profil DJ ou Booker
- * On suit le profil (UserDj.id ou UserBooker.id), pas l'utilisateur.
+ * ✅ Reposter un post (DJ / Booker) — le repost apparaît dans le feed du profil actif.
+ * @route POST /api/feed/post/:postId/repost
  */
+app.post('/api/feed/post/:postId/repost', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
 
-// Suivre un profil DJ (UserDj.id)
+    const author = await requireDjOrBookerUser(userId);
+    if (author.error) {
+      return res.status(author.error.status).json({ success: false, message: author.error.message });
+    }
+
+    const targetPost = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      select: { id: true, originalPostId: true },
+    });
+
+    if (!targetPost) {
+      return res.status(404).json({ success: false, message: 'Post introuvable.' });
+    }
+
+    const rootPostId = await resolveRootFeedPostId(postId);
+    if (!rootPostId) {
+      return res.status(404).json({ success: false, message: 'Post introuvable.' });
+    }
+
+    const rootPost = await prisma.feedPost.findUnique({
+      where: { id: rootPostId },
+      select: { id: true, authorId: true },
+    });
+
+    if (!rootPost) {
+      return res.status(404).json({ success: false, message: 'Post introuvable.' });
+    }
+
+    if (rootPost.authorId === userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tu ne peux pas reposter ta propre publication.',
+      });
+    }
+
+    const existingRepost = await prisma.feedPost.findFirst({
+      where: {
+        authorId: userId,
+        originalPostId: rootPostId,
+      },
+      select: { id: true },
+    });
+
+    if (existingRepost) {
+      return res.status(409).json({
+        success: false,
+        message: 'Tu as déjà reposté cette publication.',
+        repostId: existingRepost.id,
+      });
+    }
+
+    const postData = {
+      authorId: userId,
+      originalPostId: rootPostId,
+      content: '',
+    };
+
+    if (author.djId) postData.djId = author.djId;
+    if (author.bookerId) postData.bookerId = author.bookerId;
+
+    const includeData = {
+      ...FEED_POST_INCLUDE,
+      originalPost: { include: ORIGINAL_POST_INCLUDE },
+    };
+
+    const repost = await prisma.feedPost.create({
+      data: postData,
+      include: includeData,
+    });
+
+    if (rootPost.authorId !== userId) {
+      try {
+        await prisma.feedNotification.create({
+          data: {
+            userId: rootPost.authorId,
+            postId: repost.id,
+            actorId: userId,
+            type: 'repost',
+          },
+        });
+      } catch (notifError) {
+        console.error('Erreur création notification repost:', notifError);
+      }
+    }
+
+    const normalizeImageUrl = (url) => url || null;
+    const formatted = formatFeedPost(repost, {
+      normalizeImageUrl,
+      userLikedPostIds: new Set(),
+      userRepostedRootIds: new Set([rootPostId]),
+    });
+
+    res.json({
+      success: true,
+      post: formatted,
+    });
+  } catch (error) {
+    console.error('Erreur repost feed:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 };

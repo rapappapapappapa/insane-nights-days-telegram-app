@@ -4,6 +4,43 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 import { styles } from './NoxFeedPostCard.styles';
 
+function getProfileMeta(block, isDjBlock) {
+  if (!block) return { name: 'Utilisateur', location: null, image: null, isDj: isDjBlock };
+  const isDj = isDjBlock ?? block.profileType === 'DJ';
+  const name = isDj
+    ? block.dj?.artistName
+    : block.booker?.name || block.author?.username;
+  const location = isDj ? block.dj?.city : null;
+  const image = isDj ? block.dj?.profileImage : block.booker?.profileImage;
+  return { name, location, image, isDj };
+}
+
+function PostBody({ content, imageUri, isBrokenImage, language, onImageError }) {
+  return (
+    <>
+      {!!content?.trim() ? <Text style={styles.content}>{content}</Text> : null}
+      {!!imageUri && !isBrokenImage ? (
+        <View style={styles.imageWrap}>
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={onImageError}
+          />
+        </View>
+      ) : null}
+      {!!imageUri && isBrokenImage ? (
+        <View style={[styles.imageWrap, styles.imageFallback]}>
+          <Ionicons name="image-outline" size={22} color={Colors.textTertiary} />
+          <Text style={styles.imageFallbackText}>
+            {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
 export default function NoxFeedPostCard({
   item,
   language,
@@ -21,9 +58,13 @@ export default function NoxFeedPostCard({
   commentsCount,
   commentInput,
   canComment,
+  canRepost,
+  repostedByMe,
   onPressProfile,
+  onPressOriginalProfile,
   onToggleLike,
   onToggleComments,
+  onRepost,
   onReport,
   onDelete,
   onImageError,
@@ -31,6 +72,12 @@ export default function NoxFeedPostCard({
   onSendComment,
   formatDate,
 }) {
+  const fr = language === 'fr';
+  const original = item.originalPost;
+  const showEmbed = item.isRepost && original;
+
+  const originalMeta = showEmbed ? getProfileMeta(original, original.profileType === 'DJ') : null;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -62,6 +109,13 @@ export default function NoxFeedPostCard({
               </View>
             </View>
             <View style={styles.metaRow}>
+              {showEmbed ? (
+                <>
+                  <Ionicons name="repeat" size={12} color={Colors.textTertiary} />
+                  <Text style={styles.repostLabel}>{fr ? 'Repost' : 'Repost'}</Text>
+                  <Text style={styles.metaDot}>•</Text>
+                </>
+              ) : null}
               {profileLocation ? <Text style={styles.meta}>{profileLocation}</Text> : null}
               {profileLocation ? <Text style={styles.metaDot}>•</Text> : null}
               <Text style={styles.meta}>{formatDate(item.createdAt)}</Text>
@@ -82,25 +136,47 @@ export default function NoxFeedPostCard({
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.content}>{item.content}</Text>
-        {!!imageUri && !isBrokenImage ? (
-          <View style={styles.imageWrap}>
-            <Image
-              source={{ uri: imageUri }}
-              style={styles.image}
-              resizeMode="cover"
-              onError={onImageError}
+        {showEmbed ? (
+          <View style={styles.embeddedPost}>
+            <TouchableOpacity
+              style={styles.embeddedHeader}
+              activeOpacity={0.75}
+              onPress={onPressOriginalProfile}
+              disabled={!onPressOriginalProfile}
+            >
+              <View style={[styles.embeddedAvatar, originalMeta?.isDj ? styles.avatarDj : styles.avatarBooker]}>
+                {originalMeta?.image ? (
+                  <Image source={{ uri: originalMeta.image }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.embeddedAvatarText}>
+                    {originalMeta?.name?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.embeddedHeaderInfo}>
+                <Text style={styles.embeddedAuthor} numberOfLines={1}>
+                  {originalMeta?.name}
+                </Text>
+                <Text style={styles.meta}>{formatDate(original.createdAt)}</Text>
+              </View>
+            </TouchableOpacity>
+            <PostBody
+              content={original.content}
+              imageUri={original.imageUrl}
+              isBrokenImage={isBrokenImage}
+              language={language}
+              onImageError={onImageError}
             />
           </View>
-        ) : null}
-        {!!imageUri && isBrokenImage ? (
-          <View style={[styles.imageWrap, styles.imageFallback]}>
-            <Ionicons name="image-outline" size={22} color={Colors.textTertiary} />
-            <Text style={styles.imageFallbackText}>
-              {language === 'fr' ? 'Image indisponible' : 'Image unavailable'}
-            </Text>
-          </View>
-        ) : null}
+        ) : (
+          <PostBody
+            content={item.content}
+            imageUri={imageUri}
+            isBrokenImage={isBrokenImage}
+            language={language}
+            onImageError={onImageError}
+          />
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -126,6 +202,19 @@ export default function NoxFeedPostCard({
             </Text>
           ) : null}
         </TouchableOpacity>
+        {canRepost ? (
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={onRepost}
+            accessibilityLabel={fr ? 'Reposter' : 'Repost'}
+          >
+            <Ionicons
+              name="repeat"
+              size={20}
+              color={repostedByMe ? Colors.primary : Colors.textTertiary}
+            />
+          </TouchableOpacity>
+        ) : null}
         <View style={styles.actionSpacer} />
       </View>
 
@@ -146,7 +235,7 @@ export default function NoxFeedPostCard({
             <View style={styles.commentInputRow}>
               <TextInput
                 style={styles.commentInput}
-                placeholder={language === 'fr' ? 'Commenter…' : 'Comment…'}
+                placeholder={fr ? 'Commenter…' : 'Comment…'}
                 placeholderTextColor={Colors.textMuted}
                 value={commentInput || ''}
                 onChangeText={onCommentInputChange}

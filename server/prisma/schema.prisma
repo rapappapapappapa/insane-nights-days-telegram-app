@@ -636,6 +636,7 @@ model FeedPost {
   authorId        String
   djId            String?
   bookerId        String?
+  originalPostId  String?
   content         String
   imageUrl        String?
   imageStorageKey String?
@@ -646,6 +647,8 @@ model FeedPost {
   author          User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   booker          UserBooker?        @relation(fields: [bookerId], references: [id], onDelete: Cascade)
   dj              UserDj?            @relation(fields: [djId], references: [id], onDelete: Cascade)
+  originalPost    FeedPost?          @relation("FeedRepost", fields: [originalPostId], references: [id], onDelete: Cascade)
+  reposts         FeedPost[]         @relation("FeedRepost")
   comments        FeedPostComment[]
   postLikes       FeedPostLike[]
 
@@ -653,6 +656,7 @@ model FeedPost {
   @@index([djId])
   @@index([bookerId])
   @@index([createdAt])
+  @@index([originalPostId])
 }
 
 model FeedPostLike {

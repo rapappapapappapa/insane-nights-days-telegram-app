@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Ajouté (feed — repost artiste / orga) — 5 août
+- **API** : `POST /api/feed/post/:postId/repost` — réservé aux profils **DJ** et **BOOKER** ; le repost apparaît sur leur fil (canal following + feed global).
+- **Prisma** : `FeedPost.originalPostId` + migration `20260805140000_feed_post_repost` (un repost par auteur et par publication source).
+- **Mobile** : bouton repost sur `NoxFeedPostCard` ; carte embed pour les reposts ; notification type `repost` à l’auteur du post source.
+
 ### Corrigé (mobile — slug Expo incompatible EAS) — 4 août
 - **`app.json`** : retour au slug `insane-nights-days-mobile` — le slug `nox-mobile` du rebrand ne correspondait plus au projet EAS (`projectId` inchangé), ce qui bloquait toute publication OTA (`eas update` en erreur). Le nom affiché reste « Nox » ; migrer le slug impliquerait un nouveau projet EAS et de nouveaux builds.
 

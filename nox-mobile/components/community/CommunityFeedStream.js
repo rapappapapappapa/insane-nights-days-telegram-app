@@ -97,6 +97,66 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
 
   const formatDate = (dateString) => formatFeedRelativeDate(dateString, language);
 
+  const canUserRepost =
+    !!user?.token &&
+    (user?.activeProfileType === 'DJ' || user?.activeProfileType === 'BOOKER');
+
+  const handleRepost = async (item) => {
+    if (!canUserRepost) {
+      showError(fr ? 'Réservé aux artistes et organisateurs.' : 'Artists and organizers only.');
+      return;
+    }
+    const targetId = item.isRepost ? item.originalPost?.id : item.id;
+    if (!targetId) return;
+
+    try {
+      const response = await api.repostFeedPost(user.token, targetId);
+      if (response?.success && response.post) {
+        setFeed((prev) => {
+          const marked = prev.map((entry) => {
+            if (entry.type !== 'post') return entry;
+            const entryRootId = entry.isRepost ? entry.originalPost?.id : entry.id;
+            if (entry.id === targetId || entryRootId === targetId) {
+              return { ...entry, repostedByMe: true };
+            }
+            return entry;
+          });
+          return [response.post, ...marked.filter((entry) => entry.id !== response.post.id)];
+        });
+        showSuccess(fr ? 'Publication repostée sur ton fil.' : 'Post reposted to your feed.');
+      } else {
+        showError(response?.message || (fr ? 'Repost impossible.' : 'Could not repost.'));
+      }
+    } catch (e) {
+      if (e?.status === 409) {
+        setFeed((prev) =>
+          prev.map((entry) => {
+            if (entry.type !== 'post') return entry;
+            const entryRootId = entry.isRepost ? entry.originalPost?.id : entry.id;
+            if (entry.id === targetId || entryRootId === targetId) {
+              return { ...entry, repostedByMe: true };
+            }
+            return entry;
+          }),
+        );
+        showError(fr ? 'Tu as déjà reposté cette publication.' : 'You already reposted this post.');
+        return;
+      }
+      if (handleTokenError(e)) return;
+      showError(e?.message || (fr ? 'Erreur réseau.' : 'Network error.'));
+    }
+  };
+
+  const navigateToPostProfile = (postItem, { original = false } = {}) => {
+    const source = original && postItem.originalPost ? postItem.originalPost : postItem;
+    const isDjPost = source.profileType === 'DJ';
+    if (isDjPost && source.dj) {
+      navigate('djProfile', { djId: source.dj.id, djUserId: source.dj.userId });
+    } else if (!isDjPost && (source.booker?.id || source.bookerId)) {
+      navigate('bookerProfile', { bookerId: source.booker?.id || source.bookerId });
+    }
+  };
+
   const handleDeletePost = (postId) => {
     if (!user?.token) {
       showError(fr ? 'Connecte-toi pour supprimer.' : 'Log in to delete.');
@@ -187,6 +247,12 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
         : baseProfileImg;
     const imageUri = normalizeMediaUrl(item.imageUrl || item.image);
     const isBrokenImage = !!brokenPostImages[item.id];
+    const rootAuthorId = item.isRepost ? item.originalPost?.author?.id : item.author?.id;
+    const canRepost =
+      canUserRepost && !item.repostedByMe && rootAuthorId && rootAuthorId !== user?.id;
+    const displayImageUri = item.isRepost && item.originalPost
+      ? normalizeMediaUrl(item.originalPost.imageUrl)
+      : imageUri;
 
     return (
       <NoxFeedPostCard
@@ -196,7 +262,7 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
         profileName={profileName}
         profileLocation={profileLocation}
         profileImage={profileImage}
-        imageUri={imageUri}
+        imageUri={displayImageUri}
         isBrokenImage={isBrokenImage}
         isDj={isDj}
         isAuthor={isAuthor}
@@ -211,16 +277,16 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
         }
         commentInput={commentInputs[item.id]}
         canComment={!!user?.token}
+        canRepost={canRepost}
+        repostedByMe={!!item.repostedByMe}
         formatDate={formatDate}
-        onPressProfile={() => {
-          if (isDj && item.dj) {
-            navigate('djProfile', { djId: item.dj.id, djUserId: item.dj.userId });
-          } else if (!isDj && (item.booker?.id || item.bookerId)) {
-            navigate('bookerProfile', { bookerId: item.booker?.id || item.bookerId });
-          }
-        }}
+        onPressProfile={() => navigateToPostProfile(item)}
+        onPressOriginalProfile={
+          item.isRepost ? () => navigateToPostProfile(item, { original: true }) : undefined
+        }
         onToggleLike={() => handleToggleLike(item.id)}
         onToggleComments={() => toggleComments(item.id)}
+        onRepost={() => handleRepost(item)}
         onReport={() => reportPost(item.id)}
         onDelete={() => handleDeletePost(item.id)}
         onImageError={() => {

@@ -103,6 +103,46 @@ export const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginHorizontal: 4,
   },
+  repostLabel: {
+    color: Colors.textTertiary,
+    fontSize: 12,
+    fontFamily: FontFamily.medium,
+    marginLeft: 4,
+  },
+  embeddedPost: {
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.backgroundInput,
+  },
+  embeddedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  embeddedAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  embeddedAvatarText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontFamily: FontFamily.bold,
+  },
+  embeddedHeaderInfo: {
+    flex: 1,
+  },
+  embeddedAuthor: {
+    color: Colors.text,
+    fontSize: 14,
+    fontFamily: FontFamily.bold,
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',

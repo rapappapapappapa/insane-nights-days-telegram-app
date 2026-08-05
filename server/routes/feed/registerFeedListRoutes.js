@@ -3,6 +3,12 @@
  */
 const prisma = require('../../lib/prisma');
 const { parseTicketTiersFromDb } = require('../../utils/ticketTiers');
+const {
+  FEED_POST_INCLUDE,
+  ORIGINAL_POST_INCLUDE,
+  formatFeedPost,
+  fetchUserRepostedRootIds,
+} = require('./utils/feedPostHelpers');
 
 module.exports = function registerFeedListRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -41,18 +47,8 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       skip: offset,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { comments: true } },
-        dj: {
-          include: {
-            media: {
-              where: { type: 'photo', title: 'profile' },
-              take: 1,
-              orderBy: { createdAt: 'desc' },
-            },
-          },
-        },
-        booker: { select: { pseudo: true, nom: true, prenom: true, bookerType: true, profileImage: true } },
-        author: { select: { username: true, activeProfileType: true } },
+        ...FEED_POST_INCLUDE,
+        originalPost: { include: ORIGINAL_POST_INCLUDE },
       },
     });
 
@@ -93,43 +89,18 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       userLikes.forEach((l) => userLikedPostIds.add(l.postId));
     }
 
-    const formattedPosts = posts.map((post) => {
-      const profileType = post.djId ? 'DJ' : (post.bookerId ? 'BOOKER' : null);
-      const formattedPost = {
-        type: 'post',
-        id: post.id,
-        content: post.content,
-        imageUrl: normalizeImageUrl(post.imageUrl),
-        likes: post.likes,
-        liked: userLikedPostIds.has(post.id),
-        commentsCount: post._count?.comments ?? 0,
-        createdAt: post.createdAt,
-        profileType,
-        author: { id: post.authorId, username: post.author.username },
-      };
-      if (post.dj) {
-        const djProfileImg = post.dj.profileImage || post.dj.media?.[0]?.url;
-        formattedPost.dj = {
-          id: post.djId,
-          userId: post.authorId,
-          artistName: post.dj.artistName,
-          profileImage: normalizeImageUrl(djProfileImg),
-          city: post.dj.city,
-        };
-      }
-      if (post.booker) {
-        formattedPost.booker = {
-          id: post.bookerId,
-          userId: post.authorId,
-          name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
-          bookerType: post.booker.bookerType,
-          profileImage: normalizeImageUrl(post.booker.profileImage),
-        };
-      } else if (post.bookerId) {
-        formattedPost.bookerId = post.bookerId;
-      }
-      return formattedPost;
-    });
+    const userRepostedRootIds = await fetchUserRepostedRootIds(
+      userId,
+      posts.map((p) => p.originalPostId || p.id),
+    );
+
+    const formattedPosts = posts.map((post) =>
+      formatFeedPost(post, {
+        normalizeImageUrl,
+        userLikedPostIds,
+        userRepostedRootIds,
+      }),
+    );
 
     const formattedEvents = upcomingEvents.map((event) => {
       const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
@@ -200,31 +171,8 @@ app.get('/api/feed', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       // Pas de where clause - tous les posts sont récupérés indépendamment de la date de création du compte ou d'installation
       include: {
-        _count: { select: { comments: true } },
-        dj: {
-          include: {
-            media: {
-              where: { type: 'photo', title: 'profile' },
-              take: 1,
-              orderBy: { createdAt: 'desc' },
-            },
-          },
-        },
-        booker: {
-          select: {
-            pseudo: true,
-            nom: true,
-            prenom: true,
-            bookerType: true,
-            profileImage: true,
-          },
-        },
-        author: {
-          select: {
-            username: true,
-            activeProfileType: true,
-          },
-        },
+        ...FEED_POST_INCLUDE,
+        originalPost: { include: ORIGINAL_POST_INCLUDE },
       },
     });
 
@@ -330,54 +278,18 @@ app.get('/api/feed', async (req, res) => {
       userLikedPostIds = new Set(userLikes.map((l) => l.postId));
     }
 
-    // Formater les posts
-    const formattedPosts = posts.map((post) => {
-      // ✅ CORRECTION: Déterminer le profileType selon djId/bookerId au moment de la création, pas activeProfileType actuel
-      const profileType = post.djId ? 'DJ' : (post.bookerId ? 'BOOKER' : null);
-      
-      const formattedPost = {
-        type: 'post',
-        id: post.id,
-        content: post.content,
-        imageUrl: normalizeImageUrl(post.imageUrl), // ✅ CORRECTION: Normaliser l'URL de l'image
-        likes: post.likes,
-        liked: currentUserId ? userLikedPostIds.has(post.id) : undefined, // ✅ Statut like pour l'utilisateur connecté
-        commentsCount: post._count?.comments ?? 0,
-        createdAt: post.createdAt,
-        profileType: profileType, // ✅ CORRECTION: Utiliser djId/bookerId pour déterminer le type, pas activeProfileType
-        author: {
-          id: post.authorId,
-          username: post.author.username,
-        },
-      };
+    const userRepostedRootIds = await fetchUserRepostedRootIds(
+      currentUserId,
+      posts.map((p) => p.originalPostId || p.id),
+    );
 
-      // Si c'est un DJ
-      if (post.dj) {
-        const djProfileImg = post.dj.profileImage || post.dj.media?.[0]?.url;
-        formattedPost.dj = {
-          id: post.djId,
-          userId: post.authorId,
-          artistName: post.dj.artistName,
-          profileImage: normalizeImageUrl(djProfileImg),
-          city: post.dj.city,
-        };
-      }
-
-      // Si c'est un Booker
-      if (post.booker) {
-        formattedPost.booker = {
-          id: post.bookerId,
-          userId: post.authorId,
-          name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
-          bookerType: post.booker.bookerType,
-          profileImage: normalizeImageUrl(post.booker.profileImage),
-        };
-      } else if (post.bookerId) {
-        formattedPost.bookerId = post.bookerId;
-      }
-
-      return formattedPost;
-    });
+    const formattedPosts = posts.map((post) =>
+      formatFeedPost(post, {
+        normalizeImageUrl,
+        userLikedPostIds,
+        userRepostedRootIds,
+      }),
+    );
 
     // Formater les événements comme annonces
     const formattedEvents = upcomingEvents.map((event) => {

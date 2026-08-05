@@ -266,6 +266,16 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     }
   },
 
+  // ✅ Reposter un post (artiste / organisateur)
+  repostFeedPost: async (token, postId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/feed/post/${postId}/repost`, {
+      method: 'POST',
+    }, token);
+  },
+
   // ✅ AJOUT: Supprimer un post du feed (uniquement par l'auteur)
   deleteFeedPost: async (token, postId) => {
     if (!token) {

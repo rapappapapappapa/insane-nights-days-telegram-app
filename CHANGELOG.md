@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Corrigé (feed — bouton repost sur ProHome) — 5 août
+- **`ProHomePage`** : le fil pro utilisait une copie de `NoxFeedPostCard` sans repost — remplacé par **`CommunityFeedStream`** (bouton ↻ sur toutes les publications existantes, pas seulement les nouvelles).
+
 ### Ajouté (feed — repost artiste / orga) — 5 août
 - **API** : `POST /api/feed/post/:postId/repost` — réservé aux profils **DJ** et **BOOKER** ; le repost apparaît sur leur fil (canal following + feed global).
 - **Prisma** : `FeedPost.originalPostId` + migration `20260805140000_feed_post_repost` (un repost par auteur et par publication source).

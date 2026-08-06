@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Build iOS 17 — bundle NOX embarqué (TestFlight) — 6 août
+- **`eas build` production iOS** : build **17** — JS actuel (NOX bleu, repost, Phase D/E) embarqué dans le binaire ; fin du fallback rouge legacy du build 16.
+- **Soumission TestFlight** : `eas submit --latest` (build `178882e0`).
+
 ### Corrigé (feed — bouton repost sur ProHome) — 5 août
 - **`ProHomePage`** : le fil pro utilisait une copie de `NoxFeedPostCard` sans repost — remplacé par **`CommunityFeedStream`** (bouton ↻ sur toutes les publications existantes, pas seulement les nouvelles).
 

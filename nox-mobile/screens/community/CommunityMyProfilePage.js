@@ -65,6 +65,7 @@ export default function CommunityMyProfilePage() {
       goBack={goBack}
       onEdit={() => navigate('communityProfileEdit')}
       initialTab={initialTab}
+      wallUserId={user?.id || null}
     />
   );
 }

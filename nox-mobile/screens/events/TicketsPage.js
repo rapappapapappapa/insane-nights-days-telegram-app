@@ -21,7 +21,7 @@ import { NoxText, NoxTabs, NoxButton, NoxCard, NoxScreenHeader } from '../../com
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import { openDiscover } from '../../utils/noxNavigation';
+import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
 import {
   addNoxEventToDeviceCalendar,
   isDeviceCalendarExportSupported,
@@ -232,7 +232,11 @@ export default function TicketsPage() {
       <NoxCard key={ticket.id} style={styles.ticketCard}>
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => (past ? navigate('eventDetail', { eventId: ticket.eventId }) : setSelectedTicket(ticket))}
+          onPress={() =>
+            past
+              ? openEventPreview(navigate, user?.activeProfileType, ticket.eventId)
+              : setSelectedTicket(ticket)
+          }
           accessibilityRole="button"
           accessibilityLabel={
             past
@@ -495,7 +499,7 @@ export default function TicketsPage() {
                   variant="secondary"
                   onPress={() => {
                     setSelectedTicket(null);
-                    navigate('eventDetail', { eventId: selectedTicket.eventId });
+                    openEventPreview(navigate, user?.activeProfileType, selectedTicket.eventId);
                   }}
                 />
                 <NoxButton

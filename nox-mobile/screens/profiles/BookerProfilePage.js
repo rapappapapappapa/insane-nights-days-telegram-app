@@ -19,6 +19,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 import { NoxText, NoxButton } from '../../components/nox';
+import ProfileWallStream from '../../components/community/ProfileWallStream';
 
 export default function BookerProfilePage() {
   const insets = useSafeAreaInsets();
@@ -256,6 +257,17 @@ export default function BookerProfilePage() {
         ) : null}
       </View>
 
+      <View style={styles.wallSection}>
+        <NoxText variant="titleSecondary" style={styles.wallTitle}>
+          {language === 'fr' ? 'Publications' : 'Posts'}
+        </NoxText>
+        <ProfileWallStream
+          wallFilter={booker?.id ? { bookerId: booker.id } : null}
+          isOwnProfile={!!(user?.id && booker.userId === user?.id)}
+          enabled={!!booker?.id}
+        />
+      </View>
+
       {toast.visible ? (
         <Toast message={toast.message} type={toast.type} onHide={hideToast} />
       ) : null}
@@ -366,5 +378,12 @@ const styles = StyleSheet.create({
   },
   quickStatValue: {
     color: Colors.primary,
+  },
+  wallSection: {
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+  },
+  wallTitle: {
+    marginBottom: Spacing.md,
   },
 });

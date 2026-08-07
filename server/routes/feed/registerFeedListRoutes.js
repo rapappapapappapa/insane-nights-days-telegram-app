@@ -1,7 +1,9 @@
 /**
  * Fil d'actualité (following + feed principal).
  */
+const jwt = require('jsonwebtoken');
 const prisma = require('../../lib/prisma');
+const { JWT_SECRET } = require('../../utils/jwtConfig');
 const { parseTicketTiersFromDb } = require('../../utils/ticketTiers');
 const {
   FEED_POST_INCLUDE,
@@ -9,6 +11,36 @@ const {
   formatFeedPost,
   fetchUserRepostedRootIds,
 } = require('./utils/feedPostHelpers');
+
+function resolveOptionalUserId(req) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.userId || null;
+  } catch {
+    return null;
+  }
+}
+
+function buildFeedImageNormalizer(req) {
+  const getRequestBaseUrl = () => {
+    const publicUrl = process.env.PUBLIC_URL;
+    if (publicUrl) return publicUrl.replace(/\/$/, '');
+    const host = req.get('host');
+    const forwardedProto = req.get('x-forwarded-proto');
+    const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+    return `${proto}://${host}`.replace(/\/$/, '');
+  };
+  const baseUrl = getRequestBaseUrl();
+  return (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('/uploads/')) return `${baseUrl}${imageUrl}`;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return imageUrl;
+  };
+}
 
 module.exports = function registerFeedListRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -148,18 +180,7 @@ app.get('/api/feed', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50; // ✅ AUGMENTÉ: De 20 à 50 par défaut pour voir plus de posts
     const offset = parseInt(req.query.offset) || 0;
 
-    // ✅ Optionnel: récupérer l'utilisateur si token présent (pour inclure liked dans la réponse)
-    let currentUserId = null;
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        currentUserId = decoded.userId;
-      } catch (e) {
-        // Token invalide ou expiré, ignorer
-      }
-    }
+    let currentUserId = resolveOptionalUserId(req);
 
     // Récupérer les posts récents (triés par date décroissante)
     // ✅ CORRECTION: Pas de filtre par date - tous les posts sont visibles pour tous les utilisateurs
@@ -363,7 +384,71 @@ app.get('/api/feed', async (req, res) => {
 });
 
 /**
- * ✅ AJOUT: Liker ou unliker un post
- * @route POST /api/feed/post/:postId/like
+ * Mur profil — publications (originales + reposts) d'un DJ, booker ou utilisateur.
+ * @route GET /api/feed/wall
+ * @query userId | djId | bookerId — un seul filtre requis
  */
+app.get('/api/feed/wall', async (req, res) => {
+  try {
+    const { userId, djId, bookerId } = req.query;
+    const filters = [userId, djId, bookerId].filter(Boolean);
+    if (filters.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Indiquez exactement un paramètre : userId, djId ou bookerId.',
+      });
+    }
+
+    const limit = parseInt(req.query.limit, 10) || 30;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const where = userId
+      ? { authorId: String(userId) }
+      : djId
+        ? { djId: String(djId) }
+        : { bookerId: String(bookerId) };
+
+    const posts = await prisma.feedPost.findMany({
+      where,
+      take: limit,
+      skip: offset,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        ...FEED_POST_INCLUDE,
+        originalPost: { include: ORIGINAL_POST_INCLUDE },
+      },
+    });
+
+    const total = await prisma.feedPost.count({ where });
+    const currentUserId = resolveOptionalUserId(req);
+    const normalizeImageUrl = buildFeedImageNormalizer(req);
+
+    const userLikedPostIds = new Set();
+    if (currentUserId && posts.length > 0) {
+      const userLikes = await prisma.feedPostLike.findMany({
+        where: { userId: currentUserId, postId: { in: posts.map((p) => p.id) } },
+        select: { postId: true },
+      });
+      userLikes.forEach((l) => userLikedPostIds.add(l.postId));
+    }
+
+    const userRepostedRootIds = await fetchUserRepostedRootIds(
+      currentUserId,
+      posts.map((p) => p.originalPostId || p.id),
+    );
+
+    const feed = posts.map((post) =>
+      formatFeedPost(post, {
+        normalizeImageUrl,
+        userLikedPostIds,
+        userRepostedRootIds,
+      }),
+    );
+
+    res.json({ success: true, feed, total });
+  } catch (error) {
+    console.error('Erreur feed wall:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 };

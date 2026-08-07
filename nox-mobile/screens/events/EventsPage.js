@@ -100,7 +100,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     if (!user?.isAuthenticated) {
-      navigate('home');
+      navigate('splash');
     }
   }, [user?.isAuthenticated, navigate]);
 

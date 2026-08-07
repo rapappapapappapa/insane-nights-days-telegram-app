@@ -26,6 +26,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 import { NoxText, NoxButton, NoxCard } from '../../components/nox';
+import ProfileWallStream from '../../components/community/ProfileWallStream';
 import { Spacing } from '../../constants/theme';
 import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 import { styles } from './DjProfilePage.styles';
@@ -832,6 +833,19 @@ export default function DjProfilePage() {
           </>
         ) : null}
       </NoxCard>
+
+      {dj?.id ? (
+        <NoxCard style={{ marginHorizontal: Spacing.xl, marginTop: Spacing.lg }}>
+          <NoxText variant="titleSecondary" style={{ marginBottom: Spacing.md }}>
+            {language === 'fr' ? 'Publications' : 'Posts'}
+          </NoxText>
+          <ProfileWallStream
+            wallFilter={{ djId: dj.id }}
+            isOwnProfile={!!(user?.id && dj.userId === user?.id)}
+            enabled
+          />
+        </NoxCard>
+      ) : null}
 
       {/* Lecteur vidéo modal */}
       {selectedVideo && (

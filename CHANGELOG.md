@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Modifié (mobile — Phase D + achats/billets) — 7 août
+- **`PurchasesPage` / `TicketsPage`** : tap sur un événement → **`openEventPreview`** (fiche NOX communauté) au lieu de `eventDetail` checkout.
+- **Phase D** : plus de `navigate('home')` direct — `splash` si déconnecté, home du rôle via helpers existants.
+
+### Ajouté (mobile — mur profil publications) — 7 août
+- **API** : `GET /api/feed/wall` — liste les posts/reposts d’un compte (`userId`) ou d’un profil DJ / booker.
+- **Mobile** : `ProfileWallStream` + hook `useProfileWall` — cartes `NoxFeedPostCard` (likes, commentaires, repost) dans l’onglet **Mur** du profil communauté ; sections **Publications** sur les profils DJ et booker publics.
+
 ### Build iOS 17 — bundle NOX embarqué (TestFlight) — 6 août
 - **`eas build` production iOS** : build **17** — JS actuel (NOX bleu, repost, Phase D/E) embarqué dans le binaire ; fin du fallback rouge legacy du build 16.
 - **Soumission TestFlight** : `eas submit --latest` (build `178882e0`).

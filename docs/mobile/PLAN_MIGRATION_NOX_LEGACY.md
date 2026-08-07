@@ -305,7 +305,7 @@ flowchart TB
 |-------|--------|------------|
 | A — Quick wins | ✅ Fait | 17 juil. 2026 |
 | B — Lieux métier (B1–B9) | ✅ Fait | 4 août 2026 |
-| C — Communauté social | ✅ Fait (mur/repost hors scope) | 31 juil. 2026 |
+| C — Communauté social | ✅ Fait (mur + repost) | 7 août 2026 |
 | D — Nettoyage legacy | 🟡 En cours (D1–D3, D6 faits) | 4 août 2026 |
 | E — Pro DJ/Booker | 🟡 En cours (proHome + dashboards NOX) | 4 août 2026 |
 
@@ -319,7 +319,7 @@ Mettre à jour cette table à chaque livraison.
 
 1. QA parcours pro (`GUIDE_TEST_NOX.md`) : proHome → dashboard → retour NX  
 2. `PurchasesPage` / `TicketsPage` : liens event → preview vs checkout explicites  
-3. Mur profil communauté (wireframe WALL) si priorité produit  
+3. ~~Mur profil communauté (wireframe WALL)~~ ✅ livré 7 août (`ProfileWallStream`)  
 4. Maquettes Figma ARTIST/ORGA pour pixel-perfect home pro  
 
 ---

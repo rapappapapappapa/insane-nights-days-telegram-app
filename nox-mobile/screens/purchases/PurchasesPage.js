@@ -71,7 +71,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     if (!user?.isAuthenticated) {
-      navigate('home');
+      navigate('splash');
       return;
     }
     if (!user?.token) {
@@ -141,7 +141,9 @@ export default function PurchasesPage() {
                 activeOpacity={0.85}
                 style={styles.card}
                 onPress={() => {
-                  if (p?.event?.id) navigate('eventDetail', { eventId: p.event.id });
+                  if (p?.event?.id) {
+                    openEventPreview(navigate, user?.activeProfileType, p.event.id);
+                  }
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={

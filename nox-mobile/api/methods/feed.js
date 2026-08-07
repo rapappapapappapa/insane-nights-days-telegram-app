@@ -36,6 +36,16 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     return apiRequest(`/api/feed/following?limit=${limit}&offset=${offset}`, { noCache: true }, token);
   },
 
+  /** Publications d'un profil (mur DJ / booker / compte) */
+  getProfileWallPosts: async (token, { userId, djId, bookerId } = {}, limit = 30, offset = 0) => {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (userId) params.set('userId', userId);
+    else if (djId) params.set('djId', djId);
+    else if (bookerId) params.set('bookerId', bookerId);
+    else throw new Error('userId, djId ou bookerId requis.');
+    return apiRequest(`/api/feed/wall?${params}`, { noCache: true }, token);
+  },
+
   // ✅ Abonnements : suivre / ne plus suivre un profil (DJ ou Booker)
   followDj: async (token, djId) => {
     if (!token) throw new Error('Token requis.');

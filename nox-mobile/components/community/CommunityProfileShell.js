@@ -16,6 +16,7 @@ import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 import { openEventPreview } from '../../utils/noxNavigation';
+import ProfileWallStream from './ProfileWallStream';
 
 function Stat({ value, label }) {
   return (
@@ -30,11 +31,19 @@ function Stat({ value, label }) {
   );
 }
 
-function buildTabs(fr, ticketCount, friendCount) {
+function buildTabs(fr, ticketCount, friendCount, wallCount = null) {
+  const wallLabel =
+    wallCount != null && wallCount > 0
+      ? fr
+        ? `Mur (${wallCount})`
+        : `Wall (${wallCount})`
+      : fr
+        ? 'Mur'
+        : 'Wall';
   return [
     { id: 'overview', label: fr ? 'Aperçu' : 'Overview' },
     { id: 'events', label: fr ? `Events (${ticketCount})` : `Events (${ticketCount})` },
-    { id: 'wall', label: fr ? 'Mur' : 'Wall' },
+    { id: 'wall', label: wallLabel },
     { id: 'friends', label: fr ? `Amis (${friendCount})` : `Friends (${friendCount})` },
   ];
 }
@@ -54,6 +63,10 @@ export default function CommunityProfileShell({
   goBack,
   onEdit,
   initialTab = 'overview',
+  /** Compte utilisateur — posts DJ/booker publiés sous ce compte */
+  wallUserId = null,
+  wallDjId = null,
+  wallBookerId = null,
 }) {
   const insets = useSafeAreaInsets();
   const fr = language === 'fr';
@@ -61,6 +74,14 @@ export default function CommunityProfileShell({
   const [eventsSubTab, setEventsSubTab] = useState('attending');
   const [bannerBroken, setBannerBroken] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [wallPostCount, setWallPostCount] = useState(null);
+
+  const wallFilter = useMemo(() => {
+    if (wallUserId) return { userId: wallUserId };
+    if (wallDjId) return { djId: wallDjId };
+    if (wallBookerId) return { bookerId: wallBookerId };
+    return null;
+  }, [wallUserId, wallDjId, wallBookerId]);
 
   const upcomingTickets = useMemo(() => {
     const today = new Date();
@@ -81,8 +102,8 @@ export default function CommunityProfileShell({
   }, [tickets]);
 
   const tabs = useMemo(
-    () => buildTabs(fr, tickets.length, friends.length),
-    [fr, tickets.length, friends.length],
+    () => buildTabs(fr, tickets.length, friends.length, wallPostCount),
+    [fr, tickets.length, friends.length, wallPostCount],
   );
 
   if (loading) {
@@ -201,24 +222,12 @@ export default function CommunityProfileShell({
 
   const renderWall = () => (
     <View style={styles.tabContent}>
-      <NoxCard style={styles.infoCard}>
-        <Ionicons name="newspaper-outline" size={28} color={Colors.primary} />
-        <NoxText variant="titleSecondary" style={{ textAlign: 'center' }}>
-          {fr ? 'Fil & publications' : 'Feed & posts'}
-        </NoxText>
-        <NoxText variant="secondary" style={{ textAlign: 'center' }}>
-          {fr
-            ? 'Retrouve les posts des DJs et organisateurs que tu suis depuis l’onglet Publications du Home.'
-            : 'Find posts from DJs and organizers you follow on the Home Posts tab.'}
-        </NoxText>
-        {isOwnProfile ? (
-          <NoxButton
-            label={fr ? 'Voir le fil' : 'Open feed'}
-            onPress={() => navigate('communityHome', { feedTab: 'posts' })}
-            style={{ marginTop: Spacing.md }}
-          />
-        ) : null}
-      </NoxCard>
+      <ProfileWallStream
+        wallFilter={wallFilter}
+        isOwnProfile={isOwnProfile}
+        enabled={activeTab === 'wall'}
+        onTotalChange={setWallPostCount}
+      />
     </View>
   );
 

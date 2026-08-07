@@ -585,7 +585,7 @@ export default function ProfilePage({ user, tickets = [], onUpdateUser }) {
                       setDeletePassword('');
                       showSuccess('Compte supprimé.');
                       await logout();
-                      navigate('home');
+                      navigate('splash');
                     } catch (e) {
                       showError(e?.message || 'Mot de passe incorrect ou erreur.');
                     } finally {

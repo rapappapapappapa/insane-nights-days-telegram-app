@@ -4,7 +4,6 @@ const path = require('path');
 const files = [
   'screens/dashboard/DjDashboardPage.js',
   'screens/dashboard/BookerDashboardPage.js',
-  'screens/dashboard/VenueDashboardPage.js',
 ];
 
 files.forEach(file => {

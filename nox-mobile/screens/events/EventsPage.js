@@ -90,20 +90,6 @@ export default function EventsPage() {
     else if (routeParams?.tab === 'events') setMode('events');
   }, [routeParams?.tab]);
 
-  useEffect(() => {
-    if (user?.activeProfileType === 'COMMUNITY') {
-      navigate('communityDiscover', routeParams?.tab ? { tab: routeParams.tab } : undefined);
-    } else if (user?.activeProfileType === 'VENUE') {
-      navigate('lieuxEvents');
-    }
-  }, [user?.activeProfileType, navigate, routeParams?.tab]);
-
-  useEffect(() => {
-    if (!user?.isAuthenticated) {
-      navigate('splash');
-    }
-  }, [user?.isAuthenticated, navigate]);
-
   const fetchEvents = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoadingEvents(true);

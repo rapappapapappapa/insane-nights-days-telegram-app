@@ -67,7 +67,7 @@ content = content.replace(
     if (msgMatch) {
       const isSuccess = match.toLowerCase().includes('succès') || match.toLowerCase().includes('success');
       return isSuccess 
-        ? `showSuccess(language === 'fr' ? '${msgMatch[1]}' : '${msgMatch[2]}'); setTimeout(() => navigate('welcome'), 1500)`
+        ? `showSuccess(language === 'fr' ? '${msgMatch[1]}' : '${msgMatch[2]}'); setTimeout(() => { const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen); navigate(screen, params); }, 1500)`
         : `showError(language === 'fr' ? '${msgMatch[1]}' : '${msgMatch[2]}')`;
     }
     return match;

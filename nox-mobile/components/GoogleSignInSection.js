@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Platform, StyleSheet }
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import Colors from '../constants/colors';
+import { resolvePostAuthNavigation } from '../utils/noxRoleNavigation';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -123,7 +124,10 @@ export default function GoogleSignInSection({
 
         if (result.success) {
           showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Logged in!');
-          setTimeout(() => navigate(nextScreen || 'welcome'), 300);
+          setTimeout(() => {
+            const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+            navigate(screen, params);
+          }, 300);
         } else {
           showError(result.error || (language === 'fr' ? 'Erreur Google.' : 'Google error.'));
           handledResponseKey.current = null;

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { resolvePostAuthNavigation } from '../utils/noxRoleNavigation';
 
 /**
  * Connexion / inscription Apple (identityToken → backend).
@@ -103,7 +104,10 @@ export default function AppleSignInSection({
 
       if (result.success) {
         showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Logged in!');
-        setTimeout(() => navigate(nextScreen || 'welcome'), 300);
+        setTimeout(() => {
+          const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+          navigate(screen, params);
+        }, 300);
       } else {
         showError(result.error || (language === 'fr' ? 'Erreur Apple.' : 'Apple error.'));
       }

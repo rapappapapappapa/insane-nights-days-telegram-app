@@ -16,6 +16,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`CommunityHomePage`** : photos DJ sur les suggestions + rangées **Suggestions collectifs** et **Suggestions lieux**.
 - **`CommunityDiscoverPage`** : onglet Collectifs (Voir plus).
 
+### Modifié (mobile — Phase D terminée) — 11 août
+- **`EventsRoutePage`** : route `events` — COMMUNITY → `communityDiscover`, VENUE → `lieuxEvents`, pro → `EventsPage`.
+- **Auth Apple / Google** : post-connexion via `resolvePostAuthNavigation` (plus de `navigate('welcome')`).
+- **Écrans legacy supprimés** : `HomePage.js`, `FeedPage.js`, `VenueDashboardPage.js` (styles et composants `venueDashboard/*` conservés).
+- **Alias permanents** : `home`, `feed`, `welcome`, `venueDashboard` → résolution NOX dans `legacyScreenRedirects` + `NavigationContext`.
+
 ---
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)

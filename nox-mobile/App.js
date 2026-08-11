@@ -21,12 +21,9 @@ import NoxRadialNav from './components/nox/NoxRadialNav';
 import { getHomeScreenForProfile, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
-// Landing legacy conservé pour référence — routes `home` / `feed` redirigent (Phase D).
-// import HomePage from './screens/feed/HomePage';
 import OnboardingPage from './screens/onboarding/OnboardingPage';
 import ProHomePage from './screens/pro/ProHomePage';
 import LegacyScreenRedirect from './components/LegacyScreenRedirect';
-// import FeedPage from './screens/feed/FeedPage';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
 
 import LoginPage from './screens/auth/LoginPage';
@@ -46,7 +43,7 @@ import BookerEventDashboardPage from './screens/dashboard/BookerEventDashboardPa
 import PrestataireDashboardPage from './screens/dashboard/PrestataireDashboardPage';
 import AdminPage from './screens/dashboard/AdminPage';
 
-import EventsPage from './screens/events/EventsPage';
+import EventsRoutePage from './screens/events/EventsRoutePage';
 import EventDetailPage from './screens/events/EventDetailPage';
 import RateEventPage from './screens/events/RateEventPage';
 import TicketsPage from './screens/events/TicketsPage';
@@ -122,7 +119,7 @@ const SCREENS = {
   registerPrestataire: RegisterPrestatairePage,
   proHome: ProHomePage,
   welcome: () => <LegacyScreenRedirect target="proHome" />,
-  events: EventsPage,
+  events: EventsRoutePage,
   eventDetail: EventDetailPage,
   purchaseSuccess: PurchaseSuccessPage,
   tickets: TicketsPage,
@@ -226,7 +223,7 @@ function AppContent() {
   }, [user?.isAuthenticated, user?.activeProfileType, setBackFallback]);
 
   // IMPORTANT: Tous les Hooks doivent être appelés AVANT tout return conditionnel
-  // Si l'utilisateur est connecté et qu'on est sur home, rediriger vers welcome
+  // Connecté sur splash/login/home legacy → home du rôle actif
   useEffect(() => {
     if (!isInitializing) {
       const homeScreen = getHomeScreenForProfile(user?.activeProfileType);

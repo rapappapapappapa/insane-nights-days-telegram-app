@@ -1,6 +1,9 @@
 # 📝 Exemples d'utilisation des nouveaux composants
 
-## 1. Utilisation de BackgroundVideo dans HomePage
+> **Document historique (audit juil. 2026)** — les exemples citent `HomePage.js` et `WelcomePage.js`, **supprimés en Phase D (août 2026)**.  
+> Pour l’état actuel : `SplashPage`, `ProHomePage`, `CommunityHomePage`, composants dans `components/nox/`.
+
+---
 
 ```javascript
 // ✅ AVANT (HomePage.js)

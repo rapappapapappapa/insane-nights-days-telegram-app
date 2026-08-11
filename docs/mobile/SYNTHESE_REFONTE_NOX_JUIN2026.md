@@ -55,7 +55,8 @@ git status
 | Onboarding 3 slides | `screens/onboarding/OnboardingPage.js` | Boot si non connecté |
 | Login / inscription | `screens/auth/LoginPage.js` | Fond noir, `NoxButton`, retour onboarding |
 | Choix de rôle | `screens/auth/AccountTypePage.js` | Grille 2×2 + Prestataire |
-| Feed connecté | `screens/feed/WelcomePage.js` | Hello, recherche, onglets feed |
+| Feed connecté (pro) | `screens/pro/ProHomePage.js` | Fil events + raccourcis pro |
+| Feed communauté | `screens/community/CommunityHomePage.js` | Accueil, suggestions, onglets feed |
 | Barre recherche | `components/nox/NoxSearchBar.js` | |
 
 **Navigation** (`contexts/NavigationContext.js`, `App.js`) :
@@ -230,7 +231,8 @@ nox-mobile/
 ├── contexts/NavigationContext.js
 ├── screens/onboarding/OnboardingPage.js
 ├── screens/auth/LoginPage.js, AccountTypePage.js
-└── screens/feed/WelcomePage.js
+├── screens/pro/ProHomePage.js          # Accueil DJ / booker / prestataire
+└── screens/community/CommunityHomePage.js  # Accueil communauté
 ```
 
 ---

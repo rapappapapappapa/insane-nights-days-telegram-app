@@ -210,12 +210,12 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 | `COMMUNAUTÉ / 04_Tickets` + QR plein écran | Skin wallet inspiré wireframe 05 |
 | `COMMUNAUTÉ / 05_Profile` (social) | `CommunityProfileShell` |
 | Hub compte / réglages communauté | `ProfilePage` calqué sur réglages Lieux |
-| Home / dashboard **Artiste (DJ)** | `WelcomePage` + `djDashboard` provisoires |
-| Home / dashboard **Organisateur** | `WelcomePage` + `bookerDashboard` provisoires |
+| Home / dashboard **Artiste (DJ)** | `proHome` + `djDashboard` |
+| Home / dashboard **Organisateur** | `proHome` + `bookerDashboard` |
 | `03_Artist / Venue / Collective_Profile` HD | Profils publics skinnés sans HD |
-| Mur / **repost** | Non démarré |
+| Mur / **repost** | ✅ `ProfileWallStream` + repost DJ/booker (août 2026) |
 | Add to Apple/Google Wallet | Non branché (agenda à la place) |
 
 ---
 
-*Dernière mise à jour : 4 août 2026 — voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l'inventaire complet.*
+*Dernière mise à jour : 11 août 2026 — voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l'inventaire complet.*

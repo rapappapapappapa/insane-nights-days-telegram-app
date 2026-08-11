@@ -24,6 +24,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Modifié (documentation) — 11 août
 - **`README.md`** (racine) et **`nox-mobile/README.md`** : réécriture — stack actuelle, liens doc, démarrage Railway/EAS (suppression contenu obsolète TON / SQLite / wallet mock).
+- **`docs/README.md`** : index doc à jour, structure mobile post–Phase D.
+- **`PROJECT_CONTEXT.md`**, **`PLAN_MIGRATION`**, **`GUIDE_TEST_NOX`**, **`ECARTS_FIGMA`**, **`DESIGN_FIGMA_REFERENCE`**, **`EXPLICATION_BACKEND`**, **`API_DOCUMENTATION`** : alignement août 2026 (PostgreSQL, `proHome`, écrans legacy supprimés).
+- Docs historiques (`STRUCTURE_PROPOSEE`, `EXEMPLE_UTILISATION`, `AMELIORATIONS_SYNTHESE`, `OPTIMISATIONS_RECOMMANDATIONS`) : bannières « snapshot juil. 2026 ».
 
 ---
 

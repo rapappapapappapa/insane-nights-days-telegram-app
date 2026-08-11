@@ -17,7 +17,7 @@ Ce document est **côté design à produire**, pas un backlog de code.
 | **🟡** | Couvert **partiellement** par une planche voisine (même flow, autre rôle ou variante) |
 | **✅** | Maquette HD dans le pack — *hors scope de ce fichier* |
 
-Les routes **redirect** (`home`, `welcome`, `feed`, `venueDashboard`) ne sont pas listées : elles n’affichent pas d’UI propre.
+Les routes **redirect** (`home`, `welcome`, `feed`, `venueDashboard`, `events`) ne sont pas listées : elles résolvent vers les écrans NOX (Phase D ✅, août 2026).
 
 ---
 

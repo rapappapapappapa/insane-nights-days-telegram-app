@@ -1,5 +1,8 @@
 # 🧠 Exercices de Pratique - NOX
 
+> **Note** : ces squelettes pédagogiques utilisent parfois un **stockage en mémoire**.  
+> Le projet réel utilise **PostgreSQL + Prisma** — voir [`../docs/backend/EXPLICATION_BACKEND.md`](../docs/backend/EXPLICATION_BACKEND.md).
+
 Ces exercices vous permettent de rejouer les étapes clés du projet et de comprendre comment les différentes pièces fonctionnent.
 
 ## Organisation

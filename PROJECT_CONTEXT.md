@@ -12,7 +12,7 @@ Objectifs typiques : création d’événements, invitations DJ/lieu, **chat pri
 
 ---
 
-## 2. Structure du dépôt (`/home/ridah/nox-mobile`)
+## 2. Structure du dépôt
 
 | Dossier | Rôle |
 |---------|------|
@@ -91,12 +91,18 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
 
 ## 6. Application mobile (Expo)
 
-- **Navigation** : `NavigationContext` + table `SCREENS` dans `App.js` (pas forcément React Navigation stacks partout — pattern « page courante » + Drawer).
-- **Contextes** : `AuthContext`, `LanguageContext` (FR/EN), `EventFormContext` (création événement multi-étapes), `ConfirmContext`.
-- **Dashboards** principaux :  
-  - **`BookerDashboardPage`** : profil / événements / **chats** (DJ + lieu) / contrats intégrés au modal chat.  
-  - **`BookerEventDashboardPage`** : flux création événement (date, **heure début**, **durée heures**, lieu, sélection DJs…).  
-  - **`DjDashboardPage`**, **`VenueDashboardPage`** : profil, médias, bookings, chat + contrat + case à cocher **acceptation de bonne foi** avant « Accepter ».
+- **Navigation** : `NavigationContext` + table `SCREENS` dans `App.js` (pattern « page courante » + Drawer + radial NX).
+- **Contextes** : `AuthContext`, `LanguageContext` (FR/EN), `EventFormContext`, `ConfirmContext`.
+- **Parcours NOX par profil** :
+  - **COMMUNITY** : `communityHome`, `communityDiscover`, `communityEventDetail`
+  - **VENUE** : `lieuxDashboard`, `lieuxEvents`, `lieuxBookingChat` (+ contrat intégré)
+  - **DJ / BOOKER / PRESTATAIRE** : `proHome` + dashboards métier (`djDashboard`, `bookerDashboard`, …)
+- **Phase D (août 2026)** : écrans legacy supprimés (`HomePage`, `FeedPage`, `WelcomePage`, `VenueDashboardPage`) ; alias de route résolus dans `utils/legacyScreenRedirects.js`.
+- **Dashboards métier** :
+  - **`BookerDashboardPage`** : profil / événements / chats (DJ + lieu) / contrats
+  - **`BookerEventDashboardPage`** : wizard création événement
+  - **`DjDashboardPage`** : profil, médias, bookings, chat + contrat
+  - **Lieu** : plus de `VenueDashboardPage` — UI dans `screens/lieux/*`, logique partagée via `useVenueDashboard`, `useVenueBookingContract`, composants `venueDashboard/*`
 - **Contrats** : composants `ContractDraftEditorFields`, `DealTypePickerModal`, `CancellationPolicyPickerModal`, `EventEndTimePickerModal`; constantes partagées **`constants/contractPayload.js`** (types d’accord lieu, **grille d’annulation** prédéfinie, helpers fin de prestation basés sur **`eventTime` + `durationHours`**).
 - **API client** : `nox-mobile/api/config.js` — base URL via env Expo, méthodes `getBookingContract`, `getVenueContract`, etc.
 
@@ -116,7 +122,7 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
 - **Serveur** : Node, variables d’environnement (`DATABASE_URL`, JWT secret, Stripe, SMTP ou Resend, `PUBLIC_URL`, stockage `MEDIA_STORAGE` local vs R2, etc.).  
 - **Prisma** : `npx prisma migrate deploy` en prod après nouvelles migrations ; `prisma generate` après changement de schéma.  
 - **Mobile** : `eas build` (profils dans `eas.json`), canal **expo-updates** possible pour les OTA.  
-- Branche de travail récente citée dans les conversations : **`railway-phase1`** (GitHub : dépôt type `nox-mobile`).
+- Branche de travail : **`railway-phase1`**. Dépôt GitHub : `rapappapapappapa/insane-nights-days-telegram-app`.
 
 ---
 
@@ -143,4 +149,4 @@ Une exploration rapide des routes : `grep "^app\\.\\(get\\|post\\|put\\|delete\\
 
 ---
 
-*Dernière mise à jour du document : génération manuelle dans le dépôt — à compléter lors des prochaines grosses features.*
+*Dernière mise à jour : 11 août 2026 — Phase D mobile terminée, Phase E (polish pro) en cours.*

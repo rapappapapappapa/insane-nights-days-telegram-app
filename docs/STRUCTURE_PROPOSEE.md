@@ -1,6 +1,9 @@
 # Structure proposée pour réorganiser le projet
 
-## 📁 Structure proposée
+> **Document historique (juil. 2026)** — la structure décrite a été **largement appliquée**.  
+> État actuel : [`README.md`](../README.md) · [`docs/README.md`](README.md) · [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md).
+
+---
 
 ```
 /home/ridah/nox-mobile/

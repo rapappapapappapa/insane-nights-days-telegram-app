@@ -2,9 +2,17 @@
 
 ## Vue d'ensemble
 
-Cette API REST permet de gérer les utilisateurs, événements, tickets, profils et notes pour l'application NOX.
+API REST pour l'application mobile **Nox** (Expo) et le client web legacy.
 
-**Base URL**: `http://localhost:5000/api` (ou via Cloudflare tunnel)
+| Environnement | Base URL |
+|---------------|----------|
+| **Production** | Instance Railway (ex. `https://….up.railway.app`) — voir `EXPO_PUBLIC_API_BASE` |
+| **Local** | `http://localhost:5000/api` (port selon `server/.env`) |
+
+Auth : **JWT** dans le header `Authorization: Bearer <token>`.  
+Connexion également via **Google** et **Apple** (`POST /api/auth/google`, `/api/auth/apple`).
+
+> ⚠️ La route `POST /api/wallet/connect` (wallet TON mock) est **obsolète** — ne pas utiliser dans le mobile actuel.
 
 ---
 
@@ -70,16 +78,21 @@ Connexion d'un utilisateur (par email ou username).
 }
 ```
 
-#### `POST /api/wallet/connect`
-Connexion via wallet TON (mock pour l'instant).
+---
 
-**Body:**
-```json
-{
-  "walletAddress": "0x123...",
-  "username": "WalletUser"
-}
-```
+### Authentification sociale (production)
+
+#### `POST /api/auth/google`
+Body : `{ "idToken": "…" }` (+ champs inscription si mode register).
+
+#### `POST /api/auth/apple`
+Body : `{ "identityToken": "…" }` (+ champs inscription si mode register).
+
+---
+
+### ~~Wallet TON~~ (obsolète)
+
+~~`POST /api/wallet/connect`~~ — mock développement initial, **non utilisé** par l'app Nox actuelle.
 
 ---
 

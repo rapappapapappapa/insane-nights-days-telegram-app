@@ -1,5 +1,8 @@
 # 🚀 Optimisations et Améliorations UI/UX
 
+> **Document historique (audit 2026)** — exemples basés sur `HomePage` / `WelcomePage` (supprimés Phase D).  
+> Voir [`docs/README.md`](../README.md) pour la doc à jour.
+
 ## 📋 Table des matières
 1. [Optimisations Performance](#optimisations-performance)
 2. [Améliorations UI/UX](#améliorations-uiux)

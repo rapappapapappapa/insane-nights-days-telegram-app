@@ -1,5 +1,7 @@
 # Améliorations à prévoir — NOX
 
+> **Backlog produit / technique** — certaines entrées historiques citent des fichiers refactorés ou supprimés (Phase D). Voir [`CHANGELOG.md`](../CHANGELOG.md) pour l’état livré.
+
 **Ordre de travail conseillé :** commence par **tout ce qui impose un nouveau build App Store / Play (`[Rebuild EAS]`)**. Les cycles sont en général **les plus longs** (bundle EAS, empreintes Android, revue Apple / Google, diffusion aux utilisateurs). En **regroupant plusieurs chantiers rebuild dans le même binaire**, tu évites de **subir plusieurs fois cette même durée**.
 
 Ensuite seulement les chantiers **`[souvent OTA]`** (livraisons plus rapides via JS + API tant que le **runtime** reste compatible — vérifier **fingerprint** Expo Updates si besoin).

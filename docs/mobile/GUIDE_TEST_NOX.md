@@ -16,8 +16,8 @@ Parcours manuels pour valider les livraisons **lieuxDemandes**, **Phase D naviga
 |--------|----------------------|
 | **COMMUNITY** | Home, Discover, tickets, achats |
 | **VENUE** | Dashboard Lieux, demandes, chat, push |
-| **BOOKER** | Welcome / dashboard, création event |
-| **DJ** | Welcome / dashboard, bookings |
+| **BOOKER** | `proHome` / dashboard, création event |
+| **DJ** | `proHome` / dashboard, bookings |
 | *(optionnel)* **PRESTATAIRE** | Dashboard prestataire |
 
 ### Noter les bugs
@@ -79,7 +79,7 @@ Après connexion, la **home** dépend du profil :
 |--------|----------------|
 | COMMUNITY | `communityHome` |
 | VENUE | `lieuxDashboard` |
-| DJ / BOOKER / PRESTATAIRE | `welcome` (temporaire) |
+| DJ / BOOKER / PRESTATAIRE | `proHome` |
 
 ### 2.1 Boutons « Découvrir » / « Accueil » (ne doivent plus aller en dur sur `events` / `welcome` legacy)
 
@@ -90,7 +90,7 @@ Après connexion, la **home** dépend du profil :
 | **Achats** | (liste vide) | « Voir les événements » | **Discover** selon profil |
 | **Succès achat** | Acheter un billet | « Accueil » | **Home du profil** |
 | **Succès achat** | — | « Retour à l’événement » | Détail event **COMMUNITY** ou **legacy** selon profil |
-| **Welcome** (DJ/Booker) | Barre recherche | Tap recherche | **Discover** selon profil |
+| **ProHome** (DJ/Booker) | Barre recherche | Tap recherche | **Discover** selon profil |
 
 ### 2.2 Retour Android
 | Contexte | Attendu |
@@ -148,7 +148,7 @@ Après connexion, la **home** dépend du profil :
 ## 6. Pro (DJ / Booker) — état actuel
 
 Pas encore de maquettes Figma dédiées. Vérifier seulement :
-- Login → **welcome** (pas d’écran rouge legacy)
+- Login → **`proHome`** (pas d’écran rouge legacy)
 - NX radial visible
 - Drawer → dashboard pro accessible
 - Pas de crash au changement de profil

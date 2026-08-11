@@ -1,111 +1,102 @@
-# 🎯 Explication du Backend - NOX
+# Explication du backend NOX
 
-## 📋 Vue d'ensemble
+Vue d’ensemble de l’API **Node.js + Express** qui alimente l’app mobile Expo et le client web legacy.
 
-Le backend est un **serveur Express.js** qui gère toute la logique métier de l'application. Il sert d'API REST pour que l'application mobile puisse récupérer et manipuler des données.
+> **Référence complète** : [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) · [`../STACK.md`](../STACK.md) · [`../../PROJECT_CONTEXT.md`](../../PROJECT_CONTEXT.md)
 
-## 🗄️ Stockage des données
+---
 
-**Base de données en mémoire** (pas de vraie base de données pour l'instant) :
-- `users` : Liste des utilisateurs connectés via leur wallet TON
-- `events` : Liste des événements disponibles
-- `tickets` : Liste des tickets achetés par les utilisateurs
+## Architecture
 
-⚠️ **Note** : Les données sont perdues quand le serveur redémarre. C'est normal pour une version de développement.
+| Couche | Détail |
+|--------|--------|
+| **Runtime** | Node.js ≥ 20.18 |
+| **Framework** | Express 4 |
+| **ORM** | Prisma 6 → **PostgreSQL** (`DATABASE_URL`) |
+| **Auth** | JWT (`Authorization: Bearer`), bcrypt, Google / Apple Sign-In |
+| **Paiements** | Stripe (intents, webhooks, billets QR) |
+| **Médias** | Multer — stockage local ou **Cloudflare R2** |
+| **Emails** | Nodemailer / Resend (contrats PDF, OTP, notifications) |
+| **PDF** | `pdfkit` — contrats DJ / lieu (commission NOX 10 %) |
+| **Push** | Expo Push (`expo-server-sdk`) |
 
-## 🔌 Endpoints API disponibles
+Point d’entrée : `server/index.js` (routes principales + modules sous `server/routes/`).
 
-### 1. **POST /api/wallet/connect** - Connexion Wallet TON
-- **Fonction** : Connecte un utilisateur avec son adresse wallet TON
-- **Données reçues** : `{ walletAddress, username }`
-- **Ce que ça fait** :
-  - Vérifie si l'utilisateur existe déjà
-  - Si non, crée un nouvel utilisateur avec :
-    - Score initial : 100 points
-    - Niveau : 1
-    - SBT (Soul Bound Token) actif
-  - Génère un token de session
-  - Retourne les infos utilisateur
+---
 
-### 2. **GET /api/user/:userId** - Profil utilisateur
-- **Fonction** : Récupère toutes les infos d'un utilisateur
-- **Données retournées** : Score, niveau, événements participés, tickets achetés, etc.
+## Données persistées (PostgreSQL)
 
-### 3. **GET /api/events** - Liste des événements
-- **Fonction** : Récupère tous les événements disponibles
-- **Données retournées** : Liste complète avec titres, dates, DJs, prix, capacités, etc.
-- **✅ C'est celui que l'app mobile utilise maintenant !**
+Plus de stockage en mémoire ni wallet TON. Principales entités Prisma :
 
-### 4. **POST /api/tickets/buy** - Acheter un ticket
-- **Fonction** : Permet à un utilisateur d'acheter un ticket pour un événement
-- **Données reçues** : `{ userId, eventId, quantity }`
-- **Ce que ça fait** :
-  - Vérifie que l'événement a des places disponibles
-  - Crée un ticket avec un QR code unique
-  - Met à jour le nombre de places vendues
-  - Ajoute des points au score utilisateur (+50 points par ticket)
-  - Calcule le nouveau niveau (1 niveau tous les 200 points)
+- **`User`** — compte, email vérifié, `activeProfileType`, rôle admin
+- **Profils** — `UserCommunity`, `UserDj`, `UserBooker`, `UserVenue`, prestataire
+- **`Event`** — événements booker, capacité, billetterie, feed
+- **`EventDj` / `EventVenue`** — invitations, chat, contrats, paiements booking
+- **`Ticket` / `Payment`** — billetterie Stripe, QR, scan staff
+- **`FeedPost`** — feed social, likes, commentaires, reposts
+- **`Message`** — chat privé booking et groupes event
 
-### 5. **GET /api/user/:userId/tickets** - Tickets de l'utilisateur
-- **Fonction** : Récupère tous les tickets d'un utilisateur
-- **Données retournées** : Liste des tickets avec leurs QR codes
+Schéma complet : `server/prisma/schema.prisma`.
 
-### 6. **GET /api/tickets/:ticketId/qr** - QR Code d'un ticket
-- **Fonction** : Génère l'image QR code d'un ticket
-- **Retourne** : Une image QR code en base64 (format DataURL)
+---
 
-### 7. **GET /api/stats** - Statistiques globales
-- **Fonction** : Donne des stats sur l'application
-- **Données retournées** :
-  - Nombre total d'utilisateurs
-  - Nombre d'événements
-  - Nombre de tickets vendus
-  - Revenus totaux
-  - Score moyen des utilisateurs
+## Authentification
 
-### 8. **GET /api/test** - Route de test
-- **Fonction** : Vérifie que le serveur fonctionne
-- **Utile pour** : Debug et vérification de connexion
+| Endpoint | Usage |
+|----------|--------|
+| `POST /api/auth/register` | Inscription email + profil |
+| `POST /api/auth/login` | Connexion email / pseudo |
+| `POST /api/auth/google` | Google Sign-In (id_token) |
+| `POST /api/auth/apple` | Apple Sign-In (identityToken) |
+| `GET /api/user/profiles` | Profils du compte connecté |
 
-## 🎮 Système de points et niveaux
+La route **`POST /api/wallet/connect`** (wallet TON mock) est **obsolète** — ne plus documenter côté client.
 
-- **Score initial** : 100 points
-- **Points gagnés** : +50 points par ticket acheté
-- **Niveau** : Calculé automatiquement (1 niveau tous les 200 points)
-  - 100 points = Niveau 1
-  - 300 points = Niveau 2
-  - 500 points = Niveau 3
-  - etc.
+---
 
-## 🔒 Sécurité (version actuelle)
+## Zones fonctionnelles API
 
-⚠️ **Version de développement** - À améliorer pour la production :
-- Tokens de session simples (UUID)
-- Pas de validation d'adresse wallet TON
-- Pas d'authentification réelle
-- Données en mémoire (pas persistantes)
+Toutes sous **`/api/...`**, auth JWT sauf routes publiques.
 
-## 🚀 Comment ça marche avec l'app mobile
+| Domaine | Exemples |
+|---------|----------|
+| **Événements** | `GET /api/events`, CRUD booker, publish feed |
+| **Bookings** | Invitations DJ / lieu, accept / reject, chat |
+| **Contrats** | `/api/contracts/event-djs/...`, `/api/contracts/event-venues/...` |
+| **Billetterie** | Stripe checkout, tickets, scan QR staff |
+| **Feed** | Posts, likes, commentaires, repost, mur profil (`GET /api/feed/wall`) |
+| **Découverte** | DJs publics, lieux, collectifs |
+| **Admin** | Modération, seed démo |
 
-1. **L'app démarre** → Elle se connecte au backend (port 5000)
-2. **L'utilisateur ouvre "Événements"** → L'app appelle `GET /api/events`
-3. **Le backend répond** → Retourne la liste des événements
-4. **L'app affiche** → Les événements sont affichés dans l'interface
+Exploration rapide : `grep` dans `server/routes/` et `server/index.js`.
 
-## 📝 Notes importantes
+---
 
-- Le backend tourne sur le **port 5000** par défaut
-- Accessible en local : `http://localhost:5000`
-- Accessible sur le réseau : `http://172.20.10.7:5000`
-- CORS activé pour permettre les requêtes depuis l'app mobile
-- Format de réponse : JSON avec `{ success: true/false, ... }`
+## Sécurité
 
-## 🔄 Prochaines étapes possibles
+- **helmet**, **cors** (`ALLOWED_ORIGINS`), **express-rate-limit**
+- Limites strictes sur login / register / admin
+- **Trust proxy** activé (Railway)
+- Secrets via variables d’environnement — voir `server/env.example.txt`
 
-- [ ] Ajouter une vraie base de données (MongoDB, PostgreSQL)
-- [ ] Implémenter l'authentification réelle avec Telegram
-- [ ] Ajouter la validation des wallets TON
-- [ ] Persister les données entre les redémarrages
-- [ ] Ajouter la gestion des paiements Telegram Stars
-- [ ] Ajouter des notifications push
+---
 
+## Déploiement
+
+- **Production** : Railway (`server/railway.json`)
+- **Migrations** : `cd server && npx prisma migrate deploy`
+- **URL API mobile** : `EXPO_PUBLIC_API_BASE` → instance Railway (défaut dans `nox-mobile/api/endpointsConfig.js`)
+
+Guide détaillé : [`DEPLOY.md`](DEPLOY.md).
+
+---
+
+## Lien avec l’app mobile
+
+1. L’app lit `EXPO_PUBLIC_API_BASE` (ou fallback Railway codé).
+2. `nox-mobile/api/` centralise les appels (axios + JWT depuis Secure Store).
+3. Les OTA Expo livrent le JS client ; le serveur se déploie indépendamment sur Railway.
+
+---
+
+*Dernière mise à jour : 11 août 2026.*

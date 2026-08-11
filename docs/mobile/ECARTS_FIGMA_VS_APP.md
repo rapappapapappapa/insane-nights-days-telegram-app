@@ -180,10 +180,8 @@ Document de référence : **ce qui manque** par rapport aux maquettes versionné
 | `legal` | CGU, CGV, mentions, privacy | Obligatoire store |
 | `admin` | Modération | Admin only |
 | `tutorial` | Tutoriel | Legacy |
-| `home`, `feed`, `welcome` | Redirections Phase D | Plus de landing `HomePage` in-app |
-| `HomePage.js` | Fichier conservé | Hors routes nominales |
-| `FeedPage.js` | Fichier conservé | Redirigé |
-| `VenueDashboardPage.js` | `@deprecated` | Composants réutilisés par hooks |
+| `home`, `feed`, `welcome`, `venueDashboard` | Alias Phase D | Résolution NOX via `legacyScreenRedirects.js` — **fichiers supprimés** (août 2026) |
+| `HomePage.js`, `FeedPage.js`, `VenueDashboardPage.js` | **Supprimés** | Styles `FeedPage.styles.js` et composants `venueDashboard/*` conservés pour réutilisation |
 
 ---
 
@@ -259,4 +257,4 @@ Document de référence : **ce qui manque** par rapport aux maquettes versionné
 - Croiser avec [PLAN_MIGRATION_NOX_LEGACY.md](./PLAN_MIGRATION_NOX_LEGACY.md) pour le statut legacy.  
 - Images : [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md).
 
-*Dernière mise à jour : 4 août 2026 — post Phase D/E (`proHome`, redirects legacy, checkout séparé).*
+*Dernière mise à jour : 11 août 2026 — Phase D terminée (`proHome`, redirects, checkout séparé, écrans legacy supprimés).*

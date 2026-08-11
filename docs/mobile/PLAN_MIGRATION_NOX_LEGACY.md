@@ -32,7 +32,10 @@ Complète [DESIGN_FIGMA_REFERENCE.md](./DESIGN_FIGMA_REFERENCE.md) et [SYNTHESE_
 
 ## 3. Inventaire écran par écran
 
-Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supprimer plus tard** · **À créer**
+> **État au 11 août 2026** : Phase D terminée — voir [§ Phase D livré](#phase-d--livré-11-août-2026) et [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md).  
+> L’inventaire ci-dessous est le **snapshot initial** (juil. 2026) ; les lignes barrées ou marquées ✅ ont été traitées.
+
+Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supprimer plus tard** · **À créer** · **✅ Fait**
 
 ### 3.1 Auth & boot (commun à tous)
 
@@ -54,16 +57,16 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `communityHome` | `CommunityHomePage.js` | **Garder NOX** | Remplace `welcome` pour COMMUNITY |
 | `communityDiscover` | `CommunityDiscoverPage.js` | **Garder NOX** | **Doit remplacer** `events` pour COMMUNITY |
 | `communityEventDetail` | `CommunityEventDetailPage.js` | **Garder NOX** | **Doit remplacer** `eventDetail` pour la vue sociale |
-| `events` | `EventsPage.js` | **Supprimer plus tard** | Alias temporaire → rediriger vers `communityDiscover` |
+| `events` | `EventsRoutePage.js` → `EventsPage` (pro) | **✅ Fait** | COMMUNITY/VENUE → redirect ; DJ/Booker → liste pro |
 | `eventDetail` | `EventDetailPage.js` | **Réutiliser tel quel** | **Uniquement** flux achat / billet / post-achat / staff public |
 | `tickets` | `TicketsPage.js` | **NOX wallet (31 juil.)** | Wireframe 05 ; pas de maquette HD |
 | `notifications` | `NotificationsPage.js` | **NOX (31 juil.)** | Aligné Figma 08 communauté |
 | `profile` | `ProfilePage.js` | **Hub compte NOX (31 juil.)** | Inspiré 08_Reglage Lieux ; pas de maquette HD compte |
 | — | `CommunityProfilePage.js` | **Migrer UI** | Profil public + onglets Events/Wall (Figma 05) |
 | `communityFriends` | `CommunityFriendsPage.js` | **Migrer UI** | Entrée NX ou profil, pas drawer seul |
-| `welcome` | `WelcomePage.js` | **Supprimer plus tard** | Plus d’accueil COMMUNITY |
-| `home` | `HomePage.js` | **Supprimer plus tard** | Page publique legacy |
-| `feed` / `createFeedPost` | `FeedPage.js` etc. | **Migrer UI** | Intégrer dans onglet Publications home |
+| `welcome` | *(supprimé)* | **✅ Fait** | Alias → `proHome` |
+| `home` | *(supprimé)* | **✅ Fait** | Alias → home du profil / `splash` |
+| `feed` / `createFeedPost` | `CreateFeedPostPage.js` | **✅ Fait** | Alias `feed` → home profil ; styles dans `FeedPage.styles.js` |
 
 ### 3.3 Lieu (profil `VENUE`)
 
@@ -74,27 +77,26 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `lieuxMedia` | `LieuxMediaPage.js` | **Garder NOX** | + upload |
 | `lieuxAvailability` | `LieuxAvailabilityPage.js` | **Garder NOX** | Calendrier alimenté + bloquer dates |
 | `lieuxRequestDetail` | `LieuxRequestDetailPage.js` | **Garder NOX** | Pills footer, plus de `venueDashboard` |
-| `venueDashboard` | `VenueDashboardPage.js` | **Supprimer plus tard** | Logique → hooks partagés |
+| `venueDashboard` | *(supprimé)* | **✅ Fait** | Alias → `lieuxDashboard` ; composants `venueDashboard/*` conservés |
 | `venueProfileEdit` | `VenueProfileEditPage.js` | **Réutiliser tel quel** | Sous-écran réglages jusqu’à `lieuxSettings` |
 | `eventDetail` | `EventDetailPage.js` | **Ne pas utiliser** | Remplacer par `lieuxEventDetail` (à créer) |
 | `scanTicket` | `ScanTicketPage.js` | **Migrer UI** | Wrapper NOX + sélecteur event |
 | `eventStaff` | `EventStaffPage.js` | **Réutiliser logique** | Intégrer dans `lieuxStaff` |
-| — | `lieuxFeed` | **À créer** | Figma `11_Feed` |
-| — | `lieuxEvents` | **À créer** | Figma `12_Events` (3 onglets) |
-| — | `lieuxEventDetail` | **À créer** | Figma `13_Detail_Event validé` |
-| — | `lieuxStaff` | **À créer** | Figma `15_Staff` |
-| — | `lieuxScanner` | **À créer** | Figma `10_Scanner` (ou skin NOX de `scanTicket`) |
-| — | `lieuxSettings` | **À créer** | Figma `08_Reglage` |
-| — | `lieuxCreateEvent` | **À créer** | Figma `08_Create_Event` |
-| — | `lieuxBookingChat` | **À créer** | Extraire `VenueChatModal` + `useVenueDashboard` chat |
-| — | `lieuxNotifications` | **À créer** | Notifs métier lieu |
-| — | `lieuxDemandes` | **À créer** | Propositions artistes (Figma `08_DEMANDES`) |
+| — | `lieuxFeed` | **✅ Fait** | Figma `11_Feed` |
+| — | `lieuxEvents` | **✅ Fait** | Figma `12_Events` |
+| — | `lieuxEventDetail` | **✅ Fait** | Figma `13_Detail_Event validé` |
+| — | `lieuxStaff` | **✅ Fait** | Figma `15_Staff` |
+| — | `lieuxScanner` | **✅ Fait** | Skin NOX de `scanTicket` |
+| — | `lieuxSettings` | **✅ Fait** | Figma `08_Reglage` |
+| — | `lieuxBookingChat` | **✅ Fait** | Chat + panneau contrat (`LieuxBookingContractPanel`) |
+| — | `lieuxNotifications` | **✅ Fait** | Notifs métier lieu |
+| — | `lieuxDemandes` | **✅ Fait** | Propositions artistes (Figma `08_DEMANDES`) |
 
 ### 3.4 Pro — DJ / Booker / Prestataire
 
 | Clé | Fichier | Décision | Notes |
 |-----|---------|----------|-------|
-| `welcome` | `WelcomePage.js` | **Inspiré NOX (31 juil.)** | Accueil pro temporaire — **pas de maquette ARTIST/ORGA** |
+| `welcome` | *(alias → `proHome`)* | **✅ Fait (Phase D)** | Accueil pro — `ProHomePage.js` |
 | `djDashboard` | `DjDashboardPage.js` | **Migrer UI** | Dashboard secondaire (drawer/NX) |
 | `bookerDashboard` | `BookerDashboardPage.js` | **Migrer UI** | Idem |
 | `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Migrer UI** | Wizard event booker |
@@ -116,9 +118,9 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 
 ## 4. Règles de navigation cibles
 
-### 4.1 Helper central (à implémenter)
+### 4.1 Helper central
 
-Créer `utils/noxNavigation.js` :
+Implémenté dans `utils/noxNavigation.js` et `utils/legacyScreenRedirects.js` :
 
 ```javascript
 // Exemples de règles
@@ -149,7 +151,7 @@ export function getEventPurchaseScreen() {
 | Item NX | COMMUNITY | VENUE | DJ/BOOKER/PRESTATAIRE |
 |---------|-----------|-------|------------------------|
 | Discover | `communityDiscover` | `lieuxEvents` ou discover public | `events` → migrer |
-| Home | `communityHome` | `lieuxDashboard` | `welcome` → migrer |
+| Home | `communityHome` | `lieuxDashboard` | `proHome` |
 | Tickets | `tickets` | `tickets` (si staff) ou masqué | `tickets` |
 | Notifs | `notifications` → puis typées | `lieuxNotifications` | `notifications` |
 | Profil | `communityProfile` (nouveau) ou `profile` | `lieuxProfil` | `profile` |

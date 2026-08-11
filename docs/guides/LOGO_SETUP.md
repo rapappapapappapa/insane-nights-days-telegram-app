@@ -15,9 +15,11 @@ nox-mobile/assets/logo.png
 
 ## ✅ Utilisation
 
-Le logo est maintenant utilisé dans :
-- `HomePage.js` - Page de connexion/inscription (taille: 100x100)
-- `WelcomePage.js` - Page d'accueil après connexion (taille: 80x80)
+Le logo est utilisé dans :
+- `SplashPage.js` — écran de lancement (déconnecté)
+- `LoginPage.js` — connexion / inscription
+- `ProHomePage.js`, `CommunityHomePage.js` — accueils connectés
+- Composant réutilisable `components/Logo.js` (drawer, headers, etc.)
 
 ## 🔧 Composant Logo
 

@@ -1,5 +1,8 @@
 # 🚀 Synthèse des Améliorations - Application Nox Mobile
 
+> **Document historique (audit fév.–juil. 2026)** — cite `FeedPage`, `WelcomePage`, `HomePage` (supprimés Phase D, août 2026).  
+> État actuel : [`CHANGELOG.md`](../../CHANGELOG.md) · [`PLAN_MIGRATION_NOX_LEGACY.md`](PLAN_MIGRATION_NOX_LEGACY.md).
+
 **Date de mise à jour** : 6 février 2026  
 **Statut global** : Application fonctionnelle avec plusieurs améliorations possibles
 

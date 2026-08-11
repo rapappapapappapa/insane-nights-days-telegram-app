@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 4 au 7 août 2026 (lun. - ven.)
+## Semaine du 11 au 14 août 2026 (lun. - jeu.)
 
 ### Corrigé (Lieux — contrat dans le chat booking) — 11 août
 - **`LieuxBookingChatPage`** : panneau contrat réintégré (carte, PDF, contre-proposition, acceptation) — le chat NOX n’affichait que les messages depuis la migration Phase B.
@@ -15,6 +15,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **API** : `GET /api/venues/public`, `GET /api/bookers/public?bookerType=Collectif`.
 - **`CommunityHomePage`** : photos DJ sur les suggestions + rangées **Suggestions collectifs** et **Suggestions lieux**.
 - **`CommunityDiscoverPage`** : onglet Collectifs (Voir plus).
+
+---
+
+## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
 ### Modifié (mobile — Phase D + achats/billets) — 7 août
 - **`PurchasesPage` / `TicketsPage`** : tap sur un événement → **`openEventPreview`** (fiche NOX communauté) au lieu de `eventDetail` checkout.

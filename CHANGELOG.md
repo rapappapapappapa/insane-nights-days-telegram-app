@@ -25,6 +25,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (CI — tests serveur) — 11 août
 - **`server/package.json`** : script `npm test` — glob `tests/*.test.js` (le pattern `**` n’était pas développé sur GitHub Actions, Node recevait le chemin littéral).
 
+### Modifié (documentation) — 11 août
 - **`README.md`** (racine) et **`nox-mobile/README.md`** : réécriture — stack actuelle, liens doc, démarrage Railway/EAS (suppression contenu obsolète TON / SQLite / wallet mock).
 - **`docs/README.md`** : index doc à jour, structure mobile post–Phase D.
 - **`PROJECT_CONTEXT.md`**, **`PLAN_MIGRATION`**, **`GUIDE_TEST_NOX`**, **`ECARTS_FIGMA`**, **`DESIGN_FIGMA_REFERENCE`**, **`EXPLICATION_BACKEND`**, **`API_DOCUMENTATION`** : alignement août 2026 (PostgreSQL, `proHome`, écrans legacy supprimés).

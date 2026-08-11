@@ -22,6 +22,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Écrans legacy supprimés** : `HomePage.js`, `FeedPage.js`, `VenueDashboardPage.js` (styles et composants `venueDashboard/*` conservés).
 - **Alias permanents** : `home`, `feed`, `welcome`, `venueDashboard` → résolution NOX dans `legacyScreenRedirects` + `NavigationContext`.
 
+### Modifié (documentation) — 11 août
+- **`README.md`** (racine) et **`nox-mobile/README.md`** : réécriture — stack actuelle, liens doc, démarrage Railway/EAS (suppression contenu obsolète TON / SQLite / wallet mock).
+
 ---
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)

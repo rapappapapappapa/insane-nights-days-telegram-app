@@ -1,97 +1,87 @@
-# NOX - Application Mobile
+# Nox — application mobile
 
-Application mobile React Native avec Expo pour la plateforme NOX.
+App **Expo / React Native** (SDK 54) — canal produit principal de la plateforme NOX.
 
-## 🚀 Structure du Projet
+---
+
+## Rôles & parcours
+
+| Profil | Accueil | Découverte événements |
+|--------|---------|------------------------|
+| **COMMUNITY** | `communityHome` | `communityDiscover` |
+| **VENUE** (lieu) | `lieuxDashboard` | `lieuxEvents` |
+| **DJ / BOOKER / PRESTATAIRE** | `proHome` | `events` (pro) ou dashboard métier |
+
+Navigation : `NavigationContext` + table `SCREENS` dans `App.js`. Design system dans `components/nox/`.
+
+Les clés legacy (`home`, `feed`, `welcome`, `venueDashboard`, `events`) sont réécrites automatiquement via `utils/legacyScreenRedirects.js` (Phase D terminée).
+
+---
+
+## Structure
 
 ```
 nox-mobile/
-├── App.js                      # Navigation principale
-├── api/
-│   ├── endpointsConfig.js     # URL API (`EXPO_PUBLIC_API_BASE`, …)
-│   └── config.js              # Agrégation méthodes API
-├── screens/                    # Écrans (booker, staff, feed, …)
-└── package.json
+├── App.js                 # Routage (~70 écrans)
+├── api/                   # HTTP (axios), endpointsConfig, méthodes par domaine
+├── components/nox/        # Design system NOX
+├── screens/
+│   ├── auth/              # Login, register multi-rôles, OTP email
+│   ├── community/         # Accueil, discover, profil, onboarding
+│   ├── lieux/             # Dashboard lieu, demandes, chat + contrat
+│   ├── pro/               # Accueil pro (DJ / booker / prestataire)
+│   ├── dashboard/         # Dashboards métier
+│   ├── events/            # Liste pro, détail, billets, scan staff
+│   └── …
+├── contexts/              # Auth, Navigation, Language (FR/EN), EventForm
+├── hooks/                 # Logique métier par écran
+└── eas.json               # Profils build EAS
 ```
 
-## 📱 Pages Disponibles
+---
 
-- **HomePage** : Connexion wallet TON (mock pour l'instant)
-- **MenuPage** : Navigation vers les autres sections
-- **EventsPage** : Liste des événements avec recherche et filtres
-- **EventDetailPage** : Détails d'un événement
-- **ProfilePage** : Profil et statistiques utilisateur
-- **TicketsPage** : Gestion des tickets
+## Configuration
 
-## 🔌 Connexion Backend
+### Variables d'environnement (EAS / local)
 
-### Configuration API
+| Variable | Description |
+|----------|-------------|
+| `EXPO_PUBLIC_API_BASE` | URL API sans slash final (ex. `https://….up.railway.app`) |
+| `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID` | OAuth Google (iOS / Android / Web) |
+| `EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS` | Délai min. wizard événement booker |
+| `EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET` | Mode test scan billets (dev) |
+| `EXPO_PUBLIC_HIDE_SCAN_TEST_UI` | `true` pour masquer l’UI de test scan en prod |
 
-Le fichier **`api/endpointsConfig.js`** définit l’URL du backend. En build **EAS**, définir par exemple :
+Défaut API si non défini : voir `api/endpointsConfig.js`.
 
-| Variable | Usage |
-|----------|--------|
-| **`EXPO_PUBLIC_API_BASE`** | URL de l’API (sans slash final), ex. `https://…up.railway.app`. |
-| **`EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS`** | Délai minimum (jours) affiché côté wizard événement booker ; `0` = aligné sur serveur sans contrainte locale. |
-| **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** | (Optionnel, ≥ 8 car.) Même valeur que **`SCAN_TICKET_TEST_SECRET`** sur le serveur → active l’interrupteur *scan hors jour* sur **`ScanTicketPage`** (sinon le bandeau reste visible mais le switch peut rester inactif). |
-| **`EXPO_PUBLIC_HIDE_SCAN_TEST_UI`** | `true` / `1` → masque tout le bandeau de test sur l’écran scan (prod finale). |
+Variables serveur associées : `server/env.example.txt`.
 
-Variables serveur associées : **`server/env.example.txt`** (`SCAN_TICKET_TEST_SECRET`, `SCAN_TICKET_ALLOW_ANY_DAY`, etc.).
+---
 
-```javascript
-// Ancienne note locale — préférer EXPO_PUBLIC_API_BASE en CI / EAS
-API_CONFIG.BASE_URL = 'http://172.20.10.7:5000'
-```
-
-### Activer la connexion backend
-
-Dans `EventsPage.js`, décommentez les lignes pour activer la récupération des événements depuis le backend :
-
-```javascript
-useEffect(() => {
-  fetchEvents();
-}, []);
-
-const fetchEvents = async () => {
-  setLoading(true);
-  try {
-    const data = await api.getEvents();
-    if (data.success) {
-      setEvents(data.events);
-    }
-  } catch (error) {
-    console.error('Erreur récupération événements:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-```
-
-### Fonctions API disponibles
-
-- `api.connectWallet(walletAddress, username)` - Connexion wallet
-- `api.getUserProfile(userId)` - Profil utilisateur
-- `api.getEvents()` - Liste des événements
-- `api.buyTicket(userId, eventId, quantity)` - Acheter un ticket
-- `api.getUserTickets(userId)` - Tickets utilisateur
-- `api.getTicketQR(ticketId)` - QR code ticket
-- `api.getStats()` - Statistiques globales
-
-## 🎨 Design
-
-- Thème NOX : Fond noir (#0b0b0e) et orange (#ff7a1a)
-- Navigation native avec React Navigation
-- Mock data pour tester sans backend
-
-## 🛠️ Installation
+## Commandes
 
 ```bash
 npm install
-npx expo start
+npx expo start              # dev local
+npx expo start --dev-client # avec development build
+
+# Build
+eas build --profile preview --platform android
+eas build --profile production --platform ios
+
+# OTA (JS uniquement, runtime = app version 1.0.0)
+npm run update:both -- "Description de l'update"
 ```
 
-## 📝 Pistes / dette doc
+Canaux OTA : **`preview`** (Android), **`production`** (iOS).
 
-- Voir **`CHANGELOG.md`** (racine du dépôt) pour l’historique récent (booker, scan QR, PDF, Railway).
-- Le client web **`client/`** contient encore des listes TODO génériques ; le flux principal exposé ici est l’app **Expo** sous ce dossier.
+---
 
+## Docs liées
+
+- Racine : [`../README.md`](../README.md), [`../PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md)
+- Stack : [`../docs/STACK.md`](../docs/STACK.md)
+- Migration NOX : [`../docs/mobile/PLAN_MIGRATION_NOX_LEGACY.md`](../docs/mobile/PLAN_MIGRATION_NOX_LEGACY.md)
+- Maquettes : [`../docs/mobile/DESIGN_FIGMA_REFERENCE.md`](../docs/mobile/DESIGN_FIGMA_REFERENCE.md)
+- Setup : [`../docs/guides/GUIDE_SETUP_MOBILE.md`](../docs/guides/GUIDE_SETUP_MOBILE.md)
+- Changelog : [`../CHANGELOG.md`](../CHANGELOG.md)

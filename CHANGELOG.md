@@ -6,6 +6,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 4 au 7 août 2026 (lun. - ven.)
 
+### Corrigé (Lieux — contrat dans le chat booking) — 11 août
+- **`LieuxBookingChatPage`** : panneau contrat réintégré (carte, PDF, contre-proposition, acceptation) — le chat NOX n’affichait que les messages depuis la migration Phase B.
+- **`useVenueBookingContract`** + **`LieuxBookingContractPanel`** : réutilisation de `VenueContractModals` / `ContractDraftEditorFields`.
+
+### Modifié (accueil communauté — suggestions) — 11 août
+- **`GET /api/djs`** : renvoie `profileImage` (photo profil ou média).
+- **API** : `GET /api/venues/public`, `GET /api/bookers/public?bookerType=Collectif`.
+- **`CommunityHomePage`** : photos DJ sur les suggestions + rangées **Suggestions collectifs** et **Suggestions lieux**.
+- **`CommunityDiscoverPage`** : onglet Collectifs (Voir plus).
+
 ### Modifié (mobile — Phase D + achats/billets) — 7 août
 - **`PurchasesPage` / `TicketsPage`** : tap sur un événement → **`openEventPreview`** (fiche NOX communauté) au lieu de `eventDetail` checkout.
 - **Phase D** : plus de `navigate('home')` direct — `splash` si déconnecté, home du rôle via helpers existants.

@@ -105,6 +105,49 @@ app.get('/api/booker/:bookerId/public', async (req, res) => {
   }
 });
 
+/** Organisateurs / collectifs publics (accueil communauté) */
+app.get('/api/bookers/public', async (req, res) => {
+  try {
+    const { bookerType } = req.query;
+    const baseUrl = (() => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) return publicUrl.replace(/\/$/, '');
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return `${proto}://${host}`.replace(/\/$/, '');
+    })();
+    const normalize = (url) => {
+      if (!url) return null;
+      if (url.startsWith('/uploads/')) return `${baseUrl}${url}`;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return url;
+    };
+
+    const where = bookerType ? { bookerType: String(bookerType) } : {};
+    const bookers = await prisma.userBooker.findMany({
+      where,
+      orderBy: { pseudo: 'asc' },
+      take: parseInt(req.query.limit, 10) || 50,
+    });
+
+    res.json({
+      success: true,
+      bookers: bookers.map((b) => ({
+        id: b.id,
+        userId: b.userId,
+        pseudo: b.pseudo,
+        name: b.pseudo?.trim() || `${b.nom || ''} ${b.prenom || ''}`.trim(),
+        bookerType: b.bookerType,
+        profileImage: normalize(b.profileImage),
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur bookers publics:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Suivre un profil Booker (UserBooker.id)
 app.post('/api/follow/booker/:bookerId', authenticateToken, async (req, res) => {
   try {

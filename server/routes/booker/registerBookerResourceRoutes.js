@@ -251,6 +251,9 @@ app.get('/api/booker/venues', authenticateToken, async (req, res) => {
       id: venue.id,
       venueName: venue.venueName,
       address: venue.address,
+      city: venue.city,
+      profileImage: venue.profileImage,
+      bannerImage: venue.bannerImage,
       averageRatingGlobal: venue.averageRatingGlobal,
       maxCapacity: venue.maxCapacity ?? null,
     }));
@@ -261,6 +264,48 @@ app.get('/api/booker/venues', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur récupération lieux:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/** Lieux publics (accueil communauté, discover) */
+app.get('/api/venues/public', async (req, res) => {
+  try {
+    const baseUrl = (() => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) return publicUrl.replace(/\/$/, '');
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return `${proto}://${host}`.replace(/\/$/, '');
+    })();
+    const normalize = (url) => {
+      if (!url) return null;
+      if (url.startsWith('/uploads/')) return `${baseUrl}${url}`;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return url;
+    };
+
+    const venues = await prisma.userVenue.findMany({
+      orderBy: { averageRatingGlobal: 'desc' },
+      take: parseInt(req.query.limit, 10) || 50,
+    });
+
+    res.json({
+      success: true,
+      venues: venues.map((v) => ({
+        id: v.id,
+        venueName: v.venueName,
+        address: v.address,
+        city: v.city,
+        profileImage: normalize(v.profileImage),
+        bannerImage: normalize(v.bannerImage),
+        averageRatingGlobal: v.averageRatingGlobal,
+        maxCapacity: v.maxCapacity ?? null,
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur lieux publics:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

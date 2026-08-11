@@ -6,6 +6,22 @@ const prisma = require('../lib/prisma');
 module.exports = function registerDjPublicRoutes(app, deps) {
   void deps;
 
+  const buildPublicBaseUrl = (req) => {
+    const publicUrl = process.env.PUBLIC_URL;
+    if (publicUrl) return publicUrl.replace(/\/$/, '');
+    const host = req.get('host');
+    const forwardedProto = req.get('x-forwarded-proto');
+    const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+    return `${proto}://${host}`.replace(/\/$/, '');
+  };
+
+  const normalizeImageUrl = (req, imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('/uploads/')) return `${buildPublicBaseUrl(req)}${imageUrl}`;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return imageUrl;
+    return imageUrl;
+  };
+
 // Endpoint pour récupérer la liste de tous les DJs
 app.get('/api/djs', async (req, res) => {
   try {
@@ -18,13 +34,20 @@ app.get('/api/djs', async (req, res) => {
             username: true,
           },
         },
+        media: {
+          where: { type: 'photo', title: 'profile' },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
       },
       orderBy: {
         averageRatingGlobal: 'desc',
       },
     });
 
-    const formattedDjs = djs.map((dj) => ({
+    const formattedDjs = djs.map((dj) => {
+      const profileImage = dj.profileImage || dj.media?.[0]?.url || null;
+      return {
       id: dj.id,
       userId: dj.userId,
       artistName: dj.artistName,
@@ -38,12 +61,14 @@ app.get('/api/djs', async (req, res) => {
       minTravelFee: dj.minTravelFee,
       extraFees: dj.extraFees,
       availableStatus: dj.availableStatus,
+      profileImage: normalizeImageUrl(req, profileImage),
       averageRatingGlobal: dj.averageRatingGlobal,
       totalRatingsGlobal: dj.totalRatingsCommunity + dj.totalRatingsBooker + dj.totalRatingsVenue,
       averageRatingCommunity: dj.averageRatingCommunity,
       averageRatingBooker: dj.averageRatingBooker,
       averageRatingVenue: dj.averageRatingVenue,
-    }));
+    };
+    });
 
     res.json({ success: true, djs: formattedDjs });
   } catch (error) {

@@ -54,6 +54,8 @@ export default function CommunityHomePage() {
   const [profile, setProfile] = useState(null);
   const [events, setEvents] = useState([]);
   const [djs, setDjs] = useState([]);
+  const [venues, setVenues] = useState([]);
+  const [collectifs, setCollectifs] = useState([]);
   const [brokenImages, setBrokenImages] = useState({});
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
@@ -61,6 +63,8 @@ export default function CommunityHomePage() {
   const featured = useMemo(() => getFeaturedEvent(events), [events]);
   const upcoming = useMemo(() => filterUpcomingEvents(events, 8), [events]);
   const suggestedDjs = useMemo(() => djs.slice(0, 8), [djs]);
+  const suggestedVenues = useMemo(() => venues.slice(0, 8), [venues]);
+  const suggestedCollectifs = useMemo(() => collectifs.slice(0, 8), [collectifs]);
 
   useEffect(() => {
     if (routeParams?.feedTab) setActiveTab(routeParams.feedTab);
@@ -84,21 +88,27 @@ export default function CommunityHomePage() {
       else setLoading(true);
 
       try {
-        const tasks = [api.getEvents(), api.getDjs()];
+        const tasks = [api.getEvents(), api.getDjs(), api.getPublicVenues(), api.getPublicBookers('Collectif')];
         if (user?.token) {
           tasks.push(api.getCommunityProfile(user.token).catch(() => null));
         }
 
-        const [eventsRes, djsRes, profileRes] = await Promise.all(tasks);
+        const [eventsRes, djsRes, venuesRes, collectifsRes, profileRes] = await Promise.all(tasks);
 
         setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
         setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
+        setVenues(venuesRes?.success && Array.isArray(venuesRes.venues) ? venuesRes.venues : []);
+        setCollectifs(
+          collectifsRes?.success && Array.isArray(collectifsRes.bookers) ? collectifsRes.bookers : [],
+        );
         if (profileRes?.success && profileRes.profile) {
           setProfile(profileRes.profile);
         }
       } catch {
         setEvents([]);
         setDjs([]);
+        setVenues([]);
+        setCollectifs([]);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -131,6 +141,16 @@ export default function CommunityHomePage() {
     });
   };
 
+  const openVenue = (venue) => {
+    if (!venue?.id) return;
+    navigate('venueProfile', { venueId: venue.id, venueName: venue.venueName });
+  };
+
+  const openCollectif = (booker) => {
+    if (!booker?.id) return;
+    navigate('bookerProfile', { bookerId: booker.id });
+  };
+
   const renderThumb = (uri, fallbackIcon, key) => {
     const normalized = uri ? normalizeMediaUrl(uri) : null;
     if (normalized && !brokenImages[key]) {
@@ -138,12 +158,69 @@ export default function CommunityHomePage() {
         <Image
           source={{ uri: normalized }}
           style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
           onError={() => setBrokenImages((prev) => ({ ...prev, [key]: true }))}
         />
       );
     }
     return <Ionicons name={fallbackIcon} size={22} color={primaryAlpha(0.6)} />;
   };
+
+  const renderAvatarSuggestions = ({
+    title,
+    seeMoreLabel,
+    onSeeMore,
+    items,
+    emptyText,
+    getKey,
+    getImageUri,
+    fallbackIcon,
+    getTitle,
+    getSubtitle,
+    onPressItem,
+  }) => (
+    <>
+      <View style={styles.sectionHeaderRow}>
+        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+          {title}
+        </NoxText>
+        <TouchableOpacity onPress={onSeeMore}>
+          <NoxText variant="secondary" style={styles.link}>
+            {seeMoreLabel}
+          </NoxText>
+        </TouchableOpacity>
+      </View>
+      {items.length === 0 ? (
+        <NoxText variant="secondary" style={styles.emptyHint}>
+          {emptyText}
+        </NoxText>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+          {items.map((item) => {
+            const key = getKey(item);
+            return (
+              <TouchableOpacity
+                key={key}
+                style={styles.djCard}
+                activeOpacity={0.85}
+                onPress={() => onPressItem(item)}
+              >
+                <View style={styles.djAvatar}>
+                  {renderThumb(getImageUri(item), fallbackIcon, key)}
+                </View>
+                <NoxText variant="secondary" style={styles.djName} numberOfLines={1}>
+                  {getTitle(item)}
+                </NoxText>
+                <NoxText variant="secondary" style={styles.djGenre} numberOfLines={1}>
+                  {getSubtitle(item) || ' '}
+                </NoxText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </>
+  );
 
   const renderHeader = () => (
     <>
@@ -253,38 +330,47 @@ export default function CommunityHomePage() {
         </ScrollView>
       )}
 
-      <View style={styles.sectionHeaderRow}>
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          {fr ? 'Suggestions de DJs' : 'Suggested DJs'}
-        </NoxText>
-        <TouchableOpacity onPress={() => openDiscover(navigate, user?.activeProfileType, { tab: 'djs' })}>
-          <NoxText variant="secondary" style={styles.link}>
-            {fr ? 'Voir plus' : 'See more'}
-          </NoxText>
-        </TouchableOpacity>
-      </View>
+      {renderAvatarSuggestions({
+        title: fr ? 'Suggestions de DJs' : 'Suggested DJs',
+        seeMoreLabel: fr ? 'Voir plus' : 'See more',
+        onSeeMore: () => openDiscover(navigate, user?.activeProfileType, { tab: 'djs' }),
+        items: suggestedDjs,
+        emptyText: fr ? 'Aucun DJ disponible.' : 'No DJs available.',
+        getKey: (dj) => `dj-${dj.id}`,
+        getImageUri: (dj) => dj.profileImage,
+        fallbackIcon: 'person',
+        getTitle: (dj) => dj.artistName,
+        getSubtitle: (dj) => dj.genre || dj.style || dj.city,
+        onPressItem: openDj,
+      })}
 
-      {suggestedDjs.length === 0 ? (
-        <NoxText variant="secondary" style={styles.emptyHint}>
-          {fr ? 'Aucun DJ disponible.' : 'No DJs available.'}
-        </NoxText>
-      ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
-          {suggestedDjs.map((dj) => (
-            <TouchableOpacity key={dj.id} style={styles.djCard} activeOpacity={0.85} onPress={() => openDj(dj)}>
-              <View style={styles.djAvatar}>
-                {renderThumb(dj.profileImage, 'person', `dj-${dj.id}`)}
-              </View>
-              <NoxText variant="secondary" style={styles.djName} numberOfLines={1}>
-                {dj.artistName}
-              </NoxText>
-              <NoxText variant="secondary" style={styles.djGenre} numberOfLines={1}>
-                {dj.genre || dj.style || dj.city || ''}
-              </NoxText>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {renderAvatarSuggestions({
+        title: fr ? 'Suggestions collectifs' : 'Suggested collectives',
+        seeMoreLabel: fr ? 'Voir plus' : 'See more',
+        onSeeMore: () => openDiscover(navigate, user?.activeProfileType, { tab: 'collectifs' }),
+        items: suggestedCollectifs,
+        emptyText: fr ? 'Aucun collectif pour le moment.' : 'No collectives yet.',
+        getKey: (b) => `collectif-${b.id}`,
+        getImageUri: (b) => b.profileImage,
+        fallbackIcon: 'people',
+        getTitle: (b) => b.name || b.pseudo,
+        getSubtitle: (b) => b.bookerType || (fr ? 'Collectif' : 'Collective'),
+        onPressItem: openCollectif,
+      })}
+
+      {renderAvatarSuggestions({
+        title: fr ? 'Suggestions lieux' : 'Suggested venues',
+        seeMoreLabel: fr ? 'Voir plus' : 'See more',
+        onSeeMore: () => navigate('venueList'),
+        items: suggestedVenues,
+        emptyText: fr ? 'Aucun lieu disponible.' : 'No venues available.',
+        getKey: (v) => `venue-${v.id}`,
+        getImageUri: (v) => v.profileImage || v.bannerImage,
+        fallbackIcon: 'business',
+        getTitle: (v) => v.venueName,
+        getSubtitle: (v) => v.city || v.address,
+        onPressItem: openVenue,
+      })}
     </>
   );
 

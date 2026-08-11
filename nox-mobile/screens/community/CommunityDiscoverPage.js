@@ -41,12 +41,14 @@ export default function CommunityDiscoverPage() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [events, setEvents] = useState([]);
   const [djs, setDjs] = useState([]);
+  const [collectifs, setCollectifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [brokenImages, setBrokenImages] = useState({});
 
   useEffect(() => {
     if (routeParams?.tab === 'djs') setMode('djs');
+    else if (routeParams?.tab === 'collectifs') setMode('collectifs');
     else if (routeParams?.tab === 'events') setMode('events');
   }, [routeParams?.tab]);
 
@@ -54,12 +56,20 @@ export default function CommunityDiscoverPage() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const [eventsRes, djsRes] = await Promise.all([api.getEvents(), api.getDjs()]);
+      const [eventsRes, djsRes, collectifsRes] = await Promise.all([
+        api.getEvents(),
+        api.getDjs(),
+        api.getPublicBookers('Collectif'),
+      ]);
       setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
       setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
+      setCollectifs(
+        collectifsRes?.success && Array.isArray(collectifsRes.bookers) ? collectifsRes.bookers : [],
+      );
     } catch {
       setEvents([]);
       setDjs([]);
+      setCollectifs([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,6 +98,15 @@ export default function CommunityDiscoverPage() {
     () => filterDjsList(djs, { genre: filter, search: debouncedSearch }),
     [djs, filter, debouncedSearch],
   );
+
+  const filteredCollectifs = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return collectifs;
+    return collectifs.filter((b) => {
+      const name = (b.name || b.pseudo || '').toLowerCase();
+      return name.includes(q);
+    });
+  }, [collectifs, debouncedSearch]);
 
   const renderThumb = (uri, fallbackIcon, key, round = false) => {
     const normalized = uri ? normalizeMediaUrl(uri) : null;
@@ -149,8 +168,20 @@ export default function CommunityDiscoverPage() {
               DJs
             </NoxText>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentBtn, mode === 'collectifs' && styles.segmentBtnActive]}
+            onPress={() => setMode('collectifs')}
+          >
+            <NoxText
+              variant="buttonSecondary"
+              style={[styles.segmentText, mode === 'collectifs' && styles.segmentTextActive]}
+            >
+              {fr ? 'Collectifs' : 'Collectives'}
+            </NoxText>
+          </TouchableOpacity>
         </View>
 
+        {mode !== 'collectifs' ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           {genres.map((g) => (
             <TouchableOpacity
@@ -164,6 +195,7 @@ export default function CommunityDiscoverPage() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        ) : null}
       </View>
 
       <ScrollView
@@ -209,6 +241,31 @@ export default function CommunityDiscoverPage() {
                 </TouchableOpacity>
               );
             })
+          )
+        ) : mode === 'collectifs' ? (
+          filteredCollectifs.length === 0 ? (
+            <NoxText variant="secondary" style={styles.empty}>
+              {fr ? 'Aucun collectif trouvé.' : 'No collectives found.'}
+            </NoxText>
+          ) : (
+            filteredCollectifs.map((b) => (
+              <TouchableOpacity
+                key={b.id}
+                activeOpacity={0.85}
+                onPress={() => navigate('bookerProfile', { bookerId: b.id })}
+              >
+                <NoxCard style={styles.eventCard} padded={false}>
+                  {renderThumb(b.profileImage, 'people', `col-${b.id}`, true)}
+                  <View style={{ flex: 1 }}>
+                    <NoxText variant="form" style={styles.itemName}>
+                      {b.name || b.pseudo}
+                    </NoxText>
+                    <NoxText variant="secondary">{b.bookerType || (fr ? 'Collectif' : 'Collective')}</NoxText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+                </NoxCard>
+              </TouchableOpacity>
+            ))
           )
         ) : filteredDjs.length === 0 ? (
           <NoxText variant="secondary" style={styles.empty}>

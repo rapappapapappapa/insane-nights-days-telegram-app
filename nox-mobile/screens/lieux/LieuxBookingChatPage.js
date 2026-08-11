@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
 import { useVenueBookingChat } from '../../hooks/useVenueBookingChat';
+import { useVenueBookingContract } from '../../hooks/useVenueBookingContract';
+import LieuxBookingContractPanel from '../../components/lieux/LieuxBookingContractPanel';
 import { useToast } from '../../hooks/useToast';
 import { NoxText } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
@@ -63,8 +66,13 @@ export default function LieuxBookingChatPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const fr = language === 'fr';
+
+  const contractEditorModalCardHeight = useMemo(() => {
+    const h = Dimensions.get('window').height;
+    return Math.round(h * 0.88);
+  }, []);
 
   const eventVenueId = routeParams?.eventVenueId;
   const { bookings, loading: bookingLoading } = useLieuxData(user?.token, language);
@@ -82,6 +90,14 @@ export default function LieuxBookingChatPage() {
     token: user?.token,
     eventVenueId,
     onError: (msg) => showError(msg || (fr ? 'Erreur chat.' : 'Chat error.')),
+  });
+
+  const venueContract = useVenueBookingContract({
+    eventVenueId,
+    token: user?.token,
+    language,
+    showError,
+    showSuccess,
   });
 
   const title = booking?.eventTitle || (fr ? 'Conversation' : 'Conversation');
@@ -135,6 +151,11 @@ export default function LieuxBookingChatPage() {
             keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => scrollRef.current?.scrollToEnd?.({ animated: true })}
           >
+            <LieuxBookingContractPanel
+              language={language}
+              contractEditorModalCardHeight={contractEditorModalCardHeight}
+              contract={venueContract}
+            />
             {messages.length === 0 ? (
               <NoxText variant="secondary" style={styles.emptyChat}>
                 {fr

@@ -292,6 +292,16 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(API_CONFIG.ENDPOINTS.DJS_LIST);
   },
 
+  getPublicVenues: async (limit = 50) => {
+    return apiRequest(`/api/venues/public?limit=${limit}`, { noCache: true });
+  },
+
+  getPublicBookers: async (bookerType = null, limit = 50) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (bookerType) params.set('bookerType', bookerType);
+    return apiRequest(`/api/bookers/public?${params}`, { noCache: true });
+  },
+
   // Vérifier les notes existantes d'un utilisateur pour un événement
   checkRatings: async (token, eventId) => {
     if (!token) {

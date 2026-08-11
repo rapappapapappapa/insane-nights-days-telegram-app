@@ -22,6 +22,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Écrans legacy supprimés** : `HomePage.js`, `FeedPage.js`, `VenueDashboardPage.js` (styles et composants `venueDashboard/*` conservés).
 - **Alias permanents** : `home`, `feed`, `welcome`, `venueDashboard` → résolution NOX dans `legacyScreenRedirects` + `NavigationContext`.
 
+### Ajouté (doc — backlog mobile) — 11 août
+- **`docs/mobile/TODO.md`** : backlog court (menu radial, filtres accueil communauté, bouton central artiste) ; **`nox-mobile/todo.md`** pointe vers la doc.
+
 ### Corrigé (CI — tests serveur) — 11 août
 - **`server/package.json`** : script `npm test` — glob `tests/*.test.js` (le pattern `**` n’était pas développé sur GitHub Actions, Node recevait le chemin littéral).
 

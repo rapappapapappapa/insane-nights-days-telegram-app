@@ -82,6 +82,7 @@ Canaux OTA : **`preview`** (Android), **`production`** (iOS).
 - Racine : [`../README.md`](../README.md), [`../PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md)
 - Stack : [`../docs/STACK.md`](../docs/STACK.md)
 - Migration NOX : [`../docs/mobile/PLAN_MIGRATION_NOX_LEGACY.md`](../docs/mobile/PLAN_MIGRATION_NOX_LEGACY.md)
+- **TODO / backlog** : [`../docs/mobile/TODO.md`](../docs/mobile/TODO.md)
 - Maquettes : [`../docs/mobile/DESIGN_FIGMA_REFERENCE.md`](../docs/mobile/DESIGN_FIGMA_REFERENCE.md)
 - Setup : [`../docs/guides/GUIDE_SETUP_MOBILE.md`](../docs/guides/GUIDE_SETUP_MOBILE.md)
 - Changelog : [`../CHANGELOG.md`](../CHANGELOG.md)

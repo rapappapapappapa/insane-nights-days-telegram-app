@@ -16,6 +16,7 @@ Pour démarrer rapidement : [`../README.md`](../README.md) · [`../PROJECT_CONTE
 | [`mobile/ECARTS_FIGMA_VS_APP.md`](mobile/ECARTS_FIGMA_VS_APP.md) | Écarts design / implémentation |
 | [`mobile/MANQUES_APP.md`](mobile/MANQUES_APP.md) | Écrans sans maquette Figma |
 | [`mobile/GUIDE_TEST_NOX.md`](mobile/GUIDE_TEST_NOX.md) | Parcours de test manuel |
+| [`mobile/TODO.md`](mobile/TODO.md) | **Backlog court** (tâches en cours) |
 | [`backend/API_DOCUMENTATION.md`](backend/API_DOCUMENTATION.md) | Endpoints REST (auth JWT, events, tickets…) |
 | [`backend/DEPLOY.md`](backend/DEPLOY.md) | Déploiement Railway / PostgreSQL |
 
@@ -52,6 +53,7 @@ Pour démarrer rapidement : [`../README.md`](../README.md) · [`../PROJECT_CONTE
 | [`DESIGN_FIGMA_REFERENCE.md`](mobile/DESIGN_FIGMA_REFERENCE.md) | Pack maquettes (`design-figma/`) |
 | [`SYNTHESE_REFONTE_NOX_JUIN2026.md`](mobile/SYNTHESE_REFONTE_NOX_JUIN2026.md) | Design system + navigation |
 | [`GUIDE_TEST_NOX.md`](mobile/GUIDE_TEST_NOX.md) | QA manuelle |
+| [`TODO.md`](mobile/TODO.md) | Backlog court (tâches en cours) |
 | [`SECURITE_TOKENS_IMPLEMENTATION.md`](mobile/SECURITE_TOKENS_IMPLEMENTATION.md) | Tokens JWT / Secure Store |
 | [`LOGGING_SECURISE_IMPLEMENTATION.md`](mobile/LOGGING_SECURISE_IMPLEMENTATION.md) | Logging sans fuite de secrets |
 

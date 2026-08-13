@@ -11,6 +11,19 @@ export function useVenueBookingChat({ token, eventVenueId, onError }) {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const scrollRef = useRef(null);
+  const onErrorRef = useRef(onError);
+  const initialLoadDoneRef = useRef(false);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    initialLoadDoneRef.current = false;
+    setMessages([]);
+    setDraft('');
+    setLoading(!!token && !!eventVenueId);
+  }, [token, eventVenueId]);
 
   const loadMessages = useCallback(
     async (options = {}) => {
@@ -19,7 +32,7 @@ export function useVenueBookingChat({ token, eventVenueId, onError }) {
         setLoading(false);
         return;
       }
-      if (!silent) setLoading(true);
+      if (!silent && !initialLoadDoneRef.current) setLoading(true);
       try {
         const response = await api.getVenueMessages(token, eventVenueId);
         if (response?.success && Array.isArray(response.messages)) {
@@ -38,12 +51,15 @@ export function useVenueBookingChat({ token, eventVenueId, onError }) {
           }
         }
       } catch (e) {
-        if (!silent) onError?.(e?.message);
+        if (!silent) onErrorRef.current?.(e?.message);
       } finally {
-        if (!silent) setLoading(false);
+        if (!silent) {
+          initialLoadDoneRef.current = true;
+          setLoading(false);
+        }
       }
     },
-    [token, eventVenueId, onError],
+    [token, eventVenueId],
   );
 
   useEffect(() => {
@@ -77,17 +93,17 @@ export function useVenueBookingChat({ token, eventVenueId, onError }) {
         await loadMessages({ silent: true });
         return true;
       }
-      onError?.(response?.message);
+      onErrorRef.current?.(response?.message);
       setDraft(text);
       return false;
     } catch (e) {
-      onError?.(e?.message);
+      onErrorRef.current?.(e?.message);
       setDraft(text);
       return false;
     } finally {
       setSending(false);
     }
-  }, [token, eventVenueId, draft, sending, loadMessages, onError]);
+  }, [token, eventVenueId, draft, sending, loadMessages]);
 
   return {
     loading,
@@ -97,6 +113,6 @@ export function useVenueBookingChat({ token, eventVenueId, onError }) {
     setDraft,
     sendMessage,
     scrollRef,
-    refresh: () => loadMessages(),
+    refresh: () => loadMessages({ silent: true }),
   };
 }

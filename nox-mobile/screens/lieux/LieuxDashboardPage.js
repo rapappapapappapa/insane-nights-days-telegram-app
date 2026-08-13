@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -66,10 +66,13 @@ export default function LieuxDashboardPage() {
   const realizedCount = useMemo(() => getRealizedEventsCount(bookings), [bookings]);
 
   const [brokenImages, setBrokenImages] = useState({});
+  const handledDeepLinkRef = useRef(null);
 
   useEffect(() => {
-    if (routeParams?.openChatEventVenueId) {
-      navigate('lieuxBookingChat', { eventVenueId: routeParams.openChatEventVenueId });
+    const chatId = routeParams?.openChatEventVenueId;
+    if (chatId && handledDeepLinkRef.current !== chatId) {
+      handledDeepLinkRef.current = chatId;
+      navigate('lieuxBookingChat', { eventVenueId: chatId });
       return;
     }
     if (routeParams?.openBookings) {

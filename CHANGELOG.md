@@ -25,6 +25,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté (doc — backlog mobile) — 11 août
 - **`docs/mobile/TODO.md`** : backlog court (menu radial, filtres accueil communauté, bouton central artiste) ; **`nox-mobile/todo.md`** pointe vers la doc.
 
+### Corrigé (Lieux — chat booking clignotant) — 13 août
+- **`useVenueBookingChat`** : boucle de rechargement supprimée (`onError` via ref, spinner uniquement au 1er chargement).
+- **`LieuxBookingChatPage`** : plus de blocage sur `useLieuxData` — fil de messages et saisie restent utilisables ; métadonnées event passées en `routeParams`.
+
 ### Corrigé (CI — tests serveur) — 11 août
 - **`server/package.json`** : script `npm test` — glob `tests/*.test.js` (le pattern `**` n’était pas développé sur GitHub Actions, Node recevait le chemin littéral).
 

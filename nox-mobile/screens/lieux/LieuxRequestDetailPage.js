@@ -64,7 +64,12 @@ export default function LieuxRequestDetailPage() {
   const openBookingChat = () => {
     const id = booking?.eventVenueId || booking?.id;
     if (!id) return;
-    navigate('lieuxBookingChat', { eventVenueId: id });
+    navigate('lieuxBookingChat', {
+      eventVenueId: id,
+      eventTitle: booking?.eventTitle,
+      eventDate: booking?.eventDate,
+      eventLocation: booking?.eventLocation,
+    });
   };
 
   const handleDecision = async (decisionId) => {

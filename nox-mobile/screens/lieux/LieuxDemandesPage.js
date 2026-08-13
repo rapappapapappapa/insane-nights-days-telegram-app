@@ -145,7 +145,12 @@ export default function LieuxDemandesPage() {
   };
 
   const openChat = (booking) => {
-    navigate('lieuxBookingChat', { eventVenueId: booking.eventVenueId || booking.id });
+    navigate('lieuxBookingChat', {
+      eventVenueId: booking.eventVenueId || booking.id,
+      eventTitle: booking.eventTitle,
+      eventDate: booking.eventDate,
+      eventLocation: booking.eventLocation,
+    });
   };
 
   return (

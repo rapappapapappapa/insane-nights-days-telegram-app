@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -75,8 +75,13 @@ export default function LieuxBookingChatPage() {
   }, []);
 
   const eventVenueId = routeParams?.eventVenueId;
-  const { bookings, loading: bookingLoading } = useLieuxData(user?.token, language);
+  const { bookings } = useLieuxData(user?.token, language);
   const booking = findBookingByEventVenueId(bookings, eventVenueId);
+
+  const handleChatError = useCallback(
+    (msg) => showError(msg || (fr ? 'Erreur chat.' : 'Chat error.')),
+    [showError, fr],
+  );
 
   const {
     loading,
@@ -89,7 +94,7 @@ export default function LieuxBookingChatPage() {
   } = useVenueBookingChat({
     token: user?.token,
     eventVenueId,
-    onError: (msg) => showError(msg || (fr ? 'Erreur chat.' : 'Chat error.')),
+    onError: handleChatError,
   });
 
   const venueContract = useVenueBookingContract({
@@ -100,10 +105,25 @@ export default function LieuxBookingChatPage() {
     showSuccess,
   });
 
-  const title = booking?.eventTitle || (fr ? 'Conversation' : 'Conversation');
+  const title =
+    booking?.eventTitle ||
+    routeParams?.eventTitle ||
+    (fr ? 'Conversation' : 'Conversation');
   const subtitle = booking
     ? `${formatEventDateLabel(booking.eventDate, language, { shortMonth: true, withYear: true })}${booking.eventLocation ? ` • ${booking.eventLocation}` : ''}`
-    : '';
+    : routeParams?.eventDate || routeParams?.eventLocation
+      ? [
+          routeParams?.eventDate
+            ? formatEventDateLabel(routeParams.eventDate, language, {
+                shortMonth: true,
+                withYear: true,
+              })
+            : null,
+          routeParams?.eventLocation,
+        ]
+          .filter(Boolean)
+          .join(' • ')
+      : '';
 
   if (!eventVenueId) {
     return (
@@ -139,7 +159,7 @@ export default function LieuxBookingChatPage() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        {loading || bookingLoading ? (
+        {loading ? (
           <View style={styles.centeredFlex}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
@@ -149,7 +169,11 @@ export default function LieuxBookingChatPage() {
             style={[styles.flex, styles.messagesScroll]}
             contentContainerStyle={styles.messagesContent}
             keyboardShouldPersistTaps="handled"
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd?.({ animated: true })}
+            onContentSizeChange={() => {
+              if (messages.length > 0) {
+                scrollRef.current?.scrollToEnd?.({ animated: false });
+              }
+            }}
           >
             <LieuxBookingContractPanel
               language={language}

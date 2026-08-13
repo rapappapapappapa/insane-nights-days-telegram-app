@@ -135,7 +135,14 @@ export default function LieuxEventDetailPage() {
         </View>
         <TouchableOpacity
           style={styles.headerBtn}
-          onPress={() => navigate('lieuxBookingChat', { eventVenueId })}
+          onPress={() =>
+            navigate('lieuxBookingChat', {
+              eventVenueId,
+              eventTitle: booking?.eventTitle,
+              eventDate: booking?.eventDate,
+              eventLocation: booking?.eventLocation,
+            })
+          }
           hitSlop={12}
         >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.text} />

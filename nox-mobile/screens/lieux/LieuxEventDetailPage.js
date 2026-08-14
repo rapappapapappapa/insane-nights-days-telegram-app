@@ -68,7 +68,7 @@ export default function LieuxEventDetailPage() {
       setEventLoading(true);
       try {
         const [eventRes, staffRes] = await Promise.all([
-          api.getEventById(booking.eventId),
+          api.getEventById(booking.eventId, user?.token),
           user?.token ? api.getEventStaff(user.token, booking.eventId).catch(() => null) : null,
         ]);
         if (!cancelled && eventRes?.success && eventRes.event) {

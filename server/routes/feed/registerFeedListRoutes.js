@@ -11,6 +11,7 @@ const {
   formatFeedPost,
   fetchUserRepostedRootIds,
 } = require('./utils/feedPostHelpers');
+const { upcomingPublishedFeedEventWhere } = require('../../utils/publicEventDiscovery');
 
 function resolveOptionalUserId(req) {
   const authHeader = req.headers.authorization;
@@ -86,7 +87,10 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
 
     const upcomingEvents = bookerIds.length > 0
       ? await prisma.event.findMany({
-          where: { bookerId: { in: bookerIds }, status: 'UPCOMING', date: { gte: new Date() } },
+          where: {
+            ...upcomingPublishedFeedEventWhere({ now: new Date() }),
+            bookerId: { in: bookerIds },
+          },
           take: 10,
           orderBy: { createdAt: 'desc' },
           include: {
@@ -199,13 +203,7 @@ app.get('/api/feed', async (req, res) => {
 
     // Récupérer les événements à venir (pour les annonces) - uniquement ceux publiés sur le feed
     const upcomingEvents = await prisma.event.findMany({
-      where: {
-        status: 'UPCOMING',
-        publishedOnFeed: true,
-        date: {
-          gte: new Date(), // Événements futurs uniquement
-        },
-      },
+      where: upcomingPublishedFeedEventWhere({ now: new Date() }),
       take: 10, // Limiter à 10 événements récents
       orderBy: { createdAt: 'desc' },
       include: {

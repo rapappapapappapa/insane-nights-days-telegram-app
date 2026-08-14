@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -27,7 +27,7 @@ import {
   addNoxEventToDeviceCalendar,
   isDeviceCalendarExportSupported,
 } from '../../utils/addNoxEventToCalendar';
-import { API_DATE_RE, EVENT_DETAIL_MOCK_EVENTS, isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
+import { API_DATE_RE, isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
 import { tierSaleWindowHint } from '../../utils/ticketPricingUtils';
 import { useEventDetailPurchase } from '../../hooks/useEventDetailPurchase';
 import { useEventDetailGroups } from '../../hooks/useEventDetailGroups';
@@ -92,18 +92,10 @@ export default function EventDetailPage() {
   const [userProfiles, setUserProfiles] = useState(null);
   const [imageBroken, setImageBroken] = useState(false);
 
-  const eventId = useMemo(
-    () => routeParams?.eventId ?? EVENT_DETAIL_MOCK_EVENTS[0].id,
-    [routeParams?.eventId],
-  );
+  const eventId = routeParams?.eventId ?? null;
   const checkoutOnly = routeParams?.checkoutOnly === true;
 
-  const defaultEvent = useMemo(
-    () => EVENT_DETAIL_MOCK_EVENTS.find((item) => item.id === eventId) ?? EVENT_DETAIL_MOCK_EVENTS[0],
-    [eventId],
-  );
-
-  const [event, setEvent] = useState(defaultEvent);
+  const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reporting, setReporting] = useState(false);
@@ -126,11 +118,11 @@ export default function EventDetailPage() {
     setImageBroken(false);
   }, [event?.image, eventId]);
 
-  const isEventPast = () => event.status === 'FINISHED';
-  const isEventUpcoming = () => event.status === 'UPCOMING';
+  const isEventPast = () => event?.status === 'FINISHED';
+  const isEventUpcoming = () => event?.status === 'UPCOMING';
 
   const getStatusLabel = () => {
-    switch (event.status) {
+    switch (event?.status) {
       case 'UPCOMING':
         return fr ? 'À venir' : 'Upcoming';
       case 'ONGOING':
@@ -143,7 +135,7 @@ export default function EventDetailPage() {
   };
 
   const getStatusColor = () => {
-    switch (event.status) {
+    switch (event?.status) {
       case 'UPCOMING':
         return Colors.success;
       case 'ONGOING':
@@ -228,19 +220,25 @@ export default function EventDetailPage() {
   };
 
   const fetchEvent = async () => {
+    if (!eventId) {
+      setEvent(null);
+      setError(fr ? 'Événement introuvable.' : 'Event not found.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
-    setEvent(defaultEvent);
     try {
-      const data = await api.getEventById(eventId);
+      const data = await api.getEventById(eventId, user?.token);
       if (data?.success && data.event) {
         setEvent(data.event);
       } else {
-        setEvent(defaultEvent);
+        setEvent(null);
+        setError(data?.message || (fr ? 'Événement introuvable.' : 'Event not found.'));
       }
-    } catch {
-      setEvent(defaultEvent);
-      setError(fr ? "Impossible de charger l'événement en ligne." : 'Unable to load event online.');
+    } catch (err) {
+      setEvent(null);
+      setError(err?.message || (fr ? "Impossible de charger l'événement." : 'Unable to load event.'));
     } finally {
       setLoading(false);
     }
@@ -319,10 +317,10 @@ export default function EventDetailPage() {
     }
   };
 
-  const formattedDate = formatEventDate(event.date, language);
-  const timeRange = formatTimeRange(event.time, event.durationHours);
+  const formattedDate = formatEventDate(event?.date, language);
+  const timeRange = formatTimeRange(event?.time, event?.durationHours);
   const statusColor = getStatusColor();
-  const djList = Array.isArray(event.djs) ? event.djs : [];
+  const djList = Array.isArray(event?.djs) ? event.djs : [];
 
   const renderPurchaseSection = () => {
     if (isEventUpcoming()) {
@@ -471,6 +469,22 @@ export default function EventDetailPage() {
         <NoxText variant="secondary" style={styles.loadingText}>
           {fr ? 'Chargement de l’événement…' : 'Loading event…'}
         </NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} variant="ghost" onPress={goBack} fullWidth={false} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!event) {
+    return (
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
+        <StatusBar style="light" />
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.textTertiary} />
+        <NoxText variant="secondary" style={styles.loadingText}>
+          {error || (fr ? 'Événement introuvable.' : 'Event not found.')}
+        </NoxText>
+        {eventId ? (
+          <NoxButton label={fr ? 'Réessayer' : 'Retry'} onPress={fetchEvent} fullWidth={false} />
+        ) : null}
         <NoxButton label={fr ? 'Retour' : 'Back'} variant="ghost" onPress={goBack} fullWidth={false} />
       </SafeAreaView>
     );

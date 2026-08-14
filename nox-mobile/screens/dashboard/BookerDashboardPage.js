@@ -121,6 +121,8 @@ export default function BookerDashboardPage() {
     deletingEventId,
     publishingEventId,
     markingPaymentEventDjId,
+    markingPaymentEventVenueId,
+    markingPaymentEventPrestataireId,
     editEventVisible,
     setEditEventVisible,
     editEventDraft,
@@ -130,6 +132,8 @@ export default function BookerDashboardPage() {
     fetchMyEvents,
     onRefreshEventsList,
     markBookingAsPaid,
+    markVenueBookingAsPaid,
+    markPrestataireBookingAsPaid,
     handlePublishToFeed,
     handleDeleteEvent,
     openEditEvent,
@@ -353,6 +357,10 @@ export default function BookerDashboardPage() {
             openChat={openChat}
             markBookingAsPaid={markBookingAsPaid}
             markingPaymentEventDjId={markingPaymentEventDjId}
+            markVenueBookingAsPaid={markVenueBookingAsPaid}
+            markingPaymentEventVenueId={markingPaymentEventVenueId}
+            markPrestataireBookingAsPaid={markPrestataireBookingAsPaid}
+            markingPaymentEventPrestataireId={markingPaymentEventPrestataireId}
             openEditEvent={openEditEvent}
             handlePublishToFeed={handlePublishToFeed}
             publishingEventId={publishingEventId}

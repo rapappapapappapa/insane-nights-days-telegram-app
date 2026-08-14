@@ -3,6 +3,8 @@
  */
 const prisma = require('../lib/prisma');
 const { parseTicketTiersFromDb, enrichTiersWithSold, minTierPriceEUR } = require('../utils/ticketTiers');
+const { publishedOnFeedEventWhere, canViewEvent } = require('../utils/publicEventDiscovery');
+const { attachUserIfAuthenticated } = require('../middleware/auth');
 
 module.exports = function registerEventPublicRoutes(app, deps) {
   const { authenticateToken, userController } = deps;
@@ -48,6 +50,7 @@ const updateEventStatuses = async function updateEventStatuses() {
 app.get('/api/events', async (req, res) => {
   try {
     const dbEvents = await prisma.event.findMany({
+      where: publishedOnFeedEventWhere(),
       include: {
         venue: {
           include: {
@@ -133,7 +136,7 @@ app.get('/api/events/:eventId/groups', authenticateToken, userController.getEven
 app.post('/api/events/:eventId/groups/:groupId/invite', authenticateToken, userController.inviteToEventGroup);
 app.put('/api/event-groups/:groupId/respond', authenticateToken, userController.respondToEventGroupInvitation);
 
-app.get('/api/events/:eventId', async (req, res) => {
+app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: req.params.eventId },
@@ -146,6 +149,11 @@ app.get('/api/events/:eventId', async (req, res) => {
     });
 
     if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé' });
+    }
+
+    // Tant que l'orga n'a pas publié, l'événement n'est visible que par ses parties prenantes.
+    if (!(await canViewEvent(prisma, event, req.user))) {
       return res.status(404).json({ success: false, message: 'Événement non trouvé' });
     }
 

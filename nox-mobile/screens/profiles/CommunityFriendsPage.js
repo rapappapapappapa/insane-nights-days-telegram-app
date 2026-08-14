@@ -25,6 +25,7 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
+import { openEventPreview } from '../../utils/noxNavigation';
 
 export default function CommunityFriendsPage() {
   const insets = useSafeAreaInsets();
@@ -437,7 +438,7 @@ export default function CommunityFriendsPage() {
                 </View>
                 <TouchableOpacity
                   style={styles.eventInviteLink}
-                  onPress={() => navigate('eventDetail', { eventId: inv.event?.id })}
+                  onPress={() => openEventPreview(navigate, user?.activeProfileType, inv.event?.id)}
                 >
                   <Text style={styles.eventInviteLinkText}>{fr ? 'Voir l\'événement →' : 'View event →'}</Text>
                 </TouchableOpacity>

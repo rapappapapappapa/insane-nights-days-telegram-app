@@ -200,7 +200,12 @@ export default function VenueProfilePage() {
         </NoxText>
 
         {venue.averageRatingGlobal > 0 ? (
-          <View style={styles.ratingRow}>
+          <TouchableOpacity
+            style={styles.ratingRow}
+            onPress={() => navigate('venueRatings', { venueId, venueName: venue.venueName })}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Voir tous les avis' : 'See all reviews'}
+          >
             <NoxText variant="secondary">
               {language === 'fr' ? 'Note moyenne' : 'Average rating'}
             </NoxText>
@@ -209,8 +214,9 @@ export default function VenueProfilePage() {
               <NoxText variant="titleSecondary" style={{ color: Colors.primary }}>
                 {Number(venue.averageRatingGlobal).toFixed(1)}
               </NoxText>
+              <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
             </View>
-          </View>
+          </TouchableOpacity>
         ) : null}
 
         {venue.capacity ? (

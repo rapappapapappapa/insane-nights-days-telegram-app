@@ -4,45 +4,66 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 11 au 14 août 2026 (lun. - ven.)
+## Semaine du 11 au 14 août 2026
 
-### Corrigé (Lieux — retour chat + acceptation contrat) — 14 août
+### Corrigé (mobile — faux événement affiché en cas d’erreur API)
+- **`EventDetailPage`** : suppression du repli sur des données fictives (« Nox Night », janvier 2024) qui s’affichaient — jusqu’au tunnel d’achat — dès que l’API échouait ou que l’`eventId` était absent. Vrai écran d’erreur avec bouton **Réessayer**.
+- **`eventDetailPageUtils`** : constante `EVENT_DETAIL_MOCK_EVENTS` retirée.
+
+### Ajouté (organisateur — paiements lieu et prestataire)
+- **`BookerEventsSection`** : badge de statut + bouton « marquer payé » sur le lieu et le prestataire, comme pour les DJ (les routes serveur `PUT /api/booker/event-venues/:id/payment` et `.../event-prestataires/:id/payment` existaient sans aucun appel côté mobile).
+- **API mobile** : `updateVenueBookingPayment`, `updatePrestataireBookingPayment` ; `useBookerEvents` factorise le marquage des trois types de booking.
+
+### Ajouté (DJ — section Paiements réelle)
+- **`DjPaiementsSection`** : remplace le placeholder « bientôt » par les cachets issus de `GET /api/dj/bookings` — totaux encaissé / en attente / à venir, montant, date, facture et date de paiement par booking accepté.
+
+### Ajouté (profils — accès à tous les avis)
+- **`DjProfilePage`** : lien « Voir les N avis » vers `djRatings` ; **`VenueProfilePage`** : note moyenne cliquable vers `venueRatings`. Les deux écrans existaient, complets et branchés à l’API, mais n’étaient atteignables depuis aucun parcours.
+
+### Corrigé (commu — visibilité événements)
+- **`GET /api/events`** : seuls les événements **`publishedOnFeed`** (publiés par l’orga après validation des contrats) apparaissent dans « Prochains événements » et la page Découvrir.
+- **`GET /api/feed/following`** : même filtre pour les annonces événement dans le fil Abonnements (aligné sur le feed principal).
+- **`GET /api/events/:eventId`** : la fiche détail échappait au filtre — un événement non publié restait consultable par ID. Visible désormais par ses seules parties prenantes (orga, DJ, lieu, prestataire, staff, détenteur de billet, admin) via `canViewEvent`.
+- **`attachUserIfAuthenticated`** : nouveau middleware d’auth optionnelle ; `api.getEventById` transmet le token pour que les pros gardent l’accès à leurs événements avant publication.
+- **`CommunityFriendsPage`** : « Voir l’événement » passe par `openEventPreview` (plus de double redirection `eventDetail` → `communityEventDetail`).
+
+### Corrigé (Lieux — retour chat + acceptation contrat)
 - **`NavigationContext`** : `goBack` restaure les `routeParams` (plus d’écran « Événement introuvable » en quittant le chat).
 - **Acceptation contrat** : alerte si aucun montant (min. 0,50 €) — pas de contrat gratuit ; le bouton PDF n’est plus bloqué par l’aperçu WebView.
 - **API** : envoi / contre-proposition lieu refusés sans prix, avec le même message.
 
-### Corrigé (Lieux — contrat dans le chat booking) — 11 août
+### Corrigé (Lieux — contrat dans le chat booking)
 - **`LieuxBookingChatPage`** : panneau contrat réintégré (carte, PDF, contre-proposition, acceptation) — le chat NOX n’affichait que les messages depuis la migration Phase B.
 - **`useVenueBookingContract`** + **`LieuxBookingContractPanel`** : réutilisation de `VenueContractModals` / `ContractDraftEditorFields`.
 
-### Modifié (accueil communauté — suggestions) — 11 août
+### Modifié (accueil communauté — suggestions)
 - **`GET /api/djs`** : renvoie `profileImage` (photo profil ou média).
 - **API** : `GET /api/venues/public`, `GET /api/bookers/public?bookerType=Collectif`.
 - **`CommunityHomePage`** : photos DJ sur les suggestions + rangées **Suggestions collectifs** et **Suggestions lieux**.
 - **`CommunityDiscoverPage`** : onglet Collectifs (Voir plus).
 
-### Modifié (mobile — Phase D terminée) — 11 août
+### Modifié (mobile — Phase D terminée)
 - **`EventsRoutePage`** : route `events` — COMMUNITY → `communityDiscover`, VENUE → `lieuxEvents`, pro → `EventsPage`.
 - **Auth Apple / Google** : post-connexion via `resolvePostAuthNavigation` (plus de `navigate('welcome')`).
 - **Écrans legacy supprimés** : `HomePage.js`, `FeedPage.js`, `VenueDashboardPage.js` (styles et composants `venueDashboard/*` conservés).
 - **Alias permanents** : `home`, `feed`, `welcome`, `venueDashboard` → résolution NOX dans `legacyScreenRedirects` + `NavigationContext`.
 
-### Ajouté (doc — backlog mobile) — 11 août
+### Ajouté (doc — backlog mobile)
 - **`docs/mobile/TODO.md`** : backlog court (menu radial, filtres accueil communauté, bouton central artiste) ; **`nox-mobile/todo.md`** pointe vers la doc.
 
-### Corrigé (Lieux — acceptation contrat dans le chat) — 13 août
+### Corrigé (Lieux — acceptation contrat dans le chat)
 - **`LieuxBookingChatPage`** : `<Toast />` pour afficher les erreurs API ; panneau contrat hors `ScrollView` ; modales montées à la racine (`LieuxVenueContractModals`).
 - **`ContractPdfPreviewModal`** : bouton « J'ai lu et j'accepte » actif dès que le PDF est chargé (même si l’aperçu WebView échoue) ; spinner pendant l’envoi.
 - **`useVenueBookingContract`** : le modal PDF reste ouvert en cas d’échec ; messages d’erreur serveur remontés (ex. montant manquant).
 
-### Corrigé (Lieux — chat booking clignotant) — 13 août
+### Corrigé (Lieux — chat booking clignotant)
 - **`useVenueBookingChat`** : boucle de rechargement supprimée (`onError` via ref, spinner uniquement au 1er chargement).
 - **`LieuxBookingChatPage`** : plus de blocage sur `useLieuxData` — fil de messages et saisie restent utilisables ; métadonnées event passées en `routeParams`.
 
-### Corrigé (CI — tests serveur) — 11 août
+### Corrigé (CI — tests serveur)
 - **`server/package.json`** : script `npm test` — glob `tests/*.test.js` (le pattern `**` n’était pas développé sur GitHub Actions, Node recevait le chemin littéral).
 
-### Modifié (documentation) — 11 août
+### Modifié (documentation)
 - **`README.md`** (racine) et **`nox-mobile/README.md`** : réécriture — stack actuelle, liens doc, démarrage Railway/EAS (suppression contenu obsolète TON / SQLite / wallet mock).
 - **`docs/README.md`** : index doc à jour, structure mobile post–Phase D.
 - **`PROJECT_CONTEXT.md`**, **`PLAN_MIGRATION`**, **`GUIDE_TEST_NOX`**, **`ECARTS_FIGMA`**, **`DESIGN_FIGMA_REFERENCE`**, **`EXPLICATION_BACKEND`**, **`API_DOCUMENTATION`** : alignement août 2026 (PostgreSQL, `proHome`, écrans legacy supprimés).
@@ -50,32 +71,32 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 4 au 7 août 2026 (lun. - ven.)
+## Semaine du 4 au 7 août 2026
 
-### Modifié (mobile — Phase D + achats/billets) — 7 août
+### Modifié (mobile — Phase D + achats/billets)
 - **`PurchasesPage` / `TicketsPage`** : tap sur un événement → **`openEventPreview`** (fiche NOX communauté) au lieu de `eventDetail` checkout.
 - **Phase D** : plus de `navigate('home')` direct — `splash` si déconnecté, home du rôle via helpers existants.
 
-### Ajouté (mobile — mur profil publications) — 7 août
+### Ajouté (mobile — mur profil publications)
 - **API** : `GET /api/feed/wall` — liste les posts/reposts d’un compte (`userId`) ou d’un profil DJ / booker.
 - **Mobile** : `ProfileWallStream` + hook `useProfileWall` — cartes `NoxFeedPostCard` (likes, commentaires, repost) dans l’onglet **Mur** du profil communauté ; sections **Publications** sur les profils DJ et booker publics.
 
-### Build iOS 17 — bundle NOX embarqué (TestFlight) — 6 août
+### Build iOS 17 — bundle NOX embarqué (TestFlight)
 - **`eas build` production iOS** : build **17** — JS actuel (NOX bleu, repost, Phase D/E) embarqué dans le binaire ; fin du fallback rouge legacy du build 16.
 - **Soumission TestFlight** : `eas submit --latest` (build `178882e0`).
 
-### Corrigé (feed — bouton repost sur ProHome) — 5 août
+### Corrigé (feed — bouton repost sur ProHome)
 - **`ProHomePage`** : le fil pro utilisait une copie de `NoxFeedPostCard` sans repost — remplacé par **`CommunityFeedStream`** (bouton ↻ sur toutes les publications existantes, pas seulement les nouvelles).
 
-### Ajouté (feed — repost artiste / orga) — 5 août
+### Ajouté (feed — repost artiste / orga)
 - **API** : `POST /api/feed/post/:postId/repost` — réservé aux profils **DJ** et **BOOKER** ; le repost apparaît sur leur fil (canal following + feed global).
 - **Prisma** : `FeedPost.originalPostId` + migration `20260805140000_feed_post_repost` (un repost par auteur et par publication source).
 - **Mobile** : bouton repost sur `NoxFeedPostCard` ; carte embed pour les reposts ; notification type `repost` à l’auteur du post source.
 
-### Corrigé (mobile — slug Expo incompatible EAS) — 4 août
+### Corrigé (mobile — slug Expo incompatible EAS)
 - **`app.json`** : retour au slug `insane-nights-days-mobile` — le slug `nox-mobile` du rebrand ne correspondait plus au projet EAS (`projectId` inchangé), ce qui bloquait toute publication OTA (`eas update` en erreur). Le nom affiché reste « Nox » ; migrer le slug impliquerait un nouveau projet EAS et de nouveaux builds.
 
-### Corrigé (mobile/web — « Backend inaccessible » après le rebrand) — 4 août
+### Corrigé (mobile/web — « Backend inaccessible » après le rebrand)
 - **URL API par défaut** : le rebrand pointait vers `https://api.nox.world`, dont le DNS n'existe pas encore (`NXDOMAIN`) → l'appli ne joignait plus rien. Retour à l'URL Railway (qui répond bien) dans `nox-mobile/api/endpointsConfig.js`, `client/src/apiBase.js`, `client/src/api/config.js`, `server/scripts/update-feed-post-image-urls.js` et `verify-store-readiness.sh`. À rebasculer une fois le sous-domaine configuré (custom domain Railway + DNS).
 
 ### Modifié (repo — rebrand NOX)
@@ -87,12 +108,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Guide** : [RENOMMAGE_REPO_NOX.md](./docs/RENOMMAGE_REPO_NOX.md) — checklist ops GitHub / Railway / stores.
 - **Docs (suite)** : guide identifiants NOX et CHANGELOG sans aucune mention des anciens noms de marque ou bundle.
 
-### Modifié (mobile — bundle TestFlight conservé) — 4 août
+### Modifié (mobile — bundle TestFlight conservé)
 - **`app.json`** : retour **`com.insanenightsdays.mobile`** (scheme, iOS, Android, merchant Stripe) pour continuer TestFlight sur la fiche ASC existante (**Nox** / Apple ID `6758730347`).
 - **Cible stores** : migration **`com.nox.mobile`** documentée dans [PUBLICATION_STORES.md](./docs/mobile/PUBLICATION_STORES.md) (obligatoire avant 1ʳᵉ soumission publique).
 - **Serveur** : défaut `APPLE_IOS_BUNDLE_ID` → `com.insanenightsdays.mobile` ; `store:check` avertit si le bundle n’est pas encore `com.nox.mobile`.
 
-### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro) — 4 août
+### Modifié (mobile — Phase D nettoyage legacy + Phase E accueil pro)
 - **`proHome`** : remplace `welcome` comme home DJ / Booker / Prestataire — fil events + raccourcis dashboard NOX (`NoxCard`).
 - **Redirections legacy** : `venueDashboard` → `lieuxDashboard`, `home` / `feed` / `welcome` résolus dans `NavigationContext` via `legacyScreenRedirects.js` + `LegacyScreenRedirect`.
 - **`eventDetail`** : mode `checkoutOnly` pour l’achat billet ; profil COMMUNITY sans ce flag → `communityEventDetail` (`openEventPurchase`).
@@ -100,18 +121,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Dashboards pro** : en-tête unifié `NoxProDashboardHeader` (DJ, Booker, Prestataire).
 - **Supprimé** : `MenuPageOld.js` ; routes `home` / `feed` / `venueDashboard` retirées du parcours nominal.
 
-### Ajouté (mobile — écran vérification email non bloquant) — 3 août
+### Ajouté (mobile — écran vérification email non bloquant)
 - **`authVerifyEmail`** : bouton « Continuer sans valider » (le compte reste non vérifié, skip valable pour la session, OTP reproposé à la prochaine connexion et accessible depuis le profil) + bouton « Mauvais email ? Se déconnecter » pour ne plus être coincé si on s'est trompé d'adresse à l'inscription.
 - **`AuthContext.logout`** : reset du skip de vérification pour ne pas le propager à un autre compte.
 
-### Corrigé (serveur — vérification email en erreur 500) — 3 août
+### Corrigé (serveur — vérification email en erreur 500)
 - **`accountController`** : `require('../utils/mailer')` cassé depuis le déplacement du fichier dans `controllers/user/` (résolvait vers `controllers/utils/mailer`, inexistant) → `MODULE_NOT_FOUND` attrapé par le catch → « Erreur serveur » sur l'écran du code à 6 chiffres dès l'envoi du code. Chemin corrigé en `../../utils/mailer`.
 
 ---
 
-## Semaine du 28 au 31 juillet 2026 (mar. - ven.)
+## Semaine du 28 au 31 juillet 2026
 
-### Modifié (mobile — wallet / compte / notifs / welcome pro) — 31 juil.
+### Modifié (mobile — wallet / compte / notifs / welcome pro)
 - **`TicketsPage`** : copy Figma wireframe (« Mes billets », « Historique d’achat »), carte QR type wallet, tier « Entrée générale », retrait moins agressif.
 - **`ProfilePage`** : hub Compte inspiré réglages Lieux — raccourcis Billets / Notifs / Switch / Légal ; stats réelles (plus de badges hardcodés « 3 »).
 - **`NotificationsPage`** : point non-lu à gauche (Figma 08), header épuré.
@@ -125,25 +146,25 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Repost / mur profil** (wireframe 05 WALL) : feature non démarrée (volontairement après Figma).
 - **Apple/Google Wallet « Add to wallet »** : non branché — agenda appareil en substitution.
 
-### Modifié (mobile — profils publics Figma) — 31 juil.
+### Modifié (mobile — profils publics Figma)
 - **`DjProfilePage`** : habillage NOX (top bar, hero bannière/avatar, `NoxCard` / `NoxButton` / `NoxText`, tokens Spacing/Radius) ; retrait des fallbacks Unsplash.
 - **`VenueProfilePage`** : même shell NOX (plus de fond Unsplash), sélection booker conservée, infos + médias en cartes Figma.
 - **`BookerProfilePage`** : shell NOX + follow / édition ; plus de placeholder Unsplash.
 
-### Modifié (mobile — nav radiale) — 30 juil.
+### Modifié (mobile — nav radiale)
 - **Bouton central** : logo NOX à la place du texte « NX » (`NoxRadialNav`), en **plein cercle** (cover + clip) avec bordure bleue.
 
-### Corrigé (mobile — OTA retombée design rouge) — 30 juil.
+### Corrigé (mobile — OTA retombée design rouge)
 - **`PurchaseSuccessPage`** : import `Colors` manquant après Phase D → `ReferenceError` à l’évaluation du module, crash au boot OTA et retour au bundle intégré rouge. Même classe de bug que `Radius.pill` (29 juil.).
 
-### Modifié (mobile — alignement tokens Figma NOX) — 29 juil.
+### Modifié (mobile — alignement tokens Figma NOX)
 - **`constants/colors.js`** : palette réalignée sur les variables Figma — Primaire `#2852E8` (au lieu de `#4DA3FF`), Background `#0A0A09`, textes `#FEFEFD` / `#D9D9D9`, ombres bleues `#206ED1`. S'applique à toute l'appli NOX via les tokens.
 - **`constants/theme.js`** : rayons Figma — cartes r25, boutons pill, inputs r25.
 - **`NoxCard`** : spec carte Figma (bordure 0.5 `#FEFEFD`, ombre `rgba(114,194,244,0.5)`).
 - **`NoxButton` / textes sur fond bleu** : libellés blancs (Figma) au lieu de noirs — bouton primaire, bulle chat, scanner, dispos, nav radiale.
 - **`lieuxDashboard`** : bloc stats conforme à 08_Dashboard (« Revenus estimés / Taux de participation / Events réalisés », valeurs en bleu Primaire, libellé au-dessus) ; util `getRealizedEventsCount`.
 
-### Corrigé (mobile — crash au boot des OTA depuis le 18 juil.) — 29 juil.
+### Corrigé (mobile — crash au boot des OTA depuis le 18 juil.)
 - **`LieuxBookingChatPage`** : `Radius.pill` utilisé sans importer `Radius` (`constants/theme`) → `ReferenceError` à l'évaluation du module, crash au lancement de chaque bundle OTA publié depuis `bb039cf`. expo-updates blacklistait l'update et retombait sur le bundle intégré (ancien design rouge) — symptôme « appli revenue au design d'avant » sur iOS.
 - **Outils diagnostic** : `scripts/check-imports.js` (imports relatifs + exports nommés) et `scripts/fetch-ota-bundle.js` (télécharge/inspecte le bundle réellement servi par EAS Update).
 
@@ -152,32 +173,32 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **Navigation** : dashboard Lieux (bandeau pending), réglages, dispos et notifs → `lieuxDemandes` ; détail confirmé → `lieuxEventDetail`, sinon → `lieuxRequestDetail`.
 - **Push notifs VENUE** : chat → `lieuxBookingChat`, demandes → `lieuxDemandes` (plus de passage par `venueDashboard`).
 
-### Modifié (mobile — Phase D navigation legacy) — 30 juil.
+### Modifié (mobile — Phase D navigation legacy)
 - **`noxNavigation`** : `navigateToHome()` + discover selon profil sur **Tickets**, **Purchases**, **PurchaseSuccess**, **Welcome** (plus de `welcome` / `events` en dur).
 - **`venueDashboard`** : déjà marqué deprecated ; push VENUE et home Lieux passent par stack `lieux*`.
 
-### Ajouté (mobile — Auth Figma splash + OTP) — 30 juil.
+### Ajouté (mobile — Auth Figma splash + OTP)
 - **`splash`** : logo NOX + glow, auto → onboarding.
 - **`authVerifyEmail`** : OTP 6 chiffres (`sendEmailVerificationCode` / `confirmEmailVerificationCode`) après inscription ou login si email non vérifié.
 - **Flux** : splash → onboarding → accountType → login/register → OTP → profil / home.
 - **Guide test** : `docs/mobile/GUIDE_TEST_NOX.md`.
 
-### Corrigé (mobile — onboarding communauté) — 30 juil.
+### Corrigé (mobile — onboarding communauté)
 - **Pseudo demandé 3 fois** : inscription compte → profil communauté (affiché en lecture seule si déjà saisi) → étape « Quel est ton nom ? » **supprimée** si le pseudo existe déjà ; onboarding démarre sur la photo.
 - **Artistes / lieux à suivre** : plus de mock Figma (Amelie Lens, Le Sucre…) — suggestions depuis **`api.getDjs()`** et **`api.getVenues()`** ; follow DJ réel via `followDj` à la fin.
 
 --- 
 
-## Semaine du 21 au 24 juillet 2026 (mar. - ven.)
+## Semaine du 21 au 24 juillet 2026
 
-### Modifié (mobile — Option A Lieux : B5–B7, B9) 
+### Modifié (mobile — Option A Lieux : B5–B7, B9)
 - **`lieuxSettings`** : hub réglages NOX (profil, dispos, médias, scanner, notifications, légal).
 - **`lieuxScanner`** : scan QR skin NOX avec sélecteur d’événement confirmé (`useLieuxData`).
 - **`lieuxCreateEvent`** : formulaire brouillon local (`useLieuxEventDrafts` + onglet Brouillons).
 - **`lieuxNotifications`** : centre de notifs métier lieu dérivé des bookings.
 - **Dashboard / profil Lieux** : cloche → `lieuxNotifications`, engrenage → `lieuxSettings`, quick actions mises à jour ; FAB « Créer un événement » activé.
 
-### Modifié (mobile — Phase C Communauté : C1–C5) 
+### Modifié (mobile — Phase C Communauté : C1–C5)
 - **`communityMyProfile`** : profil NOX avec onglets Aperçu / Events / Mur / Amis (`CommunityProfileShell`).
 - **NX Profil (COMMUNITY)** → `communityMyProfile` ; tap avatar Home → profil.
 - **`communityPushOptIn`** : opt-in push Figma (1× après onboarding) ; stockage `@nox_community_push_optin_v1`.
@@ -206,9 +227,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 15 au 17 juillet 2026 (mer. - ven.)
+## Semaine du 15 au 17 juillet 2026
 
-### Modifié (mobile — Phase B migration NOX : Lieux métier B1–B4) — 17 juil.
+### Modifié (mobile — Phase B migration NOX : Lieux métier B1–B4)
 - **`lieuxBookingChat`** : chat plein écran orga ↔ lieu (`useVenueBookingChat`, plus de repli `venueDashboard` depuis Lieux).
 - **`lieuxEvents`** : liste événements avec onglets À venir / Passés / Brouillons.
 - **`lieuxEventDetail`** : détail event côté lieu (line-up, staff, chat).
@@ -216,19 +237,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`lieuxEventUtils.js`** : catégorisation bookings + grille calendrier.
 - **NX Discover (VENUE)** → `lieuxEvents` ; `venueDashboard` marqué deprecated.
 
-### Modifié (mobile — Phase A migration NOX : quick wins navigation) — 17 juil.
+### Modifié (mobile — Phase A migration NOX : quick wins navigation)
 - **`noxNavigation.js`** : routage Discover / preview event / achat selon profil actif.
 - **`NoxRadialNav`** : Discover → `communityDiscover` pour profil COMMUNITY.
 - **Communauté** : Home, Feed, Discover → `communityEventDetail` ; achat seul via `eventDetail`.
 - **Lieux** : FAB menu création (`NoxCreateSheet`), quick actions Figma, dispos `focusPending`, plus de lien « Gérer réservations » ; chat repli `openChatEventVenueId`.
 - **`PLAN_MIGRATION_NOX_LEGACY.md`** : plan de bascule NOX ↔ legacy.
 
-### Ajouté (docs — référence maquettes Figma NOX) — 17 juil.
+### Ajouté (docs — référence maquettes Figma NOX)
 - **`docs/mobile/DESIGN_FIGMA_REFERENCE.md`** : catalogue des 14 écrans Figma (design system, auth, communauté, lieux) avec liens vers le code mobile.
 - **`docs/mobile/design-figma/`** : images PNG versionnées (onboarding, wireframes, dashboards, notifications…).
 - Liens ajoutés dans `docs/README.md` et `SYNTHESE_REFONTE_NOX_JUIN2026.md`.
 
-### Modifié (mobile — navigation par rôle, accueil vs dashboard pro) — 15 juil.
+### Modifié (mobile — navigation par rôle, accueil vs dashboard pro)
 - **`noxRoleNavigation.js`** : DJ / Booker / Prestataire → home **`welcome`** (fil discover) ; `getProDashboardScreen()` et `getPostAuthScreen()` pour dashboards secondaires et post-login.
 - **`NavigationContext`** : `setBackFallback()` — retour sans historique ramène au home du rôle actif (plus toujours `onboarding`).
 - **`App.js`** : fallback retour selon auth + profil ; double appui Android « quitter » sur le home du rôle ; notif push → home du profil.
@@ -240,14 +261,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 7 au 11 juillet 2026 (mar. - ven.)
+## Semaine du 7 au 11 juillet 2026
 
-### Modifié (mobile — accueil COMMUNAUTÉ : 3 onglets + fil social + bouton NX) — 7 juil.
+### Modifié (mobile — accueil COMMUNAUTÉ : 3 onglets + fil social + bouton NX)
 - **`CommunityHomePage`** : onglets **Événements / Publications / Abonnements** ; fil API avec likes/commentaires (`CommunityFeedStream`) ; bouton **NX** radial réactivé (retrait `NoxBottomNav` sur l’accueil).
 - **`CommunityFeedStream`** : composant partagé feed posts + événements publiés (style Twitter/NOX).
 - **`NoxRadialNav`** : visible sur `communityHome` et `communityDiscover` (plus masqué sauf onboarding).
 
-### Modifié (mobile — branchement backend écrans COMMUNAUTÉ & LIEUX) — 7 juil.
+### Modifié (mobile — branchement backend écrans COMMUNAUTÉ & LIEUX)
 - **`CommunityHomePage`** : profil communauté, événements (`getEvents`), DJs (`getDjs`), fil abonnements (`getFeedFollowing`), navigation vers détail / profils / discover.
 - **`CommunityDiscoverPage`** : liste événements & DJs API, recherche + filtres genre, liens `eventDetail` / `djProfile`.
 - **`CommunityEventDetailPage`** : détail événement via `getEventById`, achat via `eventDetail`.
@@ -256,11 +277,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - **`EventsPage`** : suppression du fallback mock en cas d’erreur API.
 - **Utils** : `noxDiscoverUtils.js`, hook `useLieuxData.js`.
 
-### Corrigé (mobile — bouton NX toggle fermeture) — 7 juil.
+### Corrigé (mobile — bouton NX toggle fermeture)
 - **`NoxRadialNav`** : ré-appui sur NX referme bien le menu radial (couche orbite séparée, `pointerEvents` quand fermé, bouton NX au-dessus en z-index/elevation).
 - **`NoxRadialNav`** : rotation horaire du bouton NX à l’ouverture (~42°), retour droit à la fermeture ; correction désync (une seule valeur `menuAnim`, interpolations mémoïsées, `stopAnimation` avant chaque transition).
 
-### Modifié (mobile — refonte NOX phase 3 : parcours événements & profil) — 7 juil.
+### Modifié (mobile — refonte NOX phase 3 : parcours événements & profil)
 
 Refonte UI des écrans **production** (API réelle) alignée maquettes Figma / `components/nox`, sans régression fonctionnelle.
 
@@ -272,7 +293,7 @@ Refonte UI des écrans **production** (API réelle) alignée maquettes Figma / `
 | **`ProfilePage`** | `NoxScreenHeader`, cartes NOX, bascule profils simplifiée, RGPD / sécurité | Multi-profils, email, mot de passe, export / suppression compte |
 | **`NotificationsPage`** | Groupes **Aujourd'hui / Hier / Cette semaine**, cartes NOX, point non-lu | Feed notifications API, mark-as-read |
 
-### Modifié (mobile — branchement flux NOX par rôle) — 7 juil.
+### Modifié (mobile — branchement flux NOX par rôle)
 
 - **`utils/noxRoleNavigation.js`** : routage home / profil selon `activeProfileType` (COMMUNITY → `communityHome`, VENUE → `lieuxDashboard`, DJ/BOOKER/PRESTATAIRE → dashboards, défaut → `welcome`).
 - **`NoxRadialNav`** : Home et Profil dynamiques selon le profil actif.
@@ -282,7 +303,7 @@ Refonte UI des écrans **production** (API réelle) alignée maquettes Figma / `
 
 Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, `NotificationsPage.styles.js`, `ProfilePage.styles.js` refondu.
 
-### Ajouté (écrans design NOX — LIEUX & COMMUNAUTÉ, UI-first) — 7 juil.
+### Ajouté (écrans design NOX — LIEUX & COMMUNAUTÉ, UI-first)
 - **Nouveau composant `NoxBottomNav`** : barre de navigation basse (Accueil / bouton central `+` / Profil) alignée au design Figma, exportée depuis `components/nox`.
 - **Bloc LIEUX** (`screens/lieux/`, données mockées `mockData.js`, à brancher au backend plus tard) :
   - `LieuxDashboardPage` — Dashboard « Hello Le Sucre » (demandes en attente, actions rapides, événements à venir, stats).
@@ -297,12 +318,12 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
   - `CommunityDiscoverPage` — Discover (recherche, segment Événements/DJs, filtres de genres, listes).
 - **Navigation** : nouvelles routes enregistrées dans `App.js` (`lieux*`, `community*`) et ajoutées à `HIDE_RADIAL_NAV_PAGES` (barre de nav dédiée / plein écran).
 
-### Modifié (UI NOX — nav flottante) — 7 juil.
+### Modifié (UI NOX — nav flottante)
 - **Bandeau debug OTA retiré** : suppression de `OtaDebugBanner` (haut d’écran) et du composant associé.
 - **Bouton NX** : appui pour déployer les icônes, **ré-appui pour les masquer** (toggle).
 - **Bouton NX masqué quand le tiroir (drawer) est ouvert** : l’état d’ouverture du drawer est remonté dans `App.js` et transmis à `NoxRadialNav` (se masque + referme sa nav radiale).
 
-### Résolu ✅ — Crash iOS / OTA qui ne s’appliquaient pas (7 juil.)
+### Résolu ✅ — Crash iOS / OTA qui ne s’appliquaient pas
 - **Problème réglé** : sur iOS, l’UI restait bloquée sur l’ancien affichage rouge et les OTA ne s’appliquaient jamais (retour au bundle embarqué). Idem crash au splash des builds natifs 11–15.
 - **Cause racine** : `utils/installGlobalErrorHandlers.js` importait `{ ErrorUtils } from 'react-native'` — or `ErrorUtils` est un **global du runtime**, pas un export → `undefined` → crash dans `index.js` **avant le montage de l’app**, suivi d’un rollback OTA vers le bundle rouge.
 - **Correctif** : lecture via `globalThis.ErrorUtils` + garde-fou (no-op si absent) ; appel enveloppé dans un `try/catch` dans `index.js`.
@@ -311,7 +332,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 30 juin au 4 juillet 2026 (mar. - ven.)
+## Semaine du 30 juin au 4 juillet 2026
 
 ### Corrigé (mobile — reprise base build 10 stable)
 - **Git** : retour à **`994c20a`** (dernier commit du build TestFlight **10** stable) ; retrait des refontes NOX builds 11–15 (crash splash au boot natif).
@@ -323,13 +344,13 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 - **Drawer « Vérifier »** : télécharge l’OTA sans `reloadAsync` — fermer puis rouvrir l’app pour appliquer (comme au boot `ON_LOAD`).
 - **Bandeau test OTA** : `OtaDebugBanner` — marqueur visible **« MARQUEUR OTA · B · 3 juil. 14h25 »** + état embedded/OTA/update ID pour diagnostiquer les blocages cache.
 
-### Corrigé (mobile — CRASH iOS au boot, cause racine trouvée) — 7 juil.
+### Corrigé (mobile — CRASH iOS au boot, cause racine trouvée)
 - **Cause racine du crash splash iOS** (builds 11–15) **et du rollback OTA vers le rouge** : `utils/installGlobalErrorHandlers.js` faisait `import { ErrorUtils } from 'react-native'` — or **`ErrorUtils` est un GLOBAL du runtime, pas un export de `react-native`** → `undefined` → `ErrorUtils.getGlobalHandler` plante dans `index.js` **avant même le montage de l’app**. Reproduit en local (Expo Go : `[runtime not ready] Cannot read property 'getGlobalHandler' of undefined`).
 - **Fix** : lecture via `globalThis.ErrorUtils` + garde-fou (no-op si absent) ; appel enveloppé dans un `try/catch` dans `index.js` pour ne jamais bloquer le démarrage.
 - **Impact** : fichier absent du build 16 rouge stable (d’où sa stabilité) ; présent dans le code NOX → expliquait crash natif iOS **et** OTA NOX qui retombait sur le bundle embarqué rouge.
 - **Validé** : NOX bleu démarre correctement en local (Expo Go, iOS).
 
-### Corrigé (mobile — OTA qui ne s’appliquaient pas) — 7 juil.
+### Corrigé (mobile — OTA qui ne s’appliquaient pas)
 - **Cause racine** : livraison OTA correcte (canal `production`, runtime `1.0.0`, iOS, sans code signing) mais **jamais appliquée** — `App.js` et le bouton « Vérifier » téléchargeaient sans `reloadAsync`, et `fallbackToCacheTimeout: 0` fait toujours démarrer sur l’ancien bundle. Sur iOS, « fermer » = arrière-plan (process en mémoire) → la MAJ téléchargée ne basculait jamais.
 - **Boot `App.js`** : après `fetchUpdateAsync` réussi, `reloadAsync()` appliqué **dans la fenêtre de bootstrap** (avant montage navigation/auth → pas de boucle de crash). Compatibilité native vérifiée : seul delta = `expo-font`, déjà lié via `@expo/vector-icons`.
 - **Drawer « Vérifier »** : applique désormais la MAJ immédiatement (`reloadAsync` après téléchargement, rollback auto d’Expo si plantage).
@@ -380,7 +401,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 16 au 19 juin 2026 (mar. - ven.)
+## Semaine du 16 au 19 juin 2026
 
 ### Corrigé (wizard événement — créneaux DJ multiples, régression)
 - **2ᵉ DJ n’écrase plus le 1ᵉʳ** : priorité au `slotIndex` vers un créneau vide (`resolveDjSlotTargetIndex`) ; fusion slots/formData conserve les créneaux vides ajoutés ; sync formulaire à l’ajout d’un créneau ; nettoyage des `routeParams` après sélection.
@@ -432,7 +453,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 9 au 12 juin 2026 (mar. – ven.)
+## Semaine du 9 au 12 juin 2026
 
 ### Corrigé (wizard événement booker — créneaux DJ multiples)
 - **Ajouter plusieurs DJs ne supprime plus le précédent** : la fusion des créneaux (`mergeDjSlotsWithForm`) est désormais une **union** state local + formulaire — un DJ présent dans le formulaire ne peut plus disparaître quand l'écran est remonté pendant la navigation vers la sélection (slot vide ajouté, ordre décalé…).
@@ -482,7 +503,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 2 au 5 juin 2026 (lun. – jeu.)
+## Semaine du 2 au 5 juin 2026
 
 ### Refactorisé (serveur — routes et `index.js` allégés)
 - **`server/index.js`** : point d’entrée réduit ; enregistrement des routes via modules dédiés (**`registerEventPublicRoutes`**, **`registerDjPublicRoutes`**, **`registerProfileRoutes`**, **`registerRatingRoutes`**, **`registerMiscRoutes`**, etc.).
@@ -535,7 +556,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 26 au 29 mai 2026 (mar. – ven.)
+## Semaine du 26 au 29 mai 2026
 
 *Suite de la billetterie multi‑tarifs (création, achat, feed — voir semaine **19–22**) ; entrées ci‑dessous = livraisons **de cette semaine** uniquement.*
 
@@ -557,7 +578,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 19 au 22 mai 2026 (mar. – ven.)
+## Semaine du 19 au 22 mai 2026
 
 ### Ajouté (billetterie — multi‑tarifs, produit visible)
 - **Serveur** (déjà en place dans cette phase) : `Event.ticketTiers`, achat Stripe / démo avec **`tierId`**, quotas par palier **`maxSold`** (voir **`server/utils/ticketTiers.js`**, **`registerTicketsAndPayments`**, **`GET /api/events/:id`** avec **`ticketTiers`** enrichi et **`hasMultipleTicketPrices`**).
@@ -613,7 +634,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 13 au 15 mai 2026 (mer. – ven.)
+## Semaine du 13 au 15 mai 2026
 
 ### Modifié (mobile — dashboard DJ, médias)
 - **Onglet Médias** : suppression de la section **AUDIO (MP3)** (upload / lecteur intégré) ; message invitant à renseigner **Spotify / SoundCloud** dans **Profil artiste** — pas de fichiers audio hébergés sur la plateforme (droits d’auteur).
@@ -654,7 +675,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 5 au 7 mai 2026 (mar. – jeu., après férié du 1er mai)
+## Semaine du 5 au 7 mai 2026
 
 ### Corrigé (serveur — contrats, même compte organisateur + lieu)
 - **Accept / contre-proposition** (**`/api/contracts/event-venues/...`** et **EventDj** en miroir) : le rôle n’est plus **`isBooker ? BOOKER : …`** (qui forçait toujours BOOKER si les deux profils partagent le même `userId`). On déduit la partie qui doit répondre depuis **`contractSentBy`** (celui qui n’a pas envoyé la dernière version) — l’acceptation **lieu** après envoi **organisateur** fonctionne à nouveau.
@@ -687,7 +708,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 28 au 30 avril 2026 (mar. – jeu.)
+## Semaine du 28 au 30 avril 2026
 
 ### Modifié (client mobile — Android, aperçu PDF contrat)
 - **PDF.js hors ligne** : plus de chargement depuis jsDelivr dans **`ContractPdfPreviewModal`** — bundles **`pdfjs-dist`** embarqués dans **`assets/pdfjs/`** (extensions **`.pdfjs`**), **`metro.config.js`** (`assetExts`), script **`scripts/copy-pdfjs-assets.js`** exécuté en **`postinstall`** ; copie unique vers le cache Expo puis **`file://`** pour le worker et le rendu canvas (texte d’aide **`pdfOfflineHint`** aligné sur l’embarqué).
@@ -717,7 +738,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 21 au 24 avril 2026 (mar. - ven.)
+## Semaine du 21 au 24 avril 2026
 
 ### Corrigé (client mobile — stabilité & feed)
 - **Crash au lancement** (« Oups ! Une erreur est survenue » / ErrorBoundary) : **`WelcomePage`** et **`FeedPage`** utilisaient encore **`useFocusEffect`** sans import valide et sans **`NavigationContainer`** (navigation custom). Bloc retiré ; **cache-bust** des avatars sur **pull-to-refresh** (`fetchFeed(true)`) ; **`HomePage`** alignée.
@@ -746,7 +767,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 14 au 17 avril 2026 (lun. - ven.)
+## Semaine du 14 au 17 avril 2026
 
 ### Ajouté
 - **Organisateur — participants (billets)** : composant **`BookerTicketHoldersSection`** (`components/BookerTicketHoldersSection.js`) — filtre par nom (champ affiché dès **plus de 3** porteurs), compteur si le filtre réduit la liste, message si aucun résultat.
@@ -773,7 +794,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 7 au 10 avril 2026 (lun. - ven.)
+## Semaine du 7 au 10 avril 2026
 
 ### Ajouté
 - **EAS Update (OTA)** : vérification au **lancement** de l’app en build production (`EASUpdateOnLaunch` dans `App.js`) — si une mise à jour est disponible : `fetchUpdateAsync` puis `reloadAsync` (même logique que le bouton « Vérifier » du tiroir). Inactif en mode développement (`__DEV__`).
@@ -806,7 +827,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 31 mars au 4 avril 2026 (mar. - ven.)
+## Semaine du 31 mars au 4 avril 2026
 
 ### Corrigé
 - **Modale édition / contre-proposition contrat (iOS)** : Touches inactives sur les champs, listes (modalités, type d’accord, etc.) et boutons — dû notamment à **plusieurs `Modal` empilés** (éditeur + PDF ou éditeur + pickers) et à un **`ScrollView` sans hauteur bornée** dans un overlay centré.
@@ -826,7 +847,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 24 au 27 mars 2026 (mar. - ven.)
+## Semaine du 24 au 27 mars 2026
 
 ### Ajouté
 - **Infos légales (contrats)** : Champs légaux sur les profils Organisateur (`UserBooker`), Lieu (`UserVenue`) et DJ (`UserDj`) — raison sociale, adresse, SIRET, représentant légal / nom civil selon le type, etc.
@@ -843,21 +864,21 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 - **UI contrats (mobile)** : `constants/contractPayload.js` + `ContractDraftEditorFields` / `DealTypePickerModal` — brouillon et contre-propositions enrichis (type d’accord lieu, fin de prestation, matériel, clause financière, partages %, minimum garanti, accord personnalisé, commission NOX optionnelle) ; Booker, Lieu et DJ envoient le JSON complet au backend pour alimenter le PDF
 - **`.gitignore`** (racine) : exclusion de fichiers locaux non nécessaires au runtime (`RESEND_CONFIGURATION_PATRON.txt`, `Untitled-1`, `client/build/`, `docs/contract-templates/`)
 
-### Ajouté (24 mars 2026)
+### Ajouté
 - **Création d’événement — créneaux DJ** : Pour chaque DJ, plage horaire (début / fin en `HH:mm`) dans la fenêtre « heure de début + durée » de l’événement. Répartition automatique du temps quand plusieurs DJs, modifiable via pickers ; récap affiche nom + créneau.
   - **Prisma** : `EventDj.slotStart`, `EventDj.slotEnd` (optionnels) ; migration `20260324130000_event_dj_slot_times`
   - **API** : `POST /api/booker/events` accepte `djSlotAssignments` (même ordre que `djIds`) ; validation serveur des créneaux par rapport à `time` + `durationHours`
   - **Mobile** : `BookerEventDashboardPage`, `EventFormContext` (`djSlotAssignments`, synchro avec `addDj` / `removeDj`)
 - **Navigation sélection DJ (création événement)** : Même logique que pour le lieu — passage de `returnTo: 'bookerEventDashboard'` jusqu’à `DjProfilePage` (`navigate(returnTo || 'bookerDashboard', …)`) pour revenir au formulaire sur l’étape DJs après choix du profil (`SelectDjPage`, `DjProfilePage`).
 
-### Corrigé (24 mars 2026)
+### Corrigé
 - **Validation créneaux DJ** : `slotFitsEventWindow` renvoyait un objet `{ ok }` alors que l’app testait `if (!slotFitsEventWindow(…))` — toujours truthy, donc aucune validation. Retour **booléen** ; validation immédiate au choix d’heure dans le picker.
 - **Aperçu PDF avant envoi du contrat** : Expo SDK 54 — `expo-file-system` sans `/legacy` fait **échouer** `writeAsStringAsync` → « PDF indisponible ». Import **`expo-file-system/legacy`** ; normalisation du base64 ; repli **data URL** si pas de `cacheDirectory` ; état **préparation** du fichier.
 - **Crash des dashboards (ErrorBoundary « Oups ! Une erreur est survenue »)** : `ContractPdfPreviewModal` utilisait **`showSpinner`** non défini (merge incomplet). Ajout de **`filePreparing`**, **`showSpinner = loading || filePreparing`** et **`canConfirm`** cohérent.
 
 ---
 
-## Semaine du 17-19 mars 2026 (mar. - jeu.)
+## Semaine du 17-19 mars 2026
 
 ### Ajouté
 - **Staff & scan de billets** : Les organisateurs peuvent ajouter des profils Communauté comme amis, les assigner comme staff sur des événements (rôle scan QR) et scanner les billets à l'entrée
@@ -887,7 +908,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 10-13 mars 2026 (mar. - ven.)
+## Semaine du 10-13 mars 2026
 
 ### Ajouté
 - **Refus / annulation avec raisons** : Menu déroulant de raisons (indisponible, tarif non adapté, déjà engagé, lieu non adapté, genre non adapté, autre) pour DJ et Lieu lors d’un refus ou d’une annulation
@@ -914,7 +935,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 3-6 mars 2026 (mar. - ven.)
+## Semaine du 3-6 mars 2026
 
 ### Ajouté
 - **Version web** : Client React avec WelcomePage, auth, feed, événements, profil, tickets
@@ -940,7 +961,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 24-27 février 2026 (mar. - ven.)
+## Semaine du 24-27 février 2026
 
 ### Ajouté
 - **Système d'amis (Communauté)** : API + page "Mes amis" avec recherche par pseudo, onglets Amis/Demandes
@@ -970,7 +991,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ---
 
-## Semaine du 18-21 février 2026 (mar. - ven.)
+## Semaine du 18-21 février 2026
 
 ### Ajouté
 - **Abonnements** : Suivre / ne plus suivre un profil DJ ou Organisateur
@@ -988,7 +1009,7 @@ Fichiers styles extraits : `EventDetailPage.styles.js`, `EventsPage.styles.js`, 
 
 ## Comment maintenir ce fichier
 
-À chaque fin de semaine (ou quand tu fais un push important), ajoute une entrée sous **Semaine du [mardi] - [vendredi]** (mar. - ven.) :
+À chaque fin de semaine (ou quand tu fais un push important), ajoute une entrée sous **Semaine du … au …** :
 
 - **Ajouté** : Nouvelles fonctionnalités
 - **Modifié** : Changements dans des fonctionnalités existantes

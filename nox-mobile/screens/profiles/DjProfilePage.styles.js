@@ -395,6 +395,10 @@ export const styles = StyleSheet.create({
   noReviews: {
     fontStyle: 'italic',
   },
+  seeAllReviews: {
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+  },
   equipmentList: {
     gap: Spacing.sm,
   },

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxButton, NoxEntityCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
@@ -47,6 +48,7 @@ const formatTimeRange = (time, durationHours) => {
 export default function CommunityEventDetailPage() {
   const { goBack, navigate, routeParams } = useNavigation();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const fr = language === 'fr';
 
@@ -64,7 +66,7 @@ export default function CommunityEventDetailPage() {
     (async () => {
       setLoading(true);
       try {
-        const data = await api.getEventById(eventId);
+        const data = await api.getEventById(eventId, user?.token);
         if (!cancelled && data?.success && data.event) {
           setEvent(data.event);
         } else if (!cancelled) {
@@ -79,7 +81,7 @@ export default function CommunityEventDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, user?.token]);
 
   const lineup = useMemo(() => {
     const djs = event?.djs || [];

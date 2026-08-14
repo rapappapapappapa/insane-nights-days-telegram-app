@@ -19,6 +19,8 @@ export function useBookerEvents({
     const [deletingEventId, setDeletingEventId] = useState(null);
     const [publishingEventId, setPublishingEventId] = useState(null);
     const [markingPaymentEventDjId, setMarkingPaymentEventDjId] = useState(null);
+    const [markingPaymentEventVenueId, setMarkingPaymentEventVenueId] = useState(null);
+    const [markingPaymentEventPrestataireId, setMarkingPaymentEventPrestataireId] = useState(null);
   
     // ✅ Édition événement (champs limités)
     const [editEventVisible, setEditEventVisible] = useState(false);
@@ -79,11 +81,12 @@ export function useBookerEvents({
       return () => clearTimeout(t);
     }, [routeParams?.highlightEventId, user?.token]);
   
-    const markBookingAsPaid = async (eventDjId) => {
-      if (!user?.token || !eventDjId) return;
-      setMarkingPaymentEventDjId(eventDjId);
+    /** Marque un booking (DJ, lieu ou prestataire) comme payé et rafraîchit la liste. */
+    const markAsPaid = async (bookingId, call, setPending) => {
+      if (!user?.token || !bookingId) return;
+      setPending(bookingId);
       try {
-        const res = await api.updateBookingPayment(user.token, eventDjId, { status: 'PAID' });
+        const res = await call(user.token, bookingId, { status: 'PAID' });
         if (res?.success) {
           await fetchMyEvents();
           showSuccess(language === 'fr' ? 'Paiement marqué comme payé.' : 'Payment marked as paid.');
@@ -91,12 +94,25 @@ export function useBookerEvents({
           showError(res?.message || (language === 'fr' ? 'Impossible de mettre à jour le paiement.' : 'Unable to update payment.'));
         }
       } catch (e) {
-        console.error('[BookerDashboard] markBookingAsPaid error:', e);
+        console.error('[BookerDashboard] markAsPaid error:', e);
         showError(language === 'fr' ? 'Erreur paiement.' : 'Payment error.');
       } finally {
-        setMarkingPaymentEventDjId(null);
+        setPending(null);
       }
     };
+
+    const markBookingAsPaid = (eventDjId) =>
+      markAsPaid(eventDjId, api.updateBookingPayment, setMarkingPaymentEventDjId);
+
+    const markVenueBookingAsPaid = (eventVenueId) =>
+      markAsPaid(eventVenueId, api.updateVenueBookingPayment, setMarkingPaymentEventVenueId);
+
+    const markPrestataireBookingAsPaid = (eventPrestataireId) =>
+      markAsPaid(
+        eventPrestataireId,
+        api.updatePrestataireBookingPayment,
+        setMarkingPaymentEventPrestataireId
+      );
   
     const handlePublishToFeed = async (eventId) => {
       showConfirm(
@@ -249,6 +265,8 @@ export function useBookerEvents({
     deletingEventId,
     publishingEventId,
     markingPaymentEventDjId,
+    markingPaymentEventVenueId,
+    markingPaymentEventPrestataireId,
     editEventVisible,
     setEditEventVisible,
     editEventDraft,
@@ -258,6 +276,8 @@ export function useBookerEvents({
     fetchMyEvents,
     onRefreshEventsList,
     markBookingAsPaid,
+    markVenueBookingAsPaid,
+    markPrestataireBookingAsPaid,
     handlePublishToFeed,
     handleDeleteEvent,
     openEditEvent,

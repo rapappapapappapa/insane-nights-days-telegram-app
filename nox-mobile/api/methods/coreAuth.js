@@ -182,9 +182,10 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(API_CONFIG.ENDPOINTS.EVENTS);
   },
 
-  // Récupérer un événement par ID
-  getEventById: async (eventId) => {
-    return apiRequest(`${API_CONFIG.ENDPOINTS.EVENT_DETAIL}/${eventId}`);
+  // Récupérer un événement par ID. Le token est requis pour les événements
+  // pas encore publiés sur le feed (visibles par leurs seules parties prenantes).
+  getEventById: async (eventId, token = null) => {
+    return apiRequest(`${API_CONFIG.ENDPOINTS.EVENT_DETAIL}/${eventId}`, {}, token);
   },
 
   // Récupérer le classement des DJs

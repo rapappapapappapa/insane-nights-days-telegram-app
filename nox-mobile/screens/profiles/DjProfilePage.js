@@ -757,6 +757,18 @@ export default function DjProfilePage() {
               {language === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'}
             </NoxText>
           )}
+          {ratings.allRatings && ratings.allRatings.length > 3 ? (
+            <TouchableOpacity
+              onPress={() => navigate('djRatings', { djId, djName: dj?.artistName })}
+              accessibilityRole="button"
+            >
+              <NoxText variant="form" style={styles.seeAllReviews}>
+                {language === 'fr'
+                  ? `Voir les ${ratings.allRatings.length} avis`
+                  : `See all ${ratings.allRatings.length} reviews`}
+              </NoxText>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.equipmentColumn}>

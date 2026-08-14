@@ -77,6 +77,35 @@ const authenticateToken = async (req, res, next) => {
 };
 
 /**
+ * Auth optionnelle : renseigne req.user si un token valide est fourni,
+ * laisse passer la requête sinon. Pour les routes publiques dont la réponse
+ * dépend du demandeur (ex. événement non encore publié, visible par ses parties).
+ */
+const attachUserIfAuthenticated = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    if (user && (user.status || 'ACTIVE') !== 'BANNED') {
+      req.user = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role || 'USER',
+      };
+    }
+  } catch (error) {
+    // Token absent / invalide / expiré : la requête reste anonyme.
+  }
+
+  return next();
+};
+
+/**
  * Middleware admin
  */
 const requireAdmin = (req, res, next) => {
@@ -91,6 +120,7 @@ const requireAdmin = (req, res, next) => {
 
 module.exports = {
   authenticateToken,
+  attachUserIfAuthenticated,
   requireAdmin,
 };
 

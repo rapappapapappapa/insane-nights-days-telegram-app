@@ -8,6 +8,61 @@ import {
 import Colors from '../../../constants/colors';
 import BookerTicketHoldersSection from '../../BookerTicketHoldersSection';
 
+const PAY_COLORS = {
+  UPCOMING: 'rgba(255,255,255,0.55)',
+  PENDING: '#FFA500',
+  PAID: '#4CAF50',
+};
+
+const payLabel = (status, language) => {
+  const labels = {
+    UPCOMING: language === 'fr' ? 'Paiement à venir' : 'Payment upcoming',
+    PENDING: language === 'fr' ? 'Paiement en attente' : 'Payment pending',
+    PAID: language === 'fr' ? 'Payé' : 'Paid',
+  };
+  return labels[status] || status;
+};
+
+/** Badge de statut + bouton « marquer payé » d'un booking lieu / prestataire. */
+function BookingPaymentControls({
+  language,
+  styles,
+  status,
+  invitationStatus,
+  bookingId,
+  onMarkPaid,
+  pendingId,
+}) {
+  const payStatus = status || 'UPCOMING';
+  const busy = pendingId === bookingId;
+  const canMarkPaid =
+    invitationStatus === 'ACCEPTED' && !!bookingId && payStatus !== 'PAID' && !!onMarkPaid;
+
+  return (
+    <>
+      <View style={[styles.djStatusBadge, { backgroundColor: PAY_COLORS[payStatus] + '20' }]}>
+        <Text style={[styles.djStatusText, { color: PAY_COLORS[payStatus] }]}>
+          {payLabel(payStatus, language)}
+        </Text>
+      </View>
+      {canMarkPaid ? (
+        <TouchableOpacity
+          style={styles.chatButtonSmall}
+          onPress={() => onMarkPaid(bookingId)}
+          disabled={busy}
+          accessibilityLabel={language === 'fr' ? 'Marquer comme payé' : 'Mark as paid'}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.chatButtonSmallText}>✅</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
+    </>
+  );
+}
+
 /** Liste des événements — dashboard organisateur. */
 export default function BookerEventsSection(props) {
   const {
@@ -23,6 +78,10 @@ export default function BookerEventsSection(props) {
     openChat,
     markBookingAsPaid,
     markingPaymentEventDjId,
+    markVenueBookingAsPaid,
+    markingPaymentEventVenueId,
+    markPrestataireBookingAsPaid,
+    markingPaymentEventPrestataireId,
     openEditEvent,
     handlePublishToFeed,
     publishingEventId,
@@ -62,12 +121,23 @@ export default function BookerEventsSection(props) {
                             <>
                               <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
                               {event.venue.eventVenueId && (
-                                <TouchableOpacity
-                                  style={styles.chatButtonSmall}
-                                  onPress={() => openVenueChat(event.venue.eventVenueId)}
-                                >
-                                  <Text style={styles.chatButtonSmallText}>💬</Text>
-                                </TouchableOpacity>
+                                <>
+                                  <TouchableOpacity
+                                    style={styles.chatButtonSmall}
+                                    onPress={() => openVenueChat(event.venue.eventVenueId)}
+                                  >
+                                    <Text style={styles.chatButtonSmallText}>💬</Text>
+                                  </TouchableOpacity>
+                                  <BookingPaymentControls
+                                    language={language}
+                                    styles={styles}
+                                    status={event.venue.payment?.paymentStatus}
+                                    invitationStatus={event.venue.venueInvitationStatus}
+                                    bookingId={event.venue.eventVenueId}
+                                    onMarkPaid={markVenueBookingAsPaid}
+                                    pendingId={markingPaymentEventVenueId}
+                                  />
+                                </>
                               )}
                             </>
                           ) : event.venueNeedsReplacement ? (
@@ -97,6 +167,15 @@ export default function BookerEventsSection(props) {
                             >
                               <Text style={styles.chatButtonSmallText}>💬</Text>
                             </TouchableOpacity>
+                            <BookingPaymentControls
+                              language={language}
+                              styles={styles}
+                              status={event.prestataire.payment?.paymentStatus}
+                              invitationStatus={event.prestataire.prestataireInvitationStatus}
+                              bookingId={event.prestataire.eventPrestataireId}
+                              onMarkPaid={markPrestataireBookingAsPaid}
+                              pendingId={markingPaymentEventPrestataireId}
+                            />
                           </View>
                         ) : (
                           <TouchableOpacity

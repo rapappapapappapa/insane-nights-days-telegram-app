@@ -18,6 +18,46 @@ export function createBookerEventsApiMethods({ apiRequest, getMimeType, getFileN
     );
   },
 
+  // Booking payment (Booker -> Lieu)
+  updateVenueBookingPayment: async (token, eventVenueId, { status, amount, currency, invoiceNumber } = {}) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!eventVenueId) {
+      throw new Error('eventVenueId requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_EVENTVENUE_PAYMENT}/${eventVenueId}/payment`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ status, amount, currency, invoiceNumber }),
+      },
+      token
+    );
+  },
+
+  // Booking payment (Booker -> Prestataire)
+  updatePrestataireBookingPayment: async (
+    token,
+    eventPrestataireId,
+    { status, amount, currency, invoiceNumber } = {}
+  ) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    if (!eventPrestataireId) {
+      throw new Error('eventPrestataireId requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.BOOKER_EVENTPRESTATAIRE_PAYMENT}/${eventPrestataireId}/payment`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ status, amount, currency, invoiceNumber }),
+      },
+      token
+    );
+  },
+
   // ✅ Contrat booking (Booker <-> DJ) intégré au chat privé
   getBookingContract: async (token, eventDjId) => {
     if (!token) throw new Error('Token d\'authentification requis.');

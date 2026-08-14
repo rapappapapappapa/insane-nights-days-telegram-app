@@ -61,6 +61,8 @@ export const API_CONFIG = {
     BOOKER_CREATE_EVENT: '/api/booker/events',
     BOOKER_DELETE_EVENT: '/api/booker/events',
     BOOKER_EVENTDJ_PAYMENT: '/api/booker/event-djs',
+    BOOKER_EVENTVENUE_PAYMENT: '/api/booker/event-venues',
+    BOOKER_EVENTPRESTATAIRE_PAYMENT: '/api/booker/event-prestataires',
     CONTRACTS_EVENTDJS: '/api/contracts/event-djs',
     CONTRACTS_EVENTVENUES: '/api/contracts/event-venues',
     CONTRACTS_EVENTPRESTATAIRES: '/api/contracts/event-prestataires',

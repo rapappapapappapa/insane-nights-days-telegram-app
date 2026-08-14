@@ -158,12 +158,18 @@ export default function LieuxBookingChatPage() {
       </View>
 
       <View style={styles.contractSection}>
-        <LieuxBookingContractPanel
-          language={language}
-          contractEditorModalCardHeight={contractEditorModalCardHeight}
-          contract={venueContract}
-          withModals={false}
-        />
+        <ScrollView
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.contractSectionContent}
+        >
+          <LieuxBookingContractPanel
+            language={language}
+            contractEditorModalCardHeight={contractEditorModalCardHeight}
+            contract={venueContract}
+            withModals={false}
+          />
+        </ScrollView>
       </View>
 
       <KeyboardAvoidingView
@@ -259,12 +265,15 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, textAlign: 'center' },
   headerSub: { marginTop: 2, textAlign: 'center', fontSize: 12 },
   contractSection: {
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
+    maxHeight: '42%',
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderSubtle,
     backgroundColor: CHAT_BG,
+  },
+  contractSectionContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
   },
   messagesContent: {
     paddingHorizontal: Spacing.xl,

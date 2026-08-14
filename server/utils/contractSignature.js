@@ -10,7 +10,7 @@
 
 const prisma = require('../lib/prisma');
 const { createContractSignatureRequest, isYousignConfigured } = require('./yousign');
-const { resolveContractAmountCents, makeInvoiceNumber, loadBookingByKind } = require('./contractPayment');
+const { resolveContractAmountCents, makeInvoiceNumber, loadBookingByKind, MISSING_CONTRACT_AMOUNT_MESSAGE } = require('./contractPayment');
 const {
   generateDjContractPdf,
   generateVenueContractPdf,
@@ -205,7 +205,7 @@ async function afterBothPartiesAccepted(kind, bookingId) {
   if (!row) throw new Error('Booking introuvable.');
   const amountCents = resolveContractAmountCents(row);
   if (amountCents == null || amountCents < 50) {
-    throw new Error('Montant du contrat invalide ou manquant (minimum 0,50 €).');
+    throw new Error(MISSING_CONTRACT_AMOUNT_MESSAGE);
   }
   const next = await updateBookingByKind(kind, bookingId, {
     contractStatus: 'PENDING_PAYMENT',

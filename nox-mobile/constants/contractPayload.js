@@ -77,6 +77,26 @@ function parseOptionalNumber(str) {
   return Number.isNaN(n) ? null : n;
 }
 
+/** Minimum Stripe (0,50 €). */
+export const MIN_CONTRACT_AMOUNT_EUR = 0.5;
+
+/** Montant principal en euros depuis un payload API ou un brouillon. */
+export function resolvePayloadAmountEur(payload = {}) {
+  const raw = payload.priceEur ?? payload.amount ?? payload.rentAmount;
+  if (raw == null || String(raw).trim() === '') return null;
+  const n = Number(String(raw).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Message d’alerte si le contrat ne peut pas être validé faute de montant. */
+export function missingContractAmountMessage(payload, language = 'fr') {
+  const euros = resolvePayloadAmountEur(payload);
+  if (euros != null && euros >= MIN_CONTRACT_AMOUNT_EUR) return null;
+  return language === 'fr'
+    ? 'Impossible de valider le contrat : aucun montant n’a été saisi (minimum 0,50 €). Un prix est obligatoire pour lancer le paiement Stripe de l’organisateur. Ajoute un montant via une contre-proposition, ou demande à l’organisateur de renvoyer le contrat avec un prix.'
+    : 'The contract cannot be validated: no amount was entered (minimum €0.50). A price is required to start the organizer’s Stripe payment. Add an amount via a counter-proposal, or ask the organizer to resend the contract with a price.';
+}
+
 /**
  * @param {object} p — payload API
  * @param {'venue' | 'dj'} mode

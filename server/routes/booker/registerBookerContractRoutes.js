@@ -14,6 +14,7 @@ const {
   createContractNotificationMessageVenue,
   createContractNotificationMessagePrestataire,
 } = require('../../utils/contractHelpers');
+const { assertPayloadHasMinAmount } = require('../../utils/contractPayment');
 
 module.exports = function registerBookerContractRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -474,6 +475,11 @@ app.post('/api/contracts/event-venues/:eventVenueId/send', authenticateToken, as
     if (!isBooker) return res.status(403).json({ success: false, message: 'Seul l\'organisateur peut envoyer le contrat.' });
     if (ev.contractStatus !== 'DRAFT') return res.status(400).json({ success: false, message: 'Contrat déjà envoyé ou signé.' });
     const payload = ev.contractPayload ?? {};
+    try {
+      assertPayloadHasMinAmount(payload);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
     const hash = hashContract(payload);
     await prisma.eventVenue.update({
       where: { id: eventVenueId },
@@ -511,6 +517,11 @@ app.post('/api/contracts/event-venues/:eventVenueId/counter', authenticateToken,
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     const nextPayload = payload ?? {};
+    try {
+      assertPayloadHasMinAmount(nextPayload);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
     const hash = hashContract(nextPayload);
     await prisma.eventVenue.update({
       where: { id: eventVenueId },

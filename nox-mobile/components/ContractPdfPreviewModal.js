@@ -319,7 +319,7 @@ export default function ContractPdfPreviewModal({
 
   const showSpinner = loading || filePreparing;
   const hasPdf = !!normalizePdfBase64(pdfBase64);
-  const canConfirm = !loading && !filePreparing && !confirmBusy && hasPdf;
+  const canConfirm = !loading && !confirmBusy && hasPdf;
 
   // iOS : éviter pageSheet + autres Modal overFullScreen (ordre des couches / touches cassées).
   return (
@@ -364,7 +364,8 @@ export default function ContractPdfPreviewModal({
             <Text style={styles.error}>{errorText}</Text>
           </View>
         ) : webSource ? (
-          <WebView
+          <View style={styles.webWrap}>
+            <WebView
             key={webSource.type === 'uri' ? webSource.uri : 'html-pdf'}
             source={
               webSource.type === 'html'
@@ -385,6 +386,7 @@ export default function ContractPdfPreviewModal({
               </View>
             )}
           />
+          </View>
         ) : (
           <View style={styles.center}>
             <Text style={styles.error}>{language === 'fr' ? 'PDF indisponible.' : 'PDF unavailable.'}</Text>
@@ -399,7 +401,7 @@ export default function ContractPdfPreviewModal({
           </Text>
         ) : null}
 
-        <View style={styles.footer}>
+        <View style={styles.footer} pointerEvents="box-none">
           {Platform.OS === 'android' && pdfBase64 && !loading ? (
             <Text style={styles.pdfOfflineHint}>
               {language === 'fr'
@@ -482,6 +484,7 @@ const styles = StyleSheet.create({
   headerBtnText: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
   title: { flex: 1, color: Colors.text, fontSize: 15, fontWeight: '700', textAlign: 'center', paddingHorizontal: 4 },
   web: { flex: 1, backgroundColor: Colors.backgroundCard },
+  webWrap: { flex: 1, backgroundColor: Colors.backgroundCard },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   hint: { color: 'rgba(255,255,255,0.55)', marginTop: 12, fontSize: 14 },
   error: { color: '#ff8a80', textAlign: 'center', fontSize: 14 },
@@ -500,6 +503,8 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.12)',
     backgroundColor: Colors.background,
     gap: 10,
+    zIndex: 10,
+    elevation: 12,
   },
   secondaryBtn: {
     borderWidth: 1,

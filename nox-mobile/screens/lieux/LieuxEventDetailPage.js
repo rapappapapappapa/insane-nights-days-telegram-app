@@ -98,14 +98,24 @@ export default function LieuxEventDetailPage() {
     return (
       <View style={[styles.container, styles.centered]}>
         <NoxText variant="secondary">{fr ? 'Événement introuvable.' : 'Event not found.'}</NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
       </View>
     );
   }
 
-  if (bookingsLoading || !booking) {
+  if (bookingsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <NoxText variant="secondary">{fr ? 'Événement introuvable.' : 'Event not found.'}</NoxText>
+        <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
       </View>
     );
   }

@@ -4,7 +4,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 11 au 14 août 2026 (lun. - jeu.)
+## Semaine du 11 au 14 août 2026 (lun. - ven.)
+
+### Corrigé (Lieux — retour chat + acceptation contrat) — 14 août
+- **`NavigationContext`** : `goBack` restaure les `routeParams` (plus d’écran « Événement introuvable » en quittant le chat).
+- **Acceptation contrat** : alerte si aucun montant (min. 0,50 €) — pas de contrat gratuit ; le bouton PDF n’est plus bloqué par l’aperçu WebView.
+- **API** : envoi / contre-proposition lieu refusés sans prix, avec le même message.
 
 ### Corrigé (Lieux — contrat dans le chat booking) — 11 août
 - **`LieuxBookingChatPage`** : panneau contrat réintégré (carte, PDF, contre-proposition, acceptation) — le chat NOX n’affichait que les messages depuis la migration Phase B.

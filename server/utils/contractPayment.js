@@ -4,6 +4,9 @@
 
 const prisma = require('../lib/prisma');
 
+const MISSING_CONTRACT_AMOUNT_MESSAGE =
+  'Impossible de valider le contrat : aucun montant n’a été saisi (minimum 0,50 €). Un prix est obligatoire pour lancer le paiement Stripe de l’organisateur.';
+
 /** Montant du contrat en centimes (priorité au payload en euros). */
 function resolveContractAmountCents(row) {
   const payload = row?.contractPayload ?? {};
@@ -16,6 +19,16 @@ function resolveContractAmountCents(row) {
     return Math.floor(row.paymentAmount);
   }
   return null;
+}
+
+function assertPayloadHasMinAmount(payload) {
+  const cents = resolveContractAmountCents({ contractPayload: payload || {} });
+  if (cents == null || cents < 50) {
+    const err = new Error(MISSING_CONTRACT_AMOUNT_MESSAGE);
+    err.code = 'MISSING_CONTRACT_AMOUNT';
+    throw err;
+  }
+  return cents;
 }
 
 function makeInvoiceNumber() {
@@ -60,6 +73,8 @@ function assertBookerOwnsBooking(row, userId) {
 
 module.exports = {
   resolveContractAmountCents,
+  assertPayloadHasMinAmount,
+  MISSING_CONTRACT_AMOUNT_MESSAGE,
   makeInvoiceNumber,
   loadBookingByKind,
   findBookingByStripeIntent,

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { api } from '../api/config';
 import {
   draftFromPayload,
   buildVenueContractPayload,
   buildEventEndTimeOptions,
   formatEventWindowHint,
+  missingContractAmountMessage,
 } from '../constants/contractPayload';
 
 /**
@@ -129,8 +130,22 @@ export function useVenueBookingContract({
     loadVenueContract();
   }, [loadVenueContract]);
 
+  const alertMissingAmount = useCallback(
+    (payload) => {
+      const msg = missingContractAmountMessage(payload, language);
+      if (!msg) return false;
+      Alert.alert(
+        language === 'fr' ? 'Contrat incomplet' : 'Incomplete contract',
+        msg,
+      );
+      return true;
+    },
+    [language],
+  );
+
   const acceptContract = useCallback(async () => {
     if (!token || !eventVenueId) return false;
+    if (alertMissingAmount(contractData?.payload)) return false;
     try {
       const res = await api.acceptVenueContract(token, eventVenueId);
       if (res?.success) {
@@ -150,19 +165,36 @@ export function useVenueBookingContract({
         await loadVenueContract();
         return true;
       }
+      const amountMsg = missingContractAmountMessage(contractData?.payload, language);
+      if (amountMsg || /montant|amount|0,50|0\.50/i.test(res?.message || '')) {
+        Alert.alert(
+          language === 'fr' ? 'Contrat incomplet' : 'Incomplete contract',
+          amountMsg || res?.message,
+        );
+        return false;
+      }
       showError?.(res?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));
       return false;
     } catch (e) {
       console.error('[useVenueBookingContract] accept error:', e);
+      const amountMsg = missingContractAmountMessage(contractData?.payload, language);
+      if (amountMsg || /montant|amount|0,50|0\.50/i.test(e?.message || '')) {
+        Alert.alert(
+          language === 'fr' ? 'Contrat incomplet' : 'Incomplete contract',
+          amountMsg || e.message,
+        );
+        return false;
+      }
       showError?.(e?.message || (language === 'fr' ? 'Erreur contrat.' : 'Contract error.'));
       return false;
     }
-  }, [token, eventVenueId, language, loadVenueContract, showError, showSuccess]);
+  }, [token, eventVenueId, language, loadVenueContract, showError, showSuccess, alertMissingAmount, contractData?.payload]);
 
   const counterContract = useCallback(async () => {
     if (!token || !eventVenueId) return false;
+    const payload = buildVenueContractPayload(contractDraft);
+    if (alertMissingAmount(payload)) return false;
     try {
-      const payload = buildVenueContractPayload(contractDraft);
       const res = await api.counterVenueContract(token, eventVenueId, payload);
       if (res?.success) {
         showSuccess?.(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
@@ -174,6 +206,13 @@ export function useVenueBookingContract({
       return false;
     } catch (e) {
       console.error('[useVenueBookingContract] counter error:', e);
+      if (/montant|amount|0,50|0\.50/i.test(e?.message || '')) {
+        Alert.alert(
+          language === 'fr' ? 'Contrat incomplet' : 'Incomplete contract',
+          e.message,
+        );
+        return false;
+      }
       showError?.(e?.message || (language === 'fr' ? 'Erreur contrat.' : 'Contract error.'));
       return false;
     }
@@ -186,6 +225,7 @@ export function useVenueBookingContract({
     loadVenueContract,
     showError,
     showSuccess,
+    alertMissingAmount,
   ]);
 
   const closeContractPdfPreview = useCallback(() => {
@@ -206,6 +246,13 @@ export function useVenueBookingContract({
   const openContractPdfPreview = useCallback(
     async ({ previewPayload, pendingAction }) => {
       if (!token || !eventVenueId) return;
+      if (pendingAction === 'accept' || pendingAction === 'counter') {
+        const checkPayload =
+          pendingAction === 'counter'
+            ? buildVenueContractPayload(contractDraft)
+            : previewPayload || contractData?.payload || {};
+        if (alertMissingAmount(checkPayload)) return;
+      }
       contractEditorWasVisibleForPdfRef.current = contractEditorVisible;
       setContractEditorVisible(false);
       setContractPdfPreview({
@@ -234,7 +281,7 @@ export function useVenueBookingContract({
         }));
       }
     },
-    [token, eventVenueId, contractEditorVisible, language],
+    [token, eventVenueId, contractEditorVisible, language, alertMissingAmount, contractDraft, contractData?.payload],
   );
 
   const confirmContractPdfPreview = useCallback(async () => {

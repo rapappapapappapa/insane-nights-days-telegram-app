@@ -26,13 +26,9 @@ export default function ContractDraftEditorFields({
   const hasPresetEndTimes = eventEndOptions.length > 0;
 
   const priceLabel =
-    isVenue && dt === 'bar_only'
-      ? language === 'fr'
-        ? 'Montant (€) — optionnel si sans loyer'
-        : 'Amount (€) — optional if no rent'
-      : language === 'fr'
-        ? 'Montant principal (€)'
-        : 'Main amount (€)';
+    language === 'fr'
+      ? 'Montant principal (€) — obligatoire, min. 0,50 €'
+      : 'Main amount (€) — required, min. €0.50';
 
   return (
     <>
@@ -193,8 +189,8 @@ export default function ContractDraftEditorFields({
       {isVenue && dt === 'bar_only' ? (
         <Text style={[styles.contractModalLabel, { opacity: 0.85, marginBottom: 8 }]}>
           {language === 'fr'
-            ? 'Sans loyer : précisez dans les notes si besoin.'
-            : 'No rent: add details in notes if needed.'}
+            ? 'Même sans loyer, un montant d’au moins 0,50 € est obligatoire pour valider le contrat (paiement Stripe).'
+            : 'Even without rent, an amount of at least €0.50 is required to validate the contract (Stripe payment).'}
         </Text>
       ) : null}
 

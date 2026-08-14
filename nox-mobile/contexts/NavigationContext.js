@@ -10,6 +10,18 @@ export function setLegacyNavigationContext(getter) {
   legacyNavigationContextGetter = typeof getter === 'function' ? getter : () => ({});
 }
 
+function restoreHistoryEntry(entry, setCurrentPage, setRouteParams) {
+  if (entry && typeof entry === 'object' && entry.page) {
+    setCurrentPage(entry.page);
+    setRouteParams(entry.params);
+    return;
+  }
+  if (typeof entry === 'string') {
+    setCurrentPage(entry);
+    setRouteParams(undefined);
+  }
+}
+
 export function NavigationProvider({ children }) {
   const [currentPage, setCurrentPage] = useState('splash');
   const [routeParams, setRouteParams] = useState(undefined);
@@ -17,6 +29,10 @@ export function NavigationProvider({ children }) {
   const historyRef = useRef([]);
   /** Page de repli quand goBack() est appelé sans historique (définie par App.js selon auth + rôle). */
   const backFallbackRef = useRef('splash');
+  const currentPageRef = useRef(currentPage);
+  const routeParamsRef = useRef(routeParams);
+  currentPageRef.current = currentPage;
+  routeParamsRef.current = routeParams;
 
   const setBackFallback = useCallback((page) => {
     if (page) backFallbackRef.current = page;
@@ -25,21 +41,22 @@ export function NavigationProvider({ children }) {
   const navigate = useCallback((page, params) => {
     const context = legacyNavigationContextGetter();
     const { page: resolvedPage, params: resolvedParams } = resolveNavigationTarget(page, params, context);
-    if (currentPage !== resolvedPage) {
-      historyRef.current.push(currentPage);
+    if (currentPageRef.current !== resolvedPage) {
+      historyRef.current.push({
+        page: currentPageRef.current,
+        params: routeParamsRef.current,
+      });
       if (historyRef.current.length > 10) {
         historyRef.current.shift();
       }
     }
     setCurrentPage(resolvedPage);
     setRouteParams(resolvedParams);
-  }, [currentPage]);
+  }, []);
 
   const goBack = useCallback(() => {
     if (historyRef.current.length > 0) {
-      const previousPage = historyRef.current.pop();
-      setCurrentPage(previousPage);
-      setRouteParams(undefined);
+      restoreHistoryEntry(historyRef.current.pop(), setCurrentPage, setRouteParams);
     } else {
       setCurrentPage(backFallbackRef.current);
       setRouteParams(undefined);
@@ -48,9 +65,7 @@ export function NavigationProvider({ children }) {
 
   const tryHardwareBack = useCallback(() => {
     if (historyRef.current.length > 0) {
-      const previousPage = historyRef.current.pop();
-      setCurrentPage(previousPage);
-      setRouteParams(undefined);
+      restoreHistoryEntry(historyRef.current.pop(), setCurrentPage, setRouteParams);
       return true;
     }
     return false;

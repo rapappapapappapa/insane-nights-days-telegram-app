@@ -198,6 +198,8 @@ export default function ContractPdfPreviewModal({
   /** Lecture seule : pas de confirmation d’action (envoi / acceptation), seulement fermeture après lecture. */
   previewOnly = false,
   doneReadingLabel,
+  /** Envoi acceptation / contre-proposition en cours */
+  confirmBusy = false,
 }) {
   /** null | { type: 'uri', uri } | { type: 'html', html, baseUrl } */
   const [webSource, setWebSource] = useState(null);
@@ -316,7 +318,8 @@ export default function ContractPdfPreviewModal({
   }, [visible]);
 
   const showSpinner = loading || filePreparing;
-  const canConfirm = !loading && !filePreparing && !errorText && !!webSource;
+  const hasPdf = !!normalizePdfBase64(pdfBase64);
+  const canConfirm = !loading && !filePreparing && !confirmBusy && hasPdf;
 
   // iOS : éviter pageSheet + autres Modal overFullScreen (ordre des couches / touches cassées).
   return (
@@ -388,6 +391,14 @@ export default function ContractPdfPreviewModal({
           </View>
         )}
 
+        {!previewOnly && hasPdf && !webSource && !showSpinner && !loading ? (
+          <Text style={styles.pdfOfflineHint}>
+            {language === 'fr'
+              ? 'L’aperçu n’a pas pu s’afficher ici. Tu peux quand même confirmer si tu as lu le PDF via « Ouvrir / partager ».'
+              : 'Preview could not render here. You can still confirm if you read the PDF via “Open / share”.'}
+          </Text>
+        ) : null}
+
         <View style={styles.footer}>
           {Platform.OS === 'android' && pdfBase64 && !loading ? (
             <Text style={styles.pdfOfflineHint}>
@@ -442,7 +453,11 @@ export default function ContractPdfPreviewModal({
               accessibilityRole="button"
               accessibilityLabel={confirmLabel}
             >
-              <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+              {confirmBusy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>

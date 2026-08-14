@@ -25,6 +25,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté (doc — backlog mobile) — 11 août
 - **`docs/mobile/TODO.md`** : backlog court (menu radial, filtres accueil communauté, bouton central artiste) ; **`nox-mobile/todo.md`** pointe vers la doc.
 
+### Corrigé (Lieux — acceptation contrat dans le chat) — 13 août
+- **`LieuxBookingChatPage`** : `<Toast />` pour afficher les erreurs API ; panneau contrat hors `ScrollView` ; modales montées à la racine (`LieuxVenueContractModals`).
+- **`ContractPdfPreviewModal`** : bouton « J'ai lu et j'accepte » actif dès que le PDF est chargé (même si l’aperçu WebView échoue) ; spinner pendant l’envoi.
+- **`useVenueBookingContract`** : le modal PDF reste ouvert en cas d’échec ; messages d’erreur serveur remontés (ex. montant manquant).
+
 ### Corrigé (Lieux — chat booking clignotant) — 13 août
 - **`useVenueBookingChat`** : boucle de rechargement supprimée (`onError` via ref, spinner uniquement au 1er chargement).
 - **`LieuxBookingChatPage`** : plus de blocage sur `useLieuxData` — fil de messages et saisie restent utilisables ; métadonnées event passées en `routeParams`.

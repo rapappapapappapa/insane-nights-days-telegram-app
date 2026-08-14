@@ -19,8 +19,11 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
 import { useVenueBookingChat } from '../../hooks/useVenueBookingChat';
 import { useVenueBookingContract } from '../../hooks/useVenueBookingContract';
-import LieuxBookingContractPanel from '../../components/lieux/LieuxBookingContractPanel';
+import LieuxBookingContractPanel, {
+  LieuxVenueContractModals,
+} from '../../components/lieux/LieuxBookingContractPanel';
 import { useToast } from '../../hooks/useToast';
+import Toast from '../../components/Toast';
 import { NoxText } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -66,7 +69,7 @@ export default function LieuxBookingChatPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
-  const { showError, showSuccess } = useToast();
+  const { showError, showSuccess, toast, hideToast } = useToast();
   const fr = language === 'fr';
 
   const contractEditorModalCardHeight = useMemo(() => {
@@ -154,6 +157,15 @@ export default function LieuxBookingChatPage() {
         <View style={styles.headerBtn} />
       </View>
 
+      <View style={styles.contractSection}>
+        <LieuxBookingContractPanel
+          language={language}
+          contractEditorModalCardHeight={contractEditorModalCardHeight}
+          contract={venueContract}
+          withModals={false}
+        />
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -175,11 +187,6 @@ export default function LieuxBookingChatPage() {
               }
             }}
           >
-            <LieuxBookingContractPanel
-              language={language}
-              contractEditorModalCardHeight={contractEditorModalCardHeight}
-              contract={venueContract}
-            />
             {messages.length === 0 ? (
               <NoxText variant="secondary" style={styles.emptyChat}>
                 {fr
@@ -216,6 +223,13 @@ export default function LieuxBookingChatPage() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <LieuxVenueContractModals
+        language={language}
+        contractEditorModalCardHeight={contractEditorModalCardHeight}
+        contract={venueContract}
+      />
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
     </View>
   );
 }
@@ -244,6 +258,14 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { fontSize: 17, textAlign: 'center' },
   headerSub: { marginTop: 2, textAlign: 'center', fontSize: 12 },
+  contractSection: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderSubtle,
+    backgroundColor: CHAT_BG,
+  },
   messagesContent: {
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,

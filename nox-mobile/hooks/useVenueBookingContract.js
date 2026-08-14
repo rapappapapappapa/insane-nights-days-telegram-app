@@ -28,6 +28,7 @@ export function useVenueBookingContract({
   const [showEventEndModal, setShowEventEndModal] = useState(false);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   const [contractAcceptAck, setContractAcceptAck] = useState(false);
+  const [contractActionBusy, setContractActionBusy] = useState(false);
   const [contractPdfPreview, setContractPdfPreview] = useState({
     visible: false,
     loading: false,
@@ -129,7 +130,7 @@ export function useVenueBookingContract({
   }, [loadVenueContract]);
 
   const acceptContract = useCallback(async () => {
-    if (!token || !eventVenueId) return;
+    if (!token || !eventVenueId) return false;
     try {
       const res = await api.acceptVenueContract(token, eventVenueId);
       if (res?.success) {
@@ -147,17 +148,19 @@ export function useVenueBookingContract({
                 : 'Contract accepted.',
         );
         await loadVenueContract();
-      } else {
-        showError?.(res?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));
+        return true;
       }
+      showError?.(res?.message || (language === 'fr' ? 'Impossible d\'accepter.' : 'Unable to accept.'));
+      return false;
     } catch (e) {
       console.error('[useVenueBookingContract] accept error:', e);
-      showError?.(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+      showError?.(e?.message || (language === 'fr' ? 'Erreur contrat.' : 'Contract error.'));
+      return false;
     }
   }, [token, eventVenueId, language, loadVenueContract, showError, showSuccess]);
 
   const counterContract = useCallback(async () => {
-    if (!token || !eventVenueId) return;
+    if (!token || !eventVenueId) return false;
     try {
       const payload = buildVenueContractPayload(contractDraft);
       const res = await api.counterVenueContract(token, eventVenueId, payload);
@@ -165,12 +168,14 @@ export function useVenueBookingContract({
         showSuccess?.(language === 'fr' ? 'Contre-proposition envoyée.' : 'Counter-proposal sent.');
         closeContractEditorSession();
         await loadVenueContract();
-      } else {
-        showError?.(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+        return true;
       }
+      showError?.(res?.message || (language === 'fr' ? 'Impossible d\'envoyer.' : 'Unable to send.'));
+      return false;
     } catch (e) {
       console.error('[useVenueBookingContract] counter error:', e);
-      showError?.(language === 'fr' ? 'Erreur contrat.' : 'Contract error.');
+      showError?.(e?.message || (language === 'fr' ? 'Erreur contrat.' : 'Contract error.'));
+      return false;
     }
   }, [
     token,
@@ -233,18 +238,31 @@ export function useVenueBookingContract({
   );
 
   const confirmContractPdfPreview = useCallback(async () => {
-    contractEditorWasVisibleForPdfRef.current = false;
     const action = contractPdfPreview.pendingAction;
-    setContractPdfPreview({
-      visible: false,
-      loading: false,
-      pdfBase64: null,
-      error: null,
-      pendingAction: null,
-    });
-    if (action === 'accept') await acceptContract();
-    else if (action === 'counter') await counterContract();
-  }, [contractPdfPreview.pendingAction, acceptContract, counterContract]);
+    if (!action || action === 'preview') {
+      closeContractPdfPreview();
+      return;
+    }
+
+    setContractActionBusy(true);
+    try {
+      let ok = false;
+      if (action === 'accept') ok = await acceptContract();
+      else if (action === 'counter') ok = await counterContract();
+      if (ok) {
+        contractEditorWasVisibleForPdfRef.current = false;
+        setContractPdfPreview({
+          visible: false,
+          loading: false,
+          pdfBase64: null,
+          error: null,
+          pendingAction: null,
+        });
+      }
+    } finally {
+      setContractActionBusy(false);
+    }
+  }, [contractPdfPreview.pendingAction, acceptContract, counterContract, closeContractPdfPreview]);
 
   const openContractEditorFromChat = useCallback(() => {
     setContractEditorVisible(true);
@@ -280,5 +298,6 @@ export function useVenueBookingContract({
     setShowCancellationModalForContract,
     setShowEventEndModalForContract,
     loadVenueContract,
+    contractActionBusy,
   };
 }

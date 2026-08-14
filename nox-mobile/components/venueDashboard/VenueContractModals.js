@@ -15,7 +15,7 @@ export default function VenueContractModals(props) {
     setShowEventEndModalForContract, openContractPdfPreview, showPaymentTermsModal,
     setShowPaymentTermsModal, showDealTypeModal, setShowDealTypeModal, showCancellationModal,
     setShowCancellationModal, showEventEndModal, setShowEventEndModal, contractPdfPreview,
-    closeContractPdfPreview, confirmContractPdfPreview,
+    closeContractPdfPreview, confirmContractPdfPreview, contractActionBusy,
   } = props;
   return (
     <>
@@ -226,6 +226,7 @@ export default function VenueContractModals(props) {
               loading={contractPdfPreview.loading}
               errorText={contractPdfPreview.error}
               language={language}
+              confirmBusy={contractActionBusy}
             />
     </>
   );

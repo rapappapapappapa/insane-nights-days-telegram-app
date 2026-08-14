@@ -15,6 +15,7 @@ export default function LieuxBookingContractPanel({
   language,
   contractEditorModalCardHeight,
   contract,
+  withModals = true,
 }) {
   const {
     contractLoading,
@@ -45,6 +46,7 @@ export default function LieuxBookingContractPanel({
     setShowDealTypeModalForContract,
     setShowCancellationModalForContract,
     setShowEventEndModalForContract,
+    contractActionBusy,
   } = contract;
 
   const fr = language === 'fr';
@@ -200,34 +202,101 @@ export default function LieuxBookingContractPanel({
         ) : null}
       </View>
 
-      <VenueContractModals
-        language={language}
-        styles={styles}
-        contractEditorVisible={contractEditorVisible}
-        contractEditorModalCardHeight={contractEditorModalCardHeight}
-        closeContractEditorSession={closeContractEditorSession}
-        contractDraft={contractDraft}
-        setContractDraft={setContractDraft}
-        PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
-        setShowPaymentTermsModalForContract={setShowPaymentTermsModalForContract}
-        setShowDealTypeModalForContract={setShowDealTypeModalForContract}
-        setShowCancellationModalForContract={setShowCancellationModalForContract}
-        contractEventEndOptions={contractEventEndOptions}
-        contractEventWindowHint={contractEventWindowHint}
-        setShowEventEndModalForContract={setShowEventEndModalForContract}
-        openContractPdfPreview={openContractPdfPreview}
-        showPaymentTermsModal={showPaymentTermsModal}
-        setShowPaymentTermsModal={setShowPaymentTermsModal}
-        showDealTypeModal={showDealTypeModal}
-        setShowDealTypeModal={setShowDealTypeModal}
-        showCancellationModal={showCancellationModal}
-        setShowCancellationModal={setShowCancellationModal}
-        showEventEndModal={showEventEndModal}
-        setShowEventEndModal={setShowEventEndModal}
-        contractPdfPreview={contractPdfPreview}
-        closeContractPdfPreview={closeContractPdfPreview}
-        confirmContractPdfPreview={confirmContractPdfPreview}
-      />
+      {withModals ? (
+        <VenueContractModals
+          language={language}
+          styles={styles}
+          contractEditorVisible={contractEditorVisible}
+          contractEditorModalCardHeight={contractEditorModalCardHeight}
+          closeContractEditorSession={closeContractEditorSession}
+          contractDraft={contractDraft}
+          setContractDraft={setContractDraft}
+          PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+          setShowPaymentTermsModalForContract={setShowPaymentTermsModalForContract}
+          setShowDealTypeModalForContract={setShowDealTypeModalForContract}
+          setShowCancellationModalForContract={setShowCancellationModalForContract}
+          contractEventEndOptions={contractEventEndOptions}
+          contractEventWindowHint={contractEventWindowHint}
+          setShowEventEndModalForContract={setShowEventEndModalForContract}
+          openContractPdfPreview={openContractPdfPreview}
+          showPaymentTermsModal={showPaymentTermsModal}
+          setShowPaymentTermsModal={setShowPaymentTermsModal}
+          showDealTypeModal={showDealTypeModal}
+          setShowDealTypeModal={setShowDealTypeModal}
+          showCancellationModal={showCancellationModal}
+          setShowCancellationModal={setShowCancellationModal}
+          showEventEndModal={showEventEndModal}
+          setShowEventEndModal={setShowEventEndModal}
+          contractPdfPreview={contractPdfPreview}
+          closeContractPdfPreview={closeContractPdfPreview}
+          confirmContractPdfPreview={confirmContractPdfPreview}
+          contractActionBusy={contractActionBusy}
+        />
+      ) : null}
     </>
   );
 }
+
+/** Modales contrat (à monter hors ScrollView sur LieuxBookingChatPage). */
+export function LieuxVenueContractModals(props) {
+  const { contract, language, contractEditorModalCardHeight } = props;
+  const styles = contractStyles;
+  const {
+    contractEditorVisible,
+    closeContractEditorSession,
+    contractDraft,
+    setContractDraft,
+    openContractPdfPreview,
+    closeContractPdfPreview,
+    confirmContractPdfPreview,
+    contractPdfPreview,
+    contractEventEndOptions,
+    contractEventWindowHint,
+    showPaymentTermsModal,
+    setShowPaymentTermsModal,
+    showDealTypeModal,
+    setShowDealTypeModal,
+    showCancellationModal,
+    setShowCancellationModal,
+    showEventEndModal,
+    setShowEventEndModal,
+    setShowPaymentTermsModalForContract,
+    setShowDealTypeModalForContract,
+    setShowCancellationModalForContract,
+    setShowEventEndModalForContract,
+    contractActionBusy,
+  } = contract;
+
+  return (
+    <VenueContractModals
+      language={language}
+      styles={styles}
+      contractEditorVisible={contractEditorVisible}
+      contractEditorModalCardHeight={contractEditorModalCardHeight}
+      closeContractEditorSession={closeContractEditorSession}
+      contractDraft={contractDraft}
+      setContractDraft={setContractDraft}
+      PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+      setShowPaymentTermsModalForContract={setShowPaymentTermsModalForContract}
+      setShowDealTypeModalForContract={setShowDealTypeModalForContract}
+      setShowCancellationModalForContract={setShowCancellationModalForContract}
+      contractEventEndOptions={contractEventEndOptions}
+      contractEventWindowHint={contractEventWindowHint}
+      setShowEventEndModalForContract={setShowEventEndModalForContract}
+      openContractPdfPreview={openContractPdfPreview}
+      showPaymentTermsModal={showPaymentTermsModal}
+      setShowPaymentTermsModal={setShowPaymentTermsModal}
+      showDealTypeModal={showDealTypeModal}
+      setShowDealTypeModal={setShowDealTypeModal}
+      showCancellationModal={showCancellationModal}
+      setShowCancellationModal={setShowCancellationModal}
+      showEventEndModal={showEventEndModal}
+      setShowEventEndModal={setShowEventEndModal}
+      contractPdfPreview={contractPdfPreview}
+      closeContractPdfPreview={closeContractPdfPreview}
+      confirmContractPdfPreview={confirmContractPdfPreview}
+      contractActionBusy={contractActionBusy}
+    />
+  );
+}
+

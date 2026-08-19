@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +39,26 @@ function buildTabs(fr) {
   ];
 }
 
+/** Première partie d'une localisation ("Lyon, France" → "lyon") pour comparaison. */
+function normalizeCity(value) {
+  return String(value || '').split(',')[0].trim().toLowerCase();
+}
+
+function capitalize(value) {
+  const s = String(value || '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+/** Options uniques (non vides) à partir de plusieurs listes de valeurs brutes. */
+function collectOptions(...valueLists) {
+  const seen = new Map();
+  valueLists.flat().forEach((raw) => {
+    const key = String(raw || '').trim().toLowerCase();
+    if (key && !seen.has(key)) seen.set(key, capitalize(key));
+  });
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+}
+
 export default function CommunityHomePage() {
   const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -59,11 +80,63 @@ export default function CommunityHomePage() {
   const [brokenImages, setBrokenImages] = useState({});
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
+  // Filtres suggestions (backlog TODO.md) : style, ville, tri note / followers 7j
+  const [styleFilter, setStyleFilter] = useState(null);
+  const [cityFilter, setCityFilter] = useState(null);
+  const [sortMode, setSortMode] = useState(null); // null | 'rating' | 'followers'
+  const [pickerType, setPickerType] = useState(null); // null | 'style' | 'city'
+
   const displayName = getDisplayName(user, profile);
   const featured = useMemo(() => getFeaturedEvent(events), [events]);
-  const upcoming = useMemo(() => filterUpcomingEvents(events, 8), [events]);
-  const suggestedDjs = useMemo(() => djs.slice(0, 8), [djs]);
-  const suggestedVenues = useMemo(() => venues.slice(0, 8), [venues]);
+
+  const styleOptions = useMemo(
+    () => collectOptions(events.map((e) => e.genre), djs.map((d) => d.genre)),
+    [events, djs],
+  );
+  const cityOptions = useMemo(
+    () =>
+      collectOptions(
+        events.map((e) => normalizeCity(e.location)),
+        djs.map((d) => normalizeCity(d.city || d.mainCity)),
+        venues.map((v) => normalizeCity(v.city || v.address)),
+      ),
+    [events, djs, venues],
+  );
+
+  const matchesStyle = useCallback(
+    (value) => !styleFilter || String(value || '').trim().toLowerCase() === styleFilter.toLowerCase(),
+    [styleFilter],
+  );
+  const matchesCity = useCallback(
+    (value) => !cityFilter || normalizeCity(value) === cityFilter.toLowerCase(),
+    [cityFilter],
+  );
+
+  const upcoming = useMemo(() => {
+    const base = filterUpcomingEvents(events, 24).filter(
+      (ev) => matchesStyle(ev.genre) && matchesCity(ev.location),
+    );
+    return base.slice(0, 8);
+  }, [events, matchesStyle, matchesCity]);
+
+  const suggestedDjs = useMemo(() => {
+    let list = djs.filter(
+      (dj) => matchesStyle(dj.genre) && matchesCity(dj.city || dj.mainCity),
+    );
+    if (sortMode === 'rating') {
+      list = [...list].sort(
+        (a, b) => (b.averageRatingGlobal || 0) - (a.averageRatingGlobal || 0),
+      );
+    } else if (sortMode === 'followers') {
+      list = [...list].sort((a, b) => (b.weeklyFollowers || 0) - (a.weeklyFollowers || 0));
+    }
+    return list.slice(0, 8);
+  }, [djs, matchesStyle, matchesCity, sortMode]);
+
+  const suggestedVenues = useMemo(
+    () => venues.filter((v) => matchesCity(v.city || v.address)).slice(0, 8),
+    [venues, matchesCity],
+  );
   const suggestedCollectifs = useMemo(() => collectifs.slice(0, 8), [collectifs]);
 
   useEffect(() => {
@@ -264,8 +337,137 @@ export default function CommunityHomePage() {
       </View>
 
       <NoxTabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
+
+      {activeTab === 'events' ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersRow}
+        >
+          <TouchableOpacity
+            style={[styles.filterChip, styleFilter && styles.filterChipActive]}
+            onPress={() => setPickerType('style')}
+          >
+            <NoxText variant="secondary" style={[styles.filterChipText, styleFilter && styles.filterChipTextActive]}>
+              {styleFilter || (fr ? 'Style' : 'Style')}
+            </NoxText>
+            <Ionicons
+              name="chevron-down"
+              size={12}
+              color={styleFilter ? Colors.text : Colors.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, cityFilter && styles.filterChipActive]}
+            onPress={() => setPickerType('city')}
+          >
+            <NoxText variant="secondary" style={[styles.filterChipText, cityFilter && styles.filterChipTextActive]}>
+              {cityFilter || (fr ? 'Ville' : 'City')}
+            </NoxText>
+            <Ionicons
+              name="chevron-down"
+              size={12}
+              color={cityFilter ? Colors.text : Colors.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, sortMode === 'rating' && styles.filterChipActive]}
+            onPress={() => setSortMode((m) => (m === 'rating' ? null : 'rating'))}
+          >
+            <NoxText
+              variant="secondary"
+              style={[styles.filterChipText, sortMode === 'rating' && styles.filterChipTextActive]}
+            >
+              {fr ? 'Mieux notés' : 'Top rated'}
+            </NoxText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, sortMode === 'followers' && styles.filterChipActive]}
+            onPress={() => setSortMode((m) => (m === 'followers' ? null : 'followers'))}
+          >
+            <NoxText
+              variant="secondary"
+              style={[styles.filterChipText, sortMode === 'followers' && styles.filterChipTextActive]}
+            >
+              {fr ? 'Top followers 7j' : 'Top followers 7d'}
+            </NoxText>
+          </TouchableOpacity>
+          {styleFilter || cityFilter || sortMode ? (
+            <TouchableOpacity
+              style={styles.filterReset}
+              onPress={() => {
+                setStyleFilter(null);
+                setCityFilter(null);
+                setSortMode(null);
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
+      ) : null}
     </>
   );
+
+  const renderFilterPicker = () => {
+    const isStyle = pickerType === 'style';
+    const options = isStyle ? styleOptions : cityOptions;
+    const current = isStyle ? styleFilter : cityFilter;
+    const setValue = isStyle ? setStyleFilter : setCityFilter;
+    return (
+      <Modal
+        visible={pickerType != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerType(null)}
+      >
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setPickerType(null)}
+        >
+          <View style={styles.pickerCard}>
+            <NoxText variant="titleSecondary" style={styles.pickerTitle}>
+              {isStyle ? (fr ? 'Filtrer par style' : 'Filter by style') : fr ? 'Filtrer par ville' : 'Filter by city'}
+            </NoxText>
+            <ScrollView style={styles.pickerList}>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => {
+                  setValue(null);
+                  setPickerType(null);
+                }}
+              >
+                <NoxText variant="form" style={!current ? styles.pickerRowActive : null}>
+                  {fr ? 'Tous' : 'All'}
+                </NoxText>
+              </TouchableOpacity>
+              {options.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={styles.pickerRow}
+                  onPress={() => {
+                    setValue(opt);
+                    setPickerType(null);
+                  }}
+                >
+                  <NoxText variant="form" style={current === opt ? styles.pickerRowActive : null}>
+                    {opt}
+                  </NoxText>
+                </TouchableOpacity>
+              ))}
+              {options.length === 0 ? (
+                <NoxText variant="secondary" style={styles.pickerEmpty}>
+                  {fr ? 'Aucune option disponible.' : 'No options available.'}
+                </NoxText>
+              ) : null}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
 
   const renderEventsSections = () => (
     <>
@@ -401,6 +603,8 @@ export default function CommunityHomePage() {
           feedTab={activeTab === 'following' ? 'following' : 'all'}
         />
       )}
+
+      {renderFilterPicker()}
     </View>
   );
 }
@@ -510,4 +714,51 @@ const styles = StyleSheet.create({
   },
   djName: { color: Colors.text, fontWeight: '600' },
   djGenre: { fontSize: 11 },
+  filtersRow: {
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+    alignItems: 'center',
+    paddingBottom: Spacing.sm,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    backgroundColor: Colors.backgroundCard,
+  },
+  filterChipActive: {
+    backgroundColor: primaryAlpha(0.25),
+    borderColor: Colors.primary,
+  },
+  filterChipText: { fontSize: 12 },
+  filterChipTextActive: { color: Colors.text },
+  filterReset: { marginLeft: 2 },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  pickerCard: {
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    borderWidth: 0.5,
+    borderColor: Colors.borderCard,
+    padding: Spacing.xl,
+    maxHeight: '65%',
+  },
+  pickerTitle: { marginBottom: Spacing.md, textAlign: 'center' },
+  pickerList: { flexGrow: 0 },
+  pickerRow: {
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  pickerRowActive: { color: Colors.primary, fontWeight: '700' },
+  pickerEmpty: { paddingVertical: Spacing.md, textAlign: 'center' },
 });

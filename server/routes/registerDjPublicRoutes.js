@@ -45,6 +45,19 @@ app.get('/api/djs', async (req, res) => {
       },
     });
 
+    // Compteurs de follows (total + gain sur 7 jours) pour tri « top followers »
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const [totalFollows, weeklyFollows] = await Promise.all([
+      prisma.followDj.groupBy({ by: ['djId'], _count: { djId: true } }),
+      prisma.followDj.groupBy({
+        by: ['djId'],
+        where: { createdAt: { gte: weekAgo } },
+        _count: { djId: true },
+      }),
+    ]);
+    const totalFollowsMap = Object.fromEntries(totalFollows.map((f) => [f.djId, f._count.djId]));
+    const weeklyFollowsMap = Object.fromEntries(weeklyFollows.map((f) => [f.djId, f._count.djId]));
+
     const formattedDjs = djs.map((dj) => {
       const profileImage = dj.profileImage || dj.media?.[0]?.url || null;
       return {
@@ -67,6 +80,8 @@ app.get('/api/djs', async (req, res) => {
       averageRatingCommunity: dj.averageRatingCommunity,
       averageRatingBooker: dj.averageRatingBooker,
       averageRatingVenue: dj.averageRatingVenue,
+      followersCount: totalFollowsMap[dj.id] || 0,
+      weeklyFollowers: weeklyFollowsMap[dj.id] || 0,
     };
     });
 

@@ -54,4 +54,18 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
   },
+  emailEditBlock: {
+    marginTop: Spacing.lg,
+  },
+  emailInput: {
+    fontFamily: FontFamily.regular,
+    fontSize: 16,
+    color: Colors.text,
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.input,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
 });

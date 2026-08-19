@@ -16,6 +16,15 @@ export function createEmailPasswordApiMethods({ apiRequest, getMimeType, getFile
       token
     );
   },
+  changeUnverifiedEmail: async (token, email) => {
+    if (!token) throw new Error('Token d\'authentification requis.');
+    if (!email) throw new Error('Email requis.');
+    return apiRequest(
+      '/api/user/me/email/change',
+      { method: 'POST', body: JSON.stringify({ email: String(email).trim() }), noCache: true },
+      token
+    );
+  },
   forgotPassword: async (email) => {
     return apiRequest('/api/auth/forgot-password', {
       method: 'POST',

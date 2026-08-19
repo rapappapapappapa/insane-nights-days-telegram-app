@@ -575,6 +575,58 @@ const confirmEmailVerification = async (req, res) => {
 };
 
 /**
+ * Change l'adresse email d'un compte NON vérifié (correction de saisie à l'inscription).
+ * Réinitialise le code en cours ; le client redemande ensuite un envoi de code.
+ * @route POST /api/user/me/email/change
+ * body: { email }
+ */
+const changeUnverifiedEmail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const emailRaw = req.body?.email;
+    const email = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return sendError(res, 'Adresse email invalide.', 400);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, emailVerified: true },
+    });
+    if (!user) return sendError(res, 'Utilisateur non trouvé', 404);
+    if (user.emailVerified) {
+      return sendError(res, 'Email déjà vérifié — modification impossible ici.', 400);
+    }
+    if (user.email && user.email.toLowerCase() === email) {
+      return sendSuccess(res, { message: 'Email inchangé.', email });
+    }
+
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' }, id: { not: userId } },
+      select: { id: true },
+    });
+    if (existing) {
+      return sendError(res, 'Cette adresse email est déjà utilisée.', 409);
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        email,
+        emailVerificationCodeHash: null,
+        emailVerificationSentAt: null,
+      },
+    });
+
+    return sendSuccess(res, { message: 'Email mis à jour.', email });
+  } catch (e) {
+    console.error('Erreur changeUnverifiedEmail:', e);
+    return sendError(res, 'Erreur serveur', 500);
+  }
+};
+
+/**
  * Export des données personnelles (RGPD - droit à la portabilité)
  * GET /api/user/me/export
  */
@@ -691,6 +743,7 @@ module.exports = {
   getCurrentUser,
   sendEmailVerification,
   confirmEmailVerification,
+  changeUnverifiedEmail,
   exportUserData,
   deleteAccount,
 };

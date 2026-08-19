@@ -72,6 +72,13 @@ router.post('/me/email/verification/send', authenticateToken, userController.sen
 router.post('/me/email/verification/confirm', authenticateToken, userController.confirmEmailVerification);
 
 /**
+ * @route POST /api/user/me/email/change
+ * @desc Change l'email d'un compte non vérifié (correction de saisie)
+ * @access Private
+ */
+router.post('/me/email/change', authenticateToken, userController.changeUnverifiedEmail);
+
+/**
  * @route GET /api/user/dj/profile
  * @desc Récupère le profil DJ actif de l'utilisateur connecté
  * @access Private (nécessite authentification)

@@ -32,6 +32,9 @@ export default function AuthVerifyEmailPage() {
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [debugCode, setDebugCode] = useState(null);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [changingEmail, setChangingEmail] = useState(false);
   const sentOnce = useRef(false);
 
   const nextScreen = routeParams?.nextScreen || null;
@@ -48,6 +51,32 @@ export default function AuthVerifyEmailPage() {
   const logoutWrongEmail = async () => {
     await logout();
     navigate('login');
+  };
+
+  const submitNewEmail = async () => {
+    const email = newEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      showError(fr ? 'Entre une adresse email valide.' : 'Enter a valid email address.');
+      return;
+    }
+    setChangingEmail(true);
+    try {
+      const res = await api.changeUnverifiedEmail(user.token, email);
+      if (res?.success) {
+        await refreshCurrentUser();
+        setEditingEmail(false);
+        setNewEmail('');
+        setCode('');
+        showSuccess(fr ? 'Email mis à jour — nouveau code envoyé.' : 'Email updated — new code sent.');
+        await sendCode();
+      } else {
+        showError(res?.message || (fr ? 'Modification impossible.' : 'Could not update email.'));
+      }
+    } catch (e) {
+      showError(e?.message || (fr ? 'Erreur.' : 'Error.'));
+    } finally {
+      setChangingEmail(false);
+    }
   };
 
   useEffect(() => {
@@ -176,11 +205,46 @@ export default function AuthVerifyEmailPage() {
               : 'Your account will stay unverified — you can verify later from your profile.'}
           </NoxText>
 
+          {editingEmail ? (
+            <View style={styles.emailEditBlock}>
+              <TextInput
+                style={styles.emailInput}
+                value={newEmail}
+                onChangeText={setNewEmail}
+                placeholder={fr ? 'Nouvelle adresse email' : 'New email address'}
+                placeholderTextColor={Colors.textTertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                autoComplete="email"
+              />
+              <NoxButton
+                label={fr ? 'Mettre à jour et renvoyer un code' : 'Update and resend code'}
+                onPress={submitNewEmail}
+                loading={changingEmail}
+                style={{ marginTop: Spacing.sm }}
+              />
+              <NoxButton
+                label={fr ? 'Annuler' : 'Cancel'}
+                variant="ghost"
+                onPress={() => setEditingEmail(false)}
+                style={{ marginTop: Spacing.sm }}
+              />
+            </View>
+          ) : (
+            <NoxButton
+              label={fr ? 'Mauvais email ? Le corriger' : 'Wrong email? Fix it'}
+              variant="ghost"
+              onPress={() => setEditingEmail(true)}
+              style={{ marginTop: Spacing.lg }}
+            />
+          )}
+
           <NoxButton
-            label={fr ? 'Mauvais email ? Se déconnecter' : 'Wrong email? Log out'}
+            label={fr ? 'Se déconnecter' : 'Log out'}
             variant="ghost"
             onPress={logoutWrongEmail}
-            style={{ marginTop: Spacing.lg }}
+            style={{ marginTop: Spacing.sm }}
           />
 
           {user?.emailVerified ? (

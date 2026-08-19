@@ -37,43 +37,58 @@ const ORBIT_RADIUS = 118;
 /** Arc au-dessus du bouton NX (de gauche à droite). */
 const ORBIT_ANGLES = [-152, -119, -86, -53, -20];
 
-const NAV_ITEM_DEFS = [
-  {
-    id: 'discover',
-    screenKey: 'discover',
-    icon: 'compass-outline',
-    labelFr: 'Discover',
-    labelEn: 'Discover',
-  },
-  {
-    id: 'home',
-    screenKey: 'home',
-    icon: 'home-outline',
-    labelFr: 'Home',
-    labelEn: 'Home',
-  },
-  {
-    id: 'tickets',
-    screen: 'tickets',
-    icon: 'ticket-outline',
-    labelFr: 'Tickets',
-    labelEn: 'Tickets',
-  },
-  {
-    id: 'notifs',
-    screen: 'notifications',
-    icon: 'notifications-outline',
-    labelFr: 'Notifs',
-    labelEn: 'Notifs',
-  },
-  {
-    id: 'profile',
-    screenKey: 'profile',
-    icon: 'person-outline',
-    labelFr: 'Profil',
-    labelEn: 'Profile',
-  },
+/**
+ * Entrées de l'arc par rôle — l'agenda occupe toujours la position centrale
+ * (TODO backlog : « agenda au centre, revoir la répartition »).
+ * `screen: 'events'` résout par rôle via legacyScreenRedirects
+ * (COMMUNITY → communityDiscover, VENUE → lieuxEvents, pro → EventsPage).
+ */
+const AGENDA_ITEM = {
+  id: 'agenda',
+  screen: 'events',
+  icon: 'calendar-outline',
+  labelFr: 'Agenda',
+  labelEn: 'Agenda',
+};
+
+const COMMUNITY_ITEMS = [
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Home', labelEn: 'Home' },
+  { id: 'tickets', screen: 'tickets', icon: 'ticket-outline', labelFr: 'Tickets', labelEn: 'Tickets' },
+  AGENDA_ITEM,
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
+
+const VENUE_ITEMS = [
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
+  { id: 'demandes', screen: 'lieuxDemandes', icon: 'mail-unread-outline', labelFr: 'Demandes', labelEn: 'Requests' },
+  AGENDA_ITEM,
+  { id: 'notifs', screen: 'lieuxNotifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
+];
+
+/** Raccourcis artistes / organisateurs (TODO backlog bouton central artistes). */
+const PRO_ITEMS = [
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
+  { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
+  AGENDA_ITEM,
+  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+];
+
+const PRO_DASHBOARDS = {
+  DJ: 'djDashboard',
+  BOOKER: 'bookerDashboard',
+  PRESTATAIRE: 'prestataireDashboard',
+};
+
+function getNavItemDefs(activeProfileType) {
+  if (activeProfileType === 'VENUE') return VENUE_ITEMS;
+  if (activeProfileType === 'DJ' || activeProfileType === 'BOOKER' || activeProfileType === 'PRESTATAIRE') {
+    return PRO_ITEMS;
+  }
+  return COMMUNITY_ITEMS;
+}
 
 /** @deprecated Utiliser RADIAL_NAV_HIDDEN_PAGES depuis noxRoleNavigation.js */
 export { RADIAL_NAV_HIDDEN_PAGES as HIDE_RADIAL_NAV_PAGES } from '../../utils/noxRoleNavigation';
@@ -127,7 +142,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
 
   const navItems = useMemo(
     () =>
-      NAV_ITEM_DEFS.map((item, index) => ({
+      getNavItemDefs(user?.activeProfileType).map((item, index) => ({
         ...item,
         angle: ORBIT_ANGLES[index],
         screen:
@@ -135,9 +150,11 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
             ? homeScreen
             : item.screenKey === 'profile'
               ? profileScreen
-              : item.screenKey === 'discover'
-                ? getDiscoverScreen(user?.activeProfileType)
-                : item.screen,
+              : item.screenKey === 'dashboard'
+                ? PRO_DASHBOARDS[user?.activeProfileType] || homeScreen
+                : item.screenKey === 'discover'
+                  ? getDiscoverScreen(user?.activeProfileType)
+                  : item.screen,
       })),
     [homeScreen, profileScreen, user?.activeProfileType],
   );

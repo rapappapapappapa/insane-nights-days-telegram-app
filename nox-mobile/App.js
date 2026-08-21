@@ -19,6 +19,7 @@ import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
 import { getHomeScreenForProfile, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
+import { shouldShowTutorial } from './utils/tutorialStorage';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import OnboardingPage from './screens/onboarding/OnboardingPage';
@@ -188,6 +189,7 @@ function AppContent() {
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
   const androidExitPressRef = useRef(0);
   const initialPushHandledRef = useRef(false);
+  const tutorialPromptRef = useRef(false);
   const drawerRef = useRef(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -241,6 +243,34 @@ function AppContent() {
       }
     }
   }, [user?.isAuthenticated, user?.activeProfileType, currentPage, navigate, isInitializing]);
+
+  // Guide NOX au premier lancement (une fois par appareil)
+  useEffect(() => {
+    if (isInitializing || !user?.isAuthenticated || needsEmailVerification(user)) return;
+    if (currentPage === 'tutorial') return;
+
+    const homeScreen = getHomeScreenForProfile(user?.activeProfileType);
+    if (currentPage !== homeScreen) return;
+    if (tutorialPromptRef.current) return;
+
+    let cancelled = false;
+    (async () => {
+      const show = await shouldShowTutorial();
+      if (cancelled || !show) return;
+      tutorialPromptRef.current = true;
+      navigate('tutorial', { autoShow: true });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInitializing, user?.isAuthenticated, user?.activeProfileType, user?.emailVerified, currentPage, navigate]);
+
+  useEffect(() => {
+    if (!user?.isAuthenticated) {
+      tutorialPromptRef.current = false;
+    }
+  }, [user?.isAuthenticated]);
 
   useEffect(() => {
     androidExitPressRef.current = 0;

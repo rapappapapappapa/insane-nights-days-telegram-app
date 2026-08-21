@@ -65,6 +65,7 @@ export const TRANSIENT_PAGES = new Set([
   'communityPushOptIn',
   'purchaseSuccess',
   'rateEvent',
+  'tutorial',
 ]);
 
 /** Wizards — retour écran + bouton menu, pas de NX (arc gênant). */

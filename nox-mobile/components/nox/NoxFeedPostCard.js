@@ -71,6 +71,7 @@ export default function NoxFeedPostCard({
   onCommentInputChange,
   onSendComment,
   formatDate,
+  highlighted = false,
 }) {
   const fr = language === 'fr';
   const original = item.originalPost;
@@ -79,7 +80,7 @@ export default function NoxFeedPostCard({
   const originalMeta = showEmbed ? getProfileMeta(original, original.profileType === 'DJ') : null;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, highlighted && styles.cardHighlighted]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}

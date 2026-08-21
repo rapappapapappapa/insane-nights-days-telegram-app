@@ -13,6 +13,11 @@ export const styles = StyleSheet.create({
     borderColor: Colors.borderSubtle,
     overflow: 'hidden',
   },
+  cardHighlighted: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+    backgroundColor: primaryAlpha(0.06),
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

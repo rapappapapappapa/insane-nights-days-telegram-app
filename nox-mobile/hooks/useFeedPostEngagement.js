@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { api } from '../api/config';
 
 /**
@@ -90,13 +90,27 @@ export function useFeedPostEngagement({
     }
   };
 
-  const toggleComments = (postId) => {
-    const isExpanded = expandedComments[postId];
-    dispatchPostState({ type: 'TOGGLE_COMMENTS', postId });
-    if (!isExpanded && !postComments[postId]) {
-      loadComments(postId);
-    }
-  };
+  const toggleComments = useCallback(
+    (postId) => {
+      const isExpanded = expandedComments[postId];
+      dispatchPostState({ type: 'TOGGLE_COMMENTS', postId });
+      if (!isExpanded && !postComments[postId]) {
+        loadComments(postId);
+      }
+    },
+    [expandedComments, postComments, dispatchPostState],
+  );
+
+  const expandComments = useCallback(
+    (postId) => {
+      if (expandedComments[postId]) return;
+      dispatchPostState({ type: 'EXPAND_COMMENTS', postId });
+      if (!postComments[postId]) {
+        loadComments(postId);
+      }
+    },
+    [expandedComments, postComments, dispatchPostState],
+  );
 
   const handleCreateComment = async (postId) => {
     if (!user?.token) {
@@ -137,6 +151,7 @@ export function useFeedPostEngagement({
     dispatchPostState,
     handleToggleLike,
     toggleComments,
+    expandComments,
     handleCreateComment,
   };
 }

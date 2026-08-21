@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -29,11 +29,25 @@ import Toast from '../Toast';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 
+function matchesHighlightPost(item, highlightPostId) {
+  if (!highlightPostId || item.type !== 'post') return false;
+  const target = String(highlightPostId);
+  if (String(item.id) === target) return true;
+  if (item.isRepost && String(item.originalPost?.id) === target) return true;
+  return false;
+}
+
 /**
  * Fil NOX (publications + événements publiés) avec likes / commentaires.
  * @param {'all'|'following'} feedTab
+ * @param {string|null} [highlightPostId] — scroll + surbrillance depuis une notif feed
+ * @param {boolean} [openCommentsOnHighlight]
  */
-export default function CommunityFeedStream({ feedTab = 'all' }) {
+export default function CommunityFeedStream({
+  feedTab = 'all',
+  highlightPostId = null,
+  openCommentsOnHighlight = false,
+}) {
   const { user, handleTokenExpired } = useAuth();
   const { language } = useLanguage();
   const { navigate } = useNavigation();
@@ -41,6 +55,11 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
   const { showError, showSuccess, toast, hideToast } = useToast();
   const { refreshUnreadCount: refreshFeedNotifications } = useFeedNotifications();
   const fr = language === 'fr';
+
+  const scrollRef = useRef(null);
+  const postLayoutsRef = useRef({});
+  const highlightHandledRef = useRef(null);
+  const [activeHighlightId, setActiveHighlightId] = useState(null);
 
   const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
 
@@ -57,11 +76,13 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
     setFeed,
     loading,
     refreshing,
+    feedError,
     feedAvatarBust,
     fetchFeed,
   } = useFeedList({
     user,
     feedTab,
+    language,
     dispatchPostState,
     onAuthError: handleTokenError,
   });
@@ -76,6 +97,7 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
     dispatchPostState: dispatchEngagement,
     handleToggleLike,
     toggleComments,
+    expandComments,
     handleCreateComment,
   } = useFeedPostEngagement({
     user,
@@ -94,6 +116,40 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
   useEffect(() => {
     fetchFeed();
   }, [feedTab]);
+
+  useEffect(() => {
+    if (!highlightPostId || loading) return;
+    if (highlightHandledRef.current === highlightPostId) return;
+
+    const item = feed.find((entry) => matchesHighlightPost(entry, highlightPostId));
+    if (!item) return;
+
+    highlightHandledRef.current = highlightPostId;
+    setActiveHighlightId(item.id);
+
+    if (openCommentsOnHighlight) {
+      expandComments(item.id);
+    }
+
+    const scrollTimer = setTimeout(() => {
+      const y = postLayoutsRef.current[item.id];
+      if (y != null && scrollRef.current?.scrollTo) {
+        scrollRef.current.scrollTo({ y: Math.max(0, y - 16), animated: true });
+      }
+    }, 150);
+
+    const clearTimer = setTimeout(() => setActiveHighlightId(null), 4000);
+
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightPostId, openCommentsOnHighlight, loading, feed, expandComments]);
+
+  useEffect(() => {
+    highlightHandledRef.current = null;
+    postLayoutsRef.current = {};
+  }, [highlightPostId]);
 
   const formatDate = (dateString) => formatFeedRelativeDate(dateString, language);
 
@@ -255,52 +311,59 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
       : imageUri;
 
     return (
-      <NoxFeedPostCard
-        key={`post-${item.id}`}
-        item={item}
-        language={language}
-        profileName={profileName}
-        profileLocation={profileLocation}
-        profileImage={profileImage}
-        imageUri={displayImageUri}
-        isBrokenImage={isBrokenImage}
-        isDj={isDj}
-        isAuthor={isAuthor}
-        liked={!!likedPosts[item.id]}
-        likesCount={
-          postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes || 0
-        }
-        commentsExpanded={!!expandedComments[item.id]}
-        comments={postComments[item.id]}
-        commentsCount={
-          postComments[item.id] ? postComments[item.id].length : item.commentsCount ?? 0
-        }
-        commentInput={commentInputs[item.id]}
-        canComment={!!user?.token}
-        canRepost={canRepost}
-        repostedByMe={!!item.repostedByMe}
-        formatDate={formatDate}
-        onPressProfile={() => navigateToPostProfile(item)}
-        onPressOriginalProfile={
-          item.isRepost ? () => navigateToPostProfile(item, { original: true }) : undefined
-        }
-        onToggleLike={() => handleToggleLike(item.id)}
-        onToggleComments={() => toggleComments(item.id)}
-        onRepost={() => handleRepost(item)}
-        onReport={() => reportPost(item.id)}
-        onDelete={() => handleDeletePost(item.id)}
-        onImageError={() => {
-          dispatchEngagement({ type: 'SET_BROKEN_IMAGE', postId: item.id });
+      <View
+        key={`post-wrap-${item.id}`}
+        onLayout={(e) => {
+          postLayoutsRef.current[item.id] = e.nativeEvent.layout.y;
         }}
-        onCommentInputChange={(text) => {
-          dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: item.id, text });
-        }}
-        onSendComment={() => handleCreateComment(item.id)}
-      />
+      >
+        <NoxFeedPostCard
+          item={item}
+          language={language}
+          profileName={profileName}
+          profileLocation={profileLocation}
+          profileImage={profileImage}
+          imageUri={displayImageUri}
+          isBrokenImage={isBrokenImage}
+          isDj={isDj}
+          isAuthor={isAuthor}
+          highlighted={activeHighlightId === item.id}
+          liked={!!likedPosts[item.id]}
+          likesCount={
+            postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes || 0
+          }
+          commentsExpanded={!!expandedComments[item.id]}
+          comments={postComments[item.id]}
+          commentsCount={
+            postComments[item.id] ? postComments[item.id].length : item.commentsCount ?? 0
+          }
+          commentInput={commentInputs[item.id]}
+          canComment={!!user?.token}
+          canRepost={canRepost}
+          repostedByMe={!!item.repostedByMe}
+          formatDate={formatDate}
+          onPressProfile={() => navigateToPostProfile(item)}
+          onPressOriginalProfile={
+            item.isRepost ? () => navigateToPostProfile(item, { original: true }) : undefined
+          }
+          onToggleLike={() => handleToggleLike(item.id)}
+          onToggleComments={() => toggleComments(item.id)}
+          onRepost={() => handleRepost(item)}
+          onReport={() => reportPost(item.id)}
+          onDelete={() => handleDeletePost(item.id)}
+          onImageError={() => {
+            dispatchEngagement({ type: 'SET_BROKEN_IMAGE', postId: item.id });
+          }}
+          onCommentInputChange={(text) => {
+            dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: item.id, text });
+          }}
+          onSendComment={() => handleCreateComment(item.id)}
+        />
+      </View>
     );
   };
 
-  if (loading && feed.length === 0) {
+  if (loading && feed.length === 0 && !feedError) {
     return (
       <View style={styles.loadingWrap}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -322,9 +385,26 @@ export default function CommunityFeedStream({ feedTab = 'all' }) {
     );
   }
 
+  if (feedError && feed.length === 0) {
+    return (
+      <View style={styles.errorWrap}>
+        <Ionicons name="cloud-offline-outline" size={40} color={Colors.textTertiary} />
+        <NoxText variant="secondary" style={styles.errorText}>
+          {feedError}
+        </NoxText>
+        <TouchableOpacity style={styles.retryButton} onPress={() => fetchFeed()}>
+          <NoxText variant="form" style={styles.retryText}>
+            {fr ? 'Réessayer' : 'Retry'}
+          </NoxText>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -380,6 +460,23 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 160, paddingTop: Spacing.sm },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 200 },
+  errorWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
+  },
+  errorText: { textAlign: 'center', lineHeight: 22 },
+  retryButton: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  retryText: { color: Colors.background, fontWeight: '700' },
   eventCard: {
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,

@@ -30,6 +30,7 @@ import {
 } from '../../utils/noxDiscoverUtils';
 import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
 import { shouldShowPushOptIn } from '../../utils/communityPushOptInStorage';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 
 function buildMainTabs(fr) {
   return [
@@ -99,6 +100,7 @@ export default function CommunityHomePage() {
   const [collectifs, setCollectifs] = useState([]);
   const [brokenImages, setBrokenImages] = useState({});
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+  const [discoveryError, setDiscoveryError] = useState(null);
 
   // Filtres suggestions (backlog TODO.md) : style, ville, tri note / followers 7j
   const [styleFilter, setStyleFilter] = useState(null);
@@ -168,6 +170,13 @@ export default function CommunityHomePage() {
   }, [routeParams?.feedTab]);
 
   useEffect(() => {
+    if (routeParams?.highlightPostId) {
+      setMainTab('feed');
+      setFeedScope('discover');
+    }
+  }, [routeParams?.highlightPostId]);
+
+  useEffect(() => {
     if (!user?.isAuthenticated || user?.activeProfileType !== 'COMMUNITY') return;
     let cancelled = false;
     (async () => {
@@ -183,6 +192,7 @@ export default function CommunityHomePage() {
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
+      setDiscoveryError(null);
 
       try {
         const tasks = [api.getEvents(), api.getDjs(), api.getPublicVenues(), api.getPublicBookers('Collectif')];
@@ -191,6 +201,15 @@ export default function CommunityHomePage() {
         }
 
         const [eventsRes, djsRes, venuesRes, collectifsRes, profileRes] = await Promise.all(tasks);
+
+        if (eventsRes == null || djsRes == null) {
+          setDiscoveryError(resolveApiErrorMessage(null, language));
+          setEvents([]);
+          setDjs([]);
+          setVenues([]);
+          setCollectifs([]);
+          return;
+        }
 
         setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
         setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
@@ -201,7 +220,8 @@ export default function CommunityHomePage() {
         if (profileRes?.success && profileRes.profile) {
           setProfile(profileRes.profile);
         }
-      } catch {
+      } catch (error) {
+        setDiscoveryError(resolveApiErrorMessage(error, language));
         setEvents([]);
         setDjs([]);
         setVenues([]);
@@ -211,7 +231,7 @@ export default function CommunityHomePage() {
         setRefreshing(false);
       }
     },
-    [user?.token],
+    [user?.token, language],
   );
 
   useEffect(() => {
@@ -627,6 +647,17 @@ export default function CommunityHomePage() {
         >
           {loading ? (
             <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: Spacing.xxl }} />
+          ) : discoveryError ? (
+            <View style={styles.discoveryErrorWrap}>
+              <NoxText variant="secondary" style={styles.discoveryErrorText}>
+                {discoveryError}
+              </NoxText>
+              <TouchableOpacity style={styles.discoveryRetry} onPress={() => loadDiscovery()}>
+                <NoxText variant="form" style={styles.discoveryRetryText}>
+                  {fr ? 'Réessayer' : 'Retry'}
+                </NoxText>
+              </TouchableOpacity>
+            </View>
           ) : (
             renderEventsSections()
           )}
@@ -635,6 +666,8 @@ export default function CommunityHomePage() {
         <CommunityFeedStream
           key={`${feedScope}-${eventsRefreshKey}`}
           feedTab={feedScope === 'following' ? 'following' : 'all'}
+          highlightPostId={routeParams?.highlightPostId}
+          openCommentsOnHighlight={!!routeParams?.openComments}
         />
       )}
 
@@ -798,4 +831,18 @@ const styles = StyleSheet.create({
   },
   pickerRowActive: { color: Colors.primary, fontWeight: '700' },
   pickerEmpty: { paddingVertical: Spacing.md, textAlign: 'center' },
+  discoveryErrorWrap: {
+    marginTop: Spacing.xxl,
+    marginHorizontal: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  discoveryErrorText: { textAlign: 'center', lineHeight: 22 },
+  discoveryRetry: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  discoveryRetryText: { color: Colors.background, fontWeight: '700' },
 });

@@ -11,6 +11,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getHomeScreenForProfile } from '../../utils/noxRoleNavigation';
+import { markTutorialSeen } from '../../utils/tutorialStorage';
 import BackgroundVideo from '../../components/BackgroundVideo';
 import Logo from '../../components/Logo';
 
@@ -22,8 +25,19 @@ const { width } = Dimensions.get('window');
  */
 export default function TutorialPage() {
   const { language } = useLanguage();
-  const { goBack } = useNavigation();
+  const { goBack, navigate, routeParams } = useNavigation();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
+  const autoShow = !!routeParams?.autoShow;
+
+  const finishTutorial = async () => {
+    await markTutorialSeen();
+    if (autoShow) {
+      navigate(getHomeScreenForProfile(user?.activeProfileType));
+    } else {
+      goBack();
+    }
+  };
 
   const tutorialSteps = [
     {
@@ -74,7 +88,7 @@ export default function TutorialPage() {
     if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      goBack();
+      finishTutorial();
     }
   };
 
@@ -85,7 +99,7 @@ export default function TutorialPage() {
   };
 
   const handleSkip = () => {
-    goBack();
+    finishTutorial();
   };
 
   return (

@@ -6,6 +6,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 23 août 2026
 
+### Ajouté (onboarding — guide au 1er lancement)
+- **`TutorialPage`** + **`tutorialStorage`** : le guide NOX s’affiche **une fois** après la première connexion (skip ou fin → marqué vu, retour à l’accueil du rôle). Toujours accessible via le drawer.
+
+### Corrigé (notifs feed — deep link vers le post)
+- **`CommunityFeedStream`** : consomme `highlightPostId` et `openComments` (depuis **`NotificationsPage`** / `communityNotificationRouting`) — bascule sur le Fil, scroll vers le post, surbrillance temporaire, ouverture des commentaires si besoin.
+- **`CommunityHomePage`** / **`ProHomePage`** : transmettent les `routeParams` de notif au fil.
+
+### Corrigé (UX — erreurs réseau homogènes)
+- **`networkErrors.js`** : helpers `isNetworkFailure` / `resolveApiErrorMessage`.
+- **`useFeedList`** / **`CommunityFeedStream`** : écran d’erreur + Réessayer sur le fil.
+- **`CommunityHomePage`** (Recommandations) : message + Réessayer si l’API discovery est injoignable.
+- **`LoginPage`** (mot de passe oublié) : message réseau clair si le serveur ne répond pas.
+
 ### Modifié (commu — accueil deux niveaux d’onglets)
 - **`CommunityHomePage`** : **Recommandations** (events, DJs, collectifs, lieux) et **Fil** en onglets principaux ; dans le Fil, sous-choix **Découverte** (feed global) / **Abonnements** (profils suivis). Filtres style/ville/tri conservés sous l’onglet Recommandations.
 - **`NoxTabs`** : variant `subtle` pour les sous-onglets (puces).

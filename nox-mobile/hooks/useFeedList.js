@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api/config';
+import { resolveApiErrorMessage } from '../constants/networkErrors';
 
 /**
  * Chargement du fil (pour tous / abonnements).
  * @param onAuthError optionnel — retourne true si l'erreur (token expiré) est gérée par l'appelant.
  */
-export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthError }) {
+export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthError, language = 'fr' }) {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,13 +58,16 @@ export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthEr
           if (isRefresh) setFeedAvatarBust((n) => n + 1);
         } else {
           setFeed([]);
+          if (response == null) {
+            setFeedError(resolveApiErrorMessage(null, language));
+          }
         }
       } catch (error) {
         if (!mountedRef.current) return;
         console.error('Erreur récupération feed:', error);
         setFeed([]);
         if (!(onAuthError && onAuthError(error))) {
-          setFeedError(error?.message || null);
+          setFeedError(resolveApiErrorMessage(error, language));
         }
       } finally {
         if (mountedRef.current) {
@@ -72,7 +76,7 @@ export function useFeedList({ user, feedTab = 'all', dispatchPostState, onAuthEr
         }
       }
     },
-    [feedTab, user?.token, dispatchPostState, onAuthError]
+    [feedTab, user?.token, dispatchPostState, onAuthError, language]
   );
 
   return {

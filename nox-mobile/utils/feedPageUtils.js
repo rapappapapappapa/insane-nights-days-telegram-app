@@ -30,6 +30,14 @@ export const postStateReducer = (state, action) => {
           [action.postId]: !state.expandedComments[action.postId],
         },
       };
+    case 'EXPAND_COMMENTS':
+      return {
+        ...state,
+        expandedComments: {
+          ...state.expandedComments,
+          [action.postId]: true,
+        },
+      };
     case 'SET_COMMENT_INPUT':
       return {
         ...state,

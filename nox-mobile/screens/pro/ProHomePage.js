@@ -26,7 +26,7 @@ import { styles } from './ProHomePage.styles';
 export default function ProHomePage() {
   const { language } = useLanguage();
   const { user, updateUser, refreshCurrentUser } = useAuth();
-  const { navigate } = useNavigation();
+  const { navigate, routeParams } = useNavigation();
   const { unreadCount: feedNotificationsCount, refreshUnreadCount: refreshFeedNotifications } = useFeedNotifications();
   const { unreadCount: chatUnreadCount, latest: chatLatest } = useNotifications();
   const { toast, showError, showSuccess, showInfo, hideToast } = useToast();
@@ -282,7 +282,11 @@ export default function ProHomePage() {
             onChange={setFeedTab}
           />
 
-          <CommunityFeedStream feedTab={feedTab} />
+          <CommunityFeedStream
+            feedTab={feedTab}
+            highlightPostId={routeParams?.highlightPostId}
+            openCommentsOnHighlight={!!routeParams?.openComments}
+          />
         </View>
       
       <Toast

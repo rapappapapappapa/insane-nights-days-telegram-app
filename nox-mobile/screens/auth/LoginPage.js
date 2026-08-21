@@ -25,6 +25,7 @@ import AppleSignInSection from '../../components/AppleSignInSection';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { styles } from './LoginPage.styles';
 import { resolvePostAuthNavigation } from '../../utils/noxRoleNavigation';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 
 export default function LoginPage() {
   const { language, t } = useLanguage();
@@ -469,10 +470,10 @@ export default function LoginPage() {
                         showSuccess(language === 'fr' ? 'Si un compte existe, le code a été envoyé.' : 'If an account exists, the code was sent.');
                         setResetStep('code');
                       } else {
-                        showError(res?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                        showError(resolveApiErrorMessage(res, language));
                       }
                     } catch (e) {
-                      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                      showError(resolveApiErrorMessage(e, language));
                     } finally {
                       setResetLoading(false);
                     }
@@ -545,10 +546,10 @@ export default function LoginPage() {
                         showSuccess(language === 'fr' ? 'Mot de passe réinitialisé.' : 'Password reset.');
                         setResetVisible(false);
                       } else {
-                        showError(res?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                        showError(resolveApiErrorMessage(res, language));
                       }
                     } catch (e) {
-                      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+                      showError(resolveApiErrorMessage(e, language));
                     } finally {
                       setResetLoading(false);
                     }

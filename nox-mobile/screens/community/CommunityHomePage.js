@@ -31,10 +31,16 @@ import {
 import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
 import { shouldShowPushOptIn } from '../../utils/communityPushOptInStorage';
 
-function buildTabs(fr) {
+function buildMainTabs(fr) {
   return [
-    { id: 'events', label: fr ? 'Événements' : 'Events' },
-    { id: 'posts', label: fr ? 'Publications' : 'Posts' },
+    { id: 'reco', label: fr ? 'Recommandations' : 'For you' },
+    { id: 'feed', label: fr ? 'Fil' : 'Feed' },
+  ];
+}
+
+function buildFeedScopeTabs(fr) {
+  return [
+    { id: 'discover', label: fr ? 'Découverte' : 'Discover' },
     { id: 'following', label: fr ? 'Abonnements' : 'Following' },
   ];
 }
@@ -59,6 +65,13 @@ function collectOptions(...valueLists) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
+/** Compat routeParams.feedTab legacy : events | posts | following */
+function resolveHomeTabsFromRoute(feedTab) {
+  if (feedTab === 'following') return { mainTab: 'feed', feedScope: 'following' };
+  if (feedTab === 'posts') return { mainTab: 'feed', feedScope: 'discover' };
+  return { mainTab: 'reco', feedScope: 'discover' };
+}
+
 export default function CommunityHomePage() {
   const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -67,9 +80,16 @@ export default function CommunityHomePage() {
   const { unreadCount: feedNotificationsCount } = useFeedNotifications();
 
   const fr = language === 'fr';
-  const tabs = useMemo(() => buildTabs(fr), [fr]);
+  const mainTabs = useMemo(() => buildMainTabs(fr), [fr]);
+  const feedScopeTabs = useMemo(() => buildFeedScopeTabs(fr), [fr]);
 
-  const [activeTab, setActiveTab] = useState(routeParams?.feedTab || 'events');
+  const routeTabs = useMemo(
+    () => resolveHomeTabsFromRoute(routeParams?.feedTab),
+    [routeParams?.feedTab],
+  );
+
+  const [mainTab, setMainTab] = useState(routeTabs.mainTab);
+  const [feedScope, setFeedScope] = useState(routeTabs.feedScope);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -140,7 +160,11 @@ export default function CommunityHomePage() {
   const suggestedCollectifs = useMemo(() => collectifs.slice(0, 8), [collectifs]);
 
   useEffect(() => {
-    if (routeParams?.feedTab) setActiveTab(routeParams.feedTab);
+    if (routeParams?.feedTab) {
+      const next = resolveHomeTabsFromRoute(routeParams.feedTab);
+      setMainTab(next.mainTab);
+      setFeedScope(next.feedScope);
+    }
   }, [routeParams?.feedTab]);
 
   useEffect(() => {
@@ -191,10 +215,10 @@ export default function CommunityHomePage() {
   );
 
   useEffect(() => {
-    if (activeTab === 'events') {
+    if (mainTab === 'reco') {
       loadDiscovery();
     }
-  }, [activeTab, loadDiscovery]);
+  }, [mainTab, loadDiscovery]);
 
   const onRefreshEvents = async () => {
     await loadDiscovery(true);
@@ -329,16 +353,26 @@ export default function CommunityHomePage() {
 
       <View style={styles.searchWrap}>
         <NoxSearchBar
-          placeholder={
-            fr ? 'Rechercher un événement, un artiste ou un lieu' : 'Search an event, artist or venue'
+          placeholder={fr ? 'Ouvrir Découvrir…' : 'Open Discover…'}
+          accessibilityLabel={
+            fr ? 'Ouvrir la page Découvrir pour chercher' : 'Open Discover to search'
           }
           onPress={() => openDiscover(navigate, user?.activeProfileType)}
         />
       </View>
 
-      <NoxTabs tabs={tabs} activeId={activeTab} onChange={setActiveTab} style={styles.tabs} />
+      <NoxTabs tabs={mainTabs} activeId={mainTab} onChange={setMainTab} style={styles.tabs} />
+      {mainTab === 'feed' ? (
+        <NoxTabs
+          tabs={feedScopeTabs}
+          activeId={feedScope}
+          onChange={setFeedScope}
+          variant="subtle"
+          style={styles.feedSubTabs}
+        />
+      ) : null}
 
-      {activeTab === 'events' ? (
+      {mainTab === 'reco' ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -582,7 +616,7 @@ export default function CommunityHomePage() {
 
       <View style={[styles.topArea, { paddingTop: insets.top + Spacing.md }]}>{renderHeader()}</View>
 
-      {activeTab === 'events' ? (
+      {mainTab === 'reco' ? (
         <ScrollView
           style={styles.flex}
           contentContainerStyle={{ paddingBottom: 160 }}
@@ -599,8 +633,8 @@ export default function CommunityHomePage() {
         </ScrollView>
       ) : (
         <CommunityFeedStream
-          key={`${activeTab}-${eventsRefreshKey}`}
-          feedTab={activeTab === 'following' ? 'following' : 'all'}
+          key={`${feedScope}-${eventsRefreshKey}`}
+          feedTab={feedScope === 'following' ? 'following' : 'all'}
         />
       )}
 
@@ -653,6 +687,9 @@ const styles = StyleSheet.create({
   },
   searchWrap: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
   tabs: { marginBottom: Spacing.sm },
+  feedSubTabs: {
+    marginBottom: Spacing.xs,
+  },
   featured: {
     marginHorizontal: Spacing.xl,
     height: 180,

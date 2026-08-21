@@ -5,7 +5,7 @@ import Colors from '../../constants/colors';
 import { FontFamily } from '../../constants/typography';
 import { Layout, Radius, Spacing } from '../../constants/theme';
 
-/** Barre de recherche NOX (Figma feed / discover). */
+/** Barre de recherche NOX — saisie libre ou raccourci (onPress) vers une autre page. */
 export default function NoxSearchBar({
   value,
   onChangeText,
@@ -13,7 +13,10 @@ export default function NoxSearchBar({
   onPress,
   editable = true,
   style,
+  accessibilityLabel,
 }) {
+  const isShortcut = typeof onPress === 'function';
+
   const inner = (
     <View style={[styles.wrap, style]}>
       <Ionicons name="search" size={20} color={Colors.textTertiary} style={styles.icon} />
@@ -23,15 +26,23 @@ export default function NoxSearchBar({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={Colors.textMuted}
-        editable={editable && !onPress}
-        pointerEvents={onPress ? 'none' : 'auto'}
+        editable={editable && !isShortcut}
+        pointerEvents={isShortcut ? 'none' : 'auto'}
       />
+      {isShortcut ? (
+        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} style={styles.chevron} />
+      ) : null}
     </View>
   );
 
-  if (onPress) {
+  if (isShortcut) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.85} accessibilityRole="search">
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || placeholder}
+      >
         {inner}
       </TouchableOpacity>
     );
@@ -53,6 +64,9 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: Spacing.sm,
+  },
+  chevron: {
+    marginLeft: Spacing.xs,
   },
   input: {
     flex: 1,

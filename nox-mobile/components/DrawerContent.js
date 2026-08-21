@@ -74,6 +74,15 @@ const MENU_DEF = [
     descEn: 'Top artists',
   },
   {
+    id: 'tutorial',
+    icon: 'help-circle-outline',
+    titleFr: 'Guide NOX',
+    titleEn: 'NOX guide',
+    descFr: 'Découvrir l’application',
+    descEn: 'Learn how the app works',
+    onlyWhenLoggedIn: true,
+  },
+  {
     id: 'notifications',
     icon: 'notifications-outline',
     titleFr: 'Notifications',

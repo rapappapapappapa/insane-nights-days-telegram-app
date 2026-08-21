@@ -37,6 +37,29 @@ import DjContractModals from '../../components/djDashboard/DjContractModals';
 import { NoxProDashboardHeader } from '../../components/nox';
 import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
+const DJ_DASHBOARD_SECTIONS = new Set([
+  'profil',
+  'tarifs',
+  'medias',
+  'materiel',
+  'bookings',
+  'paiements',
+  'avis',
+]);
+
+function resolveDjDashboardSection(routeParams) {
+  if (
+    routeParams?.openBookings ||
+    routeParams?.openChatEventDjId ||
+    routeParams?.openChatEventId
+  ) {
+    return 'bookings';
+  }
+  const section = routeParams?.openSection;
+  if (section && DJ_DASHBOARD_SECTIONS.has(section)) return section;
+  return 'profil';
+}
+
 export default function DjDashboardPage() {
   const { height: contractModalWindowH } = useWindowDimensions();
   const contractEditorModalCardHeight = Math.round(contractModalWindowH * 0.88);
@@ -50,7 +73,16 @@ export default function DjDashboardPage() {
 
   const shouldOpenBookings =
     !!routeParams?.openBookings || !!routeParams?.openChatEventDjId || !!routeParams?.openChatEventId;
-  const [activeSection, setActiveSection] = useState(shouldOpenBookings ? 'bookings' : 'profil');
+  const [activeSection, setActiveSection] = useState(() => resolveDjDashboardSection(routeParams));
+
+  useEffect(() => {
+    setActiveSection(resolveDjDashboardSection(routeParams));
+  }, [
+    routeParams?.openSection,
+    routeParams?.openBookings,
+    routeParams?.openChatEventDjId,
+    routeParams?.openChatEventId,
+  ]);
 
   const profile = useDjProfile({
     user,

@@ -4,6 +4,7 @@ import { saveToken, getToken, deleteToken, saveUserData, getUserData, isTokenExp
 import { getLocalExpoPushToken, clearLocalExpoPushToken } from '../utils/pushTokenStorage';
 import { resetEmailVerificationSkip } from '../utils/noxRoleNavigation';
 import logger from '../utils/logger';
+import { getNetworkUnreachableMessage } from '../constants/networkErrors';
 
 const AuthContext = createContext();
 
@@ -103,7 +104,7 @@ export function AuthProvider({ children }) {
       if (!response) {
         return { 
           success: false, 
-          error: 'Backend inaccessible. Vérifie que le serveur est lancé et que tu es sur le même réseau Wi-Fi.' 
+          error: getNetworkUnreachableMessage('fr'),
         };
       }
 
@@ -150,7 +151,7 @@ export function AuthProvider({ children }) {
       if (!response) {
         return { 
           success: false, 
-          error: 'Backend inaccessible. Vérifie que le serveur est lancé et que tu es sur le même réseau Wi-Fi.' 
+          error: getNetworkUnreachableMessage('fr'),
         };
       }
 
@@ -196,7 +197,7 @@ export function AuthProvider({ children }) {
       if (!response) {
         return {
           success: false,
-          error: 'Backend inaccessible. Vérifie que le serveur est lancé et que tu es sur le même réseau Wi-Fi.',
+          error: getNetworkUnreachableMessage('fr'),
         };
       }
 
@@ -241,7 +242,7 @@ export function AuthProvider({ children }) {
       if (!response) {
         return {
           success: false,
-          error: 'Backend inaccessible. Vérifie que le serveur est lancé et que tu es sur le même réseau Wi-Fi.',
+          error: getNetworkUnreachableMessage('fr'),
         };
       }
 

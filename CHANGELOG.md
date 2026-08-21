@@ -6,17 +6,28 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 23 août 2026
 
-### Ajouté (accueil communauté — filtres suggestions) — 19 août
-- **`CommunityHomePage`** : puces de filtre sous les onglets — **Style**, **Ville** (sélecteurs alimentés par les données), tri **Mieux notés** et **Top followers 7 jours**. S'appliquent aux prochains événements, suggestions de DJs et de lieux.
+### Modifié (commu — accueil deux niveaux d’onglets)
+- **`CommunityHomePage`** : **Recommandations** (events, DJs, collectifs, lieux) et **Fil** en onglets principaux ; dans le Fil, sous-choix **Découverte** (feed global) / **Abonnements** (profils suivis). Filtres style/ville/tri conservés sous l’onglet Recommandations.
+- **`NoxTabs`** : variant `subtle` pour les sous-onglets (puces).
+- Deep links / legacy `feedTab` (`posts`, `following`, `events`) conservés.
+
+### Corrigé (UX — petits polish)
+- **`AuthContext`** : message réseau sans mention Wi‑Fi local — « Vérifie ta connexion Internet » (`constants/networkErrors.js`).
+- **`NoxSearchBar`** : raccourci vers Découvrir avec chevron + libellé « Ouvrir Découvrir… » (accueil commu et pro).
+- **`DrawerContent`** : entrée **Guide NOX** → écran `tutorial`.
+- **`DjDashboardPage`** : `routeParams.openSection` ouvre le bon onglet (tarifs, paiements, etc.).
+
+### Ajouté (accueil communauté — filtres suggestions)
+- **`CommunityHomePage`** : puces de filtre sous Recommandations — **Style**, **Ville** (sélecteurs alimentés par les données), tri **Mieux notés** et **Top followers 7 jours**. S'appliquent aux prochains événements, suggestions de DJs et de lieux.
 - **`GET /api/djs`** : expose `followersCount` et `weeklyFollowers` (agrégation `FollowDj` sur 7 jours) pour le tri par gain de followers.
 
-### Ajouté (Lieux — gestion des médias) — 19 août
+### Ajouté (Lieux — gestion des médias)
 - **`LieuxMediaPage`** : bouton **+** pour ajouter un média (galerie pour photos/vidéos via `expo-image-picker`, modale URL + titre pour sets/liens) et croix de suppression sur chaque tuile avec confirmation. Les routes serveur existaient déjà, l'écran était en lecture seule.
 
-### Modifié (menu radial NX — arcs par rôle, agenda au centre) — 19 août
-- **`NoxRadialNav`** : entrées différenciées par rôle, **Agenda toujours au centre** (route `events`, résolue par rôle) — COMMUNITY : Home / Tickets / Agenda / Notifs / Profil ; VENUE : Accueil / Demandes / Agenda / Notifs / Profil ; DJ·BOOKER·PRESTATAIRE : Accueil / Booking (dashboard du rôle) / Agenda / Publier / Notifs (backlog « bouton central artistes »).
+### Modifié (menu radial NX — arcs par rôle, agenda au centre)
+- **`NoxRadialNav`** : entrées différenciées par rôle, **Agenda toujours au centre** (route `events`, résolue par rôle) — COMMUNITY : Home / Tickets / Agenda / Notifs / Profil ; VENUE : Accueil / Demandes / Agenda / Notifs / Profil ; DJ·BOOKER·PRESTATAIRE : Accueil / Booking (dashboard du rôle) / Agenda / Publier / Notifs.
 
-### Ajouté (vérification email — corriger l'adresse sans se déconnecter) — 19 août
+### Ajouté (vérification email — corriger l'adresse sans se déconnecter)
 - **Serveur** : `POST /api/user/me/email/change` — change l'email d'un compte **non vérifié** (format validé, unicité vérifiée, code en cours réinitialisé).
 - **`AuthVerifyEmailPage`** : bouton « Mauvais email ? Le corriger » → saisie inline de la nouvelle adresse, mise à jour puis renvoi automatique d'un code. La déconnexion reste possible en secours.
 

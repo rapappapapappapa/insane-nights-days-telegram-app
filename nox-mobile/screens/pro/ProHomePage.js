@@ -227,7 +227,10 @@ export default function ProHomePage() {
             </View>
 
             <NoxSearchBar
-              placeholder={language === 'fr' ? 'Rechercher artistes, lieux, events…' : 'Search artists, venues, events…'}
+              placeholder={language === 'fr' ? 'Ouvrir Découvrir…' : 'Open Discover…'}
+              accessibilityLabel={
+                language === 'fr' ? 'Ouvrir la page Découvrir pour chercher' : 'Open Discover to search'
+              }
               onPress={() => openDiscover(navigate, user?.activeProfileType)}
               style={styles.searchBar}
             />

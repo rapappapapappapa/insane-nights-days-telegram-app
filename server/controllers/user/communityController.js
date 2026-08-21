@@ -414,6 +414,7 @@ module.exports = {
   getCommunityProfileById,
   getCommunityProfile,
   updateCommunityProfile,
+  getMyCommunityId,
   getCommunityFriends,
   getCommunityFriendRequests,
   sendCommunityFriendRequest,

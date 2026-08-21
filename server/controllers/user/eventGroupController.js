@@ -4,6 +4,7 @@
 
 const prisma = require('../../lib/prisma');
 const { handleError, sendError, sendSuccess } = require('../../utils/helpers');
+const { getMyCommunityId } = require('./communityController');
 
 /**
  * Créer un groupe pour un événement

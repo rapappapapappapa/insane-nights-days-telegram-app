@@ -6,6 +6,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 23 août 2026
 
+### Corrigé (mobile — dashboard DJ crash)
+- **`DjDashboardPage`** : import `useEffect` manquant (écran « Property useEffect doesn't exist »).
+
+### Corrigé (serveur — amis / invitations événements)
+- **`eventGroupController`** : import de `getMyCommunityId` depuis `communityController` (erreur « getMyCommunityId is not defined » à l’ouverture de la liste d’amis).
+
 ### Ajouté (onboarding — guide au 1er lancement)
 - **`TutorialPage`** + **`tutorialStorage`** : le guide NOX s’affiche **une fois** après la première connexion (skip ou fin → marqué vu, retour à l’accueil du rôle). Toujours accessible via le drawer.
 

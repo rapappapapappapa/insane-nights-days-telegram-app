@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 25 au 28 août 2026
 
+### Modifié (DJ — hub dashboard en grille)
+- **`DjDashboardPage`** : accueil en **grille 2×N** (gros carrés + icônes Ionicons) ; navigation par section avec retour au hub ; deep links `openSection` / bookings conservés.
+
 ### Modifié (DJ — accueil dashboard, sans fil)
 - Accueil profil **DJ** = **`djDashboard`** (plus `proHome`), arc NX et drawer adaptés ; notifs feed → **Notifications** (fil via profil Communauté).
 

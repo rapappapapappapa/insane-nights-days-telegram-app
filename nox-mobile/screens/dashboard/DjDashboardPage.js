@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Text,
   View,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
@@ -16,10 +14,8 @@ import Colors from '../../constants/colors';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
 import RejectReasonModal from '../../components/RejectReasonModal';
-import { Ionicons } from '@expo/vector-icons';
 import { styles } from './DjDashboardPage.styles';
 import { useDjProfile } from '../../hooks/useDjProfile';
 import { useDjBookings } from '../../hooks/useDjBookings';
@@ -31,6 +27,7 @@ import DjBookingsSection from '../../components/djDashboard/sections/DjBookingsS
 import DjAvisSection from '../../components/djDashboard/sections/DjAvisSection';
 import DjPaiementsSection from '../../components/djDashboard/sections/DjPaiementsSection';
 import DjMediasSection from '../../components/djDashboard/sections/DjMediasSection';
+import DjDashboardHomeSection from '../../components/djDashboard/DjDashboardHomeSection';
 import DjMediaModals from '../../components/djDashboard/DjMediaModals';
 import DjChatModal from '../../components/djDashboard/DjChatModal';
 import DjContractModals from '../../components/djDashboard/DjContractModals';
@@ -57,7 +54,7 @@ function resolveDjDashboardSection(routeParams) {
   }
   const section = routeParams?.openSection;
   if (section && DJ_DASHBOARD_SECTIONS.has(section)) return section;
-  return 'profil';
+  return 'home';
 }
 
 export default function DjDashboardPage() {
@@ -256,14 +253,84 @@ export default function DjDashboardPage() {
   } = messaging;
 
   const menuItems = [
-    { id: 'profil', label: language === 'fr' ? 'Profil artiste' : 'Artist Profile', icon: '👤' },
-    { id: 'tarifs', label: language === 'fr' ? 'Tarifs & disponibilités' : 'Rates & Availabilities', icon: '💰' },
-    { id: 'medias', label: language === 'fr' ? 'Médias' : 'Media', icon: '📸' },
-    { id: 'materiel', label: language === 'fr' ? 'Matériel & rider' : 'Equipment & Rider', icon: '🎛️' },
-    { id: 'bookings', label: 'Bookings', icon: '📅' },
-    { id: 'paiements', label: language === 'fr' ? 'Paiements' : 'Payments', icon: '💳' },
-    { id: 'avis', label: language === 'fr' ? 'Avis & notes' : 'Reviews & Notes', icon: '⭐' },
+    {
+      id: 'profil',
+      label: language === 'fr' ? 'Profil artiste' : 'Artist profile',
+      hint: language === 'fr' ? 'Identité & bio' : 'Identity & bio',
+      icon: 'person',
+      accentColor: '#81B9FF',
+      accentBg: 'rgba(129,185,255,0.15)',
+    },
+    {
+      id: 'tarifs',
+      label: language === 'fr' ? 'Tarifs' : 'Rates',
+      hint: language === 'fr' ? 'Disponibilités' : 'Availability',
+      icon: 'cash',
+      accentColor: '#34D399',
+      accentBg: 'rgba(52,211,153,0.12)',
+    },
+    {
+      id: 'medias',
+      label: language === 'fr' ? 'Médias' : 'Media',
+      hint: language === 'fr' ? 'Photos & vidéos' : 'Photos & videos',
+      icon: 'images',
+      accentColor: '#F472B6',
+      accentBg: 'rgba(244,114,182,0.12)',
+    },
+    {
+      id: 'materiel',
+      label: language === 'fr' ? 'Matériel' : 'Equipment',
+      hint: language === 'fr' ? 'Rider technique' : 'Technical rider',
+      icon: 'hardware-chip',
+      accentColor: '#A78BFA',
+      accentBg: 'rgba(167,139,250,0.12)',
+    },
+    {
+      id: 'bookings',
+      label: 'Bookings',
+      hint: language === 'fr' ? 'Invitations & chat' : 'Invites & chat',
+      icon: 'calendar',
+      accentColor: Colors.primaryLight,
+      accentBg: 'rgba(40,82,232,0.2)',
+    },
+    {
+      id: 'paiements',
+      label: language === 'fr' ? 'Paiements' : 'Payments',
+      hint: language === 'fr' ? 'Stripe & facturation' : 'Stripe & billing',
+      icon: 'card',
+      accentColor: '#FBBF24',
+      accentBg: 'rgba(251,191,36,0.12)',
+    },
+    {
+      id: 'avis',
+      label: language === 'fr' ? 'Avis' : 'Reviews',
+      hint: language === 'fr' ? 'Notes reçues' : 'Ratings received',
+      icon: 'star',
+      accentColor: '#FCD34D',
+      accentBg: 'rgba(252,211,77,0.12)',
+    },
   ];
+
+  const isHubView = activeSection === 'home';
+  const activeMenuItem = menuItems.find((item) => item.id === activeSection);
+  const headerTitle = isHubView
+    ? language === 'fr'
+      ? 'Dashboard DJ'
+      : 'DJ Dashboard'
+    : activeMenuItem?.label || (language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard');
+
+  const handleHeaderBack = () => {
+    if (isHubView) {
+      goBack();
+      return;
+    }
+    setActiveSection('home');
+  };
+
+  const openSection = (sectionId) => {
+    setActiveSection(sectionId);
+    if (sectionId === 'bookings') markAllAsRead();
+  };
 
   if (loading) {
     return (
@@ -362,6 +429,19 @@ export default function DjDashboardPage() {
   };
 
   const renderContent = () => {
+    if (activeSection === 'home') {
+      return (
+        <DjDashboardHomeSection
+          language={language}
+          styles={styles}
+          tiles={menuItems}
+          unreadCount={unreadCount}
+          displayName={pseudo || artistName}
+          onSelectSection={openSection}
+        />
+      );
+    }
+
     switch (activeSection) {
       case 'profil':
         return <DjProfilSection {...dashboardProps} />;
@@ -396,56 +476,18 @@ export default function DjDashboardPage() {
       <StatusBar style="light" />
 
       <NoxProDashboardHeader
-        title={language === 'fr' ? 'Dashboard DJ' : 'DJ Dashboard'}
-        showBack={!isHome}
-        onBack={goBack}
+        title={headerTitle}
+        showBack={!isHubView || !isHome}
+        onBack={handleHeaderBack}
         unreadCount={unreadCount}
         onMessagesPress={() => {
-          setActiveSection('bookings');
+          openSection('bookings');
           refreshUnreadCount();
         }}
         onMarkMessagesRead={markAllAsRead}
       />
 
       <View style={styles.mainContent}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.sectionTabs}
-          contentContainerStyle={styles.sectionTabsContent}
-        >
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.sectionTab,
-                activeSection === item.id && styles.sectionTabActive,
-              ]}
-              onPress={() => {
-                setActiveSection(item.id);
-                if (item.id === 'bookings') markAllAsRead();
-              }}
-              activeOpacity={0.8}
-            >
-              <View style={styles.sectionTabIconWrap}>
-                <Text style={styles.sectionTabIcon}>{item.icon}</Text>
-                {item.id === 'bookings' && unreadCount > 0 && (
-                  <NotificationBadge count={unreadCount} />
-                )}
-              </View>
-              <Text
-                style={[
-                  styles.sectionTabText,
-                  activeSection === item.id && styles.sectionTabTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {renderContent()}
       </View>
 

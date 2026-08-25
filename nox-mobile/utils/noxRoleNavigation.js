@@ -9,6 +9,7 @@ export function getHomeScreenForProfile(activeProfileType) {
     case 'VENUE':
       return 'lieuxDashboard';
     case 'DJ':
+      return 'djDashboard';
     case 'BOOKER':
     case 'PRESTATAIRE':
       return 'proHome';

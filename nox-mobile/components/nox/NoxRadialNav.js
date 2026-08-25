@@ -67,10 +67,26 @@ const VENUE_ITEMS = [
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
-/** Raccourcis artistes / organisateurs (TODO backlog bouton central artistes). */
+/** Raccourcis organisateurs / prestataires (fil pro + booking). */
 const PRO_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
+  AGENDA_ITEM,
+  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+];
+
+/** DJ : accueil = dashboard pro, sans fil — le feed reste côté profil Communauté. */
+const DJ_ITEMS = [
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
+  {
+    id: 'bookings',
+    screen: 'djDashboard',
+    routeParams: { openBookings: true },
+    icon: 'briefcase-outline',
+    labelFr: 'Bookings',
+    labelEn: 'Bookings',
+  },
   AGENDA_ITEM,
   { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
   { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
@@ -84,7 +100,8 @@ const PRO_DASHBOARDS = {
 
 function getNavItemDefs(activeProfileType) {
   if (activeProfileType === 'VENUE') return VENUE_ITEMS;
-  if (activeProfileType === 'DJ' || activeProfileType === 'BOOKER' || activeProfileType === 'PRESTATAIRE') {
+  if (activeProfileType === 'DJ') return DJ_ITEMS;
+  if (activeProfileType === 'BOOKER' || activeProfileType === 'PRESTATAIRE') {
     return PRO_ITEMS;
   }
   return COMMUNITY_ITEMS;
@@ -239,9 +256,9 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
   };
   const close = () => setOpen(false);
 
-  const navigateTo = (screen) => {
+  const navigateTo = (screen, params) => {
     close();
-    if (currentPage !== screen) navigate(screen);
+    if (currentPage !== screen || params) navigate(screen, params);
   };
 
   return (
@@ -287,7 +304,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
                 >
                   <TouchableOpacity
                     style={[styles.orbitBtn, active && styles.orbitBtnActive]}
-                    onPress={() => navigateTo(item.screen)}
+                    onPress={() => navigateTo(item.screen, item.routeParams)}
                     activeOpacity={0.85}
                     accessibilityRole="button"
                     accessibilityLabel={label}

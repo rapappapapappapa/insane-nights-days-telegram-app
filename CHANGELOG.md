@@ -4,6 +4,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 25 au 28 août 2026
+
+### Modifié (DJ — accueil dashboard, sans fil)
+- Accueil profil **DJ** = **`djDashboard`** (plus `proHome`), arc NX et drawer adaptés ; notifs feed → **Notifications** (fil via profil Communauté).
+
+---
+
 ## Semaine du 17 au 23 août 2026
 
 ### Corrigé (mobile — dashboard DJ crash)

@@ -35,6 +35,12 @@ export default function ProHomePage() {
   const [feedTab, setFeedTab] = useState('all'); // 'all' | 'following'
 
   useEffect(() => {
+    if (user?.activeProfileType === 'DJ') {
+      navigate('djDashboard', routeParams);
+    }
+  }, [user?.activeProfileType, navigate, routeParams]);
+
+  useEffect(() => {
     if (user?.isAuthenticated && user?.token) {
       loadUserData();
     }
@@ -179,6 +185,15 @@ export default function ProHomePage() {
         return [];
     }
   })();
+
+  if (user?.activeProfileType === 'DJ') {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
       <View style={styles.container}>

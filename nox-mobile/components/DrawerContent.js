@@ -27,7 +27,7 @@ const MENU_DEF = [
     descFr: 'Fil pro & raccourcis',
     descEn: 'Pro feed & shortcuts',
     onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['DJ', 'BOOKER', 'PRESTATAIRE'],
+    onlyForActiveProfileTypes: ['BOOKER', 'PRESTATAIRE'],
   },
   {
     id: 'communityHome',

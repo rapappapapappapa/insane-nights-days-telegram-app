@@ -1,42 +1,43 @@
 # TODO mobile — backlog court
 
 Liste de tâches **courante** (notes produit / UX).  
-Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan global : [`PLAN_MIGRATION_NOX_LEGACY.md`](PLAN_MIGRATION_NOX_LEGACY.md).
+Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan global : [`PLAN_MIGRATION_NOX_LEGACY.md`](PLAN_MIGRATION_NOX_LEGACY.md) · parcours test : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
-*Dernière mise à jour : 21 août 2026.*
-
----
-
-## Navigation & menu radial
-
-- [x] **Menu rond (NX radial)** : remplacer / réorganiser les icônes — **agenda au centre**, revoir la répartition des autres entrées. *(fait 19/08 — arcs par rôle : COMMUNITY, VENUE, pro)*
-
-## Communauté — accueil (`CommunityHomePage`)
-
-- [x] **Suggestions événements & DJs** : filtres par **style**, **ville**, **mieux notés**, ou **plus gros gain de followers de la semaine**. *(fait 19/08)*
-- [x] **Accueil deux niveaux** : onglets **Recommandations** / **Fil**, sous-onglets Fil **Découverte** / **Abonnements**. *(fait 21/08)*
-
-## Profil artiste — bouton central
-
-- [x] **Bouton central artistes** : raccourcis via arc pro du menu radial (Booking, Publier, Agenda). *(fait 19/08)*
+*Dernière mise à jour : 25 août 2026.*
 
 ---
 
-## Onboarding & qualité (vague 2 — semaine 17–23 août)
+## Semaine du 25 au 28 août 2026
 
-- [x] **Tutorial au 1er lancement** : `TutorialPage` une fois après la première connexion.
-- [x] **Deep link notifs feed** : `highlightPostId` / `openComments` branchés sur le fil.
-- [x] **Messages réseau homogènes** : feed, accueil reco, mot de passe oublié.
-- [x] **Mot de passe oublié** : messages réseau + flow existant conservé (email → code → reset).
+### QA & correctifs (remontés en test)
+
+- [x] **Liste d’amis** : `getMyCommunityId is not defined` (serveur — `eventGroupController`). *Push 12440ae — deploy Railway.*
+- [x] **Dashboard DJ** : crash `useEffect` (`DjDashboardPage`). *Push 12440ae — OTA mobile à faire.*
+- [x] **Accueil DJ** : dashboard pro à la place du fil (`proHome`) — feed via profil Communauté.
+- [ ] **OTA mobile** : publier le fix dashboard DJ + accueil DJ (+ lot sem. 17–23 si pas encore reçu).
+
+### Suite produit (si bande passante)
+
+- [ ] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed.
+- [ ] **Prep stores** : Resend prod, `store:check`, parcours [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
 ---
 
-## Prochain gros sujet produit
+## Navigation & menu radial *(fait sem. 17–23)*
 
-- [ ] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed — voir chiffrage backlog.
+- [x] **Menu rond (NX radial)** — agenda au centre, arcs par rôle.
+
+## Communauté — accueil *(fait sem. 17–23)*
+
+- [x] Filtres suggestions (style, ville, tri).
+- [x] Onglets **Recommandations** / **Fil** + Découverte / Abonnements.
+
+## Onboarding & qualité *(fait sem. 17–23)*
+
+- [x] Tutorial 1er lancement, deep link notifs feed, messages réseau, MDP oublié.
 
 ---
 
 ## Fixes divers
 
-- [ ] *(à préciser)* — entrée « fixe » du backlog initial.
+- [ ] *(à préciser)*

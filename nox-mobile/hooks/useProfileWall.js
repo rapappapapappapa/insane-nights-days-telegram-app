@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../api/config';
 
 /**
- * Charge les publications affichées sur le mur d'un profil (userId, djId ou bookerId).
+ * Charge les publications affichées sur le mur d'un profil (userId, djId, bookerId ou venueId).
  */
 export function useProfileWall({ user, wallFilter, dispatchPostState, onAuthError, enabled = true }) {
   const [posts, setPosts] = useState([]);
@@ -13,7 +13,7 @@ export function useProfileWall({ user, wallFilter, dispatchPostState, onAuthErro
 
   const hasFilter =
     enabled &&
-    !!(wallFilter?.userId || wallFilter?.djId || wallFilter?.bookerId);
+    !!(wallFilter?.userId || wallFilter?.djId || wallFilter?.bookerId || wallFilter?.venueId);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -67,6 +67,7 @@ export function useProfileWall({ user, wallFilter, dispatchPostState, onAuthErro
       wallFilter?.userId,
       wallFilter?.djId,
       wallFilter?.bookerId,
+      wallFilter?.venueId,
       dispatchPostState,
       onAuthError,
     ],

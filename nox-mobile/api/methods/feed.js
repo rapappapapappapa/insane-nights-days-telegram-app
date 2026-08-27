@@ -36,17 +36,18 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     return apiRequest(`/api/feed/following?limit=${limit}&offset=${offset}`, { noCache: true }, token);
   },
 
-  /** Publications d'un profil (mur DJ / booker / compte) */
-  getProfileWallPosts: async (token, { userId, djId, bookerId } = {}, limit = 30, offset = 0) => {
+  /** Publications d'un profil (mur DJ / booker / lieu / compte) */
+  getProfileWallPosts: async (token, { userId, djId, bookerId, venueId } = {}, limit = 30, offset = 0) => {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     if (userId) params.set('userId', userId);
     else if (djId) params.set('djId', djId);
     else if (bookerId) params.set('bookerId', bookerId);
-    else throw new Error('userId, djId ou bookerId requis.');
+    else if (venueId) params.set('venueId', venueId);
+    else throw new Error('userId, djId, bookerId ou venueId requis.');
     return apiRequest(`/api/feed/wall?${params}`, { noCache: true }, token);
   },
 
-  // ✅ Abonnements : suivre / ne plus suivre un profil (DJ ou Booker)
+  // ✅ Abonnements : suivre / ne plus suivre un profil (DJ, Booker ou Lieu)
   followDj: async (token, djId) => {
     if (!token) throw new Error('Token requis.');
     return apiRequest(`/api/follow/dj/${djId}`, { method: 'POST' }, token);
@@ -63,15 +64,27 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
     if (!token) throw new Error('Token requis.');
     return apiRequest(`/api/follow/booker/${bookerId}`, { method: 'DELETE' }, token);
   },
-  getFollowStatus: async (token, { djId, bookerId }) => {
+  followVenue: async (token, venueId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/venue/${venueId}`, { method: 'POST' }, token);
+  },
+  unfollowVenue: async (token, venueId) => {
+    if (!token) throw new Error('Token requis.');
+    return apiRequest(`/api/follow/venue/${venueId}`, { method: 'DELETE' }, token);
+  },
+  getFollowStatus: async (token, { djId, bookerId, venueId }) => {
     if (!token) throw new Error('Token requis.');
     const params = new URLSearchParams();
     if (djId) params.set('djId', djId);
     if (bookerId) params.set('bookerId', bookerId);
+    if (venueId) params.set('venueId', venueId);
     return apiRequest(`/api/follow/status?${params}`, {}, token);
   },
   getBookerProfileById: async (bookerId) => {
     return apiRequest(`/api/booker/${bookerId}/public`);
+  },
+  getVenueProfileById: async (venueId) => {
+    return apiRequest(`/api/venue/${venueId}/public`);
   },
 
   getCommunityProfile: async (token) => {

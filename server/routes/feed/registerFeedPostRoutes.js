@@ -32,16 +32,16 @@ app.post(
   try {
     const userId = req.user.id;
 
-    // Vérifier que l'utilisateur est un DJ ou un Booker
+    // Vérifier que l'utilisateur est un DJ, Booker ou Lieu
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { activeProfileType: true },
     });
 
-    if (!user || (user.activeProfileType !== 'DJ' && user.activeProfileType !== 'BOOKER')) {
+    if (!user || !['DJ', 'BOOKER', 'VENUE'].includes(user.activeProfileType)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les DJs et les Bookers peuvent uploader des images.',
+        message: 'Seuls les DJs, organisateurs et lieux peuvent uploader des images.',
       });
     }
 
@@ -122,7 +122,7 @@ app.post(
 });
 
 /**
- * ✅ MODIFICATION: Créer un nouveau post dans le feed (DJ et Booker)
+ * Créer un nouveau post dans le feed (DJ, Booker, Lieu)
  * @route POST /api/feed/post
  */
 app.post('/api/feed/post', authenticateToken, async (req, res) => {
@@ -130,16 +130,15 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { content, imageUrl } = req.body;
 
-    // Vérifier que l'utilisateur est un DJ ou un Booker
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { activeProfileType: true },
     });
 
-    if (!user || (user.activeProfileType !== 'DJ' && user.activeProfileType !== 'BOOKER')) {
+    if (!user || !['DJ', 'BOOKER', 'VENUE'].includes(user.activeProfileType)) {
       return res.status(403).json({
         success: false,
-        message: 'Seuls les DJs et les Bookers peuvent créer des posts. Les profils Community peuvent commenter.',
+        message: 'Seuls les DJs, organisateurs et lieux peuvent créer des posts. Les profils Community peuvent commenter.',
       });
     }
 
@@ -226,13 +225,38 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
           nom: true,
           prenom: true,
           bookerType: true,
+          profileImage: true,
+        },
+      };
+    }
+    // Si c'est un Lieu
+    else if (user.activeProfileType === 'VENUE') {
+      const venueProfile = await prisma.userVenue.findFirst({
+        where: { userId: userId },
+        select: { id: true },
+      });
+
+      if (!venueProfile) {
+        return res.status(404).json({
+          success: false,
+          message: 'Profil lieu introuvable.',
+        });
+      }
+
+      postData.venueId = venueProfile.id;
+      includeData.venue = {
+        select: {
+          venueName: true,
+          city: true,
+          address: true,
+          profileImage: true,
         },
       };
     }
     else {
       return res.status(400).json({
         success: false,
-        message: 'Type de profil invalide. Seuls les DJs et Bookers peuvent créer des posts.',
+        message: 'Type de profil invalide. Seuls les DJs, organisateurs et lieux peuvent créer des posts.',
       });
     }
 
@@ -270,6 +294,16 @@ app.post('/api/feed/post', authenticateToken, async (req, res) => {
         name: post.booker.pseudo?.trim() || `${post.booker.nom} ${post.booker.prenom}`,
         bookerType: post.booker.bookerType,
         profileImage: post.booker.profileImage,
+      };
+    }
+
+    if (post.venue) {
+      responsePost.venue = {
+        id: post.venueId,
+        venueName: post.venue.venueName,
+        city: post.venue.city,
+        address: post.venue.address,
+        profileImage: post.venue.profileImage,
       };
     }
 

@@ -1,5 +1,5 @@
 /**
- * Abonnements DJ / Booker et profil booker public.
+ * Abonnements DJ / Booker / Lieu et profil booker public.
  */
 const prisma = require('../../lib/prisma');
 
@@ -194,11 +194,112 @@ app.delete('/api/follow/booker/:bookerId', authenticateToken, async (req, res) =
   }
 });
 
-// Vérifier si l'utilisateur suit un profil (djId ou bookerId en query)
+// Suivre un profil Lieu (UserVenue.id)
+app.post('/api/follow/venue/:venueId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { venueId } = req.params;
+
+    const venue = await prisma.userVenue.findUnique({ where: { id: venueId } });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const existing = await prisma.followVenue.findUnique({
+      where: { followerId_venueId: { followerId, venueId } },
+    });
+    if (existing) {
+      return res.json({ success: true, following: true, message: 'Déjà abonné.' });
+    }
+
+    await prisma.followVenue.create({
+      data: { followerId, venueId },
+    });
+
+    res.status(201).json({ success: true, following: true, message: 'Abonnement ajouté.' });
+  } catch (error) {
+    console.error('Erreur follow Lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Ne plus suivre un profil Lieu
+app.delete('/api/follow/venue/:venueId', authenticateToken, async (req, res) => {
+  try {
+    const followerId = req.user.id;
+    const { venueId } = req.params;
+
+    await prisma.followVenue.deleteMany({
+      where: { followerId, venueId },
+    });
+
+    res.json({ success: true, following: false, message: 'Abonnement retiré.' });
+  } catch (error) {
+    console.error('Erreur unfollow Lieu:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * Profil lieu public (sans auth)
+ * @route GET /api/venue/:venueId/public
+ */
+app.get('/api/venue/:venueId/public', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+    const venue = await prisma.userVenue.findUnique({
+      where: { id: venueId },
+      include: {
+        _count: { select: { feedPosts: true, followers: true } },
+      },
+    });
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Profil lieu non trouvé.' });
+    }
+
+    const getRequestBaseUrl = () => {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) return publicUrl.replace(/\/$/, '');
+      const host = req.get('host');
+      const forwardedProto = req.get('x-forwarded-proto');
+      const proto = forwardedProto || (host && host.includes('trycloudflare.com') ? 'https' : req.protocol);
+      return host ? `${proto}://${host}` : '';
+    };
+    const baseUrl = getRequestBaseUrl();
+    const normalizeImageUrl = (url) => {
+      if (!url) return null;
+      if (url.startsWith('/uploads/')) return `${baseUrl}${url}`;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return url;
+    };
+
+    res.json({
+      success: true,
+      venue: {
+        id: venue.id,
+        userId: venue.userId,
+        venueName: venue.venueName,
+        address: venue.address,
+        city: venue.city,
+        profileImage: normalizeImageUrl(venue.profileImage),
+        bannerImage: normalizeImageUrl(venue.bannerImage),
+        averageRatingGlobal: venue.averageRatingGlobal,
+        maxCapacity: venue.maxCapacity ?? null,
+        postsCount: venue._count.feedPosts,
+        followersCount: venue._count.followers,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur profil lieu public:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Vérifier si l'utilisateur suit un profil (djId, bookerId ou venueId en query)
 app.get('/api/follow/status', authenticateToken, async (req, res) => {
   try {
     const followerId = req.user.id;
-    const { djId, bookerId } = req.query;
+    const { djId, bookerId, venueId } = req.query;
 
     if (djId) {
       const follow = await prisma.followDj.findUnique({
@@ -212,8 +313,14 @@ app.get('/api/follow/status', authenticateToken, async (req, res) => {
       });
       return res.json({ success: true, following: !!follow });
     }
+    if (venueId) {
+      const follow = await prisma.followVenue.findUnique({
+        where: { followerId_venueId: { followerId, venueId } },
+      });
+      return res.json({ success: true, following: !!follow });
+    }
 
-    return res.status(400).json({ success: false, message: 'djId ou bookerId requis.' });
+    return res.status(400).json({ success: false, message: 'djId, bookerId ou venueId requis.' });
   } catch (error) {
     console.error('Erreur follow status:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -221,9 +328,7 @@ app.get('/api/follow/status', authenticateToken, async (req, res) => {
 });
 
 /**
- * ✅ Feed Abonnements : posts + événements des profils suivis (DJ ou Booker)
+ * Feed Abonnements : posts + événements des profils suivis (DJ, Booker ou Lieu)
  * @route GET /api/feed/following
- * @query limit, offset
- * @auth requis
  */
 };

@@ -249,6 +249,7 @@ app.get('/api/booker/venues', authenticateToken, async (req, res) => {
 
     const formattedVenues = venues.map((venue) => ({
       id: venue.id,
+      userId: venue.userId,
       venueName: venue.venueName,
       address: venue.address,
       city: venue.city,
@@ -295,6 +296,7 @@ app.get('/api/venues/public', async (req, res) => {
       success: true,
       venues: venues.map((v) => ({
         id: v.id,
+        userId: v.userId,
         venueName: v.venueName,
         address: v.address,
         city: v.city,

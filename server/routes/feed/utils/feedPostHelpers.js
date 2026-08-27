@@ -23,6 +23,14 @@ const FEED_POST_INCLUDE = {
       profileImage: true,
     },
   },
+  venue: {
+    select: {
+      venueName: true,
+      city: true,
+      address: true,
+      profileImage: true,
+    },
+  },
   author: {
     select: {
       username: true,
@@ -50,6 +58,14 @@ const ORIGINAL_POST_INCLUDE = {
       profileImage: true,
     },
   },
+  venue: {
+    select: {
+      venueName: true,
+      city: true,
+      address: true,
+      profileImage: true,
+    },
+  },
   author: {
     select: {
       id: true,
@@ -57,6 +73,13 @@ const ORIGINAL_POST_INCLUDE = {
     },
   },
 };
+
+function resolveFeedProfileType(post) {
+  if (post.djId) return 'DJ';
+  if (post.bookerId) return 'BOOKER';
+  if (post.venueId) return 'VENUE';
+  return null;
+}
 
 async function resolveFeedAuthorProfile(userId, activeProfileType) {
   if (activeProfileType === 'DJ') {
@@ -67,7 +90,7 @@ async function resolveFeedAuthorProfile(userId, activeProfileType) {
     if (!djProfile) {
       return { error: { status: 404, message: 'Profil DJ introuvable.' } };
     }
-    return { profileType: 'DJ', djId: djProfile.id, bookerId: null };
+    return { profileType: 'DJ', djId: djProfile.id, bookerId: null, venueId: null };
   }
 
   if (activeProfileType === 'BOOKER') {
@@ -78,13 +101,24 @@ async function resolveFeedAuthorProfile(userId, activeProfileType) {
     if (!bookerProfile) {
       return { error: { status: 404, message: 'Profil Booker introuvable.' } };
     }
-    return { profileType: 'BOOKER', djId: null, bookerId: bookerProfile.id };
+    return { profileType: 'BOOKER', djId: null, bookerId: bookerProfile.id, venueId: null };
+  }
+
+  if (activeProfileType === 'VENUE') {
+    const venueProfile = await prisma.userVenue.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!venueProfile) {
+      return { error: { status: 404, message: 'Profil lieu introuvable.' } };
+    }
+    return { profileType: 'VENUE', djId: null, bookerId: null, venueId: venueProfile.id };
   }
 
   return {
     error: {
       status: 403,
-      message: 'Seuls les DJs et les Bookers peuvent publier ou reposter sur le feed.',
+      message: 'Seuls les DJs, organisateurs et lieux peuvent publier ou reposter sur le feed.',
     },
   };
 }
@@ -100,6 +134,32 @@ async function requireDjOrBookerUser(userId) {
       error: {
         status: 403,
         message: 'Seuls les artistes et organisateurs peuvent publier ou reposter sur le feed.',
+      },
+    };
+  }
+
+  const profile = await resolveFeedAuthorProfile(userId, user.activeProfileType);
+  if (profile.error) return profile;
+
+  return {
+    activeProfileType: user.activeProfileType,
+    ...profile,
+  };
+}
+
+/** DJ, Booker ou Lieu — création de posts originaux. */
+async function requireFeedPublisherUser(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { activeProfileType: true },
+  });
+
+  const allowed = user && ['DJ', 'BOOKER', 'VENUE'].includes(user.activeProfileType);
+  if (!allowed) {
+    return {
+      error: {
+        status: 403,
+        message: 'Seuls les DJs, organisateurs et lieux peuvent créer des posts. Les profils Community peuvent commenter.',
       },
     };
   }
@@ -129,7 +189,7 @@ async function resolveRootFeedPostId(postId) {
 }
 
 function formatFeedPostAuthorBlock(post, normalizeImageUrl) {
-  const profileType = post.djId ? 'DJ' : post.bookerId ? 'BOOKER' : null;
+  const profileType = resolveFeedProfileType(post);
   const formatted = {
     profileType,
     author: {
@@ -161,6 +221,19 @@ function formatFeedPostAuthorBlock(post, normalizeImageUrl) {
     formatted.bookerId = post.bookerId;
   }
 
+  if (post.venue) {
+    formatted.venue = {
+      id: post.venueId,
+      userId: post.authorId,
+      venueName: post.venue.venueName,
+      city: post.venue.city,
+      address: post.venue.address,
+      profileImage: normalizeImageUrl(post.venue.profileImage),
+    };
+  } else if (post.venueId) {
+    formatted.venueId = post.venueId;
+  }
+
   return formatted;
 }
 
@@ -176,7 +249,7 @@ function formatOriginalFeedPost(post, normalizeImageUrl) {
 }
 
 function formatFeedPost(post, { normalizeImageUrl, userLikedPostIds, userRepostedRootIds }) {
-  const profileType = post.djId ? 'DJ' : post.bookerId ? 'BOOKER' : null;
+  const profileType = resolveFeedProfileType(post);
   const rootId = post.originalPostId || post.id;
 
   const formattedPost = {
@@ -225,6 +298,7 @@ module.exports = {
   FEED_POST_INCLUDE,
   ORIGINAL_POST_INCLUDE,
   requireDjOrBookerUser,
+  requireFeedPublisherUser,
   resolveRootFeedPostId,
   formatFeedPost,
   fetchUserRepostedRootIds,

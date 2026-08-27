@@ -36,15 +36,15 @@ export default function CreateFeedPostPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   /**
-   * ✅ Règle: Seuls les DJ et Organisateur peuvent créer des posts. Les Community peuvent commenter mais pas poster.
+   * Seuls les DJ, Organisateur et Lieu peuvent créer des posts.
    */
   useEffect(() => {
     const activeType = user?.activeProfileType;
-    if (user && activeType && activeType !== 'DJ' && activeType !== 'BOOKER') {
+    if (user && activeType && !['DJ', 'BOOKER', 'VENUE'].includes(activeType)) {
       showError(
         language === 'fr'
-          ? 'Seuls les profils DJ et Organisateur peuvent créer des posts. Les profils Community peuvent commenter.'
-          : 'Only DJ and Organisateur profiles can create posts. Community profiles can comment.'
+          ? 'Seuls les profils DJ, Organisateur et Lieu peuvent créer des posts. Les profils Community peuvent commenter.'
+          : 'Only DJ, Organizer and Venue profiles can create posts. Community profiles can comment.'
       );
       goBack();
     }
@@ -141,13 +141,13 @@ export default function CreateFeedPostPage() {
       return;
     }
 
-    // Vérifier que le profil actif est DJ ou Organisateur (backend refuse sinon)
+    // Vérifier que le profil actif est DJ, Organisateur ou Lieu (backend refuse sinon)
     const activeType = user?.activeProfileType;
-    if (activeType !== 'DJ' && activeType !== 'BOOKER') {
+    if (!['DJ', 'BOOKER', 'VENUE'].includes(activeType)) {
       showError(
         language === 'fr'
-          ? 'Seuls les profils DJ et Organisateur peuvent poster. Passe sur ton profil Organisateur ou DJ via le menu.'
-          : 'Only DJ and Organizer profiles can post. Switch to your Organizer or DJ profile via the menu.'
+          ? 'Seuls les profils DJ, Organisateur et Lieu peuvent poster. Passe sur le bon profil via le menu.'
+          : 'Only DJ, Organizer and Venue profiles can post. Switch profile via the menu.'
       );
       return;
     }

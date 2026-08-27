@@ -22,8 +22,8 @@ import { Spacing } from '../../constants/theme';
  * Liste de publications pour l'onglet « Mur » d'un profil.
  * S'affiche à l'intérieur d'un ScrollView parent (pas de scroll imbriqué).
  *
- * @param {{ userId?: string, djId?: string, bookerId?: string }} wallFilter
- * @param {boolean} isOwnProfile — affiche CTA création si DJ/Booker
+ * @param {{ userId?: string, djId?: string, bookerId?: string, venueId?: string }} wallFilter
+ * @param {boolean} isOwnProfile — affiche CTA création si DJ/Booker/Lieu
  * @param {boolean} enabled — false tant que l'onglet Mur n'est pas actif
  */
 export default function ProfileWallStream({
@@ -97,7 +97,7 @@ export default function ProfileWallStream({
 
   const canCreatePost =
     isOwnProfile &&
-    (user?.activeProfileType === 'DJ' || user?.activeProfileType === 'BOOKER');
+    ['DJ', 'BOOKER', 'VENUE'].includes(user?.activeProfileType);
 
   const handleRepost = async (item) => {
     if (!canUserRepost) {
@@ -136,10 +136,14 @@ export default function ProfileWallStream({
 
   const navigateToPostProfile = (postItem, { original = false } = {}) => {
     const source = original && postItem.originalPost ? postItem.originalPost : postItem;
-    const isDjPost = source.profileType === 'DJ';
-    if (isDjPost && source.dj) {
+    if (source.profileType === 'DJ' && source.dj) {
       navigate('djProfile', { djId: source.dj.id, djUserId: source.dj.userId });
-    } else if (!isDjPost && (source.booker?.id || source.bookerId)) {
+    } else if (source.profileType === 'VENUE' && (source.venue?.id || source.venueId)) {
+      navigate('venueProfile', {
+        venueId: source.venue?.id || source.venueId,
+        venueName: source.venue?.venueName,
+      });
+    } else if (source.booker?.id || source.bookerId) {
       navigate('bookerProfile', { bookerId: source.booker?.id || source.bookerId });
     }
   };
@@ -173,15 +177,25 @@ export default function ProfileWallStream({
   };
 
   const renderPostCard = (item) => {
-    const isDj = item.profileType === 'DJ';
+    const profileType = item.profileType || 'BOOKER';
+    const isDj = profileType === 'DJ';
+    const isVenue = profileType === 'VENUE';
     const profileName = isDj
       ? item.dj?.artistName
-      : item.booker?.name || item.author?.username;
-    const profileLocation = isDj ? item.dj?.city : null;
+      : isVenue
+        ? item.venue?.venueName
+        : item.booker?.name || item.author?.username;
+    const profileLocation = isDj
+      ? item.dj?.city
+      : isVenue
+        ? item.venue?.city || item.venue?.address
+        : null;
     const isAuthor = user?.id && item.author?.id === user.id;
     const baseProfileImg = isDj
       ? normalizeMediaUrl(item.dj?.profileImage)
-      : normalizeMediaUrl(item.booker?.profileImage);
+      : isVenue
+        ? normalizeMediaUrl(item.venue?.profileImage)
+        : normalizeMediaUrl(item.booker?.profileImage);
     const profileImage =
       isAuthor && baseProfileImg
         ? `${String(baseProfileImg).split('?')[0]}?cb=${feedAvatarBust}`
@@ -207,6 +221,7 @@ export default function ProfileWallStream({
         imageUri={displayImageUri}
         isBrokenImage={isBrokenImage}
         isDj={isDj}
+        profileType={profileType}
         isAuthor={isAuthor}
         liked={!!likedPosts[item.id]}
         likesCount={
@@ -276,9 +291,9 @@ export default function ProfileWallStream({
             isOwnProfile
               ? fr
                 ? canCreatePost
-                  ? 'Publie depuis ton profil artiste ou organisateur — tes posts apparaîtront ici.'
-                  : 'Passe sur ton profil DJ ou Organisateur pour publier sur le fil.'
-                : 'You have not posted yet. Switch to your artist or organizer profile to publish.'
+                  ? 'Publie depuis ton profil — tes posts apparaîtront ici.'
+                  : 'Passe sur ton profil DJ, Organisateur ou Lieu pour publier sur le fil.'
+                : 'You have not posted yet. Switch to your artist, organizer or venue profile to publish.'
               : fr
                 ? 'Ce profil n’a pas encore de publication.'
                 : 'This profile has no posts yet.'

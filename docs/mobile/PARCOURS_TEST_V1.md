@@ -156,7 +156,7 @@ Checklist manuelle pour la sortie V1.
 | [ ] | Contrat sans montant → alerte explicite | | | |
 | [ ] | Retour chat stable (pas clignotement) | | | |
 | [ ] | Profil lieu → avis venueRatings | | | |
-| [ ] | ⚠️ FAB **Publier** feed lieux | *Non implémenté — noter comportement* | | | |
+| [ ] | FAB **Publier** feed lieux | | | |
 
 ---
 

@@ -4,15 +4,31 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
 import { styles } from './NoxFeedPostCard.styles';
 
-function getProfileMeta(block, isDjBlock) {
-  if (!block) return { name: 'Utilisateur', location: null, image: null, isDj: isDjBlock };
-  const isDj = isDjBlock ?? block.profileType === 'DJ';
-  const name = isDj
-    ? block.dj?.artistName
-    : block.booker?.name || block.author?.username;
-  const location = isDj ? block.dj?.city : null;
-  const image = isDj ? block.dj?.profileImage : block.booker?.profileImage;
-  return { name, location, image, isDj };
+function getProfileMeta(block) {
+  if (!block) return { name: 'Utilisateur', location: null, image: null, profileType: null };
+  const profileType = block.profileType || (block.dj ? 'DJ' : block.venue ? 'VENUE' : block.booker ? 'BOOKER' : null);
+  if (profileType === 'DJ') {
+    return {
+      name: block.dj?.artistName,
+      location: block.dj?.city,
+      image: block.dj?.profileImage,
+      profileType: 'DJ',
+    };
+  }
+  if (profileType === 'VENUE') {
+    return {
+      name: block.venue?.venueName,
+      location: block.venue?.city || block.venue?.address,
+      image: block.venue?.profileImage,
+      profileType: 'VENUE',
+    };
+  }
+  return {
+    name: block.booker?.name || block.author?.username,
+    location: null,
+    image: block.booker?.profileImage,
+    profileType: 'BOOKER',
+  };
 }
 
 function PostBody({ content, imageUri, isBrokenImage, language, onImageError }) {
@@ -50,6 +66,7 @@ export default function NoxFeedPostCard({
   imageUri,
   isBrokenImage,
   isDj,
+  profileType: profileTypeProp,
   isAuthor,
   liked,
   likesCount,
@@ -76,8 +93,28 @@ export default function NoxFeedPostCard({
   const fr = language === 'fr';
   const original = item.originalPost;
   const showEmbed = item.isRepost && original;
+  const profileType = profileTypeProp || (isDj ? 'DJ' : item?.profileType) || 'BOOKER';
 
-  const originalMeta = showEmbed ? getProfileMeta(original, original.profileType === 'DJ') : null;
+  const originalMeta = showEmbed ? getProfileMeta(original) : null;
+
+  const badgeIcon =
+    profileType === 'DJ' ? 'musical-notes' : profileType === 'VENUE' ? 'business' : 'calendar';
+  const badgeLabel = profileType === 'DJ' ? 'DJ' : profileType === 'VENUE' ? 'Lieu' : 'Org.';
+  const avatarStyle =
+    profileType === 'DJ'
+      ? styles.avatarDj
+      : profileType === 'VENUE'
+        ? styles.avatarVenue
+        : styles.avatarBooker;
+  const badgeStyle =
+    profileType === 'DJ'
+      ? styles.badgeDj
+      : profileType === 'VENUE'
+        ? styles.badgeVenue
+        : styles.badgeBooker;
+  const avatarLetter =
+    profileName?.charAt(0)?.toUpperCase() ||
+    (profileType === 'DJ' ? 'D' : profileType === 'VENUE' ? 'L' : 'O');
 
   return (
     <View style={[styles.card, highlighted && styles.cardHighlighted]}>
@@ -92,10 +129,8 @@ export default function NoxFeedPostCard({
             {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.avatarImage} />
             ) : (
-              <View style={[styles.avatarPlaceholder, isDj ? styles.avatarDj : styles.avatarBooker]}>
-                <Text style={styles.avatarText}>
-                  {profileName?.charAt(0)?.toUpperCase() || (isDj ? 'D' : 'O')}
-                </Text>
+              <View style={[styles.avatarPlaceholder, avatarStyle]}>
+                <Text style={styles.avatarText}>{avatarLetter}</Text>
               </View>
             )}
           </View>
@@ -104,9 +139,9 @@ export default function NoxFeedPostCard({
               <Text style={styles.authorName} numberOfLines={1}>
                 {profileName || 'Utilisateur'}
               </Text>
-              <View style={[styles.badge, isDj ? styles.badgeDj : styles.badgeBooker]}>
-                <Ionicons name={isDj ? 'musical-notes' : 'calendar'} size={10} color={Colors.text} />
-                <Text style={styles.badgeText}>{isDj ? 'DJ' : 'Org.'}</Text>
+              <View style={[styles.badge, badgeStyle]}>
+                <Ionicons name={badgeIcon} size={10} color={Colors.text} />
+                <Text style={styles.badgeText}>{badgeLabel}</Text>
               </View>
             </View>
             <View style={styles.metaRow}>
@@ -145,7 +180,16 @@ export default function NoxFeedPostCard({
               onPress={onPressOriginalProfile}
               disabled={!onPressOriginalProfile}
             >
-              <View style={[styles.embeddedAvatar, originalMeta?.isDj ? styles.avatarDj : styles.avatarBooker]}>
+              <View
+                style={[
+                  styles.embeddedAvatar,
+                  originalMeta?.profileType === 'DJ'
+                    ? styles.avatarDj
+                    : originalMeta?.profileType === 'VENUE'
+                      ? styles.avatarVenue
+                      : styles.avatarBooker,
+                ]}
+              >
                 {originalMeta?.image ? (
                   <Image source={{ uri: originalMeta.image }} style={styles.avatarImage} />
                 ) : (

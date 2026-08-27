@@ -32,9 +32,7 @@ const OPTIONS = [
     icon: 'create-outline',
     labelFr: 'Publier',
     labelEn: 'Post update',
-    enabled: false,
-    soonFr: 'Bientôt disponible (Phase B)',
-    soonEn: 'Coming soon (Phase B)',
+    enabled: true,
   },
 ];
 
@@ -51,6 +49,8 @@ export default function NoxCreateSheet({ visible, onClose, navigate, language = 
       navigate('lieuxMedia');
     } else if (option.id === 'availability') {
       navigate('lieuxAvailability');
+    } else if (option.id === 'post') {
+      navigate('createFeedPost');
     }
   };
 

@@ -60,10 +60,15 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       where: { followerId: userId },
       select: { bookerId: true },
     });
+    const followedVenues = await prisma.followVenue.findMany({
+      where: { followerId: userId },
+      select: { venueId: true },
+    });
     const djIds = followedDjs.map((f) => f.djId);
     const bookerIds = followedBookers.map((f) => f.bookerId);
+    const venueIds = followedVenues.map((f) => f.venueId);
 
-    if (djIds.length === 0 && bookerIds.length === 0) {
+    if (djIds.length === 0 && bookerIds.length === 0 && venueIds.length === 0) {
       return res.json({ success: true, feed: [], total: 0 });
     }
 
@@ -71,6 +76,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       OR: [
         ...(djIds.length > 0 ? [{ djId: { in: djIds } }] : []),
         ...(bookerIds.length > 0 ? [{ bookerId: { in: bookerIds } }] : []),
+        ...(venueIds.length > 0 ? [{ venueId: { in: venueIds } }] : []),
       ],
     };
 
@@ -382,18 +388,18 @@ app.get('/api/feed', async (req, res) => {
 });
 
 /**
- * Mur profil — publications (originales + reposts) d'un DJ, booker ou utilisateur.
+ * Mur profil — publications (originales + reposts) d'un DJ, booker, lieu ou utilisateur.
  * @route GET /api/feed/wall
- * @query userId | djId | bookerId — un seul filtre requis
+ * @query userId | djId | bookerId | venueId — un seul filtre requis
  */
 app.get('/api/feed/wall', async (req, res) => {
   try {
-    const { userId, djId, bookerId } = req.query;
-    const filters = [userId, djId, bookerId].filter(Boolean);
+    const { userId, djId, bookerId, venueId } = req.query;
+    const filters = [userId, djId, bookerId, venueId].filter(Boolean);
     if (filters.length !== 1) {
       return res.status(400).json({
         success: false,
-        message: 'Indiquez exactement un paramètre : userId, djId ou bookerId.',
+        message: 'Indiquez exactement un paramètre : userId, djId, bookerId ou venueId.',
       });
     }
 
@@ -403,7 +409,9 @@ app.get('/api/feed/wall', async (req, res) => {
       ? { authorId: String(userId) }
       : djId
         ? { djId: String(djId) }
-        : { bookerId: String(bookerId) };
+        : bookerId
+          ? { bookerId: String(bookerId) }
+          : { venueId: String(venueId) };
 
     const posts = await prisma.feedPost.findMany({
       where,

@@ -205,10 +205,14 @@ export default function CommunityFeedStream({
 
   const navigateToPostProfile = (postItem, { original = false } = {}) => {
     const source = original && postItem.originalPost ? postItem.originalPost : postItem;
-    const isDjPost = source.profileType === 'DJ';
-    if (isDjPost && source.dj) {
+    if (source.profileType === 'DJ' && source.dj) {
       navigate('djProfile', { djId: source.dj.id, djUserId: source.dj.userId });
-    } else if (!isDjPost && (source.booker?.id || source.bookerId)) {
+    } else if (source.profileType === 'VENUE' && (source.venue?.id || source.venueId)) {
+      navigate('venueProfile', {
+        venueId: source.venue?.id || source.venueId,
+        venueName: source.venue?.venueName,
+      });
+    } else if (source.booker?.id || source.bookerId) {
       navigate('bookerProfile', { bookerId: source.booker?.id || source.bookerId });
     }
   };
@@ -288,15 +292,25 @@ export default function CommunityFeedStream({
   );
 
   const renderPostCard = (item) => {
-    const isDj = item.profileType === 'DJ';
+    const profileType = item.profileType || 'BOOKER';
+    const isDj = profileType === 'DJ';
+    const isVenue = profileType === 'VENUE';
     const profileName = isDj
       ? item.dj?.artistName
-      : item.booker?.name || item.author?.username;
-    const profileLocation = isDj ? item.dj?.city : null;
+      : isVenue
+        ? item.venue?.venueName
+        : item.booker?.name || item.author?.username;
+    const profileLocation = isDj
+      ? item.dj?.city
+      : isVenue
+        ? item.venue?.city || item.venue?.address
+        : null;
     const isAuthor = user?.id && item.author?.id === user.id;
     const baseProfileImg = isDj
       ? normalizeMediaUrl(item.dj?.profileImage)
-      : normalizeMediaUrl(item.booker?.profileImage);
+      : isVenue
+        ? normalizeMediaUrl(item.venue?.profileImage)
+        : normalizeMediaUrl(item.booker?.profileImage);
     const profileImage =
       isAuthor && baseProfileImg
         ? `${String(baseProfileImg).split('?')[0]}?cb=${feedAvatarBust}`
@@ -326,6 +340,7 @@ export default function CommunityFeedStream({
           imageUri={displayImageUri}
           isBrokenImage={isBrokenImage}
           isDj={isDj}
+          profileType={profileType}
           isAuthor={isAuthor}
           highlighted={activeHighlightId === item.id}
           liked={!!likedPosts[item.id]}

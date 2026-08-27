@@ -50,6 +50,9 @@ export const styles = StyleSheet.create({
   avatarBooker: {
     backgroundColor: '#3DD6A8',
   },
+  avatarVenue: {
+    backgroundColor: '#F0A04B',
+  },
   avatarText: {
     color: Colors.text,
     fontSize: 17,
@@ -85,6 +88,11 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(61, 214, 168, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(61, 214, 168, 0.35)',
+  },
+  badgeVenue: {
+    backgroundColor: 'rgba(240, 160, 75, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(240, 160, 75, 0.4)',
   },
   badgeText: {
     color: Colors.text,

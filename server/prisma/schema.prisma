@@ -39,6 +39,7 @@ model User {
   postLikes                 FeedPostLike[]
   followingBookers          FollowBooker[]
   followingDjs              FollowDj[]
+  followingVenues           FollowVenue[]
   payments                  Payment[]
   reportsAssigned           Report[]           @relation("ReportsAssigned")
   reportsMade               Report[]           @relation("ReportsMade")
@@ -270,6 +271,8 @@ model UserVenue {
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   media                  VenueMedia[]
   ratings                VenueRating[]
+  feedPosts              FeedPost[]
+  followers              FollowVenue[]
 
   @@index([userId])
 }
@@ -636,6 +639,7 @@ model FeedPost {
   authorId        String
   djId            String?
   bookerId        String?
+  venueId         String?
   originalPostId  String?
   content         String
   imageUrl        String?
@@ -647,6 +651,7 @@ model FeedPost {
   author          User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   booker          UserBooker?        @relation(fields: [bookerId], references: [id], onDelete: Cascade)
   dj              UserDj?            @relation(fields: [djId], references: [id], onDelete: Cascade)
+  venue           UserVenue?         @relation(fields: [venueId], references: [id], onDelete: Cascade)
   originalPost    FeedPost?          @relation("FeedRepost", fields: [originalPostId], references: [id], onDelete: Cascade)
   reposts         FeedPost[]         @relation("FeedRepost")
   comments        FeedPostComment[]
@@ -655,6 +660,7 @@ model FeedPost {
   @@index([authorId])
   @@index([djId])
   @@index([bookerId])
+  @@index([venueId])
   @@index([createdAt])
   @@index([originalPostId])
 }
@@ -729,6 +735,19 @@ model FollowBooker {
   @@unique([followerId, bookerId])
   @@index([followerId])
   @@index([bookerId])
+}
+
+model FollowVenue {
+  id         String    @id @default(uuid())
+  followerId String
+  venueId    String
+  createdAt  DateTime  @default(now())
+  venue      UserVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  follower   User      @relation(fields: [followerId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, venueId])
+  @@index([followerId])
+  @@index([venueId])
 }
 
 enum UserRole {

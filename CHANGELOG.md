@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 25 au 28 août 2026
 
+### Ajouté (Lieux — publication feed + abonnements)
+- **Prisma** : `FeedPost.venueId` + modèle **`FollowVenue`** (migration `20260827140000_feed_post_venue_follow`).
+- **API** : création / upload image de posts pour profil **VENUE** ; `POST|DELETE /api/follow/venue/:venueId` ; `GET /api/follow/status?venueId=` ; `GET /api/venue/:venueId/public` ; fil Abonnements et mur (`/api/feed/wall?venueId=`) incluent les lieux.
+- **Mobile** : FAB Lieux **Publier** → `createFeedPost` ; `CreateFeedPostPage` accepte VENUE ; badge Lieu sur `NoxFeedPostCard` ; **Suivre** + mur publications sur `VenueProfilePage`.
+
 ### Modifié (DJ — hub dashboard en grille)
 - **`DjDashboardPage`** : accueil en **grille 2×N** (gros carrés + icônes Ionicons) ; navigation par section avec retour au hub ; deep links `openSection` / bookings conservés.
 

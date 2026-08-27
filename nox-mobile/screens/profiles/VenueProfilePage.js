@@ -20,6 +20,9 @@ import { api, normalizeMediaUrl } from '../../api/config';
 import StarRating from '../../components/StarRating';
 import VideoPlayer from '../../components/VideoPlayer';
 import { NoxText, NoxButton, NoxCard } from '../../components/nox';
+import ProfileWallStream from '../../components/community/ProfileWallStream';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +31,7 @@ export default function VenueProfilePage() {
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
   const { venueId, selectionMode, selectedVenueId, returnTo, eventId, replaceMode } = routeParams || {};
 
   const [venue, setVenue] = useState(null);
@@ -37,6 +41,8 @@ export default function VenueProfilePage() {
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [bannerBroken, setBannerBroken] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [loadingFollow, setLoadingFollow] = useState(false);
 
   useEffect(() => {
     if (venueId) {
@@ -44,16 +50,64 @@ export default function VenueProfilePage() {
     }
   }, [venueId]);
 
+  useEffect(() => {
+    if (!user?.token || !venue?.id || venue.userId === user?.id) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await api.getFollowStatus(user.token, { venueId: venue.id });
+        if (mounted && res?.success) setFollowing(!!res.following);
+      } catch {
+        if (mounted) setFollowing(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.token, user?.id, venue?.id, venue?.userId]);
+
+  const handleFollowToggle = async () => {
+    if (!user?.token || !venue?.id || loadingFollow) return;
+    if (venue.userId === user?.id) return;
+    setLoadingFollow(true);
+    try {
+      if (following) {
+        await api.unfollowVenue(user.token, venue.id);
+        setFollowing(false);
+        showSuccess(language === 'fr' ? 'Abonnement retiré.' : 'Unfollowed.');
+      } else {
+        await api.followVenue(user.token, venue.id);
+        setFollowing(true);
+        showSuccess(language === 'fr' ? 'Vous suivez ce lieu.' : 'You now follow this venue.');
+      }
+    } catch (e) {
+      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+    } finally {
+      setLoadingFollow(false);
+    }
+  };
+
   const fetchVenueProfile = async () => {
     setLoading(true);
     setBannerBroken(false);
     try {
-      const response = await api.getVenues(user.token);
-      if (response && response.success && Array.isArray(response.venues)) {
-        const foundVenue = response.venues.find((v) => v.id === venueId);
-        if (foundVenue) {
-          setVenue(foundVenue);
+      let foundVenue = null;
+      try {
+        const publicRes = await api.getVenueProfileById(venueId);
+        if (publicRes?.success && publicRes.venue) {
+          foundVenue = publicRes.venue;
         }
+      } catch {
+        // fallback liste booker
+      }
+      if (!foundVenue && user?.token) {
+        const response = await api.getVenues(user.token);
+        if (response && response.success && Array.isArray(response.venues)) {
+          foundVenue = response.venues.find((v) => v.id === venueId) || null;
+        }
+      }
+      if (foundVenue) {
+        setVenue(foundVenue);
       }
       const mediaRes = await api.getVenueMedia(venueId);
       if (mediaRes?.success && Array.isArray(mediaRes.media)) {
@@ -191,7 +245,36 @@ export default function VenueProfilePage() {
               });
             }}
           />
+        ) : user?.token && venue.userId && venue.userId !== user?.id ? (
+          <NoxButton
+            label={
+              loadingFollow
+                ? '…'
+                : following
+                  ? language === 'fr'
+                    ? 'Abonné'
+                    : 'Following'
+                  : language === 'fr'
+                    ? 'Suivre'
+                    : 'Follow'
+            }
+            variant={following ? 'secondary' : 'primary'}
+            disabled={loadingFollow}
+            style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
+            onPress={handleFollowToggle}
+          />
         ) : null}
+      </View>
+
+      <View style={styles.wallSection}>
+        <NoxText variant="titleSecondary" style={styles.wallTitle}>
+          {language === 'fr' ? 'Publications' : 'Posts'}
+        </NoxText>
+        <ProfileWallStream
+          wallFilter={venue?.id ? { venueId: venue.id } : null}
+          isOwnProfile={!!(user?.id && venue.userId === user?.id)}
+          enabled={!!venue?.id}
+        />
       </View>
 
       <NoxCard style={styles.card}>
@@ -311,6 +394,9 @@ export default function VenueProfilePage() {
         visible={videoModalVisible}
         onClose={() => setVideoModalVisible(false)}
       />
+      {toast?.visible ? (
+        <Toast message={toast.message} type={toast.type} onHide={hideToast} />
+      ) : null}
     </ScrollView>
   );
 }
@@ -373,6 +459,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     alignItems: 'center',
     marginBottom: Spacing.lg,
+  },
+  wallSection: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  wallTitle: {
+    marginBottom: Spacing.md,
+    textTransform: 'uppercase',
+    fontSize: 13,
   },
   venueName: {
     textAlign: 'center',

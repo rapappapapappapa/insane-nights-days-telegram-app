@@ -3,7 +3,7 @@
 Liste de tâches **courante** (notes produit / UX).  
 Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan global : [`PLAN_MIGRATION_NOX_LEGACY.md`](PLAN_MIGRATION_NOX_LEGACY.md) · parcours test : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
-*Dernière mise à jour : 25 août 2026.*
+*Dernière mise à jour : 27 août 2026.*
 
 ---
 
@@ -14,11 +14,11 @@ Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan glo
 - [x] **Liste d’amis** : `getMyCommunityId is not defined` (serveur — `eventGroupController`). *Push 12440ae — deploy Railway.*
 - [x] **Dashboard DJ** : crash `useEffect` (`DjDashboardPage`). *Push 12440ae — OTA mobile à faire.*
 - [x] **Accueil DJ** : dashboard pro à la place du fil (`proHome`) — feed via profil Communauté.
-- [ ] **OTA mobile** : publier le fix dashboard DJ + accueil DJ (+ lot sem. 17–23 si pas encore reçu).
+- [ ] **OTA mobile** : publier le fix dashboard DJ + accueil DJ (+ lot sem. 17–23 + publication Lieux si pas encore reçu).
 
-### Suite produit (si bande passante)
+### Suite produit
 
-- [ ] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed.
+- [x] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed, mur profil, follow.
 - [ ] **Prep stores** : Resend prod, `store:check`, parcours [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
 ---

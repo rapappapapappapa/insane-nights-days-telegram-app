@@ -14,12 +14,12 @@ Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan glo
 - [x] **Liste d’amis** : `getMyCommunityId is not defined` (serveur — `eventGroupController`). *Push 12440ae — deploy Railway.*
 - [x] **Dashboard DJ** : crash `useEffect` (`DjDashboardPage`). *Push 12440ae — OTA mobile à faire.*
 - [x] **Accueil DJ** : dashboard pro à la place du fil (`proHome`) — feed via profil Communauté.
-- [ ] **OTA mobile** : publier le fix dashboard DJ + accueil DJ (+ lot sem. 17–23 + publication Lieux si pas encore reçu).
+- [x] **OTA mobile** : Android preview + iOS production publiés (27 août) — message « Publication Lieux + follow venue + dashboard DJ ».
 
 ### Suite produit
 
-- [x] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed, mur profil, follow.
-- [ ] **Prep stores** : Resend prod, `store:check`, parcours [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
+- [x] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed, mur profil, follow. *Push `b678ced` — migrate deploy Railway au redéploiement.*
+- [x] **Prep stores (technique)** : `store:check` OK (warn bundle TestFlight). Resend : config doc `RESEND_FROM=Nox <noreply@nox.world>` — à vérifier sur le dashboard Railway (pas dans `.env` local). QA manuelle : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
 ---
 

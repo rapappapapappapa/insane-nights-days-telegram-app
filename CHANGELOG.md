@@ -6,6 +6,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 25 au 28 août 2026
 
+### Corrigé (mobile — dashboards pro, safe area)
+- **`NoxProDashboardHeader`** : flèche retour respecte la **safe area** (`useSafeAreaInsets`) + zone tactile élargie — DJ, Booker et Prestataire.
+
+### Modifié (Lieux — polish publication & profil)
+- **`NoxRadialNav`** (rôle VENUE) : slot **Publier** (`createFeedPost`) à la place des notifs radial (cloche sur le dashboard lieu conservée).
+- **`VenueProfilePage`** : avatar `profileImage`, compteurs abonnés / publications, mur **Publications** après la section Médias, retour plus cliquable, capacité `maxCapacity` ou `capacity`.
+- **`CommunityOnboardingPage`** : abonnement aux **lieux** sélectionnés à la fin de l’onboarding (comme pour les DJs).
+- **`GET /api/venues/public`** : expose `postsCount` et `followersCount` (agrégation Prisma).
+
+### Ajouté (outillage)
+- **`npm run store:check:node`** : vérification pré-store sous Windows (sans bash).
+
 ### Ajouté (Lieux — publication feed + abonnements)
 - **Prisma** : `FeedPost.venueId` + modèle **`FollowVenue`** (migration `20260827140000_feed_post_venue_follow`).
 - **API** : création / upload image de posts pour profil **VENUE** ; `POST|DELETE /api/follow/venue/:venueId` ; `GET /api/follow/status?venueId=` ; `GET /api/venue/:venueId/public` ; fil Abonnements et mur (`/api/feed/wall?venueId=`) incluent les lieux.

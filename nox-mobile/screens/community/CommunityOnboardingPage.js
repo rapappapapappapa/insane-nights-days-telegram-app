@@ -251,9 +251,10 @@ export default function CommunityOnboardingPage() {
         genres: genresPayload || null,
       });
 
-      await Promise.allSettled(
-        artists.map((djId) => api.followDj(user.token, djId).catch(() => null)),
-      );
+      await Promise.allSettled([
+        ...artists.map((djId) => api.followDj(user.token, djId).catch(() => null)),
+        ...venues.map((venueId) => api.followVenue(user.token, venueId).catch(() => null)),
+      ]);
 
       return true;
     } catch {
@@ -273,6 +274,7 @@ export default function CommunityOnboardingPage() {
     name,
     profilePseudo,
     artists,
+    venues,
   ]);
 
   const next = async () => {

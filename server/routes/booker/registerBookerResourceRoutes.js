@@ -290,6 +290,9 @@ app.get('/api/venues/public', async (req, res) => {
     const venues = await prisma.userVenue.findMany({
       orderBy: { averageRatingGlobal: 'desc' },
       take: parseInt(req.query.limit, 10) || 50,
+      include: {
+        _count: { select: { feedPosts: true, followers: true } },
+      },
     });
 
     res.json({
@@ -304,6 +307,8 @@ app.get('/api/venues/public', async (req, res) => {
         bannerImage: normalize(v.bannerImage),
         averageRatingGlobal: v.averageRatingGlobal,
         maxCapacity: v.maxCapacity ?? null,
+        postsCount: v._count.feedPosts,
+        followersCount: v._count.followers,
       })),
     });
   } catch (error) {

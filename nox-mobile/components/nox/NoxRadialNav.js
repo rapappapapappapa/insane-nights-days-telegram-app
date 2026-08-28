@@ -38,8 +38,7 @@ const ORBIT_RADIUS = 118;
 const ORBIT_ANGLES = [-152, -119, -86, -53, -20];
 
 /**
- * Entrées de l'arc par rôle — l'agenda occupe toujours la position centrale
- * (TODO backlog : « agenda au centre, revoir la répartition »).
+ * Entrées de l'arc par rôle — l'agenda occupe toujours la position centrale.
  * `screen: 'events'` résout par rôle via legacyScreenRedirects
  * (COMMUNITY → communityDiscover, VENUE → lieuxEvents, pro → EventsPage).
  */
@@ -63,7 +62,7 @@ const VENUE_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'demandes', screen: 'lieuxDemandes', icon: 'mail-unread-outline', labelFr: 'Demandes', labelEn: 'Requests' },
   AGENDA_ITEM,
-  { id: 'notifs', screen: 'lieuxNotifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 

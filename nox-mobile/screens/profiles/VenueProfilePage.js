@@ -41,6 +41,7 @@ export default function VenueProfilePage() {
   const [videoModalVisible, setVideoModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [bannerBroken, setBannerBroken] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
 
@@ -90,6 +91,7 @@ export default function VenueProfilePage() {
   const fetchVenueProfile = async () => {
     setLoading(true);
     setBannerBroken(false);
+    setAvatarBroken(false);
     try {
       let foundVenue = null;
       try {
@@ -167,6 +169,8 @@ export default function VenueProfilePage() {
 
   const isSelected = selectedVenueId === venue.id;
   const bannerUri = normalizeMediaUrl(venue.bannerImage || venue.coverImage || photos[0]?.url);
+  const avatarUri = normalizeMediaUrl(venue.profileImage);
+  const fr = language === 'fr';
 
   return (
     <ScrollView
@@ -177,7 +181,11 @@ export default function VenueProfilePage() {
       <StatusBar style="light" />
 
       <View style={[styles.topBar, { paddingTop: (insets?.top ?? 0) + Spacing.sm }]}>
-        <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.topBarBtn}>
+        <TouchableOpacity
+          onPress={goBack}
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          style={styles.topBarBtn}
+        >
           <Ionicons name="chevron-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
@@ -204,7 +212,16 @@ export default function VenueProfilePage() {
         </View>
         <View style={styles.avatarWrap}>
           <View style={styles.avatarPlaceholder}>
-            <Ionicons name="business" size={32} color={Colors.primary} />
+            {avatarUri && !avatarBroken ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+                onError={() => setAvatarBroken(true)}
+              />
+            ) : (
+              <Ionicons name="business" size={32} color={Colors.primary} />
+            )}
           </View>
         </View>
       </View>
@@ -219,6 +236,24 @@ export default function VenueProfilePage() {
             <NoxText variant="secondary" style={{ flex: 1 }}>
               {venue.address}
             </NoxText>
+          </View>
+        ) : null}
+
+        {(venue.followersCount > 0 || venue.postsCount > 0) ? (
+          <View style={styles.statsRow}>
+            {venue.followersCount > 0 ? (
+              <NoxText variant="secondary">
+                {venue.followersCount} {fr ? 'abonnés' : 'followers'}
+              </NoxText>
+            ) : null}
+            {venue.followersCount > 0 && venue.postsCount > 0 ? (
+              <NoxText variant="secondary" style={styles.statsDot}>•</NoxText>
+            ) : null}
+            {venue.postsCount > 0 ? (
+              <NoxText variant="secondary">
+                {venue.postsCount} {fr ? 'publications' : 'posts'}
+              </NoxText>
+            ) : null}
           </View>
         ) : null}
 
@@ -266,17 +301,6 @@ export default function VenueProfilePage() {
         ) : null}
       </View>
 
-      <View style={styles.wallSection}>
-        <NoxText variant="titleSecondary" style={styles.wallTitle}>
-          {language === 'fr' ? 'Publications' : 'Posts'}
-        </NoxText>
-        <ProfileWallStream
-          wallFilter={venue?.id ? { venueId: venue.id } : null}
-          isOwnProfile={!!(user?.id && venue.userId === user?.id)}
-          enabled={!!venue?.id}
-        />
-      </View>
-
       <NoxCard style={styles.card}>
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>
           {language === 'fr' ? 'Informations' : 'Information'}
@@ -302,10 +326,10 @@ export default function VenueProfilePage() {
           </TouchableOpacity>
         ) : null}
 
-        {venue.capacity ? (
+        {(venue.maxCapacity || venue.capacity) ? (
           <View style={styles.infoRow}>
             <NoxText variant="secondary">{language === 'fr' ? 'Capacité' : 'Capacity'}</NoxText>
-            <NoxText variant="form">{String(venue.capacity)}</NoxText>
+            <NoxText variant="form">{String(venue.maxCapacity || venue.capacity)}</NoxText>
           </View>
         ) : null}
 
@@ -388,6 +412,17 @@ export default function VenueProfilePage() {
         )}
       </NoxCard>
 
+      <View style={styles.wallSection}>
+        <NoxText variant="titleSecondary" style={styles.wallTitle}>
+          {language === 'fr' ? 'Publications' : 'Posts'}
+        </NoxText>
+        <ProfileWallStream
+          wallFilter={venue?.id ? { venueId: venue.id } : null}
+          isOwnProfile={!!(user?.id && venue.userId === user?.id)}
+          enabled={!!venue?.id}
+        />
+      </View>
+
       <VideoPlayer
         videoUrl={selectedVideo?.url}
         title={selectedVideo?.title}
@@ -454,6 +489,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: Colors.background,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   identityBlock: {
     paddingHorizontal: Spacing.xl,
@@ -478,6 +518,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 4,
     marginTop: Spacing.xs,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  statsDot: {
+    opacity: 0.5,
   },
   card: {
     marginHorizontal: Spacing.xl,

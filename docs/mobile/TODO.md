@@ -3,7 +3,7 @@
 Liste de tâches **courante** (notes produit / UX).  
 Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan global : [`PLAN_MIGRATION_NOX_LEGACY.md`](PLAN_MIGRATION_NOX_LEGACY.md) · parcours test : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 
-*Dernière mise à jour : 27 août 2026.*
+*Dernière mise à jour : 28 août 2026.*
 
 ---
 
@@ -15,11 +15,14 @@ Backlog détaillé historique : [`TODO_RESTANT.md`](TODO_RESTANT.md) · plan glo
 - [x] **Dashboard DJ** : crash `useEffect` (`DjDashboardPage`). *Push 12440ae — OTA mobile à faire.*
 - [x] **Accueil DJ** : dashboard pro à la place du fil (`proHome`) — feed via profil Communauté.
 - [x] **OTA mobile** : Android preview + iOS production publiés (27 août) — message « Publication Lieux + follow venue + dashboard DJ ».
+- [x] **Dashboards pro** : flèche retour sous la safe area (`NoxProDashboardHeader`). *Push `3a3859c` — OTA 28 août.*
 
 ### Suite produit
 
 - [x] **Publication Lieux** (FAB « Publier ») : `FeedPost.venueId`, `FollowVenue`, feed, mur profil, follow. *Push `b678ced` — migrate deploy Railway au redéploiement.*
+- [x] **Polish Lieux** : radial Publier, profil lieu (avatar, stats, mur), follow lieux à l’onboarding, `postsCount`/`followersCount` API publique.
 - [x] **Prep stores (technique)** : `store:check` OK (warn bundle TestFlight). Resend : config doc `RESEND_FROM=Nox <noreply@nox.world>` — à vérifier sur le dashboard Railway (pas dans `.env` local). QA manuelle : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
+- [x] **`store:check:node`** : script npm Windows pour la vérif pré-store.
 
 ---
 

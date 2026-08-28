@@ -14,6 +14,7 @@
     "update:both": "bash scripts/publish-update-both.sh",
     "eas:verify-fingerprint": "bash scripts/verify-eas-fingerprint.sh",
     "store:check": "bash scripts/verify-store-readiness.sh",
+    "store:check:node": "node ../scripts/store-check-node.js",
     "build:store:ios": "eas build --platform ios --profile production",
     "build:store:android": "eas build --platform android --profile production",
     "build:store:both": "eas build --platform all --profile production",

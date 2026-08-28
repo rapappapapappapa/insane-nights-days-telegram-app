@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NoxText from './NoxText';
 import NotificationBadge from '../NotificationBadge';
 import Colors from '../../constants/colors';
@@ -17,11 +18,14 @@ export default function NoxProDashboardHeader({
   onMarkMessagesRead,
   rightSlot,
 }) {
+  const insets = useSafeAreaInsets();
+  const topPad = (insets?.top ?? 0) + Spacing.sm;
+
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: topPad }]}>
       <View style={styles.side}>
         {showBack && onBack ? (
-          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={12}>
+          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
           </TouchableOpacity>
         ) : (
@@ -64,7 +68,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: Layout.headerHeight,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingBottom: Spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.borderSubtle,
     backgroundColor: Colors.background,

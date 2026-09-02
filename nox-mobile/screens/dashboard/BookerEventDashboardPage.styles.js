@@ -1,49 +1,26 @@
 import { StyleSheet, Platform } from 'react-native';
 import Colors from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(77,163,255,0.2)',
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  title: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingTop: Spacing.lg,
     paddingBottom: 100,
   },
   stepsIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 30,
-    paddingHorizontal: 10,
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.xs,
   },
   step: {
     alignItems: 'center',
@@ -56,44 +33,51 @@ export const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    lineHeight: 30,
+    backgroundColor: Colors.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
   },
   stepNumberActive: {
     backgroundColor: Colors.primary,
-    color: '#fff',
+    borderColor: Colors.primary,
+  },
+  stepNumberText: {
+    color: Colors.textTertiary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  stepNumberTextActive: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   stepLabel: {
     marginTop: 5,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
   stepLabelActive: {
     color: Colors.primary,
-    fontWeight: '700',
   },
   stepLine: {
     flex: 1,
     height: 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 5,
+    backgroundColor: Colors.borderSubtle,
+    marginHorizontal: 4,
   },
   stepLineActive: {
     backgroundColor: Colors.primary,
   },
   form: {
-    gap: 20,
+    gap: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
+    color: Colors.text,
+    marginBottom: Spacing.lg,
   },
   inputGroup: {
     marginBottom: 20,

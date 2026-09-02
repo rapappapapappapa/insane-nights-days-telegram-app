@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { openDiscover, navigateToHome, openEventPreview } from '../../utils/noxNavigation';
+import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
 import { api } from '../../api/config';
-import Colors from '../../constants/colors';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
+import { NoxText, NoxButton, NoxCard, NoxScreenHeader } from '../../components/nox';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
@@ -44,7 +48,8 @@ const getStatusLabel = (status, language) => {
 
 export default function PurchasesPage() {
   const { language } = useLanguage();
-  const { navigate } = useNavigation();
+  const fr = language === 'fr';
+  const { navigate, goBack } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, hideToast } = useToast();
 
@@ -86,102 +91,100 @@ export default function PurchasesPage() {
   const hasPurchases = useMemo(() => payments.length > 0, [payments]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar style="light" />
 
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButtonTop}
-          onPress={() => navigateToHome(navigate, user?.activeProfileType)}
-          accessibilityRole="button"
-          accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
-        >
-          <Text style={styles.backButtonTopText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-      </View>
+      <NoxScreenHeader
+        title={fr ? 'Historique d’achat' : 'Purchase history'}
+        subtitle={fr ? 'Paiements Stripe confirmés' : 'Confirmed Stripe payments'}
+        onBack={goBack}
+      />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>🧾 {language === 'fr' ? 'Mes achats' : 'My purchases'}</Text>
-          <Text style={styles.subtitle}>
-            {language === 'fr' ? 'Historique de vos paiements' : 'Your payment history'}
-          </Text>
-        </View>
-
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>{language === 'fr' ? 'Chargement...' : 'Loading...'}</Text>
+            <NoxText variant="secondary">{fr ? 'Chargement…' : 'Loading…'}</NoxText>
           </View>
         ) : !hasPurchases ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>🧾</Text>
-            <Text style={styles.emptyTitle}>
-              {language === 'fr' ? 'Aucun achat pour le moment' : 'No purchases yet'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {language === 'fr'
-                ? 'Achetez un ticket sur un événement à venir pour voir apparaître vos achats ici.'
-                : 'Buy a ticket for an upcoming event to see your purchases here.'}
-            </Text>
-            <TouchableOpacity
-              style={styles.primaryCta}
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="receipt-outline" size={40} color={Colors.primary} />
+            </View>
+            <NoxText variant="titleSecondary" style={styles.emptyTitle}>
+              {fr ? 'Aucun achat pour le moment' : 'No purchases yet'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr
+                ? 'Achète un billet sur un événement à venir pour retrouver tes paiements ici.'
+                : 'Buy a ticket for an upcoming event to see your payments here.'}
+            </NoxText>
+            <NoxButton
+              label={fr ? 'Découvrir les événements' : 'Browse events'}
               onPress={() => openDiscover(navigate, user?.activeProfileType)}
-              accessibilityRole="button"
-              accessibilityLabel={language === 'fr' ? 'Voir les événements' : 'Browse events'}
-            >
-              <Text style={styles.primaryCtaText}>{language === 'fr' ? 'Voir les événements' : 'Browse events'}</Text>
-            </TouchableOpacity>
+            />
           </View>
         ) : (
           <View style={styles.list}>
-            {payments.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                activeOpacity={0.85}
-                style={styles.card}
-                onPress={() => {
-                  if (p?.event?.id) {
-                    openEventPreview(navigate, user?.activeProfileType, p.event.id);
-                  }
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  `${p?.event?.title || (language === 'fr' ? 'Événement' : 'Event')}. ${language === 'fr' ? 'Voir le détail' : 'View details'}`
-                }
-              >
-                <View style={styles.rowTop}>
-                  <View style={styles.left}>
-                    <Text style={styles.eventTitle}>{p?.event?.title || (language === 'fr' ? 'Événement' : 'Event')}</Text>
-                    <Text style={styles.date}>{formatDate(p.createdAt)}</Text>
+            {payments.map((p) => {
+              const status = String(p.status || '').toLowerCase();
+              const isOk = status === 'fulfilled' || status === 'succeeded';
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (p?.event?.id) {
+                      openEventPreview(navigate, user?.activeProfileType, p.event.id);
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <NoxCard style={styles.card}>
+                  <View style={styles.rowTop}>
+                    <View style={styles.left}>
+                      <NoxText variant="form" style={styles.eventTitle} numberOfLines={2}>
+                        {p?.event?.title || (fr ? 'Événement' : 'Event')}
+                      </NoxText>
+                      <NoxText variant="secondary" style={styles.date}>
+                        {formatDate(p.createdAt)}
+                      </NoxText>
+                    </View>
+                    <View style={styles.right}>
+                      <NoxText variant="titleSecondary" style={styles.amount}>
+                        {centsToEuros(p.amount)}
+                      </NoxText>
+                      <NoxText
+                        variant="secondary"
+                        style={[styles.status, isOk ? styles.statusOk : styles.statusPending]}
+                      >
+                        {getStatusLabel(p.status, language)}
+                      </NoxText>
+                    </View>
                   </View>
-                  <View style={styles.right}>
-                    <Text style={styles.amount}>{centsToEuros(p.amount)}</Text>
-                    <Text style={styles.status}>{getStatusLabel(p.status, language)}</Text>
-                  </View>
-                </View>
 
-                <View style={styles.rowBottom}>
-                  <Text style={styles.meta}>
-                    {language === 'fr' ? 'Quantité' : 'Quantity'}: {p.quantity ?? 1} • {language === 'fr' ? 'Devise' : 'Currency'}: {String(p.currency || 'eur').toUpperCase()}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.ticketsButton}
-                    onPress={() => navigate('tickets')}
-                    accessibilityRole="button"
-                    accessibilityLabel={language === 'fr' ? 'Mes tickets' : 'My tickets'}
-                  >
-                    <Text style={styles.ticketsButtonText}>{language === 'fr' ? 'Mes tickets' : 'My tickets'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.rowBottom}>
+                    <NoxText variant="secondary" style={styles.meta}>
+                      {fr ? 'Quantité' : 'Quantity'}: {p.quantity ?? 1} · {String(p.currency || 'eur').toUpperCase()}
+                    </NoxText>
+                    <NoxButton
+                      label={fr ? 'Mes billets' : 'My tickets'}
+                      variant="ghost"
+                      onPress={() => navigate('tickets')}
+                      style={styles.ticketsButton}
+                      fullWidth={false}
+                    />
+                  </View>
+                  </NoxCard>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -190,153 +193,98 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    backgroundColor: Colors.background,
-  },
-  backButtonTop: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonTopText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   scroll: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    textAlign: 'center',
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingBottom: Spacing.xxxl,
+    gap: Spacing.md,
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
-    gap: 12,
-  },
-  loadingText: {
-    color: 'rgba(255,255,255,0.7)',
+    paddingVertical: Spacing.xxxl * 2,
+    gap: Spacing.md,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 30,
+    paddingVertical: Spacing.xxxl * 2,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
   },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 14,
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: primaryAlpha(0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   emptyTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 8,
     textAlign: 'center',
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 16,
-  },
-  primaryCta: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-  },
-  primaryCtaText: {
-    color: Colors.background,
-    fontWeight: '900',
+    marginBottom: Spacing.sm,
   },
   list: {
-    gap: 14,
+    gap: Spacing.md,
   },
   card: {
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.borderActive,
-    borderRadius: 18,
-    padding: 16,
-    gap: 10,
+    gap: Spacing.md,
   },
   rowTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: Spacing.md,
   },
   left: {
     flex: 1,
-    gap: 4,
+    gap: Spacing.xs,
   },
   right: {
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 6,
+    gap: Spacing.xs,
   },
   eventTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '900',
+    flex: 1,
   },
   date: {
-    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
   },
   amount: {
     color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '900',
   },
   status: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  statusOk: {
+    color: Colors.success,
+  },
+  statusPending: {
+    color: Colors.warning,
   },
   rowBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.borderSubtle,
   },
   meta: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
     flex: 1,
+    fontSize: 12,
   },
   ticketsButton: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  ticketsButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
+    minHeight: 36,
+    paddingHorizontal: Spacing.md,
   },
 });
 

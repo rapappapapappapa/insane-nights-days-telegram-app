@@ -18,7 +18,6 @@ import { useEventForm } from '../../contexts/EventFormContext';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
-import NotificationBadge from '../../components/NotificationBadge';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
@@ -34,8 +33,26 @@ import BookerDateTimePickers from '../../components/bookerDashboard/BookerDateTi
 import BookerChatModal from '../../components/bookerDashboard/BookerChatModal';
 import BookerContractModals from '../../components/bookerDashboard/BookerContractModals';
 import BookerEditEventModal from '../../components/bookerDashboard/BookerEditEventModal';
+import BookerDashboardHomeSection from '../../components/bookerDashboard/BookerDashboardHomeSection';
 import { NoxProDashboardHeader } from '../../components/nox';
 import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
+
+const BOOKER_DASHBOARD_SECTIONS = new Set(['profil', 'events']);
+
+function resolveBookerDashboardSection(routeParams) {
+  if (
+    routeParams?.openBookings ||
+    routeParams?.openChatEventDjId ||
+    routeParams?.openChatEventId ||
+    routeParams?.openChatEventVenueId ||
+    routeParams?.highlightEventId
+  ) {
+    return 'events';
+  }
+  const section = routeParams?.openSection;
+  if (section && BOOKER_DASHBOARD_SECTIONS.has(section)) return section;
+  return 'home';
+}
 
 export default function BookerDashboardPage() {
   const { height: contractModalWindowH } = useWindowDimensions();
@@ -56,11 +73,19 @@ export default function BookerDashboardPage() {
     !!routeParams?.openChatEventId ||
     !!routeParams?.openChatEventVenueId ||
     !!routeParams?.highlightEventId;
-  const shouldOpenProfil = routeParams?.openSection === 'profil';
 
-  const [activeSection, setActiveSection] = useState(
-    shouldOpenProfil ? 'profil' : shouldOpenBookings ? 'events' : 'profil'
-  );
+  const [activeSection, setActiveSection] = useState(() => resolveBookerDashboardSection(routeParams));
+
+  useEffect(() => {
+    setActiveSection(resolveBookerDashboardSection(routeParams));
+  }, [
+    routeParams?.openSection,
+    routeParams?.openBookings,
+    routeParams?.openChatEventDjId,
+    routeParams?.openChatEventId,
+    routeParams?.openChatEventVenueId,
+    routeParams?.highlightEventId,
+  ]);
 
   const profile = useBookerProfile({ user, language, showError, showSuccess });
   const events = useBookerEvents({
@@ -240,79 +265,84 @@ export default function BookerDashboardPage() {
     })();
   }, [user?.token]);
 
-  return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-      >
-        <StatusBar style="light" />
-        <NoxProDashboardHeader
-          title={language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard'}
-          showBack={!isHome}
-          onBack={goBack}
+  const menuItems = [
+    {
+      id: 'profil',
+      label: language === 'fr' ? 'Mon profil' : 'My profile',
+      hint: language === 'fr' ? 'Identité & visibilité' : 'Identity & visibility',
+      icon: 'person',
+      accentColor: '#81B9FF',
+      accentBg: 'rgba(129,185,255,0.15)',
+    },
+    {
+      id: 'events',
+      label: language === 'fr' ? 'Mes événements' : 'My events',
+      hint: language === 'fr' ? 'Bookings & chat' : 'Bookings & chat',
+      icon: 'calendar',
+      accentColor: Colors.primaryLight,
+      accentBg: 'rgba(40,82,232,0.2)',
+    },
+    {
+      id: 'create-event',
+      label: language === 'fr' ? 'Créer un event' : 'Create event',
+      hint: language === 'fr' ? 'Assistant pas à pas' : 'Step-by-step wizard',
+      icon: 'add-circle',
+      accentColor: '#34D399',
+      accentBg: 'rgba(52,211,153,0.12)',
+    },
+  ];
+
+  const isHubView = activeSection === 'home';
+  const activeMenuItem = menuItems.find((item) => item.id === activeSection);
+  const headerTitle = isHubView
+    ? language === 'fr'
+      ? 'Dashboard Organisateur'
+      : 'Organizer Dashboard'
+    : activeMenuItem?.label ||
+      (language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard');
+
+  const handleHeaderBack = () => {
+    if (isHubView) {
+      goBack();
+      return;
+    }
+    setActiveSection('home');
+  };
+
+  const openSection = (sectionId) => {
+    if (sectionId === 'create-event') {
+      navigate('bookerEventDashboard', {});
+      return;
+    }
+    setActiveSection(sectionId);
+    if (sectionId === 'events') {
+      fetchMyEvents();
+      markAllAsRead();
+    }
+  };
+
+  const displayName =
+    profileForm?.pseudo ||
+    bookerProfile?.pseudo ||
+    bookerProfile?.name ||
+    user?.username?.split('@')?.[0] ||
+    '';
+
+  const renderContent = () => {
+    if (isHubView) {
+      return (
+        <BookerDashboardHomeSection
+          language={language}
+          styles={styles}
+          tiles={menuItems}
           unreadCount={unreadCount}
-          onMessagesPress={() => {
-            setActiveSection('events');
-            refreshUnreadCount();
-          }}
-          onMarkMessagesRead={markAllAsRead}
+          displayName={displayName}
+          onSelectSection={openSection}
         />
+      );
+    }
 
-      {/* Boutons de navigation */}
-      <View style={styles.tabButtons}>
-        <TouchableOpacity
-          style={[styles.tabButton, activeSection === 'profil' && styles.tabButtonActive]}
-          onPress={() => setActiveSection('profil')}
-        >
-          <Text style={[styles.tabButtonText, activeSection === 'profil' && styles.tabButtonTextActive]}>
-            {language === 'fr' ? 'Profil' : 'Profile'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, activeSection === 'events' && styles.tabButtonActive]}
-          onPress={() => {
-            setActiveSection('events');
-            fetchMyEvents();
-            // Marquer les messages comme lus quand on ouvre la section événements
-            markAllAsRead();
-          }}
-        >
-          <View style={styles.tabButtonContent}>
-            <Text style={[styles.tabButtonText, activeSection === 'events' && styles.tabButtonTextActive]}>
-              {language === 'fr' ? 'Mes événements' : 'My Events'}
-            </Text>
-            <NotificationBadge count={unreadCount} />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* ✅ AJOUT: Boutons Profil (voir public + dashboard événement) */}
-      {activeSection === 'profil' && (
-        <View style={styles.profilActionsRow}>
-          {bookerProfile?.id && (
-            <TouchableOpacity
-              style={styles.viewPublicProfileButton}
-              onPress={() => navigate('bookerProfile', { bookerId: bookerProfile.id })}
-            >
-              <Ionicons name="eye-outline" size={20} color={Colors.primary} />
-              <Text style={styles.viewPublicProfileButtonText}>
-                {language === 'fr' ? 'Voir mon profil public' : 'View my public profile'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.eventDashboardButton}
-            onPress={() => navigate('bookerEventDashboard', {})}
-          >
-            <Ionicons name="calendar" size={24} color={Colors.background} />
-            <Text style={styles.eventDashboardButtonText}>
-              {language === 'fr' ? 'Dashboard Événement' : 'Event Dashboard'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
+    return (
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
@@ -330,20 +360,35 @@ export default function BookerDashboardPage() {
         }
       >
         {activeSection === 'profil' ? (
-          <BookerProfilSection
-            language={language}
-            styles={styles}
-            loadingProfile={loadingProfile}
-            bookerProfile={bookerProfile}
-            profileImage={profileImage}
-            profileForm={profileForm}
-            setProfileForm={setProfileForm}
-            uploadingProfileImage={uploadingProfileImage}
-            pickProfileImage={pickProfileImage}
-            savingProfile={savingProfile}
-            saveBookerProfile={saveBookerProfile}
-          />
-        ) : activeSection === 'events' ? (
+          <>
+            {bookerProfile?.id ? (
+              <View style={styles.profilActionsRow}>
+                <TouchableOpacity
+                  style={styles.viewPublicProfileButton}
+                  onPress={() => navigate('bookerProfile', { bookerId: bookerProfile.id })}
+                >
+                  <Ionicons name="eye-outline" size={20} color={Colors.primary} />
+                  <Text style={styles.viewPublicProfileButtonText}>
+                    {language === 'fr' ? 'Voir mon profil public' : 'View my public profile'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <BookerProfilSection
+              language={language}
+              styles={styles}
+              loadingProfile={loadingProfile}
+              bookerProfile={bookerProfile}
+              profileImage={profileImage}
+              profileForm={profileForm}
+              setProfileForm={setProfileForm}
+              uploadingProfileImage={uploadingProfileImage}
+              pickProfileImage={pickProfileImage}
+              savingProfile={savingProfile}
+              saveBookerProfile={saveBookerProfile}
+            />
+          </>
+        ) : (
           <BookerEventsSection
             language={language}
             styles={styles}
@@ -367,8 +412,31 @@ export default function BookerDashboardPage() {
             handleDeleteEvent={handleDeleteEvent}
             deletingEventId={deletingEventId}
           />
-        ) : null}
+        )}
       </ScrollView>
+    );
+  };
+
+  return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <StatusBar style="light" />
+        <NoxProDashboardHeader
+          title={headerTitle}
+          showBack={!isHubView || !isHome}
+          onBack={handleHeaderBack}
+          unreadCount={unreadCount}
+          onMessagesPress={() => {
+            openSection('events');
+            refreshUnreadCount();
+          }}
+          onMarkMessagesRead={markAllAsRead}
+        />
+
+        <View style={styles.mainContent}>{renderContent()}</View>
 
       <BookerDateTimePickers
         language={language}

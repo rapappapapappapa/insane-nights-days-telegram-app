@@ -19,7 +19,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import { NoxText, NoxButton } from '../../components/nox';
+import { NoxText, NoxButton, NoxCard } from '../../components/nox';
+import EventCheckoutSection from '../../components/events/EventCheckoutSection';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
@@ -27,8 +28,7 @@ import {
   addNoxEventToDeviceCalendar,
   isDeviceCalendarExportSupported,
 } from '../../utils/addNoxEventToCalendar';
-import { API_DATE_RE, isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
-import { tierSaleWindowHint } from '../../utils/ticketPricingUtils';
+import { API_DATE_RE } from '../../utils/eventDetailPageUtils';
 import { useEventDetailPurchase } from '../../hooks/useEventDetailPurchase';
 import { useEventDetailGroups } from '../../hooks/useEventDetailGroups';
 import { styles } from './EventDetailPage.styles';
@@ -322,144 +322,28 @@ export default function EventDetailPage() {
   const statusColor = getStatusColor();
   const djList = Array.isArray(event?.djs) ? event.djs : [];
 
-  const renderPurchaseSection = () => {
-    if (isEventUpcoming()) {
-      if (user?.isAuthenticated && !hasActiveCommunityProfile()) {
-        return (
-          <View style={styles.warningCard}>
-            <NoxText variant="secondary" style={styles.warningText}>
-              {fr
-                ? 'Seuls les profils Community peuvent acheter des tickets. Bascule sur ton profil Community depuis ton profil.'
-                : 'Only Community profiles can buy tickets. Switch to your Community profile from your profile.'}
-            </NoxText>
-            <NoxButton
-              label={fr ? 'Aller au profil' : 'Go to profile'}
-              onPress={() => navigate('profile')}
-            />
-          </View>
-        );
-      }
-
-      return (
-        <View style={styles.purchaseSection}>
-          {!canProceedPurchaseTier && hasMultipleTicketTiers ? (
-            <NoxText variant="secondary" style={styles.helperTextTier}>
-              {fr
-                ? 'Aucun tarif disponible pour le moment (quotas épuisés ou vente non ouverte).'
-                : 'No tiers available right now (sold out or sale not open).'}
-            </NoxText>
-          ) : null}
-
-          {hasMultipleTicketTiers && ticketTiersForPurchase?.length ? (
-            <View style={styles.tierSection}>
-              <NoxText variant="titleSecondary" style={{ fontSize: 15 }}>
-                {fr ? 'Choix du tarif' : 'Ticket type'}
-              </NoxText>
-              {ticketTiersForPurchase.map((t) => {
-                const sel = t.id === selectedTierId;
-                const ok = isTicketTierSelectable(t);
-                const soldHint =
-                  t.maxSold != null && t.maxSold !== '' && t.remaining != null
-                    ? fr ? ` (${t.remaining} restant(s))` : ` (${t.remaining} left)`
-                    : '';
-                const windowHint = tierSaleWindowHint(t, language);
-                return (
-                  <TouchableOpacity
-                    key={t.id}
-                    style={[styles.tierChip, sel && styles.tierChipSelected, !ok && styles.tierChipDisabled]}
-                    onPress={() => ok && setSelectedTierId(t.id)}
-                    disabled={!ok}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: sel, disabled: !ok }}
-                  >
-                    <NoxText
-                      variant="form"
-                      style={[
-                        styles.tierChipLabel,
-                        sel && styles.tierChipLabelSelected,
-                        !ok && styles.tierChipLabelDisabled,
-                      ]}
-                    >
-                      {t.label} · {t.price}€{soldHint}
-                      {windowHint ? ` · ${windowHint}` : ''}
-                    </NoxText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : null}
-
-          <View style={styles.cgvRow}>
-            <TouchableOpacity
-              style={[styles.cgvCheckbox, acceptedCgv && styles.cgvCheckboxChecked]}
-              onPress={() => setAcceptedCgv(!acceptedCgv)}
-              activeOpacity={0.7}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: acceptedCgv }}
-            >
-              {acceptedCgv ? <NoxText style={styles.cgvCheckmark}>✓</NoxText> : null}
-            </TouchableOpacity>
-            <View style={styles.cgvTextWrap}>
-              <NoxText variant="secondary">{fr ? "J'accepte les " : 'I accept the '}</NoxText>
-              <TouchableOpacity onPress={() => navigate('legal', { type: 'cgv' })}>
-                <NoxText variant="secondary" style={styles.cgvLink}>
-                  {fr ? 'CGV' : 'Terms of Sale'}
-                </NoxText>
-              </TouchableOpacity>
-              <NoxText variant="secondary">{fr ? ' pour cet achat.' : ' for this purchase.'}</NoxText>
-            </View>
-          </View>
-
-          <NoxButton
-            label={fr ? `Acheter un ticket (${unitPriceForPurchase}€)` : `Buy ticket (${unitPriceForPurchase}€)`}
-            onPress={handleBuyTicket}
-            loading={buyingTicket}
-            disabled={
-              buyingTicket ||
-              !acceptedCgv ||
-              !canProceedPurchaseTier ||
-              (user?.isAuthenticated && !hasActiveCommunityProfile())
-            }
-            style={styles.buyBtn}
-          />
-        </View>
-      );
-    }
-
-    if (isEventPast()) {
-      return (
-        <View style={styles.pastEventSection}>
-          <NoxText variant="secondary" style={styles.pastEventText}>
-            {fr ? 'Cet événement est terminé' : 'This event has ended'}
-          </NoxText>
-          <NoxButton
-            label={fr ? 'Noter cet événement' : 'Rate this event'}
-            variant="ghost"
-            onPress={() =>
-              navigate('rateEvent', {
-                eventId: event.id,
-                eventTitle: event.title,
-                eventDate: event.date,
-                eventStatus: event.status,
-                venueId: event.venueId,
-                venueName: event.venueName,
-                djIds: event.djIds || [],
-              })
-            }
-            style={styles.rateBtn}
-          />
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.pastEventSection}>
-        <NoxText variant="secondary" style={styles.pastEventText}>
-          {fr ? 'Cet événement est en cours' : 'This event is ongoing'}
-        </NoxText>
-      </View>
-    );
-  };
+  const renderPurchaseSection = () => (
+    <EventCheckoutSection
+      fr={fr}
+      styles={styles}
+      navigate={navigate}
+      user={user}
+      hasActiveCommunityProfile={hasActiveCommunityProfile}
+      isEventUpcoming={isEventUpcoming}
+      isEventPast={isEventPast}
+      event={event}
+      buyingTicket={buyingTicket}
+      acceptedCgv={acceptedCgv}
+      setAcceptedCgv={setAcceptedCgv}
+      selectedTierId={selectedTierId}
+      setSelectedTierId={setSelectedTierId}
+      ticketTiersForPurchase={ticketTiersForPurchase}
+      hasMultipleTicketTiers={hasMultipleTicketTiers}
+      canProceedPurchaseTier={canProceedPurchaseTier}
+      unitPriceForPurchase={unitPriceForPurchase}
+      handleBuyTicket={handleBuyTicket}
+    />
+  );
 
   if (loading) {
     return (
@@ -783,7 +667,11 @@ export default function EventDetailPage() {
             </>
           )}
 
-          {renderPurchaseSection()}
+          {checkoutOnly ? (
+            <NoxCard style={styles.checkoutCard}>{renderPurchaseSection()}</NoxCard>
+          ) : (
+            renderPurchaseSection()
+          )}
         </View>
       </ScrollView>
 

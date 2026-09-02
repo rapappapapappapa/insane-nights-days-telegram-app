@@ -1,32 +1,35 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { openDiscover, navigateToHome, openEventPreview } from '../../utils/noxNavigation';
-import Colors from '../../constants/colors';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
+import { NoxText, NoxButton, NoxCard } from '../../components/nox';
 
 export default function PurchaseSuccessPage() {
   const { language } = useLanguage();
+  const fr = language === 'fr';
   const { navigate, routeParams } = useNavigation();
   const { user } = useAuth();
 
   const eventId = routeParams?.eventId ?? null;
   const eventTitle = routeParams?.eventTitle ?? null;
   const quantity = Number(routeParams?.quantity ?? 1);
-  const amount = routeParams?.amount ?? null; // ex: 10 (euros) ou "10€"
+  const amount = routeParams?.amount ?? null;
 
   const subtitle = useMemo(() => {
     if (eventTitle) {
-      return language === 'fr'
-        ? `Votre ticket est prêt pour : ${eventTitle}`
+      return fr
+        ? `Ton billet est prêt pour : ${eventTitle}`
         : `Your ticket is ready for: ${eventTitle}`;
     }
-    return language === 'fr'
-      ? 'Votre ticket est prêt.'
-      : 'Your ticket is ready.';
-  }, [eventTitle, language]);
+    return fr ? 'Ton billet est prêt.' : 'Your ticket is ready.';
+  }, [eventTitle, fr]);
 
   const amountLabel = useMemo(() => {
     if (amount === null || typeof amount === 'undefined') return null;
@@ -35,60 +38,61 @@ export default function PurchaseSuccessPage() {
   }, [amount]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar style="light" />
 
-      <View style={styles.card}>
-        <Text style={styles.icon}>✅</Text>
-        <Text style={styles.title}>
-          {language === 'fr' ? 'Paiement confirmé' : 'Payment confirmed'}
-        </Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-
-        <View style={styles.details}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>
-              {language === 'fr' ? 'Quantité' : 'Quantity'}
-            </Text>
-            <Text style={styles.detailValue}>{Number.isFinite(quantity) ? quantity : 1}</Text>
+      <View style={styles.inner}>
+        <NoxCard style={styles.card}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
           </View>
-          {amountLabel ? (
+          <NoxText variant="title" style={styles.title}>
+            {fr ? 'Paiement confirmé' : 'Payment confirmed'}
+          </NoxText>
+          <NoxText variant="secondary" style={styles.subtitle}>
+            {subtitle}
+          </NoxText>
+
+          <View style={styles.details}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{language === 'fr' ? 'Montant' : 'Amount'}</Text>
-              <Text style={styles.detailValue}>{amountLabel}</Text>
+              <NoxText variant="secondary">{fr ? 'Quantité' : 'Quantity'}</NoxText>
+              <NoxText variant="form">{Number.isFinite(quantity) ? quantity : 1}</NoxText>
             </View>
-          ) : null}
-        </View>
+            {amountLabel ? (
+              <View style={styles.detailRow}>
+                <NoxText variant="secondary">{fr ? 'Montant' : 'Amount'}</NoxText>
+                <NoxText variant="titleSecondary" style={{ color: Colors.primary }}>
+                  {amountLabel}
+                </NoxText>
+              </View>
+            ) : null}
+          </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={() => navigate('tickets')}>
-          <Text style={styles.primaryButtonText}>
-            {language === 'fr' ? 'Voir mes tickets' : 'View my tickets'}
-          </Text>
-        </TouchableOpacity>
+          <NoxButton label={fr ? 'Voir mes billets' : 'View my tickets'} onPress={() => navigate('tickets')} />
 
-        <View style={styles.secondaryRow}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              if (eventId) {
-                openEventPreview(navigate, user?.activeProfileType, eventId);
-              } else {
-                openDiscover(navigate, user?.activeProfileType);
-              }
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {language === 'fr' ? "Retour à l'événement" : 'Back to event'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigateToHome(navigate, user?.activeProfileType)}>
-            <Text style={styles.secondaryButtonText}>
-              {language === 'fr' ? 'Accueil' : 'Home'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.secondaryRow}>
+            <NoxButton
+              label={fr ? "Retour à l'événement" : 'Back to event'}
+              variant="secondary"
+              onPress={() => {
+                if (eventId) {
+                  openEventPreview(navigate, user?.activeProfileType, eventId);
+                } else {
+                  openDiscover(navigate, user?.activeProfileType);
+                }
+              }}
+              style={styles.secondaryBtn}
+            />
+            <NoxButton
+              label={fr ? 'Accueil' : 'Home'}
+              variant="ghost"
+              onPress={() => navigateToHome(navigate, user?.activeProfileType)}
+              style={styles.secondaryBtn}
+            />
+          </View>
+        </NoxCard>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -96,92 +100,55 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    alignItems: 'center',
+  },
+  inner: {
+    flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: Layout.screenPaddingHorizontal,
   },
   card: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: Colors?.backgroundCard ?? '#121217',
-    borderWidth: 1,
-    borderColor: Colors?.borderActive ?? 'rgba(77,163,255,0.35)',
-    borderRadius: 20,
-    padding: 22,
-    gap: 12,
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.xxl,
   },
-  icon: {
-    fontSize: 46,
-    textAlign: 'center',
-    marginBottom: 6,
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: primaryAlpha(0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   title: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '900',
     textAlign: 'center',
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: Spacing.sm,
   },
   details: {
-    marginTop: 8,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    borderRadius: 14,
-    padding: 14,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    alignSelf: 'stretch',
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.borderSubtle,
+    marginBottom: Spacing.sm,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  detailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  detailValue: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  primaryButton: {
-    marginTop: 10,
-    backgroundColor: Colors?.primary ?? Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: Colors.background,
-    fontSize: 16,
-    fontWeight: '900',
-  },
   secondaryRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    gap: 10,
+    alignSelf: 'stretch',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
+  secondaryBtn: {
+    minHeight: 44,
   },
 });
-

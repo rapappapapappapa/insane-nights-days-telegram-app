@@ -4,6 +4,29 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 1 au 4 septembre 2026
+
+### Modifié (mobile — checkout billet Figma)
+- **`eventDetail` (`checkoutOnly`)** : récap + section paiement dans une **`NoxCard`**, libellés FR (« Paiement », « Payer X€ », hint Stripe).
+- **Composant** : `EventCheckoutSection.js` (tiers, CGV, CTA) — réutilisé sur fiche événement et mode checkout.
+- **`purchaseSuccess`** : écran confirmation NOX (`NoxCard`, icône Ionicons, détails montant/quantité).
+- **`purchases`** : historique d’achat NOX (`NoxScreenHeader`, cartes `NoxCard`, statuts colorés).
+
+### Manques Figma (checkout — pas de maquette HD dédiée)
+- Pas d’écran **`eventCheckout`** séparé dans Figma : flow sur `eventDetail` checkout + confirmation inspirée wallet.
+- Sélecteur quantité multi-billets, réductions/promo codes : non maquettés.
+
+### Modifié (mobile — Booker Figma, phase 1)
+- **`bookerDashboard`** : hub accueil en **grille 2×N** (Profil / Mes événements / Créer un event), comme le dashboard DJ — plus d’onglets horizontaux legacy.
+- **`bookerEventDashboard`** : header **`NoxProDashboardHeader`**, stepper et hints aux tokens NOX.
+- **Composant** : `BookerDashboardHomeSection.js`.
+
+### Manques Figma (Booker — pas de maquette HD)
+- Écrans **wizard** (étapes 1–5) : shell NOX sur le header/stepper ; formulaires internes encore en styles legacy.
+- **Liste événements / chat / contrats** booker : polish tokens à poursuivre (`BookerDashboardPage.styles.js`).
+
+---
+
 ## Semaine du 25 au 28 août 2026
 
 ### Corrigé (mobile — dashboards pro, safe area)

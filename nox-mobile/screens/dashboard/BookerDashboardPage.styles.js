@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import Colors from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -1550,5 +1551,71 @@ export const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  mainContent: {
+    flex: 1,
+  },
+  hubScroll: {
+    flex: 1,
+  },
+  hubScrollContent: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  hubHero: {
+    marginBottom: Spacing.xxl,
+  },
+  hubGreeting: {
+    fontSize: 26,
+    lineHeight: 32,
+    marginBottom: Spacing.sm,
+  },
+  hubSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  },
+  hubGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  hubTile: {
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    borderWidth: 0.5,
+    borderColor: Colors.borderCard,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    justifyContent: 'space-between',
+    shadowColor: Colors.cardShadow,
+    shadowOffset: { width: 2, height: 5 },
+    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    elevation: 3,
+  },
+  hubTileIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  hubTileBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+  },
+  hubTileLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: Spacing.md,
+  },
+  hubTileHint: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
 });

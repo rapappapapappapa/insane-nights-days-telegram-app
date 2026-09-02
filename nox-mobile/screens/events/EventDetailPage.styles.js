@@ -288,8 +288,23 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
   },
   tierSection: {
-    marginTop: Spacing.xl,
+    marginTop: Spacing.sm,
     gap: Spacing.sm,
+  },
+  tierSectionLabel: {
+    marginBottom: Spacing.xs,
+  },
+  checkoutSectionTitle: {
+    marginBottom: Spacing.xs,
+  },
+  checkoutSecureHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: Spacing.xs,
+  },
+  checkoutCard: {
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
   },
   tierChip: {
     paddingVertical: Spacing.md,

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
@@ -25,6 +24,7 @@ import BookerEventStep4Details from '../../components/bookerEventWizard/sections
 import BookerEventStep5Summary from '../../components/bookerEventWizard/sections/BookerEventStep5Summary';
 import BookerEventPickersModals from '../../components/bookerEventWizard/BookerEventPickersModals';
 import BookerEventPostCreateModal from '../../components/bookerEventWizard/BookerEventPostCreateModal';
+import { NoxProDashboardHeader, NoxText } from '../../components/nox';
 
 export default function BookerEventDashboardPage() {
   const { language } = useLanguage();
@@ -97,6 +97,14 @@ export default function BookerEventDashboardPage() {
     showSuccess,
   };
 
+  const stepLabels = [
+    language === 'fr' ? 'Date' : 'Date',
+    language === 'fr' ? 'Lieu' : 'Venue',
+    'DJs',
+    language === 'fr' ? 'Détails' : 'Details',
+    language === 'fr' ? 'Récap' : 'Review',
+  ];
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -104,13 +112,12 @@ export default function BookerEventDashboardPage() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{language === 'fr' ? 'Créer un événement' : 'Create Event'}</Text>
-        <View style={{ width: 80 }} />
-      </View>
+      <NoxProDashboardHeader
+        title={language === 'fr' ? 'Créer un événement' : 'Create event'}
+        subtitle={`${language === 'fr' ? 'Étape' : 'Step'} ${currentStep}/5 · ${stepLabels[currentStep - 1]}`}
+        showBack
+        onBack={goBack}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -121,45 +128,33 @@ export default function BookerEventDashboardPage() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        {/* Indicateur d'étapes */}
         <View style={styles.stepsIndicator}>
-          <View style={[styles.step, currentStep >= 1 && styles.stepActive]}>
-            <Text style={[styles.stepNumber, currentStep >= 1 && styles.stepNumberActive]}>1</Text>
-            <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'Date' : 'Date'}
-            </Text>
-          </View>
-          <View style={[styles.stepLine, currentStep >= 2 && styles.stepLineActive]} />
-          <View style={[styles.step, currentStep >= 2 && styles.stepActive]}>
-            <Text style={[styles.stepNumber, currentStep >= 2 && styles.stepNumberActive]}>2</Text>
-            <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'Lieu' : 'Venue'}
-            </Text>
-          </View>
-          <View style={[styles.stepLine, currentStep >= 3 && styles.stepLineActive]} />
-          <View style={[styles.step, currentStep >= 3 && styles.stepActive]}>
-            <Text style={[styles.stepNumber, currentStep >= 3 && styles.stepNumberActive]}>3</Text>
-            <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'DJs' : 'DJs'}
-            </Text>
-          </View>
-          <View style={[styles.stepLine, currentStep >= 4 && styles.stepLineActive]} />
-          <View style={[styles.step, currentStep >= 4 && styles.stepActive]}>
-            <Text style={[styles.stepNumber, currentStep >= 4 && styles.stepNumberActive]}>4</Text>
-            <Text style={[styles.stepLabel, currentStep >= 4 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'Détails' : 'Details'}
-            </Text>
-          </View>
-          <View style={[styles.stepLine, currentStep >= 5 && styles.stepLineActive]} />
-          <View style={[styles.step, currentStep >= 5 && styles.stepActive]}>
-            <Text style={[styles.stepNumber, currentStep >= 5 && styles.stepNumberActive]}>5</Text>
-            <Text style={[styles.stepLabel, currentStep >= 5 && styles.stepLabelActive]}>
-              {language === 'fr' ? 'Récap' : 'Review'}
-            </Text>
-          </View>
+          {stepLabels.map((label, index) => {
+            const stepNum = index + 1;
+            const active = currentStep >= stepNum;
+            return (
+              <React.Fragment key={label}>
+                {index > 0 ? (
+                  <View style={[styles.stepLine, currentStep >= stepNum && styles.stepLineActive]} />
+                ) : null}
+                <View style={[styles.step, active && styles.stepActive]}>
+                  <View style={[styles.stepNumber, active && styles.stepNumberActive]}>
+                    <NoxText variant="form" style={active ? styles.stepNumberTextActive : styles.stepNumberText}>
+                      {stepNum}
+                    </NoxText>
+                  </View>
+                  <NoxText variant="secondary" style={[styles.stepLabel, active && styles.stepLabelActive]}>
+                    {label}
+                  </NoxText>
+                </View>
+              </React.Fragment>
+            );
+          })}
         </View>
 
-        <Text style={styles.stepRequiredHint}>{stepRequirementsHint(currentStep, language)}</Text>
+        <NoxText variant="secondary" style={styles.stepRequiredHint}>
+          {stepRequirementsHint(currentStep, language)}
+        </NoxText>
 
         <TouchableOpacity
           onPress={clearDraftAndRestartWizard}
@@ -172,11 +167,14 @@ export default function BookerEventDashboardPage() {
               : 'New event, clear saved draft'
           }
         >
-          <Text style={[styles.startFreshLinkText, creating && styles.startFreshLinkTextDisabled]}>
+          <NoxText
+            variant="secondary"
+            style={[styles.startFreshLinkText, creating && styles.startFreshLinkTextDisabled]}
+          >
             {language === 'fr'
               ? 'Nouvel événement — effacer le brouillon'
               : 'New event — clear draft'}
-          </Text>
+          </NoxText>
         </TouchableOpacity>
 
         <View style={styles.form}>

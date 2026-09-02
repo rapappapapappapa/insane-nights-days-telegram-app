@@ -98,8 +98,8 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 |-----|---------|----------|-------|
 | `welcome` | *(alias → `proHome`)* | **✅ Fait (Phase D)** | Accueil pro — `ProHomePage.js` |
 | `djDashboard` | `DjDashboardPage.js` | **Migrer UI** | Dashboard secondaire (drawer/NX) |
-| `bookerDashboard` | `BookerDashboardPage.js` | **Migrer UI** | Idem |
-| `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Migrer UI** | Wizard event booker |
+| `bookerDashboard` | `BookerDashboardPage.js` | **Hub grille NOX (2 sept.)** | Wizard + listes encore legacy |
+| `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Header/stepper NOX (2 sept.)** | Steps internes à skinner |
 | `prestataireDashboard` | `PrestataireDashboardPage.js` | **Migrer UI** | Hors maquettes actuelles |
 | Profils publics | `DjProfilePage`, `VenueProfilePage`, `BookerProfilePage` | **NOX (31 juil.)** | Shell Figma + API inchangée |
 
@@ -108,7 +108,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | Clé | Fichier | Décision |
 |-----|---------|----------|
 | `tickets` | `TicketsPage.js` | **NOX wallet (31 juil.)** — garder logique QR / historique |
-| `purchases` / `purchaseSuccess` | `PurchasesPage.js` | **Migrer UI** |
+| `purchases` / `purchaseSuccess` | `PurchasesPage.js` | **NOX checkout (2 sept.)** |
 | `scanTicket` / `staffEvents` | Scan + liste events staff | **Migrer UI** — accès staff |
 | `switchProfile` | `SwitchProfilePage.js` | **Garder NOX** |
 | `legal` | `LegalPage.js` | **Réutiliser tel quel** |

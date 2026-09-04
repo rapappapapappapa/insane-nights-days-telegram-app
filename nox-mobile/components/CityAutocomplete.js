@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Colors from '../constants/colors';
+import { Layout, Radius, Spacing } from '../constants/theme';
+import { FontFamily } from '../constants/typography';
 
-const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholderTextColor }) => {
+const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholderTextColor, label }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -77,10 +79,11 @@ const CityAutocomplete = ({ value, onChangeText, placeholder, style, placeholder
 
   return (
     <View style={styles.container}>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={style || styles.input}
         placeholder={placeholder}
-        placeholderTextColor={placeholderTextColor || 'rgba(255,255,255,0.4)'}
+        placeholderTextColor={placeholderTextColor || Colors.textMuted}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => {
@@ -119,16 +122,25 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     zIndex: 1,
+    marginBottom: Spacing.lg,
+  },
+  label: {
+    fontFamily: FontFamily.medium,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
   },
   input: {
-    backgroundColor: '#1a1a1f',
+    minHeight: Layout.inputHeight,
+    backgroundColor: Colors.backgroundInput,
     borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
+    borderColor: Colors.borderSubtle,
+    borderRadius: Radius.input,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    color: Colors.text,
+    fontSize: 15,
+    fontFamily: FontFamily.regular,
   },
   loadingContainer: {
     position: 'absolute',
@@ -140,12 +152,12 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#1a1a1f',
+    backgroundColor: Colors.backgroundElevated,
     borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
+    borderColor: Colors.borderSubtle,
     borderTopWidth: 0,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
+    borderBottomLeftRadius: Radius.input,
+    borderBottomRightRadius: Radius.input,
     maxHeight: 200,
     zIndex: 1000,
     marginTop: -1,
@@ -157,11 +169,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: Colors.borderSubtle,
   },
   suggestionText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: Colors.text,
+    fontSize: 15,
+    fontFamily: FontFamily.regular,
   },
 });
 

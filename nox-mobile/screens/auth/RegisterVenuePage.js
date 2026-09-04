@@ -1,23 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { ActivityIndicator, Platform, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
-import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import Toast from '../../components/Toast';
+import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
+import RegisterRoleFormShell from './RegisterRoleFormShell';
+import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
 export default function RegisterVenuePage() {
   const { language, t } = useLanguage();
@@ -312,350 +304,152 @@ export default function RegisterVenuePage() {
     }
   };
 
+  const fr = language === 'fr';
+  const title = fr ? 'Compte Lieu' : 'Venue Account';
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <RegisterRoleFormShell
+      title={title}
+      subtitle={fr ? 'Enregistre ton lieu pour recevoir des demandes d’événements.' : 'Register your venue to receive event requests.'}
+      onBack={goBack}
+      submitLabel={fr ? 'Créer mon compte' : 'Create my account'}
+      onSubmit={handleSubmit}
+      loading={loading}
+      scrollRef={scrollViewRef}
+      toast={toast}
+      hideToast={hideToast}
+      keyboardDismissMode="none"
     >
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="none"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {language === 'fr' ? 'Compte Lieu' : 'Venue Account'}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Nom du lieu' : 'Venue name'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Nom de ton lieu' : 'Your venue name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.venueName}
-            onChangeText={(value) => handleChange('venueName', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Pseudo' : 'Username'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.pseudo}
-            onChangeText={(value) => handleChange('pseudo', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Email' : 'Email'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            value={formData.email}
-            onChangeText={(value) => handleChange('email', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Adresse' : 'Address'}
-          </Text>
-          <View style={styles.addressInputContainer}>
-          <TextInput
-            style={styles.input}
-              placeholder={language === 'fr' ? 'Commencez à taper une adresse...' : 'Start typing an address...'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.address}
-              onChangeText={(value) => {
-                handleChange('address', value);
-                // Réinitialiser la sélection si l'utilisateur modifie manuellement
-                if (selectedAddressId && value !== formData.address) {
-                  setSelectedAddressId(null);
-                }
-              }}
-              onFocus={() => {
-                if (addressSuggestions.length > 0) {
-                  setShowSuggestions(true);
-                }
-                if (Platform.OS === 'android') {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 300);
-                }
-              }}
-              onBlur={() => {
-                // Délai plus long pour permettre le clic sur une suggestion et le scroll
-                // Avec keyboardDismissMode="none", onBlur ne devrait plus être appelé lors du scroll
-                setTimeout(() => {
-                  // Cacher les suggestions seulement si on a vraiment perdu le focus
-                  if (addressSuggestions.length > 0) {
-                    setShowSuggestions(false);
-                  }
-                }, 300);
-              }}
-            />
-            {searchingAddress && (
-              <ActivityIndicator
-                size="small"
-                color={Colors.primary}
-                style={styles.addressSearchLoader}
-              />
-            )}
-          </View>
-          {showSuggestions && addressSuggestions.length > 0 && (
-            <View style={styles.suggestionsContainer}>
-              {addressSuggestions.map((item) => (
-                <TouchableOpacity
-                  key={item.id.toString()}
-                  style={styles.suggestionItem}
-                  onPress={() => selectAddress(item)}
-                >
-                  <Text style={styles.suggestionText}>{item.displayName}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          <Text style={styles.label}>
-            {language === 'fr'
-              ? 'Capacité max. du lieu (places, optionnel)'
-              : 'Max venue capacity (guests, optional)'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ex: 350' : 'e.g. 350'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.maxCapacity}
-            onChangeText={(value) => handleChange('maxCapacity', value)}
-          />
-          <Text style={styles.optionalHint}>
-            {language === 'fr'
-              ? 'Sert à plafonner la capacité des événements qui se déroulent chez vous. Tu pourras la modifier plus tard.'
-              : 'Caps event capacity for events at your venue. You can change it later.'}
-          </Text>
-
-          <Text style={[styles.label, styles.legalSectionTitle]}>
-            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
-          </Text>
-          <Text style={styles.legalHint}>
-            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
-          </Text>
-          <Text style={styles.label}>{language === 'fr' ? 'Société / Raison sociale' : 'Company name'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.companyName}
-            onChangeText={(value) => handleChange('companyName', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Représentant légal' : 'Legal representative'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Nom du représentant' : 'Representative name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.legalRepresentative}
-            onChangeText={(value) => handleChange('legalRepresentative', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '75001' : '75001'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.postalCode}
-            onChangeText={(value) => handleChange('postalCode', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Ville' : 'City'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Paris' : 'Paris'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.city}
-            onChangeText={(value) => handleChange('city', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'France' : 'France'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.country}
-            onChangeText={(value) => handleChange('country', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.siret}
-            onChangeText={(value) => handleChange('siret', value)}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.background} />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
+      <NoxInput
+        label={fr ? 'Nom du lieu' : 'Venue name'}
+        placeholder={fr ? 'Nom de ton lieu' : 'Your venue name'}
+        autoCapitalize="words"
+        value={formData.venueName}
+        onChangeText={(value) => handleChange('venueName', value)}
+        icon={<Ionicons name="business-outline" size={20} color={Colors.textTertiary} />}
       />
-    </KeyboardAvoidingView>
+      <NoxInput
+        label={fr ? 'Pseudo' : 'Username'}
+        placeholder={fr ? 'Ton pseudo' : 'Your username'}
+        autoCapitalize="none"
+        value={formData.pseudo}
+        onChangeText={(value) => handleChange('pseudo', value)}
+        icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label="Email"
+        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        value={formData.email}
+        onChangeText={(value) => handleChange('email', value)}
+        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label={fr ? 'Adresse' : 'Address'}
+        placeholder={fr ? 'Commence à taper une adresse…' : 'Start typing an address…'}
+        value={formData.address}
+        onChangeText={(value) => {
+          handleChange('address', value);
+          if (selectedAddressId && value !== formData.address) {
+            setSelectedAddressId(null);
+          }
+        }}
+        icon={<Ionicons name="location-outline" size={20} color={Colors.textTertiary} />}
+        rightSlot={searchingAddress ? <ActivityIndicator size="small" color={Colors.primary} /> : null}
+        onFocus={() => {
+          if (addressSuggestions.length > 0) {
+            setShowSuggestions(true);
+          }
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            if (addressSuggestions.length > 0) {
+              setShowSuggestions(false);
+            }
+          }, 300);
+        }}
+      />
+      {showSuggestions && addressSuggestions.length > 0 ? (
+        <View style={styles.suggestions}>
+          {addressSuggestions.map((item) => (
+            <TouchableOpacity
+              key={item.id.toString()}
+              style={styles.suggestionItem}
+              onPress={() => selectAddress(item)}
+            >
+              <NoxText variant="secondary" style={styles.suggestionText}>
+                {item.displayName}
+              </NoxText>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
+
+      <NoxInput
+        label={fr ? 'Capacité max. (optionnel)' : 'Max capacity (optional)'}
+        placeholder={fr ? 'Ex: 350' : 'e.g. 350'}
+        keyboardType="numeric"
+        value={formData.maxCapacity}
+        onChangeText={(value) => handleChange('maxCapacity', value)}
+        icon={<Ionicons name="people-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxText variant="secondary" style={styles.hint}>
+        {fr
+          ? 'Plafonne la capacité des événements chez toi. Modifiable plus tard.'
+          : 'Caps event capacity at your venue. You can change it later.'}
+      </NoxText>
+
+      <View style={styles.legalBlock}>
+        <NoxText variant="form" style={styles.legalTitle}>
+          {fr ? 'Infos légales (optionnel)' : 'Legal info (optional)'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.hint}>
+          {fr ? 'Pour pré-remplir tes contrats.' : 'Used to pre-fill your contracts.'}
+        </NoxText>
+      </View>
+      <NoxInput
+        label={fr ? 'Société / Raison sociale' : 'Company name'}
+        placeholder={fr ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
+        value={formData.companyName}
+        onChangeText={(value) => handleChange('companyName', value)}
+      />
+      <NoxInput
+        label={fr ? 'Représentant légal' : 'Legal representative'}
+        placeholder={fr ? 'Nom du représentant' : 'Representative name'}
+        value={formData.legalRepresentative}
+        onChangeText={(value) => handleChange('legalRepresentative', value)}
+      />
+      <NoxInput
+        label={fr ? 'Code postal' : 'Postal code'}
+        placeholder="75001"
+        keyboardType="numeric"
+        value={formData.postalCode}
+        onChangeText={(value) => handleChange('postalCode', value)}
+      />
+      <NoxInput
+        label={fr ? 'Ville' : 'City'}
+        placeholder="Paris"
+        value={formData.city}
+        onChangeText={(value) => handleChange('city', value)}
+      />
+      <NoxInput
+        label={fr ? 'Pays' : 'Country'}
+        placeholder="France"
+        value={formData.country}
+        onChangeText={(value) => handleChange('country', value)}
+      />
+      <NoxInput
+        label="SIRET"
+        placeholder="123 456 789 00012"
+        keyboardType="numeric"
+        value={formData.siret}
+        onChangeText={(value) => handleChange('siret', value)}
+      />
+    </RegisterRoleFormShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 300,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  form: {
-    gap: 18,
-    marginBottom: 24,
-  },
-  label: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  input: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-    flex: 1,
-  },
-  addressInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  addressSearchLoader: {
-    position: 'absolute',
-    right: 16,
-  },
-  suggestionsContainer: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    marginTop: 4,
-    maxHeight: 200,
-    zIndex: 1000,
-  },
-  suggestionItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(77,163,255,0.1)',
-  },
-  suggestionText: {
-    color: '#ffffff',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  legalSectionTitle: {
-    marginTop: 20,
-  },
-  legalHint: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginBottom: 12,
-  },
-  optionalHint: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    marginTop: -12,
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-});

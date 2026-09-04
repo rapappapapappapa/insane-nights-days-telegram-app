@@ -45,7 +45,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `login` | `LoginPage.js` | **Garder NOX** | |
 | `accountType` | `AccountTypePage.js` | **Garder NOX** | Prestataire = hors Figma mais produit |
 | `registerCommunity` | `RegisterCommunityPage.js` | **Migrer UI** | Fusionner avec Sign Up Figma ou alléger champs |
-| `registerDj/Booker/Venue/Prestataire` | `Register*.js` | **Migrer UI** | Thème NOX progressif |
+| `registerDj/Booker/Venue/Prestataire` | `Register*.js` | **NOX Sign Up (3 sept.)** DJ/Booker/Venue | Prestataire encore legacy |
 | — | Écran OTP (`AUTH / Verif`) | **À créer** | `AuthVerifyEmailPage.js` post-inscription |
 | — | Opt-in push | **À créer** | `NotificationsOptInPage.js` (Figma 08) |
 

@@ -1,25 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Modal,
-} from 'react-native';
+import { Modal, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
-import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import Toast from '../../components/Toast';
+import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import RegisterRoleFormShell from './RegisterRoleFormShell';
+import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
 export default function RegisterBookerPage() {
   const { language, t } = useLanguage();
@@ -193,432 +184,182 @@ export default function RegisterBookerPage() {
     }
   };
 
+  const fr = language === 'fr';
+  const title = fr ? 'Compte Organisateur' : 'Organizer Account';
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {language === 'fr' ? 'Compte Organisateur' : 'Organiser Account'}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Nom' : 'Last name'}
-            {formData.nom && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli depuis votre profil Community' : 'pre-filled from your Community profile'})</Text>
-            )}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton nom' : 'Your last name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.nom}
-            onChangeText={(value) => handleChange('nom', value)}
-            editable={!loadingProfiles}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Prénom' : 'First name'}
-            {formData.prenom && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli depuis votre profil Community' : 'pre-filled from your Community profile'})</Text>
-            )}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton prénom' : 'Your first name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.prenom}
-            onChangeText={(value) => handleChange('prenom', value)}
-            editable={!loadingProfiles}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Pseudo' : 'Username'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.pseudo}
-            onChangeText={(value) => handleChange('pseudo', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Email' : 'Email'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            value={formData.email}
-            onChangeText={(value) => handleChange('email', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Téléphone pro' : 'Professional phone'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '06 12 34 56 78' : '+33 6 12 34 56 78'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="phone-pad"
-            value={formData.phonePro}
-            onChangeText={(value) => handleChange('phonePro', value)}
-            onFocus={() => {
-              if (Platform.OS === 'android') {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }
-            }}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Type d\'organisateur' : 'Organizer type'}
-          </Text>
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => setShowBookerTypeModal(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.inputText, !formData.bookerType && styles.placeholderText]}>
-              {formData.bookerType 
-                ? bookerTypes.find(bt => bt.value === formData.bookerType)?.label || formData.bookerType
-                : (language === 'fr' ? 'Sélectionner un type' : 'Select a type')}
-            </Text>
-            <Text style={styles.chevron}>▼</Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.label, styles.legalSectionTitle]}>
-            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
-          </Text>
-          <Text style={styles.legalHint}>
-            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
-          </Text>
-          <Text style={styles.label}>{language === 'fr' ? 'Société / Raison sociale' : 'Company name'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.companyName}
-            onChangeText={(value) => handleChange('companyName', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.address}
-            onChangeText={(value) => handleChange('address', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '75001' : '75001'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.postalCode}
-            onChangeText={(value) => handleChange('postalCode', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Ville' : 'City'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Paris' : 'Paris'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.city}
-            onChangeText={(value) => handleChange('city', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'France' : 'France'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.country}
-            onChangeText={(value) => handleChange('country', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.siret}
-            onChangeText={(value) => handleChange('siret', value)}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
+    <RegisterRoleFormShell
+      title={title}
+      subtitle={fr ? 'Crée ton profil orga pour lancer tes events.' : 'Create your organizer profile to run events.'}
+      onBack={goBack}
+      submitLabel={fr ? 'Créer mon compte' : 'Create my account'}
+      onSubmit={handleSubmit}
+      loading={loading}
+      scrollRef={scrollViewRef}
+      toast={toast}
+      hideToast={hideToast}
+      extra={
+        <Modal
+          visible={showBookerTypeModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowBookerTypeModal(false)}
         >
-          {loading ? (
-            <ActivityIndicator color={Colors.background} />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Modal de sélection du type d'organisateur */}
-      <Modal
-        visible={showBookerTypeModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowBookerTypeModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {language === 'fr' ? 'Sélectionner un type d\'organisateur' : 'Select an organizer type'}
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowBookerTypeModal(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalOptions}>
-              {bookerTypes.map((type) => (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <NoxText variant="titleSecondary">
+                  {fr ? 'Type d’organisateur' : 'Organizer type'}
+                </NoxText>
                 <TouchableOpacity
-                  key={type.value}
-                  style={[
-                    styles.modalOption,
-                    formData.bookerType === type.value && styles.modalOptionSelected
-                  ]}
-                  onPress={() => {
-                    handleChange('bookerType', type.value);
-                    setShowBookerTypeModal(false);
-                  }}
+                  style={styles.modalClose}
+                  onPress={() => setShowBookerTypeModal(false)}
+                  accessibilityRole="button"
                 >
-                  <Text style={[
-                    styles.modalOptionText,
-                    formData.bookerType === type.value && styles.modalOptionTextSelected
-                  ]}>
-                    {type.label}
-                  </Text>
-                  {formData.bookerType === type.value && (
-                    <Text style={styles.modalOptionCheck}>✓</Text>
-                  )}
+                  <Ionicons name="close" size={18} color={Colors.primary} />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+              <ScrollView style={styles.modalOptions}>
+                {bookerTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.modalOption,
+                      formData.bookerType === type.value && styles.modalOptionSelected,
+                    ]}
+                    onPress={() => {
+                      handleChange('bookerType', type.value);
+                      setShowBookerTypeModal(false);
+                    }}
+                  >
+                    <NoxText variant="form">{type.label}</NoxText>
+                    {formData.bookerType === type.value ? (
+                      <Ionicons name="checkmark" size={18} color={Colors.primary} />
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
-
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
+        </Modal>
+      }
+    >
+      <NoxInput
+        label={fr ? 'Nom' : 'Last name'}
+        placeholder={fr ? 'Ton nom' : 'Your last name'}
+        autoCapitalize="words"
+        value={formData.nom}
+        onChangeText={(value) => handleChange('nom', value)}
+        editable={!loadingProfiles}
+        icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
       />
-    </KeyboardAvoidingView>
+      <NoxInput
+        label={fr ? 'Prénom' : 'First name'}
+        placeholder={fr ? 'Ton prénom' : 'Your first name'}
+        autoCapitalize="words"
+        value={formData.prenom}
+        onChangeText={(value) => handleChange('prenom', value)}
+        editable={!loadingProfiles}
+      />
+      <NoxInput
+        label={fr ? 'Pseudo' : 'Username'}
+        placeholder={fr ? 'Ton pseudo' : 'Your username'}
+        autoCapitalize="none"
+        value={formData.pseudo}
+        onChangeText={(value) => handleChange('pseudo', value)}
+      />
+      <NoxInput
+        label="Email"
+        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        value={formData.email}
+        onChangeText={(value) => handleChange('email', value)}
+        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label={fr ? 'Téléphone pro' : 'Professional phone'}
+        placeholder={fr ? '06 12 34 56 78' : '+33 6 12 34 56 78'}
+        keyboardType="phone-pad"
+        value={formData.phonePro}
+        onChangeText={(value) => handleChange('phonePro', value)}
+        icon={<Ionicons name="call-outline" size={20} color={Colors.textTertiary} />}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+
+      <NoxText variant="secondary" style={{ marginBottom: 8 }}>
+        {fr ? 'Type d’organisateur' : 'Organizer type'}
+      </NoxText>
+      <TouchableOpacity
+        style={styles.selectField}
+        onPress={() => setShowBookerTypeModal(true)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+      >
+        <NoxText
+          variant="form"
+          style={[styles.selectValue, !formData.bookerType && styles.selectPlaceholder]}
+        >
+          {formData.bookerType
+            ? bookerTypes.find((bt) => bt.value === formData.bookerType)?.label || formData.bookerType
+            : fr
+              ? 'Sélectionner un type'
+              : 'Select a type'}
+        </NoxText>
+        <Ionicons name="chevron-down" size={18} color={Colors.textTertiary} />
+      </TouchableOpacity>
+
+      <View style={styles.legalBlock}>
+        <NoxText variant="form" style={styles.legalTitle}>
+          {fr ? 'Infos légales (optionnel)' : 'Legal info (optional)'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.hint}>
+          {fr ? 'Pour pré-remplir tes contrats.' : 'Used to pre-fill your contracts.'}
+        </NoxText>
+      </View>
+      <NoxInput
+        label={fr ? 'Société / Raison sociale' : 'Company name'}
+        placeholder={fr ? 'Ex: Ma société SARL' : 'e.g. My Company Ltd'}
+        value={formData.companyName}
+        onChangeText={(value) => handleChange('companyName', value)}
+      />
+      <NoxInput
+        label={fr ? 'Adresse' : 'Address'}
+        placeholder={fr ? 'Adresse complète' : 'Full address'}
+        value={formData.address}
+        onChangeText={(value) => handleChange('address', value)}
+      />
+      <NoxInput
+        label={fr ? 'Code postal' : 'Postal code'}
+        placeholder="75001"
+        keyboardType="numeric"
+        value={formData.postalCode}
+        onChangeText={(value) => handleChange('postalCode', value)}
+      />
+      <NoxInput
+        label={fr ? 'Ville' : 'City'}
+        placeholder="Paris"
+        value={formData.city}
+        onChangeText={(value) => handleChange('city', value)}
+      />
+      <NoxInput
+        label={fr ? 'Pays' : 'Country'}
+        placeholder="France"
+        value={formData.country}
+        onChangeText={(value) => handleChange('country', value)}
+      />
+      <NoxInput
+        label="SIRET"
+        placeholder="123 456 789 00012"
+        keyboardType="numeric"
+        value={formData.siret}
+        onChangeText={(value) => handleChange('siret', value)}
+      />
+    </RegisterRoleFormShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  form: {
-    gap: 18,
-    marginBottom: 24,
-  },
-  label: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  input: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  autoFillHint: {
-    color: 'rgba(77,163,255,0.6)',
-    fontSize: 11,
-    fontWeight: '400',
-    fontStyle: 'italic',
-  },
-  inputText: {
-    color: '#ffffff',
-    fontSize: 16,
-    flex: 1,
-  },
-  placeholderText: {
-    color: 'rgba(255,255,255,0.4)',
-  },
-  chevron: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1a1a1f',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-    borderTopWidth: 2,
-    borderTopColor: Colors.primary,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(77,163,255,0.3)',
-  },
-  modalTitle: {
-    color: Colors.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(77,163,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseButtonText: {
-    color: Colors.primary,
-    fontSize: 24,
-    fontWeight: '300',
-  },
-  modalOptions: {
-    padding: 10,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.2)',
-  },
-  modalOptionSelected: {
-    backgroundColor: 'rgba(77,163,255,0.2)',
-    borderColor: Colors.primary,
-  },
-  modalOptionText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  modalOptionTextSelected: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  modalOptionCheck: {
-    color: Colors.primary,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  legalSectionTitle: {
-    marginTop: 20,
-  },
-  legalHint: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginBottom: 12,
-  },
-});
-

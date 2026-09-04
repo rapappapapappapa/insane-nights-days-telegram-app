@@ -6,6 +6,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 1 au 4 septembre 2026
 
+### Modifié (mobile — inscriptions rôle Figma)
+- **`registerDj` / `registerBooker` / `registerVenue`** : shell commun **`RegisterRoleFormShell`** (safe area, header retour, titre Sign Up, **`NoxInput` / `NoxButton`**).
+- **`CityAutocomplete`** : tokens NOX (bordure, fond, suggestions).
+- Pas de planche HD dédiée par rôle — inspiré **`AUTH / Sign Up`** (`03-onboarding-auth-splash`).
+
+### Manques Figma (inscriptions)
+- **`registerCommunity`** / **`registerPrestataire`** encore legacy.
+- Aucune maquette « Compte DJ / Orga / Lieu » distincte du Sign Up global.
+
 ### Modifié (mobile — checkout billet Figma)
 - **`eventDetail` (`checkoutOnly`)** : récap + section paiement dans une **`NoxCard`**, libellés FR (« Paiement », « Payer X€ », hint Stripe).
 - **Composant** : `EventCheckoutSection.js` (tiers, CGV, CTA) — réutilisé sur fiche événement et mode checkout.

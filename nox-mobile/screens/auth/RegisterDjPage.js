@@ -1,25 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { Platform, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
-import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import CityAutocomplete from '../../components/CityAutocomplete';
-import Toast from '../../components/Toast';
+import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import RegisterRoleFormShell from './RegisterRoleFormShell';
+import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
 export default function RegisterDjPage() {
   const { language, t } = useLanguage();
@@ -250,308 +242,131 @@ export default function RegisterDjPage() {
     }
   };
 
+  const fr = language === 'fr';
+  const title = fr ? 'Compte DJ' : 'DJ Account';
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <RegisterRoleFormShell
+      title={title}
+      subtitle={fr ? 'Complète ton profil artiste pour rejoindre le réseau.' : 'Complete your artist profile to join the network.'}
+      onBack={goBack}
+      submitLabel={fr ? 'Créer mon compte DJ' : 'Create my DJ account'}
+      onSubmit={handleSubmit}
+      loading={loading}
+      scrollRef={scrollViewRef}
+      toast={toast}
+      hideToast={hideToast}
     >
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {language === 'fr' ? 'Compte DJ' : 'DJ Account'}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Nom d\'artiste' : 'Artist name'}
-            {formData.artistName && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli depuis votre profil DJ existant' : 'pre-filled from your existing DJ profile'})</Text>
-            )}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton nom d\'artiste' : 'Your artist name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.artistName}
-            onChangeText={(value) => handleChange('artistName', value)}
-            editable={!loadingProfiles}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Pseudo' : 'Username'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            autoCapitalize="words"
-            value={formData.pseudo}
-            onChangeText={(value) => handleChange('pseudo', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Email pro' : 'Professional email'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            value={formData.email}
-            onChangeText={(value) => handleChange('email', value)}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Ville' : 'City'}
-            {formData.city && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
-            )}
-          </Text>
-          <CityAutocomplete
-            value={formData.city}
-            onChangeText={(value) => handleChange('city', value)}
-            placeholder={language === 'fr' ? 'Tapez le nom de votre ville...' : 'Type your city name...'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            style={styles.input}
-            editable={!loadingProfiles}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Téléphone' : 'Phone'}
-            {formData.phone && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
-            )}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '06 12 34 56 78' : '+33 6 12 34 56 78'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="phone-pad"
-            value={formData.phone}
-            onChangeText={(value) => handleChange('phone', value)}
-            editable={!loadingProfiles}
-            onFocus={() => {
-              if (Platform.OS === 'android') {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }
-            }}
-          />
-
-          <Text style={styles.label}>
-            {language === 'fr' ? 'Date de naissance' : 'Date of birth'}
-            {formData.dateNaissance && (
-              <Text style={styles.autoFillHint}> ({language === 'fr' ? 'pré-rempli' : 'pre-filled'})</Text>
-            )}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            maxLength={10}
-            value={formData.dateNaissance}
-            onChangeText={(value) => handleChange('dateNaissance', value)}
-            editable={!loadingProfiles}
-            onFocus={() => {
-              if (Platform.OS === 'android') {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }
-            }}
-          />
-
-          <Text style={[styles.label, styles.legalSectionTitle]}>
-            {language === 'fr' ? 'Infos légales (optionnel, pour les contrats)' : 'Legal info (optional, for contracts)'}
-          </Text>
-          <Text style={styles.legalHint}>
-            {language === 'fr' ? 'Complétez ces champs pour pré-remplir vos contrats.' : 'Fill these fields to pre-fill your contracts.'}
-          </Text>
-          <Text style={styles.label}>{language === 'fr' ? 'Nom légal' : 'Legal name'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Nom civil complet' : 'Full legal name'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.legalName}
-            onChangeText={(value) => handleChange('legalName', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Adresse' : 'Address'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'Adresse complète' : 'Full address'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.address}
-            onChangeText={(value) => handleChange('address', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Code postal' : 'Postal code'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '75001' : '75001'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.postalCode}
-            onChangeText={(value) => handleChange('postalCode', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'Pays' : 'Country'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'France' : 'France'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.country}
-            onChangeText={(value) => handleChange('country', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'SIRET' : 'SIRET'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? '123 456 789 00012' : '123 456 789 00012'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="numeric"
-            value={formData.siret}
-            onChangeText={(value) => handleChange('siret', value)}
-          />
-          <Text style={styles.label}>{language === 'fr' ? 'N° TVA' : 'VAT number'}</Text>
-          <TextInput
-            style={styles.input}
-            placeholder={language === 'fr' ? 'FR12345678901' : 'FR12345678901'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={formData.vatNumber}
-            onChangeText={(value) => handleChange('vatNumber', value)}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.background} />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {language === 'fr' ? 'Créer mon compte DJ' : 'Create my DJ account'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
+      <NoxInput
+        label={fr ? 'Nom d’artiste' : 'Artist name'}
+        placeholder={fr ? 'Ton nom d’artiste' : 'Your artist name'}
+        autoCapitalize="words"
+        value={formData.artistName}
+        onChangeText={(value) => handleChange('artistName', value)}
+        editable={!loadingProfiles}
+        icon={<Ionicons name="musical-notes-outline" size={20} color={Colors.textTertiary} />}
       />
-    </KeyboardAvoidingView>
+      <NoxInput
+        label={fr ? 'Pseudo' : 'Username'}
+        placeholder={fr ? 'Ton pseudo' : 'Your username'}
+        autoCapitalize="none"
+        value={formData.pseudo}
+        onChangeText={(value) => handleChange('pseudo', value)}
+        icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label={fr ? 'Email pro' : 'Professional email'}
+        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        value={formData.email}
+        onChangeText={(value) => handleChange('email', value)}
+        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <CityAutocomplete
+        label={fr ? 'Ville' : 'City'}
+        value={formData.city}
+        onChangeText={(value) => handleChange('city', value)}
+        placeholder={fr ? 'Tape le nom de ta ville…' : 'Type your city name…'}
+      />
+      <NoxInput
+        label={fr ? 'Téléphone' : 'Phone'}
+        placeholder={fr ? '06 12 34 56 78' : '+33 6 12 34 56 78'}
+        keyboardType="phone-pad"
+        value={formData.phone}
+        onChangeText={(value) => handleChange('phone', value)}
+        editable={!loadingProfiles}
+        icon={<Ionicons name="call-outline" size={20} color={Colors.textTertiary} />}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+      <NoxInput
+        label={fr ? 'Date de naissance' : 'Date of birth'}
+        placeholder={fr ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
+        keyboardType="numeric"
+        maxLength={10}
+        value={formData.dateNaissance}
+        onChangeText={(value) => handleChange('dateNaissance', value)}
+        editable={!loadingProfiles}
+        icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+
+      <View style={styles.legalBlock}>
+        <NoxText variant="form" style={styles.legalTitle}>
+          {fr ? 'Infos légales (optionnel)' : 'Legal info (optional)'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.hint}>
+          {fr ? 'Pour pré-remplir tes contrats.' : 'Used to pre-fill your contracts.'}
+        </NoxText>
+      </View>
+      <NoxInput
+        label={fr ? 'Nom légal' : 'Legal name'}
+        placeholder={fr ? 'Nom civil complet' : 'Full legal name'}
+        value={formData.legalName}
+        onChangeText={(value) => handleChange('legalName', value)}
+      />
+      <NoxInput
+        label={fr ? 'Adresse' : 'Address'}
+        placeholder={fr ? 'Adresse complète' : 'Full address'}
+        value={formData.address}
+        onChangeText={(value) => handleChange('address', value)}
+      />
+      <NoxInput
+        label={fr ? 'Code postal' : 'Postal code'}
+        placeholder="75001"
+        keyboardType="numeric"
+        value={formData.postalCode}
+        onChangeText={(value) => handleChange('postalCode', value)}
+      />
+      <NoxInput
+        label={fr ? 'Pays' : 'Country'}
+        placeholder="France"
+        value={formData.country}
+        onChangeText={(value) => handleChange('country', value)}
+      />
+      <NoxInput
+        label="SIRET"
+        placeholder="123 456 789 00012"
+        keyboardType="numeric"
+        value={formData.siret}
+        onChangeText={(value) => handleChange('siret', value)}
+      />
+      <NoxInput
+        label={fr ? 'N° TVA' : 'VAT number'}
+        placeholder="FR12345678901"
+        value={formData.vatNumber}
+        onChangeText={(value) => handleChange('vatNumber', value)}
+      />
+    </RegisterRoleFormShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  form: {
-    gap: 18,
-    marginBottom: 24,
-  },
-  label: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  input: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  autoFillHint: {
-    color: 'rgba(77,163,255,0.6)',
-    fontSize: 11,
-    fontWeight: '400',
-    fontStyle: 'italic',
-  },
-  legalSectionTitle: {
-    marginTop: 20,
-  },
-  legalHint: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginBottom: 12,
-  },
-});
 

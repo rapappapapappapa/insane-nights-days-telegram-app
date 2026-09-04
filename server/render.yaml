@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: insane-nights-backend
+    name: nox-backend
     env: node
     buildCommand: npm install && npx prisma generate
     startCommand: npm start
@@ -11,13 +11,13 @@ services:
         sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: insane-nights-db
+          name: nox-db
           property: connectionString
     postDeployCommand: npx prisma migrate deploy
 
 databases:
-  - name: insane-nights-db
+  - name: nox-db
     plan: free
-    databaseName: insane_nights
-    user: insane_nights_user
+    databaseName: nox_db
+    user: nox_db_user
 

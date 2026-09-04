@@ -34,4 +34,11 @@ server/backend_manual.pid
 # Local cloudflared binary (downloaded)
 cloudflared
 
+# Fichiers locaux / hors runtime applicatif (ne pas versionner)
+RESEND_CONFIGURATION_PATRON.txt
+Untitled-1
+client/build/
+docs/contract-templates/
 
+# Script perso / assistant : heure système (`node scripts/local-time.js`)
+scripts/local-time.js

@@ -45,7 +45,7 @@ async function cleanAndAssociate() {
       // Assignation selon le genre de l'événement
       let djNamesToAssign = [];
       
-      if (event.genre === 'Electro' || event.title.includes('Electro') || event.title.includes('Insane Night')) {
+      if (event.genre === 'Electro' || event.title.includes('Electro') || event.title.includes('Nox Night')) {
         djNamesToAssign = ['DJ NEON', 'MIXMASTER NOVA'];
       } else if (event.genre === 'Drum & Bass' || event.title.includes('Bass Revolution') || event.title.includes('Drum')) {
         djNamesToAssign = ['BASS STORM', 'DJ CYBER'];

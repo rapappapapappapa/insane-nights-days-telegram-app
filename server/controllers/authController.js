@@ -4,13 +4,22 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-const { validateRegistration, validateLogin, normalizeEmail } = require('../utils/validation');
+const prisma = require('../lib/prisma');
+const {
+  validateRegistration,
+  validateLogin,
+  normalizeEmail,
+  validatePassword,
+  isValidEmail,
+  parseBirthDate,
+  validateAge,
+  sanitizeInvisibleChars,
+} = require('../utils/validation');
+const { verifyGoogleIdToken } = require('../utils/googleIdTokenVerify');
+const { verifyAppleIdentityToken } = require('../utils/appleIdTokenVerify');
 const { sanitizeUser, handleError, sendError, sendSuccess } = require('../utils/helpers');
 
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'insane-nights-days-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../utils/jwtConfig');
 
 /**
  * Inscription d'un nouvel utilisateur
@@ -19,12 +28,34 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
  */
 const register = async (req, res) => {
   try {
-    const { email, username, password } = req.body ?? {};
+    const { email, username, password, birthDate: birthDateStr, certifiedMajor } = req.body ?? {};
+
+    // Log pour diagnostic (email masqué, domaine visible)
+    const domain = (email && typeof email === 'string' && email.includes('@')) ? email.split('@')[1] : '?';
+    const masked = email ? `${String(email).slice(0, 2)}***@${domain}` : '?';
+    console.log('[register] Tentative inscription:', { emailMasked: masked, username: username?.slice(0, 8) + '***' });
 
     // Valider les données d'inscription
     const validation = validateRegistration({ email, username, password });
     if (!validation.valid) {
+      console.log('[register] Validation échouée:', validation.message);
       return sendError(res, validation.message, 400);
+    }
+
+    // Valider date de naissance et majorité
+    if (!birthDateStr || !birthDateStr.trim()) {
+      return sendError(res, 'La date de naissance est requise.', 400);
+    }
+    const parsed = parseBirthDate(birthDateStr.trim());
+    if (!parsed.valid) {
+      return sendError(res, parsed.message, 400);
+    }
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) {
+      return sendError(res, ageCheck.message, 403);
+    }
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
     }
 
     const { normalizedData } = validation;
@@ -35,6 +66,7 @@ const register = async (req, res) => {
     });
 
     if (existingUserByEmail) {
+      console.log('[register] Email déjà utilisé:', masked);
       return sendError(res, 'Cet email ou pseudo est déjà utilisé.', 409);
     }
 
@@ -44,6 +76,7 @@ const register = async (req, res) => {
     });
 
     if (existingUserByUsername) {
+      console.log('[register] Pseudo déjà utilisé');
       return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
     }
 
@@ -54,6 +87,7 @@ const register = async (req, res) => {
         email: normalizedData.email,
         username: normalizedData.username,
         password: hashedPassword,
+        birthDate: parsed.date,
         score: 100,
         level: 1,
       },
@@ -66,12 +100,14 @@ const register = async (req, res) => {
       { expiresIn: JWT_EXPIRES_IN }
     );
 
+    console.log('[register] Compte créé:', masked);
     return sendSuccess(res, {
       message: 'Compte créé avec succès.',
       user: sanitizeUser(newUser),
       token: token,
     }, 201);
   } catch (error) {
+    console.error('[register] Erreur:', error.message, error.code);
     handleError(error, res, "Erreur lors de l'inscription.");
   }
 };
@@ -100,34 +136,27 @@ const login = async (req, res) => {
         where: { email: normalizedEmail },
       });
     } else {
-      // Sinon, chercher par pseudo (username)
+      // Sinon, chercher par pseudo (username) - insensible à la casse (PostgreSQL)
       const usernameSearch = email.trim();
-      
-      // Chercher d'abord avec la casse exacte
       user = await prisma.user.findFirst({
-        where: { username: usernameSearch },
+        where: {
+          username: { equals: usernameSearch, mode: 'insensitive' },
+        },
       });
-      
-      // Si pas trouvé, essayer avec une recherche insensible à la casse
-      if (!user) {
-        try {
-          const users = await prisma.$queryRaw`
-            SELECT * FROM User WHERE LOWER(username) = LOWER(${usernameSearch})
-          `;
-          if (users && users.length > 0) {
-            user = users[0];
-          }
-        } catch (queryError) {
-          console.error('[LOGIN] Erreur requête brute:', queryError);
-        }
-      }
     }
 
     if (!user) {
       return sendError(res, 'Identifiants invalides.', 401);
     }
 
-    // Vérifier le mot de passe
+    if (user.password == null || user.password === '') {
+      return sendError(
+        res,
+        'Ce compte utilise Google, Apple ou une autre méthode sans mot de passe. Utilise le bouton correspondant.',
+        401
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return sendError(res, 'Identifiants invalides.', 401);
@@ -147,6 +176,403 @@ const login = async (req, res) => {
     });
   } catch (error) {
     handleError(error, res, 'Erreur lors de la connexion.');
+  }
+};
+
+/**
+ * Connexion ou inscription avec Google (id_token vérifié côté serveur).
+ * Nouveau compte : mêmes exigences que l'inscription classique (âge, CGU…).
+ */
+const googleAuth = async (req, res) => {
+  try {
+    const { idToken, birthDate: birthDateStr, certifiedMajor, acceptedCgu, username: usernameRaw } =
+      req.body ?? {};
+    let profile;
+    try {
+      profile = await verifyGoogleIdToken(idToken);
+    } catch (e) {
+      const code = Number(e.statusCode);
+      const http = Number.isFinite(code) && code >= 400 && code < 600 ? code : 500;
+      return sendError(res, e.message || 'Token Google invalide.', http);
+    }
+
+    const { googleId } = profile;
+    const normalizedEmail = normalizeEmail(profile.email);
+
+    let user = await prisma.user.findFirst({ where: { googleId } });
+
+    if (user) {
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (user) {
+      if (user.googleId && user.googleId !== googleId) {
+        return sendError(res, 'Ce compte email est déjà lié à un autre compte Google.', 409);
+      }
+      if (!user.googleId) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId },
+        });
+      }
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    if (!birthDateStr || !String(birthDateStr).trim()) {
+      return sendError(res, 'La date de naissance est requise pour créer un compte.', 400);
+    }
+    const parsed = parseBirthDate(String(birthDateStr).trim());
+    if (!parsed.valid) return sendError(res, parsed.message, 400);
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) return sendError(res, ageCheck.message, 403);
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
+    }
+    if (!acceptedCgu) {
+      return sendError(res, 'Vous devez accepter les CGU et la politique de confidentialité.', 400);
+    }
+
+    const usernameCheck = validateOptionalUsername(usernameRaw);
+    if (!usernameCheck.valid) return sendError(res, usernameCheck.message, 400);
+    let finalUsername = usernameCheck.value;
+    if (!finalUsername) {
+      try {
+        finalUsername = await allocateUniqueUsername(prisma, suggestUsernameFromEmail(normalizedEmail));
+      } catch (allocErr) {
+        console.error('[googleAuth] allocate username:', allocErr);
+        return sendError(
+          res,
+          'Impossible de créer un pseudo unique. Choisis un pseudo ou réessaie.',
+          500
+        );
+      }
+    } else {
+      const taken = await prisma.user.findFirst({
+        where: { username: { equals: finalUsername, mode: 'insensitive' } },
+      });
+      if (taken) return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        username: finalUsername,
+        password: null,
+        googleId,
+        birthDate: parsed.date,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        score: 100,
+        level: 1,
+      },
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    return sendSuccess(
+      res,
+      {
+        message: 'Compte créé avec succès.',
+        user: sanitizeUser(newUser),
+        token,
+      },
+      201
+    );
+  } catch (error) {
+    console.error('[googleAuth]', error);
+    handleError(error, res, 'Erreur lors de la connexion Google.');
+  }
+};
+
+/**
+ * Connexion ou inscription avec Apple (identityToken vérifié côté serveur, JWKS Apple).
+ * L’email est lu **uniquement** depuis le JWT (pas de confiance au corps brut).
+ */
+const appleAuth = async (req, res) => {
+  try {
+    const { identityToken, birthDate: birthDateStr, certifiedMajor, acceptedCgu, username: usernameRaw } =
+      req.body ?? {};
+
+    let verified;
+    try {
+      verified = await verifyAppleIdentityToken(identityToken);
+    } catch (e) {
+      const code = Number(e.statusCode);
+      const http = Number.isFinite(code) && code >= 400 && code < 600 ? code : 500;
+      return sendError(res, e.message || 'Token Apple invalide.', http);
+    }
+
+    const { appleId } = verified;
+    const normalizedEmail = verified.email ? normalizeEmail(verified.email) : null;
+
+    if (normalizedEmail && verified.emailVerified === false) {
+      return sendError(res, 'Ton compte Apple doit partager une email vérifiée.', 400);
+    }
+
+    let user = await prisma.user.findFirst({ where: { appleId } });
+
+    if (user) {
+      const token = jwt.sign(
+        { userId: user.id, email: user.email },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+      return sendSuccess(res, {
+        message: 'Connexion réussie.',
+        user: sanitizeUser(user),
+        token,
+      });
+    }
+
+    if (normalizedEmail) {
+      user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (user) {
+        if (user.appleId && user.appleId !== appleId) {
+          return sendError(res, 'Ce compte email est déjà lié à un autre compte Apple.', 409);
+        }
+        if (!user.appleId) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { appleId },
+          });
+        }
+        const token = jwt.sign(
+          { userId: user.id, email: user.email },
+          JWT_SECRET,
+          { expiresIn: JWT_EXPIRES_IN }
+        );
+        return sendSuccess(res, {
+          message: 'Connexion réussie.',
+          user: sanitizeUser(user),
+          token,
+        });
+      }
+    }
+
+    if (!normalizedEmail) {
+      return sendError(
+        res,
+        'Apple n’a pas inclus d’email dans le jeton. Réessaie : sur un iPhone, Réglages → [ton nom] → Connexion avec Apple → Nox → « Arrêter d’utiliser Apple ID », puis reconnecte-toi en partageant l’email. Tu peux aussi utiliser Google ou l’email.',
+        400
+      );
+    }
+
+    if (!birthDateStr || !String(birthDateStr).trim()) {
+      return sendError(res, 'La date de naissance est requise pour créer un compte.', 400);
+    }
+    const parsed = parseBirthDate(String(birthDateStr).trim());
+    if (!parsed.valid) return sendError(res, parsed.message, 400);
+    const ageCheck = validateAge(parsed.date);
+    if (!ageCheck.valid) return sendError(res, ageCheck.message, 403);
+    if (!certifiedMajor) {
+      return sendError(res, 'Vous devez certifier avoir 18 ans ou plus.', 400);
+    }
+    if (!acceptedCgu) {
+      return sendError(res, 'Vous devez accepter les CGU et la politique de confidentialité.', 400);
+    }
+
+    const usernameCheck = validateOptionalUsername(usernameRaw);
+    if (!usernameCheck.valid) return sendError(res, usernameCheck.message, 400);
+    let finalUsername = usernameCheck.value;
+    if (!finalUsername) {
+      try {
+        finalUsername = await allocateUniqueUsername(prisma, suggestUsernameFromEmail(normalizedEmail));
+      } catch (allocErr) {
+        console.error('[appleAuth] allocate username:', allocErr);
+        return sendError(
+          res,
+          'Impossible de créer un pseudo unique. Choisis un pseudo ou réessaie.',
+          500
+        );
+      }
+    } else {
+      const taken = await prisma.user.findFirst({
+        where: { username: { equals: finalUsername, mode: 'insensitive' } },
+      });
+      if (taken) return sendError(res, 'Ce pseudo est déjà utilisé.', 409);
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        username: finalUsername,
+        password: null,
+        appleId,
+        birthDate: parsed.date,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+        score: 100,
+        level: 1,
+      },
+    });
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    return sendSuccess(
+      res,
+      {
+        message: 'Compte créé avec succès.',
+        user: sanitizeUser(newUser),
+        token,
+      },
+      201
+    );
+  } catch (error) {
+    console.error('[appleAuth]', error);
+    handleError(error, res, 'Erreur lors de la connexion Apple.');
+  }
+};
+
+/**
+ * Mot de passe oublié: envoie un code par email
+ * @route POST /api/auth/forgot-password
+ * body: { email }
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const emailRaw = req.body?.email;
+    const email = typeof emailRaw === 'string' ? normalizeEmail(emailRaw) : '';
+    // Ne jamais révéler si l'email existe ou non
+    const genericOk = () =>
+      sendSuccess(res, { message: 'Si un compte existe, un code de réinitialisation a été envoyé.' });
+
+    if (!email || !isValidEmail(email)) {
+      return genericOk();
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true },
+    });
+
+    if (!user) return genericOk();
+
+    const crypto = require('crypto');
+    const { sendMail } = require('../utils/mailer');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetCodeHash: codeHash,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+
+    const subject = 'Nox — Réinitialisation du mot de passe';
+    const text = `Ton code de réinitialisation est: ${code}\n\nIl expire dans 15 minutes.`;
+    const html = `<p>Ton code de réinitialisation est:</p><h2>${code}</h2><p>Il expire dans 15 minutes.</p>`;
+
+    try {
+      await sendMail({ to: user.email, subject, text, html });
+    } catch (e) {
+      if (process.env.NODE_ENV === 'production') {
+        return sendError(res, 'Impossible d\'envoyer l\'email. Vérifie la config serveur.', 500);
+      }
+      const debugCode = process.env.DEBUG_LOGS === 'true' ? code : undefined;
+      return sendSuccess(res, { message: 'Code généré (email non envoyé).', debugCode });
+    }
+
+    return genericOk();
+  } catch (e) {
+    handleError(e, res, 'Erreur lors du mot de passe oublié.');
+  }
+};
+
+/**
+ * Réinitialiser le mot de passe avec code
+ * @route POST /api/auth/reset-password
+ * body: { email, code, newPassword, confirmPassword? }
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const emailRaw = req.body?.email;
+    const codeRaw = req.body?.code;
+    const newPassword = req.body?.newPassword;
+    const confirmPassword = req.body?.confirmPassword ?? newPassword;
+
+    const email = typeof emailRaw === 'string' ? normalizeEmail(emailRaw) : '';
+    const code = typeof codeRaw === 'string' ? codeRaw.trim() : '';
+
+    if (!email || !isValidEmail(email)) {
+      return sendError(res, 'Email invalide.', 400);
+    }
+    if (!/^\d{6}$/.test(code)) {
+      return sendError(res, 'Code invalide (6 chiffres).', 400);
+    }
+    if (newPassword !== confirmPassword) {
+      return sendError(res, 'La confirmation ne correspond pas.', 400);
+    }
+    const pwd = validatePassword(newPassword);
+    if (!pwd.valid) return sendError(res, pwd.message, 400);
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        passwordResetCodeHash: true,
+        passwordResetExpiresAt: true,
+      },
+    });
+    if (!user || !user.passwordResetCodeHash || !user.passwordResetExpiresAt) {
+      return sendError(res, 'Code invalide ou expiré.', 400);
+    }
+    const expiresAt = new Date(user.passwordResetExpiresAt);
+    if (expiresAt.getTime() < Date.now()) {
+      return sendError(res, 'Code expiré.', 400);
+    }
+
+    const crypto = require('crypto');
+    const salt = (process.env.AUTH_CODE_SALT || '').trim();
+    const codeHash = crypto.createHash('sha256').update(`${salt}:${code}`).digest('hex');
+    if (codeHash !== user.passwordResetCodeHash) {
+      return sendError(res, 'Code invalide.', 400);
+    }
+
+    const hashedPassword = await bcrypt.hash(String(newPassword), 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetCodeHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    return sendSuccess(res, { message: 'Mot de passe réinitialisé.' });
+  } catch (e) {
+    handleError(e, res, 'Erreur reset password.');
   }
 };
 
@@ -175,7 +601,7 @@ const connectWallet = async (req, res) => {
         data: {
           email: walletAddress,
           username: username || `Wallet_${walletAddress.slice(0, 8)}`,
-          password: '', // Pas de mot de passe pour les wallets
+          password: null,
           score: 100,
           level: 1,
         },
@@ -198,9 +624,44 @@ const connectWallet = async (req, res) => {
   }
 };
 
+function suggestUsernameFromEmail(email) {
+  const normalized = normalizeEmail(email);
+  const local = normalized.split('@')[0] || 'user';
+  const cleaned = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24);
+  if (cleaned.length >= 2) return cleaned;
+  return `user_${cleaned || 'nox'}`;
+}
+
+function validateOptionalUsername(raw) {
+  if (raw == null || String(raw).trim() === '') return { valid: true, value: null };
+  const s = sanitizeInvisibleChars(String(raw)).trim();
+  if (s.length < 2) return { valid: false, message: 'Le pseudo doit contenir au moins 2 caractères.' };
+  if (s.length > 40) return { valid: false, message: 'Le pseudo est trop long (40 caractères max).' };
+  if (!/^[a-zA-Z0-9_-]+$/.test(s)) {
+    return { valid: false, message: 'Pseudo invalide (lettres, chiffres, tirets et underscore).' };
+  }
+  return { valid: true, value: s };
+}
+
+async function allocateUniqueUsername(prismaClient, base) {
+  const safeBase = (base || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24) || 'user';
+  for (let i = 0; i < 40; i += 1) {
+    const suffix = i === 0 ? '' : `_${Math.random().toString(36).slice(2, 7)}`;
+    const candidate = `${safeBase}${suffix}`.slice(0, 40);
+    const exists = await prismaClient.user.findFirst({
+      where: { username: { equals: candidate, mode: 'insensitive' } },
+    });
+    if (!exists) return candidate;
+  }
+  throw new Error('Impossible d\'attribuer un pseudo unique.');
+}
+
 module.exports = {
   register,
   login,
+  googleAuth,
+  appleAuth,
   connectWallet,
+  forgotPassword,
+  resetPassword,
 };
-

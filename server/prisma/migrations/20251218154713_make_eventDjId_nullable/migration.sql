@@ -12,8 +12,8 @@ CREATE TABLE "Message_new" (
     "content" TEXT NOT NULL,
     "read" BOOLEAN NOT NULL DEFAULT false,
     "deleted" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Copier les données de l'ancienne table vers la nouvelle

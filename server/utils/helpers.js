@@ -15,6 +15,8 @@ const sanitizeUser = (user) => {
     id: user.id,
     email: user.email,
     username: user.username,
+    role: user.role || 'USER',
+    emailVerified: !!user.emailVerified,
     score: user.score ?? 0,
     level: user.level ?? 1,
     activeProfileType: user.activeProfileType ?? null,

@@ -1,7 +1,7 @@
 {
-  "name": "insane-nights-days-app",
+  "name": "nox-platform",
   "version": "1.0.0",
-  "description": "App Telegram moderne pour la plateforme Insane Nights & Days",
+  "description": "Plateforme NOX — API, app mobile Expo et client web",
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
@@ -9,7 +9,8 @@
     "client:dev": "cd client && npm start",
     "build": "cd client && npm run build",
     "start": "node server/index.js",
-    "install:all": "npm install && cd client && npm install"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "test:server": "cd server && npm test"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -18,7 +19,6 @@
     "fs-extra": "^11.2.0",
     "nodemailer": "^7.0.10",
     "qrcode": "^1.5.3",
-    "telegraf": "^4.15.6",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -26,13 +26,12 @@
     "nodemon": "^3.0.2"
   },
   "keywords": [
-    "telegram",
-    "app",
+    "nox",
     "events",
-    "insane",
-    "ton",
-    "blockchain"
+    "mobile",
+    "expo",
+    "nightlife"
   ],
-  "author": "Insane Corporation",
+  "author": "NOX",
   "license": "MIT"
 }

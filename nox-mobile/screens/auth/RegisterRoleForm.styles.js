@@ -21,6 +21,14 @@ export const registerRoleStyles = StyleSheet.create({
   header: {
     marginBottom: Spacing.xl,
   },
+  stepBadge: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: Spacing.sm,
+  },
   title: {
     textAlign: 'left',
     marginBottom: Spacing.xs,
@@ -28,6 +36,21 @@ export const registerRoleStyles = StyleSheet.create({
   subtitle: {
     textAlign: 'left',
     lineHeight: 22,
+  },
+  accountSummary: {
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.borderSubtle,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    gap: Spacing.xs,
+  },
+  accountSummaryTitle: {
+    marginBottom: Spacing.xs,
+  },
+  accountSummaryLine: {
+    fontSize: 13,
   },
   form: {
     marginBottom: Spacing.lg,

@@ -7,11 +7,13 @@ import Toast from '../../components/Toast';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
 /**
- * Shell commun des inscriptions de rôle (DJ / Booker / Lieu) — aligné Sign Up Figma.
+ * Shell commun des inscriptions de rôle (DJ / Booker / Lieu) — étape 2 après le compte.
  */
 export default function RegisterRoleFormShell({
   title,
   subtitle,
+  stepLabel,
+  accountSummary = null,
   onBack,
   submitLabel,
   onSubmit,
@@ -41,6 +43,11 @@ export default function RegisterRoleFormShell({
           keyboardDismissMode={keyboardDismissMode}
         >
           <View style={styles.header}>
+            {stepLabel ? (
+              <NoxText variant="secondary" style={styles.stepBadge}>
+                {stepLabel}
+              </NoxText>
+            ) : null}
             <NoxText variant="title" style={styles.title}>
               {title}
             </NoxText>
@@ -50,6 +57,19 @@ export default function RegisterRoleFormShell({
               </NoxText>
             ) : null}
           </View>
+
+          {accountSummary ? (
+            <View style={styles.accountSummary}>
+              <NoxText variant="form" style={styles.accountSummaryTitle}>
+                {accountSummary.title}
+              </NoxText>
+              {accountSummary.lines?.map((line) => (
+                <NoxText key={line} variant="secondary" style={styles.accountSummaryLine}>
+                  {line}
+                </NoxText>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.form}>{children}</View>
 

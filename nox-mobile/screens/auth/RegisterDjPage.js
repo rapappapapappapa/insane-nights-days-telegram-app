@@ -10,6 +10,7 @@ import CityAutocomplete from '../../components/CityAutocomplete';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -18,14 +19,15 @@ export default function RegisterDjPage() {
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const roleCopy = getRegisterRoleCopy('registerDj', language);
+  const accountPseudo = (user?.username || '').trim();
+  const accountEmail = (user?.email || '').trim();
+  const accountBirth = formatBirthDateFr(user?.birthDate);
 
   const [formData, setFormData] = useState({
-    pseudo: user?.username || '',
     artistName: '',
-    email: user?.email || '',
     city: '',
     phone: '',
-    dateNaissance: '',
     legalName: '',
     address: '',
     postalCode: '',
@@ -61,7 +63,6 @@ export default function RegisterDjPage() {
                   artistName: dj.artistName || prev.artistName,
                   city: dj.city || prev.city,
                   phone: dj.phone || prev.phone,
-                  dateNaissance: dj.birthDate || prev.dateNaissance,
                 }));
               }
             } catch (djError) {
@@ -87,85 +88,27 @@ export default function RegisterDjPage() {
   }, [user?.token]);
 
   const handleChange = (field, value) => {
-    // Validation spéciale pour la date de naissance
-    if (field === 'dateNaissance') {
-      // N'autoriser que les chiffres
-      const cleaned = value.replace(/[^0-9]/g, '');
-      
-      // Formater automatiquement avec des slashes
-      let formatted = cleaned;
-      if (cleaned.length > 2) {
-        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
-      }
-      if (cleaned.length > 4) {
-        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
-      }
-      
-      // Limiter à 10 caractères (jj/mm/aaaa)
-      const limited = formatted.length > 10 ? formatted.slice(0, 10) : formatted;
-      setFormData((prev) => ({ ...prev, [field]: limited }));
-    } else {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    }
-  };
-
-  const validateDate = (dateString) => {
-    // Format attendu: jj/mm/aaaa
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    if (!dateRegex.test(dateString)) {
-      return false;
-    }
-    
-    const [, day, month, year] = dateString.match(dateRegex);
-    const dayNum = parseInt(day, 10);
-    const monthNum = parseInt(month, 10);
-    const yearNum = parseInt(year, 10);
-    
-    // Vérifier les limites raisonnables
-    if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
-      return false;
-    }
-    if (monthNum < 1 || monthNum > 12) {
-      return false;
-    }
-    if (dayNum < 1 || dayNum > 31) {
-      return false;
-    }
-    
-    // Vérifier que la date est valide (ex: pas le 31 février)
-    const date = new Date(yearNum, monthNum - 1, dayNum);
-    if (
-      date.getFullYear() !== yearNum ||
-      date.getMonth() !== monthNum - 1 ||
-      date.getDate() !== dayNum
-    ) {
-      return false;
-    }
-    
-    // Vérifier que la personne a au moins 13 ans
-    const today = new Date();
-    const age = today.getFullYear() - yearNum;
-    if (age < 13) {
-      return false;
-    }
-    
-    return true;
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
     if (loading) return;
 
-    // Validation
-    if (!formData.pseudo || !formData.artistName || !formData.email || !formData.city || !formData.phone || !formData.dateNaissance) {
-      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
+    const pseudo = accountPseudo;
+    const email = accountEmail;
+    const dateNaissance = accountBirth;
+
+    if (!pseudo || !email || !dateNaissance) {
+      showError(
+        language === 'fr'
+          ? 'Compte incomplet. Reviens à l’inscription ou reconnecte-toi.'
+          : 'Incomplete account. Go back to sign-up or log in again.',
+      );
       return;
     }
 
-    // Validation de la date de naissance
-    if (!validateDate(formData.dateNaissance)) {
-      showError(language === 'fr' 
-        ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
-        : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.');
+    if (!formData.artistName || !formData.city || !formData.phone) {
+      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
 
@@ -190,12 +133,12 @@ export default function RegisterDjPage() {
 
       const response = await api.createDjProfile({
         token: user.token,
-        pseudo: formData.pseudo,
+        pseudo,
         artistName: formData.artistName,
-        email: formData.email,
+        email,
         city: formData.city,
         phone: formData.phone,
-        birthDate: formData.dateNaissance,
+        birthDate: dateNaissance,
         legalName: formData.legalName?.trim() || undefined,
         address: formData.address?.trim() || undefined,
         postalCode: formData.postalCode?.trim() || undefined,
@@ -243,14 +186,27 @@ export default function RegisterDjPage() {
   };
 
   const fr = language === 'fr';
-  const title = fr ? 'Compte DJ' : 'DJ Account';
+  const title = roleCopy?.profileTitle || (fr ? 'Profil artiste' : 'Artist profile');
 
   return (
     <RegisterRoleFormShell
       title={title}
-      subtitle={fr ? 'Complète ton profil artiste pour rejoindre le réseau.' : 'Complete your artist profile to join the network.'}
+      stepLabel={fr ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+      subtitle={
+        fr
+          ? 'Ton compte est prêt. Ajoute les infos artiste pour activer ton espace DJ.'
+          : 'Your account is ready. Add artist details to activate your DJ space.'
+      }
+      accountSummary={{
+        title: fr ? 'Compte NOX (déjà créé)' : 'NOX account (already created)',
+        lines: [
+          accountPseudo ? `${fr ? 'Pseudo' : 'Username'} · ${accountPseudo}` : null,
+          accountEmail ? `Email · ${accountEmail}` : null,
+          accountBirth ? `${fr ? 'Naissance' : 'Birth'} · ${accountBirth}` : null,
+        ].filter(Boolean),
+      }}
       onBack={goBack}
-      submitLabel={fr ? 'Créer mon compte DJ' : 'Create my DJ account'}
+      submitLabel={fr ? 'Activer mon profil artiste' : 'Activate my artist profile'}
       onSubmit={handleSubmit}
       loading={loading}
       scrollRef={scrollViewRef}
@@ -266,24 +222,6 @@ export default function RegisterDjPage() {
         editable={!loadingProfiles}
         icon={<Ionicons name="musical-notes-outline" size={20} color={Colors.textTertiary} />}
       />
-      <NoxInput
-        label={fr ? 'Pseudo' : 'Username'}
-        placeholder={fr ? 'Ton pseudo' : 'Your username'}
-        autoCapitalize="none"
-        value={formData.pseudo}
-        onChangeText={(value) => handleChange('pseudo', value)}
-        icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
-      />
-      <NoxInput
-        label={fr ? 'Email pro' : 'Professional email'}
-        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        value={formData.email}
-        onChangeText={(value) => handleChange('email', value)}
-        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
-      />
       <CityAutocomplete
         label={fr ? 'Ville' : 'City'}
         value={formData.city}
@@ -298,21 +236,6 @@ export default function RegisterDjPage() {
         onChangeText={(value) => handleChange('phone', value)}
         editable={!loadingProfiles}
         icon={<Ionicons name="call-outline" size={20} color={Colors.textTertiary} />}
-        onFocus={() => {
-          if (Platform.OS === 'android') {
-            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
-          }
-        }}
-      />
-      <NoxInput
-        label={fr ? 'Date de naissance' : 'Date of birth'}
-        placeholder={fr ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-        keyboardType="numeric"
-        maxLength={10}
-        value={formData.dateNaissance}
-        onChangeText={(value) => handleChange('dateNaissance', value)}
-        editable={!loadingProfiles}
-        icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
         onFocus={() => {
           if (Platform.OS === 'android') {
             setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);

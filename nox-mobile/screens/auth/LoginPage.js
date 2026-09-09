@@ -25,6 +25,7 @@ import AppleSignInSection from '../../components/AppleSignInSection';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { styles } from './LoginPage.styles';
 import { resolvePostAuthNavigation } from '../../utils/noxRoleNavigation';
+import { getRegisterRoleCopy } from '../../utils/registerFlow';
 import { resolveApiErrorMessage } from '../../constants/networkErrors';
 
 export default function LoginPage() {
@@ -53,6 +54,8 @@ export default function LoginPage() {
   const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
 
   const nextScreen = routeParams?.nextScreen || null;
+  const roleCopy = getRegisterRoleCopy(nextScreen, language);
+  const isRoleSignup = mode === 'register' && !!nextScreen && !!roleCopy;
 
   useEffect(() => {
     if (nextScreen) setMode('register');
@@ -192,15 +195,34 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.header}>
+            {isRoleSignup ? (
+              <Text style={styles.stepBadge}>
+                {language === 'fr' ? 'Étape 1 sur 2 — Compte' : 'Step 1 of 2 — Account'}
+              </Text>
+            ) : null}
             <Text style={styles.title}>
               {mode === 'register'
-                ? (language === 'fr' ? 'Rejoins le réseau' : 'Join the network')
-                : (language === 'fr' ? 'Accède au réseau' : 'Access the network')}
+                ? isRoleSignup
+                  ? roleCopy.accountTitle
+                  : language === 'fr'
+                    ? 'Rejoins le réseau'
+                    : 'Join the network'
+                : language === 'fr'
+                  ? 'Accède au réseau'
+                  : 'Access the network'}
             </Text>
             <Text style={styles.subtitle}>
               {mode === 'register'
-                ? (language === 'fr' ? 'Crée ton compte NOX en quelques secondes' : 'Create your NOX account in seconds')
-                : (language === 'fr' ? 'Connecte-toi pour retrouver ta scène' : 'Log in to get back to your scene')}
+                ? isRoleSignup
+                  ? language === 'fr'
+                    ? `Crée ton accès NOX. Ensuite tu compléteras ton profil ${roleCopy.label} — ce n’est pas un second compte.`
+                    : `Create your NOX access. Then you’ll complete your ${roleCopy.label} profile — not a second account.`
+                  : language === 'fr'
+                    ? 'Crée ton compte NOX en quelques secondes'
+                    : 'Create your NOX account in seconds'
+                : language === 'fr'
+                  ? 'Connecte-toi pour retrouver ta scène'
+                  : 'Log in to get back to your scene'}
             </Text>
           </View>
 
@@ -362,7 +384,15 @@ export default function LoginPage() {
                   </View>
                 </View>
                 <NoxButton
-                  label={language === 'fr' ? 'Créer mon compte' : 'Create account'}
+                  label={
+                    isRoleSignup
+                      ? language === 'fr'
+                        ? 'Continuer — profil ensuite'
+                        : 'Continue — profile next'
+                      : language === 'fr'
+                        ? 'Créer mon compte'
+                        : 'Create account'
+                  }
                   onPress={handleRegister}
                   loading={loading}
                   disabled={loading}

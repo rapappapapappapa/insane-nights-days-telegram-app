@@ -9,6 +9,7 @@ import { api } from '../../api/config';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { getRegisterRoleCopy } from '../../utils/registerFlow';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -17,12 +18,13 @@ export default function RegisterBookerPage() {
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const roleCopy = getRegisterRoleCopy('registerBooker', language);
+  const accountPseudo = (user?.username || '').trim();
+  const accountEmail = (user?.email || '').trim();
 
   const [formData, setFormData] = useState({
-    pseudo: user?.username || '',
     nom: '',
     prenom: '',
-    email: user?.email || '',
     phonePro: '',
     bookerType: '',
     companyName: '',
@@ -87,7 +89,15 @@ export default function RegisterBookerPage() {
     if (loading) return;
 
     // Validation
-    if (!formData.pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.phonePro || !formData.bookerType) {
+    if (!accountPseudo || !accountEmail) {
+      showError(
+        language === 'fr'
+          ? 'Compte incomplet. Reviens à l’inscription ou reconnecte-toi.'
+          : 'Incomplete account. Go back to sign-up or log in again.',
+      );
+      return;
+    }
+    if (!formData.nom || !formData.prenom || !formData.phonePro || !formData.bookerType) {
       showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
@@ -113,10 +123,10 @@ export default function RegisterBookerPage() {
 
       const response = await api.createBookerProfile({
         token: user.token,
-        pseudo: formData.pseudo,
+        pseudo: accountPseudo,
         nom: formData.nom,
         prenom: formData.prenom,
-        email: formData.email,
+        email: accountEmail,
         phonePro: formData.phonePro,
         bookerType: formData.bookerType,
         companyName: formData.companyName?.trim() || undefined,
@@ -185,14 +195,26 @@ export default function RegisterBookerPage() {
   };
 
   const fr = language === 'fr';
-  const title = fr ? 'Compte Organisateur' : 'Organizer Account';
+  const title = roleCopy?.profileTitle || (fr ? 'Profil organisateur' : 'Organizer profile');
 
   return (
     <RegisterRoleFormShell
       title={title}
-      subtitle={fr ? 'Crée ton profil orga pour lancer tes events.' : 'Create your organizer profile to run events.'}
+      stepLabel={fr ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+      subtitle={
+        fr
+          ? 'Ton compte est prêt. Complète ton profil orga pour lancer des events.'
+          : 'Your account is ready. Complete your organizer profile to run events.'
+      }
+      accountSummary={{
+        title: fr ? 'Compte NOX (déjà créé)' : 'NOX account (already created)',
+        lines: [
+          accountPseudo ? `${fr ? 'Pseudo' : 'Username'} · ${accountPseudo}` : null,
+          accountEmail ? `Email · ${accountEmail}` : null,
+        ].filter(Boolean),
+      }}
       onBack={goBack}
-      submitLabel={fr ? 'Créer mon compte' : 'Create my account'}
+      submitLabel={fr ? 'Activer mon profil organisateur' : 'Activate my organizer profile'}
       onSubmit={handleSubmit}
       loading={loading}
       scrollRef={scrollViewRef}
@@ -260,23 +282,6 @@ export default function RegisterBookerPage() {
         value={formData.prenom}
         onChangeText={(value) => handleChange('prenom', value)}
         editable={!loadingProfiles}
-      />
-      <NoxInput
-        label={fr ? 'Pseudo' : 'Username'}
-        placeholder={fr ? 'Ton pseudo' : 'Your username'}
-        autoCapitalize="none"
-        value={formData.pseudo}
-        onChangeText={(value) => handleChange('pseudo', value)}
-      />
-      <NoxInput
-        label="Email"
-        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        value={formData.email}
-        onChangeText={(value) => handleChange('email', value)}
-        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
       />
       <NoxInput
         label={fr ? 'Téléphone pro' : 'Professional phone'}

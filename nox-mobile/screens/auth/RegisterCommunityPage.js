@@ -217,13 +217,16 @@ export default function RegisterCommunityPage() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.header}>
+            <Text style={styles.stepBadge}>
+              {language === 'fr' ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+            </Text>
             <Text style={styles.title}>
-              {language === 'fr' ? 'Compte Communauté' : 'Community Account'}
+              {language === 'fr' ? 'Profil Communauté' : 'Community profile'}
             </Text>
             <Text style={styles.subtitle}>
               {language === 'fr'
-                ? 'Votre numéro ISN sera généré.'
-                : 'Your ISN number will be generated.'}
+                ? 'Ton compte est prêt. Complète ton profil pour obtenir ton numéro ISN — ce n’est pas un second compte.'
+                : 'Your account is ready. Complete your profile for your ISN number — not a second account.'}
             </Text>
           </View>
 
@@ -404,6 +407,14 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 20,
     marginBottom: 30,
+  },
+  stepBadge: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
   },
   title: {
     color: '#fff',

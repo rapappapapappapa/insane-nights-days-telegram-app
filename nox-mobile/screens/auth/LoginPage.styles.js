@@ -35,6 +35,14 @@ export const styles = StyleSheet.create({
   header: {
     marginBottom: Spacing.xxl,
   },
+  stepBadge: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: FontFamily.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: Spacing.sm,
+  },
   title: {
     color: Colors.text,
     fontSize: 32,

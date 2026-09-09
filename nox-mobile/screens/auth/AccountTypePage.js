@@ -101,8 +101,8 @@ export default function AccountTypePage() {
             </NoxText>
             <NoxText variant="secondary" style={styles.subtitle}>
               {language === 'fr'
-                ? 'Tu compléteras ton profil juste après l’inscription.'
-                : 'You will complete your profile right after signing up.'}
+                ? 'Étape suivante : créer ton compte, puis compléter ton profil métier (pas un second compte).'
+                : 'Next: create your account, then complete your role profile (not a second account).'}
             </NoxText>
           </View>
 

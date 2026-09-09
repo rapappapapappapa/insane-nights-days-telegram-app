@@ -19,6 +19,7 @@ import { useToast } from '../../hooks/useToast';
 import Colors from '../../constants/colors';
 import { Spacing } from '../../constants/theme';
 import { getPostAuthScreen, skipEmailVerificationForSession } from '../../utils/noxRoleNavigation';
+import { getRegisterRoleCopy } from '../../utils/registerFlow';
 import { styles } from './AuthVerifyEmailPage.styles';
 
 export default function AuthVerifyEmailPage() {
@@ -38,6 +39,7 @@ export default function AuthVerifyEmailPage() {
   const sentOnce = useRef(false);
 
   const nextScreen = routeParams?.nextScreen || null;
+  const roleCopy = getRegisterRoleCopy(nextScreen, language);
 
   const finish = () => {
     navigate(getPostAuthScreen(user?.activeProfileType, nextScreen));
@@ -159,6 +161,13 @@ export default function AuthVerifyEmailPage() {
               ? `Nous avons envoyé un code à 6 chiffres à ${user.email || 'ton adresse'}.`
               : `We sent a 6-digit code to ${user.email || 'your address'}.`}
           </NoxText>
+          {roleCopy ? (
+            <NoxText variant="secondary" style={[styles.subtitle, { marginTop: Spacing.sm }]}>
+              {fr
+                ? `Ensuite : activation de ton profil ${roleCopy.label}.`
+                : `Next: activate your ${roleCopy.label} profile.`}
+            </NoxText>
+          ) : null}
 
           <TextInput
             style={styles.codeInput}

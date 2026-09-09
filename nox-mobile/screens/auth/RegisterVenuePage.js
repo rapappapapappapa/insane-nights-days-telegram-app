@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
+import { getRegisterRoleCopy } from '../../utils/registerFlow';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -16,11 +17,12 @@ export default function RegisterVenuePage() {
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const roleCopy = getRegisterRoleCopy('registerVenue', language);
+  const accountPseudo = (user?.username || '').trim();
+  const accountEmail = (user?.email || '').trim();
 
   const [formData, setFormData] = useState({
-    pseudo: user?.username || '',
     venueName: '',
-    email: user?.email || '',
     address: '',
     maxCapacity: '',
     companyName: '',
@@ -207,7 +209,15 @@ export default function RegisterVenuePage() {
     if (loading) return;
 
     // Validation
-    if (!formData.pseudo || !formData.venueName || !formData.email || !formData.address) {
+    if (!accountPseudo || !accountEmail) {
+      showError(
+        language === 'fr'
+          ? 'Compte incomplet. Reviens à l’inscription ou reconnecte-toi.'
+          : 'Incomplete account. Go back to sign-up or log in again.',
+      );
+      return;
+    }
+    if (!formData.venueName || !formData.address) {
       showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
@@ -253,9 +263,9 @@ export default function RegisterVenuePage() {
 
       const response = await api.createVenueProfile({
         token: user.token,
-        pseudo: formData.pseudo,
+        pseudo: accountPseudo,
         venueName: formData.venueName,
-        email: formData.email,
+        email: accountEmail,
         address: formData.address,
         companyName: formData.companyName?.trim() || undefined,
         legalRepresentative: formData.legalRepresentative?.trim() || undefined,
@@ -305,14 +315,26 @@ export default function RegisterVenuePage() {
   };
 
   const fr = language === 'fr';
-  const title = fr ? 'Compte Lieu' : 'Venue Account';
+  const title = roleCopy?.profileTitle || (fr ? 'Profil lieu' : 'Venue profile');
 
   return (
     <RegisterRoleFormShell
       title={title}
-      subtitle={fr ? 'Enregistre ton lieu pour recevoir des demandes d’événements.' : 'Register your venue to receive event requests.'}
+      stepLabel={fr ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+      subtitle={
+        fr
+          ? 'Ton compte est prêt. Enregistre ton lieu pour recevoir des demandes.'
+          : 'Your account is ready. Register your venue to receive requests.'
+      }
+      accountSummary={{
+        title: fr ? 'Compte NOX (déjà créé)' : 'NOX account (already created)',
+        lines: [
+          accountPseudo ? `${fr ? 'Pseudo' : 'Username'} · ${accountPseudo}` : null,
+          accountEmail ? `Email · ${accountEmail}` : null,
+        ].filter(Boolean),
+      }}
       onBack={goBack}
-      submitLabel={fr ? 'Créer mon compte' : 'Create my account'}
+      submitLabel={fr ? 'Activer mon profil lieu' : 'Activate my venue profile'}
       onSubmit={handleSubmit}
       loading={loading}
       scrollRef={scrollViewRef}
@@ -327,24 +349,6 @@ export default function RegisterVenuePage() {
         value={formData.venueName}
         onChangeText={(value) => handleChange('venueName', value)}
         icon={<Ionicons name="business-outline" size={20} color={Colors.textTertiary} />}
-      />
-      <NoxInput
-        label={fr ? 'Pseudo' : 'Username'}
-        placeholder={fr ? 'Ton pseudo' : 'Your username'}
-        autoCapitalize="none"
-        value={formData.pseudo}
-        onChangeText={(value) => handleChange('pseudo', value)}
-        icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
-      />
-      <NoxInput
-        label="Email"
-        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        value={formData.email}
-        onChangeText={(value) => handleChange('email', value)}
-        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
       />
       <NoxInput
         label={fr ? 'Adresse' : 'Address'}

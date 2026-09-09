@@ -4,6 +4,26 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 8 au 11 septembre 2026
+
+### Corrigé (auth — parcours inscription rôle)
+- Clarifie le flux **2 étapes** : choix du rôle → **compte NOX** (étape 1) → **profil métier** (étape 2), sans impression de « recréer un compte ».
+- **`LoginPage`** : titres / CTA adaptés au rôle (« Continuer — profil ensuite »).
+- **`registerDj` / `registerBooker` / `registerVenue`** : résumé du compte déjà créé ; plus de re-saisie email / pseudo / naissance ; CTA « Activer mon profil… ».
+- **`registerCommunity`** + OTP : copy alignée étape 2.
+- **API** : `sanitizeUser` expose `birthDate` pour préremplir le profil.
+
+### Modifié (mobile — dashboard DJ Figma)
+- **`djDashboard` accueil** : layout **`Dashboard_DJ_Pro`** — salutation + avatar + cloche, carte hero profil (« Voir mon profil »), grille **Mes outils**, carrousel **Prochains événements** (bookings acceptés), bloc **Statistiques** (données réelles, sans faux %).
+- **Footer** : inchangé (nav radiale / logo NOX) — pas la barre 5 items de la maquette.
+- **`useDjBookings`** : charge aussi les bookings sur l’accueil hub.
+
+### Manques Figma / API (dashboard DJ)
+- Followers / vues profil / tendances « +X% » : pas encore exposés côté API home DJ.
+- Images d’événements sur les cards hub : fallback icône si pas d’URL booking.
+
+---
+
 ## Semaine du 1 au 4 septembre 2026
 
 ### Modifié (mobile — inscriptions rôle Figma)

@@ -97,7 +97,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | Clé | Fichier | Décision | Notes |
 |-----|---------|----------|-------|
 | `welcome` | *(alias → `proHome`)* | **✅ Fait (Phase D)** | Accueil pro — `ProHomePage.js` |
-| `djDashboard` | `DjDashboardPage.js` | **Migrer UI** | Dashboard secondaire (drawer/NX) |
+| `djDashboard` | `DjDashboardPage.js` | **NOX hub Figma (9 sept.)** | Accueil `Dashboard_DJ_Pro` ; footer radial inchangé |
 | `bookerDashboard` | `BookerDashboardPage.js` | **Hub grille NOX (2 sept.)** | Wizard + listes encore legacy |
 | `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Header/stepper NOX (2 sept.)** | Steps internes à skinner |
 | `prestataireDashboard` | `PrestataireDashboardPage.js` | **Migrer UI** | Hors maquettes actuelles |

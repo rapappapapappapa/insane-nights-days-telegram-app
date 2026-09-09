@@ -99,7 +99,11 @@ export function useDjBookings({ user, language, showError, showSuccess, activeSe
   
 
   useEffect(() => {
-    if (activeSection === 'bookings' && user?.token && !loadingBookings) {
+    if (
+      (activeSection === 'bookings' || activeSection === 'home') &&
+      user?.token &&
+      !loadingBookings
+    ) {
       fetchBookings();
     }
   }, [activeSection, user?.token]);

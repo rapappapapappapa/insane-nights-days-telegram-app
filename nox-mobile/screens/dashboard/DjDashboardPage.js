@@ -32,7 +32,6 @@ import DjMediaModals from '../../components/djDashboard/DjMediaModals';
 import DjChatModal from '../../components/djDashboard/DjChatModal';
 import DjContractModals from '../../components/djDashboard/DjContractModals';
 import { NoxProDashboardHeader } from '../../components/nox';
-import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 const DJ_DASHBOARD_SECTIONS = new Set([
   'profil',
@@ -63,7 +62,6 @@ export default function DjDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'djDashboard');
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
@@ -437,7 +435,21 @@ export default function DjDashboardPage() {
           tiles={menuItems}
           unreadCount={unreadCount}
           displayName={pseudo || artistName}
+          artistName={artistName}
+          genre={genre}
+          city={mainCity || city}
+          bannerImage={bannerImage}
+          profileImage={profileImage}
+          averageRating={djProfile?.averageRatingGlobal}
+          bookings={bookings}
+          navigate={navigate}
+          userId={user?.id}
+          djId={djProfile?.id}
           onSelectSection={openSection}
+          onNotificationsPress={() => {
+            navigate('notifications');
+            refreshUnreadCount();
+          }}
         />
       );
     }
@@ -475,18 +487,19 @@ export default function DjDashboardPage() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <NoxProDashboardHeader
-        title={headerTitle}
-        showBack={!isHubView || !isHome}
-        onBack={handleHeaderBack}
-        unreadCount={unreadCount}
-        onMessagesPress={() => {
-          openSection('bookings');
-          refreshUnreadCount();
-        }}
-        onMarkMessagesRead={markAllAsRead}
-      />
-
+      {!isHubView ? (
+        <NoxProDashboardHeader
+          title={headerTitle}
+          showBack
+          onBack={handleHeaderBack}
+          unreadCount={unreadCount}
+          onMessagesPress={() => {
+            openSection('bookings');
+            refreshUnreadCount();
+          }}
+          onMarkMessagesRead={markAllAsRead}
+        />
+      ) : null}
       <View style={styles.mainContent}>
         {renderContent()}
       </View>

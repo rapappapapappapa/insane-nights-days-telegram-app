@@ -42,16 +42,16 @@ const MenuPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-insane-black py-6 px-4">
+    <div className="min-h-screen bg-nox-black py-6 px-4">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-insane-orange rounded-xl mb-4">
-          <span className="text-insane-black font-black text-2xl">I</span>
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-nox-primary rounded-xl mb-4">
+          <span className="text-nox-black font-black text-2xl">I</span>
         </div>
-        <h1 className="text-2xl font-bold text-insane-white mb-2">
+        <h1 className="text-2xl font-bold text-nox-white mb-2">
           Menu Principal
         </h1>
-        <p className="text-insane-white/60 text-sm">
+        <p className="text-nox-white/60 text-sm">
           Que voulez-vous faire ?
         </p>
       </div>
@@ -64,17 +64,17 @@ const MenuPage = () => {
             to={item.link}
             className="block"
           >
-            <div className="bg-insane-gray border border-insane-orange/30 rounded-xl p-4 text-center h-32 flex flex-col items-center justify-center hover:border-insane-orange hover:bg-insane-orange/10 transition-all duration-300 active:scale-95">
+            <div className="bg-nox-gray border border-nox-primary/30 rounded-xl p-4 text-center h-32 flex flex-col items-center justify-center hover:border-nox-primary hover:bg-nox-primary/10 transition-all duration-300 active:scale-95">
               {/* Icon avec gradient */}
               <div className={`inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl mb-3`}>
                 <span className="text-xl">{item.title.split(' ')[0]}</span>
               </div>
               
-              <h3 className="text-sm font-bold text-insane-white mb-1">
+              <h3 className="text-sm font-bold text-nox-white mb-1">
                 {item.title.split(' ').slice(1).join(' ')}
               </h3>
               
-              <p className="text-xs text-insane-white/60 leading-tight">
+              <p className="text-xs text-nox-white/60 leading-tight">
                 {item.description}
               </p>
             </div>
@@ -84,7 +84,7 @@ const MenuPage = () => {
 
       {/* Bouton Déconnecter */}
       <div className="text-center mt-8">
-        <button className="bg-insane-gray border border-insane-orange/30 text-insane-orange px-6 py-3 rounded-xl hover:bg-insane-orange hover:text-insane-black transition-all duration-300">
+        <button className="bg-nox-gray border border-nox-primary/30 text-nox-primary px-6 py-3 rounded-xl hover:bg-nox-primary hover:text-nox-black transition-all duration-300">
           🔌 Déconnecter Wallet
         </button>
       </div>

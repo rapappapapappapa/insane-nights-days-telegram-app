@@ -72,7 +72,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 
 | Clé | Fichier | Décision | Notes |
 |-----|---------|----------|-------|
-| `lieuxDashboard` | `LieuxDashboardPage.js` | **Garder NOX** | Corriger quick actions + FAB |
+| `lieuxDashboard` | `LieuxDashboardPage.js` | **Hub Figma Lieu (11 sept.)** | Accueil `Dashboard_lieu_pro` ; bottom nav Lieux inchangée |
 | `lieuxProfil` | `LieuxProfilPage.js` | **Garder NOX** | Stats surface / sound system |
 | `lieuxMedia` | `LieuxMediaPage.js` | **Garder NOX** | + upload |
 | `lieuxAvailability` | `LieuxAvailabilityPage.js` | **Garder NOX** | Calendrier alimenté + bloquer dates |
@@ -98,7 +98,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 |-----|---------|----------|-------|
 | `welcome` | *(alias → `proHome`)* | **✅ Fait (Phase D)** | Accueil pro — `ProHomePage.js` |
 | `djDashboard` | `DjDashboardPage.js` | **NOX hub Figma (9 sept.)** | Accueil `Dashboard_DJ_Pro` ; footer radial inchangé |
-| `bookerDashboard` | `BookerDashboardPage.js` | **Hub grille NOX (2 sept.)** | Wizard + listes encore legacy |
+| `bookerDashboard` | `BookerDashboardPage.js` | **Hub Figma Orga (11 sept.)** | Sections Booking/Lieux/Contrats/Avis encore mappées → events |
 | `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Header/stepper NOX (2 sept.)** | Steps internes à skinner |
 | `prestataireDashboard` | `PrestataireDashboardPage.js` | **Migrer UI** | Hors maquettes actuelles |
 | Profils publics | `DjProfilePage`, `VenueProfilePage`, `BookerProfilePage` | **NOX (31 juil.)** | Shell Figma + API inchangée |

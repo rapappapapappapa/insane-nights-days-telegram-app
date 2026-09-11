@@ -5,6 +5,7 @@ import {
   ScrollView,
   Image,
   useWindowDimensions,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import NotificationBadge from '../NotificationBadge';
 import Colors from '../../constants/colors';
 import { Layout, Spacing } from '../../constants/theme';
 import { normalizeMediaUrl } from '../../api/config';
+import { isAcceptedBooking, isPendingBooking } from '../../utils/lieuxEventUtils';
 
 function formatCompact(n) {
   const num = Number(n);
@@ -39,34 +41,39 @@ function formatEventBadge(iso, language) {
   }
 }
 
-function bookerTypeLabel(type, fr) {
+function venueTypeLabel(type, fr) {
   const map = {
-    INDEPENDENT: fr ? 'Indépendant' : 'Independent',
-    Indépendant: fr ? 'Indépendant' : 'Independent',
-    Agence: fr ? 'Agence' : 'Agency',
-    Collectif: fr ? 'Collectif' : 'Collective',
-    Label: 'Label',
-    Promoteur: fr ? 'Promoteur' : 'Promoter',
-    Autre: fr ? 'Autre' : 'Other',
+    CLUB: 'Club',
+    Club: 'Club',
+    BAR: 'Bar',
+    Bar: 'Bar',
+    SALLE: fr ? 'Salle' : 'Hall',
+    FESTIVAL: 'Festival',
+    OUTDOOR: fr ? 'Extérieur' : 'Outdoor',
   };
-  return map[type] || type || (fr ? 'Organisateur' : 'Organizer');
+  return map[type] || type || (fr ? 'Lieu' : 'Venue');
 }
 
-export default function BookerDashboardHomeSection({
+export default function LieuxDashboardHomeSection({
   language,
   styles,
   tiles,
-  onSelectSection,
-  unreadCount = 0,
-  onNotificationsPress,
+  onSelectTool,
+  pendingCount = 0,
   displayName,
-  orgName,
-  bookerType,
+  venueName,
+  venueType,
   city,
+  country,
+  bannerImage,
   profileImage,
-  bookerId,
-  events = [],
+  averageRating,
+  venueId,
+  bookings = [],
+  realizedCount = 0,
   navigate,
+  refreshing = false,
+  onRefresh,
 }) {
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
@@ -76,71 +83,81 @@ export default function BookerDashboardHomeSection({
   const toolWidth = (width - horizontalPad * 2 - gap) / 2;
   const eventCardWidth = Math.min(260, width * 0.68);
 
-  const greeting = displayName
+  const greeting = displayName || venueName
     ? fr
-      ? `Salut ${displayName} !`
-      : `Hi ${displayName}!`
+      ? `Salut ${displayName || venueName} !`
+      : `Hi ${displayName || venueName}!`
     : fr
-      ? 'Espace organisateur'
-      : 'Organizer hub';
+      ? 'Espace lieu'
+      : 'Venue hub';
 
   const subtitle = fr
-    ? 'Organise, développe, fais vivre tes événements.'
-    : 'Plan, grow and run your events.';
+    ? 'Gère ton lieu, tes événements et ta communauté.'
+    : 'Manage your venue, events and community.';
 
+  const bannerUri = bannerImage ? normalizeMediaUrl(bannerImage) : null;
   const avatarUri = profileImage ? normalizeMediaUrl(profileImage) : null;
+  const heroUri = bannerUri || avatarUri;
 
   const upcoming = useMemo(() => {
-    const now = Date.now();
-    return (events || [])
-      .filter((e) => e?.date)
-      .filter((e) => {
-        const t = new Date(e.date).getTime();
-        return Number.isFinite(t) && t >= now - 12 * 60 * 60 * 1000;
+    const now = Date.now() - 12 * 60 * 60 * 1000;
+    return (bookings || [])
+      .filter((b) => b?.eventDate && (isAcceptedBooking(b) || isPendingBooking(b)))
+      .filter((b) => {
+        const t = new Date(b.eventDate).getTime();
+        return Number.isFinite(t) && t >= now;
       })
-      .filter((e) => e.status !== 'FINISHED' && e.status !== 'CANCELLED')
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
       .slice(0, 8);
-  }, [events]);
+  }, [bookings]);
 
-  const eventsCount = (events || []).length;
   const ticketsSold = useMemo(
-    () => (events || []).reduce((sum, e) => sum + (Number(e.sold) || 0), 0),
-    [events],
-  );
-  const publishedCount = useMemo(
-    () => (events || []).filter((e) => e.publishedOnFeed).length,
-    [events],
+    () => (bookings || []).reduce((sum, b) => sum + (Number(b.eventSold) || 0), 0),
+    [bookings],
   );
 
-  const openPublicProfile = () => {
-    if (!navigate || !bookerId) {
-      onSelectSection('profil');
-      return;
-    }
-    navigate('bookerProfile', { bookerId });
-  };
+  const ratingLabel =
+    averageRating != null && Number(averageRating) > 0
+      ? Number(averageRating).toFixed(1)
+      : '—';
 
-  const openEvent = (event) => {
-    if (!navigate || !event?.id) {
-      onSelectSection('events');
-      return;
-    }
-    navigate('eventDetail', { eventId: event.id });
-  };
-
-  const metaLine = [bookerTypeLabel(bookerType, fr), fr ? 'Événements' : 'Events', city]
+  const cityLine = [city, country].filter(Boolean).join(', ');
+  const metaLine = [venueTypeLabel(venueType, fr), fr ? 'Événements' : 'Events', city]
     .filter(Boolean)
     .join(' • ');
+
+  const openPublicProfile = () => {
+    if (!navigate) return;
+    if (venueId) {
+      navigate('venueProfile', { venueId });
+      return;
+    }
+    navigate('lieuxProfil');
+  };
+
+  const openEvent = (booking) => {
+    const eventVenueId = booking?.eventVenueId || booking?.id;
+    if (!navigate || !eventVenueId) {
+      onSelectTool('planning');
+      return;
+    }
+    const pending = isPendingBooking(booking);
+    navigate(pending ? 'lieuxRequestDetail' : 'lieuxEventDetail', { eventVenueId });
+  };
 
   return (
     <ScrollView
       style={styles.hubScroll}
       contentContainerStyle={[
         styles.hubScrollContent,
-        { paddingTop: (insets?.top ?? 0) + Spacing.sm },
+        { paddingTop: (insets?.top ?? 0) + Spacing.sm, paddingBottom: 140 },
       ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        ) : undefined
+      }
     >
       <View style={styles.hubTopRow}>
         <TouchableOpacity
@@ -152,7 +169,7 @@ export default function BookerDashboardHomeSection({
             <Image source={{ uri: avatarUri }} style={styles.hubTopAvatar} />
           ) : (
             <View style={[styles.hubTopAvatar, styles.hubTopAvatarFallback]}>
-              <Ionicons name="person" size={20} color={Colors.primary} />
+              <Ionicons name="business" size={20} color={Colors.primary} />
             </View>
           )}
         </TouchableOpacity>
@@ -166,32 +183,32 @@ export default function BookerDashboardHomeSection({
         </View>
         <TouchableOpacity
           style={styles.hubNotifBtn}
-          onPress={onNotificationsPress}
+          onPress={() => navigate?.('lieuxNotifications')}
           hitSlop={10}
           accessibilityRole="button"
         >
           <Ionicons name="notifications-outline" size={22} color={Colors.text} />
-          {unreadCount > 0 ? (
+          {pendingCount > 0 ? (
             <View style={styles.hubNotifBadge}>
-              <NotificationBadge count={unreadCount} />
+              <NotificationBadge count={pendingCount} />
             </View>
           ) : null}
         </TouchableOpacity>
       </View>
 
       <View style={styles.hubProfileCard}>
-        {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.hubProfileBanner} blurRadius={8} />
+        {heroUri ? (
+          <Image source={{ uri: heroUri }} style={styles.hubProfileBanner} />
         ) : (
           <View style={[styles.hubProfileBanner, styles.hubProfileBannerFallback]}>
-            <Ionicons name="calendar-outline" size={36} color={Colors.primary} />
+            <Ionicons name="business-outline" size={36} color={Colors.primary} />
           </View>
         )}
         <View style={styles.hubProfileOverlay} />
-        <View style={styles.hubOrgaBadge}>
+        <View style={styles.hubVenueBadge}>
           <Ionicons name="business-outline" size={12} color={Colors.text} />
-          <NoxText style={styles.hubOrgaBadgeText}>
-            {fr ? 'Profil organisateur' : 'Organizer profile'}
+          <NoxText style={styles.hubVenueBadgeText}>
+            {fr ? 'Profil lieu' : 'Venue profile'}
           </NoxText>
         </View>
         <TouchableOpacity style={styles.hubProfileViewBtn} onPress={openPublicProfile} activeOpacity={0.85}>
@@ -203,7 +220,7 @@ export default function BookerDashboardHomeSection({
         <View style={styles.hubProfileInfo}>
           <View style={styles.hubProfileNameRow}>
             <NoxText variant="title" style={styles.hubProfileName} numberOfLines={1}>
-              {orgName || displayName || (fr ? 'Organisateur' : 'Organizer')}
+              {venueName || displayName || (fr ? 'Mon lieu' : 'My venue')}
             </NoxText>
             <Ionicons name="checkmark-circle" size={18} color={Colors.primary} />
           </View>
@@ -212,42 +229,62 @@ export default function BookerDashboardHomeSection({
               {metaLine}
             </NoxText>
           ) : null}
-          {city ? (
+          {cityLine ? (
             <View style={styles.hubProfileLocRow}>
               <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
               <NoxText variant="secondary" style={styles.hubProfileLoc} numberOfLines={1}>
-                {city}
+                {cityLine}
               </NoxText>
             </View>
           ) : null}
           <View style={styles.hubProfileStats}>
             <View style={styles.hubProfileStat}>
-              <NoxText style={styles.hubProfileStatValue}>{eventsCount || '—'}</NoxText>
+              <NoxText style={styles.hubProfileStatValue}>{realizedCount || '—'}</NoxText>
               <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
-                {fr ? 'Événements organisés' : 'Events organized'}
+                {fr ? 'Événements accueillis' : 'Events hosted'}
+              </NoxText>
+            </View>
+            <View style={styles.hubProfileStat}>
+              <NoxText style={styles.hubProfileStatValue}>
+                {ratingLabel === '—' ? '—' : `${ratingLabel} ★`}
+              </NoxText>
+              <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
+                {fr ? 'Note moyenne' : 'Avg. rating'}
               </NoxText>
             </View>
             <View style={styles.hubProfileStat}>
               <NoxText style={styles.hubProfileStatValue}>{formatCompact(ticketsSold)}</NoxText>
               <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
-                {fr ? 'Participants cumulés' : 'Total attendees'}
-              </NoxText>
-            </View>
-            <View style={styles.hubProfileStat}>
-              <NoxText style={styles.hubProfileStatValue}>{publishedCount || '—'}</NoxText>
-              <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
-                {fr ? 'Sur le feed' : 'On the feed'}
+                {fr ? 'Places vendues' : 'Tickets sold'}
               </NoxText>
             </View>
           </View>
         </View>
       </View>
 
+      {pendingCount > 0 ? (
+        <TouchableOpacity
+          style={styles.hubPendingBanner}
+          onPress={() => onSelectTool('artistes')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.hubPendingLeft}>
+            <Ionicons name="mail-unread-outline" size={18} color={Colors.text} />
+            <NoxText style={styles.hubPendingLabel}>
+              {fr
+                ? `Demandes en attente (${pendingCount})`
+                : `Pending requests (${pendingCount})`}
+            </NoxText>
+          </View>
+          <NoxText style={styles.hubPendingLink}>{fr ? 'Voir' : 'View'}</NoxText>
+        </TouchableOpacity>
+      ) : null}
+
       <View style={styles.hubSectionHeader}>
         <NoxText variant="titleSecondary" style={styles.hubSectionTitleInline}>
           {fr ? 'Mes outils' : 'My tools'}
         </NoxText>
-        <TouchableOpacity onPress={() => onSelectSection('events')} hitSlop={8}>
+        <TouchableOpacity onPress={() => onSelectTool('planning')} hitSlop={8}>
           <NoxText style={styles.hubSeeAll}>{fr ? 'Tout voir >' : 'See all >'}</NoxText>
         </TouchableOpacity>
       </View>
@@ -264,15 +301,15 @@ export default function BookerDashboardHomeSection({
                   marginRight: isLeftColumn ? gap : 0,
                 },
               ]}
-              onPress={() => onSelectSection(tile.id)}
+              onPress={() => onSelectTool(tile.id)}
               activeOpacity={0.85}
             >
               <View style={styles.hubToolRow}>
                 <View style={[styles.hubTileIconWrap, { backgroundColor: tile.accentBg }]}>
                   <Ionicons name={tile.icon} size={22} color={tile.accentColor} />
-                  {tile.id === 'events' && unreadCount > 0 ? (
+                  {tile.id === 'artistes' && pendingCount > 0 ? (
                     <View style={styles.hubTileBadge}>
-                      <NotificationBadge count={unreadCount} />
+                      <NotificationBadge count={pendingCount} />
                     </View>
                   ) : null}
                 </View>
@@ -293,18 +330,18 @@ export default function BookerDashboardHomeSection({
 
       <View style={styles.hubSectionHeader}>
         <NoxText variant="titleSecondary" style={styles.hubSectionTitleInline}>
-          {fr ? 'Mes prochains événements' : 'Upcoming events'}
+          {fr ? 'Prochains événements' : 'Upcoming events'}
         </NoxText>
-        <TouchableOpacity onPress={() => onSelectSection('events')} hitSlop={8}>
-          <NoxText style={styles.hubSeeAll}>{fr ? 'Tout voir >' : 'See all >'}</NoxText>
+        <TouchableOpacity onPress={() => onSelectTool('planning')} hitSlop={8}>
+          <NoxText style={styles.hubSeeAll}>{fr ? 'Voir plus >' : 'See more >'}</NoxText>
         </TouchableOpacity>
       </View>
       {upcoming.length === 0 ? (
         <View style={styles.hubEmptyEvents}>
           <NoxText variant="secondary" style={styles.hubEmptyEventsText}>
             {fr
-              ? 'Aucun événement à venir. Crée-en un depuis Mes outils.'
-              : 'No upcoming events. Create one from My tools.'}
+              ? 'Aucun événement à venir. Les demandes apparaîtront ici.'
+              : 'No upcoming events. Incoming requests will show here.'}
           </NoxText>
         </View>
       ) : (
@@ -313,23 +350,27 @@ export default function BookerDashboardHomeSection({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.hubEventsScroll}
         >
-          {upcoming.map((event) => {
-            const badge = formatEventBadge(event.date, language);
+          {upcoming.map((booking) => {
+            const badge = formatEventBadge(booking.eventDate, language);
             const venueLine =
-              event.venue?.venueName || event.location || (fr ? 'Lieu à confirmer' : 'Venue TBD');
+              booking.eventLocation ||
+              venueName ||
+              (fr ? 'Lieu' : 'Venue');
             const cap =
-              event.capacity != null
-                ? `${event.sold ?? 0} / ${event.capacity}`
-                : event.sold != null
-                  ? String(event.sold)
+              booking.eventCapacity != null
+                ? `${booking.eventSold ?? 0} / ${booking.eventCapacity}`
+                : booking.eventSold != null
+                  ? String(booking.eventSold)
                   : null;
-            const published = !!event.publishedOnFeed;
-            const imageUri = event.image ? normalizeMediaUrl(event.image) : null;
+            const pending = isPendingBooking(booking);
+            const published = !pending && isAcceptedBooking(booking);
+            const imageUri = booking.eventImage ? normalizeMediaUrl(booking.eventImage) : null;
+            const key = booking.eventVenueId || booking.id;
             return (
               <TouchableOpacity
-                key={event.id}
+                key={key}
                 style={[styles.hubEventCard, { width: eventCardWidth }]}
-                onPress={() => openEvent(event)}
+                onPress={() => openEvent(booking)}
                 activeOpacity={0.9}
               >
                 {imageUri ? (
@@ -348,7 +389,7 @@ export default function BookerDashboardHomeSection({
                 <View style={styles.hubEventBottom}>
                   <View style={{ flex: 1 }}>
                     <NoxText style={styles.hubEventTitle} numberOfLines={1}>
-                      {event.title || (fr ? 'Événement' : 'Event')}
+                      {booking.eventTitle || (fr ? 'Événement' : 'Event')}
                     </NoxText>
                     <View style={styles.hubProfileLocRow}>
                       <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
@@ -368,16 +409,28 @@ export default function BookerDashboardHomeSection({
                       <View
                         style={[
                           styles.hubEventStatus,
-                          published ? styles.hubEventStatusPublished : styles.hubEventStatusDraft,
+                          pending
+                            ? styles.hubEventStatusDraft
+                            : published
+                              ? styles.hubEventStatusPublished
+                              : styles.hubEventStatusDraft,
                         ]}
                       >
                         <NoxText
                           style={[
                             styles.hubEventStatusText,
-                            published ? styles.hubEventStatusTextPublished : styles.hubEventStatusTextDraft,
+                            pending
+                              ? styles.hubEventStatusTextDraft
+                              : styles.hubEventStatusTextPublished,
                           ]}
                         >
-                          {published ? (fr ? 'Publié' : 'Published') : fr ? 'Brouillon' : 'Draft'}
+                          {pending
+                            ? fr
+                              ? 'Demande'
+                              : 'Request'
+                            : fr
+                              ? 'Confirmé'
+                              : 'Confirmed'}
                         </NoxText>
                       </View>
                     </View>
@@ -402,31 +455,31 @@ export default function BookerDashboardHomeSection({
       </View>
       <View style={styles.hubStatsGrid}>
         <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap }]}>
-          <Ionicons name="people-outline" size={18} color={Colors.primaryLight} />
+          <Ionicons name="calendar-outline" size={18} color={Colors.primaryLight} />
+          <NoxText style={styles.hubStatValue}>{realizedCount || '—'}</NoxText>
+          <NoxText variant="secondary" style={styles.hubStatLabel}>
+            {fr ? 'Events réalisés' : 'Events hosted'}
+          </NoxText>
+        </View>
+        <View style={[styles.hubStatCard, { width: toolWidth }]}>
+          <Ionicons name="ticket-outline" size={18} color="#F472B6" />
           <NoxText style={styles.hubStatValue}>{formatCompact(ticketsSold)}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
             {fr ? 'Places vendues' : 'Tickets sold'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth }]}>
-          <Ionicons name="calendar-outline" size={18} color="#34D399" />
-          <NoxText style={styles.hubStatValue}>{eventsCount}</NoxText>
-          <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Événements' : 'Events'}
-          </NoxText>
-        </View>
         <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap, marginTop: gap }]}>
-          <Ionicons name="newspaper-outline" size={18} color="#F472B6" />
-          <NoxText style={styles.hubStatValue}>{publishedCount}</NoxText>
+          <Ionicons name="star-outline" size={18} color="#FBBF24" />
+          <NoxText style={styles.hubStatValue}>{ratingLabel}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Sur le feed' : 'On the feed'}
+            {fr ? 'Note moyenne' : 'Avg. rating'}
           </NoxText>
         </View>
         <View style={[styles.hubStatCard, { width: toolWidth, marginTop: gap }]}>
-          <Ionicons name="chatbubbles-outline" size={18} color="#FBBF24" />
-          <NoxText style={styles.hubStatValue}>{unreadCount || '—'}</NoxText>
+          <Ionicons name="mail-unread-outline" size={18} color="#34D399" />
+          <NoxText style={styles.hubStatValue}>{pendingCount || '—'}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Messages non lus' : 'Unread messages'}
+            {fr ? 'Demandes en attente' : 'Pending requests'}
           </NoxText>
         </View>
       </View>

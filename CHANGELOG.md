@@ -6,6 +6,24 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 8 au 11 septembre 2026
 
+### Modifié (mobile — dashboard Lieu Figma)
+- **`lieuxDashboard` accueil** : layout **`Dashboard_lieu_pro`** — salutation + avatar + cloche, carte hero lieu (« Voir mon profil »), grille **Mes outils** (10 tuiles Figma), carrousel **prochains événements**, bloc **Statistiques** (données réelles).
+- **Footer** : `NoxLieuxBottomNav` inchangée (pas la barre 5 items Figma).
+- Mapping outils : dispos / events / demandes / profil / médias / `createFeedPost` / settings.
+
+### Manques Figma / API (dashboard Lieu)
+- Followers / vues profil / tendances « +X% » : pas encore exposés côté API home venue.
+- Sections Finances / Documents / Espaces dédiées : redirigées vers surfaces existantes.
+
+### Modifié (mobile — dashboard Organisateur Figma)
+- **`bookerDashboard` accueil** : layout **`Dashboard_Orga_Pro`** — salutation + avatar + cloche, carte hero organisateur (« Voir mon profil »), grille **Mes outils** (10 tuiles Figma), carrousel **prochains événements** (statut Publié/Brouillon), bloc **Statistiques** (données réelles).
+- **Footer** : inchangé (nav radiale / logo NOX).
+- Mapping outils : créer event → wizard ; communication → `createFeedPost` ; booking/lieux/contrats/paiements/avis → section événements ; paramètres → profil.
+
+### Manques Figma / API (dashboard Orga)
+- Note moyenne organisateur, CA / tendances « +X% » : pas encore exposés côté API home booker.
+- Sections dédiées Booking / Lieux / Contrats / Paiements / Avis : redirigées vers surfaces existantes en attendant des écrans dédiés.
+
 ### Corrigé (auth — parcours inscription rôle)
 - Clarifie le flux **2 étapes** : choix du rôle → **compte NOX** (étape 1) → **profil métier** (étape 2), sans impression de « recréer un compte ».
 - **`LoginPage`** : titres / CTA adaptés au rôle (« Continuer — profil ensuite »).

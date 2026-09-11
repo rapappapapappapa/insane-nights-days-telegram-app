@@ -35,7 +35,6 @@ import BookerContractModals from '../../components/bookerDashboard/BookerContrac
 import BookerEditEventModal from '../../components/bookerDashboard/BookerEditEventModal';
 import BookerDashboardHomeSection from '../../components/bookerDashboard/BookerDashboardHomeSection';
 import { NoxProDashboardHeader } from '../../components/nox';
-import { isHomeScreenForProfile } from '../../utils/noxRoleNavigation';
 
 const BOOKER_DASHBOARD_SECTIONS = new Set(['profil', 'events']);
 
@@ -60,7 +59,6 @@ export default function BookerDashboardPage() {
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
-  const isHome = isHomeScreenForProfile(user?.activeProfileType, 'bookerDashboard');
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { showConfirm } = useConfirm();
   const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
@@ -267,39 +265,92 @@ export default function BookerDashboardPage() {
 
   const menuItems = [
     {
-      id: 'profil',
-      label: language === 'fr' ? 'Mon profil' : 'My profile',
-      hint: language === 'fr' ? 'Identité & visibilité' : 'Identity & visibility',
-      icon: 'person',
-      accentColor: '#81B9FF',
-      accentBg: 'rgba(129,185,255,0.15)',
-    },
-    {
-      id: 'events',
-      label: language === 'fr' ? 'Mes événements' : 'My events',
-      hint: language === 'fr' ? 'Bookings & chat' : 'Bookings & chat',
+      id: 'create-event',
+      label: language === 'fr' ? 'Créer un événement' : 'Create event',
+      hint: language === 'fr' ? 'Billetterie, line-up, lieu' : 'Tickets, line-up, venue',
       icon: 'calendar',
       accentColor: Colors.primaryLight,
       accentBg: 'rgba(40,82,232,0.2)',
     },
     {
-      id: 'create-event',
-      label: language === 'fr' ? 'Créer un event' : 'Create event',
-      hint: language === 'fr' ? 'Assistant pas à pas' : 'Step-by-step wizard',
-      icon: 'add-circle',
+      id: 'events',
+      label: language === 'fr' ? 'Mes événements' : 'My events',
+      hint: language === 'fr' ? 'Brouillons, publiés, archivés' : 'Drafts, published, archived',
+      icon: 'list',
       accentColor: '#34D399',
       accentBg: 'rgba(52,211,153,0.12)',
+    },
+    {
+      id: 'booking',
+      label: language === 'fr' ? 'Booking artistes' : 'Artist booking',
+      hint: language === 'fr' ? 'Rechercher & inviter' : 'Search & invite',
+      icon: 'people',
+      accentColor: '#F472B6',
+      accentBg: 'rgba(244,114,182,0.12)',
+    },
+    {
+      id: 'lieux',
+      label: language === 'fr' ? 'Lieux' : 'Venues',
+      hint: language === 'fr' ? 'Gérer mes lieux favoris' : 'Manage favorite venues',
+      icon: 'location',
+      accentColor: '#A78BFA',
+      accentBg: 'rgba(167,139,250,0.12)',
+    },
+    {
+      id: 'communication',
+      label: 'Communication',
+      hint: language === 'fr' ? 'Visuels, réseaux, promos' : 'Visuals, social, promos',
+      icon: 'megaphone',
+      accentColor: '#F87171',
+      accentBg: 'rgba(248,113,113,0.12)',
+    },
+    {
+      id: 'contrats',
+      label: language === 'fr' ? 'Contrats' : 'Contracts',
+      hint: language === 'fr' ? 'Templates & signatures' : 'Templates & signatures',
+      icon: 'document-text',
+      accentColor: '#FBBF24',
+      accentBg: 'rgba(251,191,36,0.12)',
+    },
+    {
+      id: 'statistiques',
+      label: language === 'fr' ? 'Statistiques' : 'Statistics',
+      hint: language === 'fr' ? 'Ventes, audience, revenus' : 'Sales, audience, revenue',
+      icon: 'bar-chart',
+      accentColor: '#818CF8',
+      accentBg: 'rgba(129,140,248,0.12)',
+    },
+    {
+      id: 'paiements',
+      label: language === 'fr' ? 'Paiements' : 'Payments',
+      hint: language === 'fr' ? 'Stripe & reversements' : 'Stripe & payouts',
+      icon: 'card',
+      accentColor: '#FCD34D',
+      accentBg: 'rgba(252,211,77,0.12)',
+    },
+    {
+      id: 'avis',
+      label: language === 'fr' ? 'Avis' : 'Reviews',
+      hint: language === 'fr' ? 'Notes des artistes & public' : 'Artist & public ratings',
+      icon: 'star',
+      accentColor: '#FBBF24',
+      accentBg: 'rgba(251,191,36,0.12)',
+    },
+    {
+      id: 'profil',
+      label: language === 'fr' ? 'Paramètres' : 'Settings',
+      hint: language === 'fr' ? 'Équipe, rôles, préférences' : 'Team, roles, preferences',
+      icon: 'settings',
+      accentColor: '#C084FC',
+      accentBg: 'rgba(192,132,252,0.12)',
     },
   ];
 
   const isHubView = activeSection === 'home';
   const activeMenuItem = menuItems.find((item) => item.id === activeSection);
-  const headerTitle = isHubView
-    ? language === 'fr'
-      ? 'Dashboard Organisateur'
-      : 'Organizer Dashboard'
-    : activeMenuItem?.label ||
-      (language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard');
+  const headerTitle =
+    activeMenuItem?.label ||
+    (language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard');
 
   const handleHeaderBack = () => {
     if (isHubView) {
@@ -312,6 +363,22 @@ export default function BookerDashboardPage() {
   const openSection = (sectionId) => {
     if (sectionId === 'create-event') {
       navigate('bookerEventDashboard', {});
+      return;
+    }
+    if (sectionId === 'communication') {
+      navigate('createFeedPost');
+      return;
+    }
+    if (sectionId === 'statistiques') {
+      // Stats live on the hub; keep user on home (scroll already shows them).
+      setActiveSection('home');
+      return;
+    }
+    // booking / lieux / contrats / paiements / avis → closest existing surface = events
+    if (['booking', 'lieux', 'contrats', 'paiements', 'avis'].includes(sectionId)) {
+      setActiveSection('events');
+      fetchMyEvents();
+      markAllAsRead();
       return;
     }
     setActiveSection(sectionId);
@@ -328,6 +395,12 @@ export default function BookerDashboardPage() {
     user?.username?.split('@')?.[0] ||
     '';
 
+  const orgName =
+    bookerProfile?.companyName ||
+    profileForm?.companyName ||
+    bookerProfile?.pseudo ||
+    displayName;
+
   const renderContent = () => {
     if (isHubView) {
       return (
@@ -337,7 +410,18 @@ export default function BookerDashboardPage() {
           tiles={menuItems}
           unreadCount={unreadCount}
           displayName={displayName}
+          orgName={orgName}
+          bookerType={profileForm?.bookerType || bookerProfile?.bookerType}
+          city={profileForm?.city || bookerProfile?.city}
+          profileImage={profileImage || bookerProfile?.profileImage}
+          bookerId={bookerProfile?.id}
+          events={myEvents}
+          navigate={navigate}
           onSelectSection={openSection}
+          onNotificationsPress={() => {
+            navigate('notifications');
+            refreshUnreadCount();
+          }}
         />
       );
     }
@@ -424,17 +508,19 @@ export default function BookerDashboardPage() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <StatusBar style="light" />
-        <NoxProDashboardHeader
-          title={headerTitle}
-          showBack={!isHubView || !isHome}
-          onBack={handleHeaderBack}
-          unreadCount={unreadCount}
-          onMessagesPress={() => {
-            openSection('events');
-            refreshUnreadCount();
-          }}
-          onMarkMessagesRead={markAllAsRead}
-        />
+        {!isHubView ? (
+          <NoxProDashboardHeader
+            title={headerTitle}
+            showBack
+            onBack={handleHeaderBack}
+            unreadCount={unreadCount}
+            onMessagesPress={() => {
+              openSection('events');
+              refreshUnreadCount();
+            }}
+            onMarkMessagesRead={markAllAsRead}
+          />
+        ) : null}
 
         <View style={styles.mainContent}>{renderContent()}</View>
 

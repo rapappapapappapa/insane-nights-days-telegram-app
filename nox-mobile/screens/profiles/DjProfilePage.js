@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Text,
   View,
@@ -10,39 +10,52 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import Colors, { primaryAlpha } from '../../constants/colors';
+import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-// Audio migration: expo-av -> expo-audio (no direct replacement for setIsEnabledAsync)
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { api, API_CONFIG, normalizeMediaUrl } from '../../api/config';
+import { api, normalizeMediaUrl } from '../../api/config';
 import StarRating from '../../components/StarRating';
 import VideoPlayer from '../../components/VideoPlayer';
 import BuiltInStreamPlayerModal from '../../components/BuiltInStreamPlayerModal';
-// AudioPlayer retiré: plus d'audio mp3 dans le profil DJ
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
-import { NoxText, NoxButton, NoxCard } from '../../components/nox';
+import { NoxText, NoxButton } from '../../components/nox';
 import ProfileWallStream from '../../components/community/ProfileWallStream';
+import {
+  PublicProfileHero,
+  PublicProfileTabs,
+  PublicProfileEventCarousel,
+  publicProfileStyles as pp,
+} from '../../components/publicProfile';
 import { Spacing } from '../../constants/theme';
 import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 import { styles } from './DjProfilePage.styles';
 
 export default function DjProfilePage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const { djId, djUserId, selectionMode, selectedDjIds = [], returnTo, eventId, slotIndex = null, slotIntent = 'fill', replaceDjId = null, isSlotMode = false } = routeParams || {};
-  
+  const {
+    djId,
+    djUserId,
+    selectionMode,
+    selectedDjIds = [],
+    returnTo,
+    eventId,
+    slotIndex = null,
+    slotIntent = 'fill',
+    replaceDjId = null,
+  } = routeParams || {};
+  const fr = language === 'fr';
+
   const [dj, setDj] = useState(null);
   const [ratings, setRatings] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('media');
+  const [activeTab, setActiveTab] = useState('about');
   const [media, setMedia] = useState({ photos: [], videos: [], audio: [] });
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
@@ -51,19 +64,14 @@ export default function DjProfilePage() {
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(null);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [events, setEvents] = useState({ upcomingEvents: [], pastEvents: [] });
-  const previousTabRef = useRef(activeTab);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
   const [streamPlayer, setStreamPlayer] = useState({ visible: false, uri: null, title: '' });
-  // Drawer global géré dans App.js
 
   useEffect(() => {
-    if (djId || djUserId) {
-      fetchDjProfile();
-    }
+    if (djId || djUserId) fetchDjProfile();
   }, [djId, djUserId]);
 
-  // Charger le statut d'abonnement (suivre ce profil DJ)
   useEffect(() => {
     if (!user?.token || !dj?.id || dj.userId === user?.id) return;
     let mounted = true;
@@ -75,17 +83,10 @@ export default function DjProfilePage() {
         if (mounted) setFollowing(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [user?.token, user?.id, dj?.id, dj?.userId]);
-
-  // Note: plus d'onglet audio, rien à stopper au changement d'onglet
-
-  // Fonction pour arrêter l'audio et revenir en arrière
-  const handleBack = async () => {
-    // Note: expo-audio gère automatiquement le nettoyage des players
-    // quand les composants sont démontés, pas besoin d'arrêter manuellement
-    goBack();
-  };
 
   const openBuiltInStream = (url, provider) => {
     if (!url || typeof url !== 'string') return;
@@ -93,25 +94,21 @@ export default function DjProfilePage() {
     const resolved = resolveStreamingEmbed(trimmed, provider);
     if (!resolved) {
       Alert.alert(
-        language === 'fr' ? 'Lecture intégrée impossible' : 'In-app playback unavailable',
-        language === 'fr'
-          ? 'Ce lien ne peut pas être chargé dans le lecteur intégré (lien court, page compte, etc.). Colle une URL complète du type open.spotify.com (piste, album, playlist, artiste, podcast) ou une URL SoundCloud https://soundcloud.com/…'
-          : 'This link cannot load in the in-app player (short link, profile-only URL, etc.). Use a full open.spotify.com URL (track, album, playlist, artist, show) or an https://soundcloud.com/… URL.',
+        fr ? 'Lecture intégrée impossible' : 'In-app playback unavailable',
+        fr
+          ? 'Ce lien ne peut pas être chargé dans le lecteur intégré. Utilise une URL Spotify / SoundCloud complète.'
+          : 'This link cannot load in the in-app player. Use a full Spotify / SoundCloud URL.',
         [
-          { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
+          { text: fr ? 'Annuler' : 'Cancel', style: 'cancel' },
           {
-            text: language === 'fr' ? 'Ouvrir dans le navigateur / app' : 'Open in browser / app',
+            text: fr ? 'Ouvrir dans le navigateur' : 'Open in browser',
             onPress: () => Linking.openURL(trimmed).catch(() => {}),
           },
-        ]
+        ],
       );
       return;
     }
-    setStreamPlayer({
-      visible: true,
-      uri: resolved.uri,
-      title: resolved.title,
-    });
+    setStreamPlayer({ visible: true, uri: resolved.uri, title: resolved.title });
   };
 
   const handleFollowToggle = async () => {
@@ -122,14 +119,14 @@ export default function DjProfilePage() {
       if (following) {
         await api.unfollowDj(user.token, dj.id);
         setFollowing(false);
-        showSuccess(language === 'fr' ? 'Abonnement retiré.' : 'Unfollowed.');
+        showSuccess(fr ? 'Abonnement retiré.' : 'Unfollowed.');
       } else {
         await api.followDj(user.token, dj.id);
         setFollowing(true);
-        showSuccess(language === 'fr' ? 'Vous suivez ce DJ.' : 'You now follow this DJ.');
+        showSuccess(fr ? 'Vous suivez ce DJ.' : 'You now follow this DJ.');
       }
     } catch (e) {
-      showError(e?.message || (language === 'fr' ? 'Erreur.' : 'Error.'));
+      showError(e?.message || (fr ? 'Erreur.' : 'Error.'));
     } finally {
       setLoadingFollow(false);
     }
@@ -138,13 +135,11 @@ export default function DjProfilePage() {
   const fetchDjProfile = async () => {
     setLoading(true);
     try {
-      // Récupérer les notes et les infos du DJ
       const identifier = djUserId || djId;
       const ratingsResponse = await api.getDjRatings(identifier);
-      
+
       if (ratingsResponse && ratingsResponse.success) {
         setRatings(ratingsResponse.ratings);
-        // Utiliser les infos du DJ depuis l'API
         if (ratingsResponse.dj) {
           setDj({
             id: ratingsResponse.dj.id,
@@ -153,12 +148,10 @@ export default function DjProfilePage() {
             city: ratingsResponse.dj.city,
             phone: ratingsResponse.dj.phone,
             birthDate: ratingsResponse.dj.birthDate,
-            // Champs éditables
             bio: ratingsResponse.dj.bio,
             genre: ratingsResponse.dj.genre,
             mainCity: ratingsResponse.dj.mainCity,
             languages: ratingsResponse.dj.languages,
-            // ✅ Tarifs retirés (prix à convenir via contrat Booker ↔ DJ)
             availableStatus: ratingsResponse.dj.availableStatus,
             soundcloudUrl: ratingsResponse.dj.soundcloudUrl,
             spotifyUrl: ratingsResponse.dj.spotifyUrl,
@@ -166,37 +159,38 @@ export default function DjProfilePage() {
             instagramUrl: ratingsResponse.dj.instagramUrl,
             tiktokUrl: ratingsResponse.dj.tiktokUrl,
             equipment: ratingsResponse.dj.equipment,
+            followersCount: ratingsResponse.dj.followersCount,
+            followingCount: ratingsResponse.dj.followingCount,
             averageRatingGlobal: ratingsResponse.ratings.averageRatingGlobal,
           });
 
-          // Récupérer les médias (depuis la réponse ou via API séparée)
           const allMedia = ratingsResponse.media || [];
           if (allMedia.length > 0) {
             setMedia({
-              photos: allMedia.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
-              videos: allMedia.filter(m => m.type === 'video'),
-              audio: [], // audio supprimé
+              photos: allMedia.filter(
+                (m) => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner',
+              ),
+              videos: allMedia.filter((m) => m.type === 'video'),
+              audio: [],
             });
-            
-            // Photo de profil et bannière
-            const profileImg = allMedia.find(m => m.type === 'photo' && m.title === 'profile');
-            const bannerImg = allMedia.find(m => m.type === 'photo' && m.title === 'banner');
+            const profileImg = allMedia.find((m) => m.type === 'photo' && m.title === 'profile');
+            const bannerImg = allMedia.find((m) => m.type === 'photo' && m.title === 'banner');
             if (profileImg) setProfileImage(profileImg.url);
             if (bannerImg) setBannerImage(bannerImg.url);
           } else {
-            // Fallback : récupérer les médias via API séparée
             try {
               const mediaResponse = await api.getDjMedia(identifier);
-              if (mediaResponse && mediaResponse.success) {
+              if (mediaResponse?.success) {
                 const mediaList = mediaResponse.media || [];
                 setMedia({
-                  photos: mediaList.filter(m => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner'),
-                  videos: mediaList.filter(m => m.type === 'video'),
-                  audio: [], // audio supprimé
+                  photos: mediaList.filter(
+                    (m) => m.type === 'photo' && m.title !== 'profile' && m.title !== 'banner',
+                  ),
+                  videos: mediaList.filter((m) => m.type === 'video'),
+                  audio: [],
                 });
-                
-                const profileImg = mediaList.find(m => m.type === 'photo' && m.title === 'profile');
-                const bannerImg = mediaList.find(m => m.type === 'photo' && m.title === 'banner');
+                const profileImg = mediaList.find((m) => m.type === 'photo' && m.title === 'profile');
+                const bannerImg = mediaList.find((m) => m.type === 'photo' && m.title === 'banner');
                 if (profileImg) setProfileImage(profileImg.url);
                 if (bannerImg) setBannerImage(bannerImg.url);
               }
@@ -205,7 +199,6 @@ export default function DjProfilePage() {
             }
           }
         } else {
-          // Fallback si les infos ne sont pas disponibles
           setDj({
             id: djId,
             userId: djUserId,
@@ -216,11 +209,9 @@ export default function DjProfilePage() {
         }
       }
 
-      // Récupérer les événements du DJ
       try {
-        const identifier = djUserId || djId;
         const eventsResponse = await api.getDjEvents(identifier);
-        if (eventsResponse && eventsResponse.success) {
+        if (eventsResponse?.success) {
           setEvents({
             upcomingEvents: eventsResponse.upcomingEvents || [],
             pastEvents: eventsResponse.pastEvents || [],
@@ -228,14 +219,55 @@ export default function DjProfilePage() {
         }
       } catch (eventsError) {
         console.error('Erreur récupération événements DJ:', eventsError);
-        // Ne pas bloquer l'affichage si les événements ne peuvent pas être chargés
       }
     } catch (error) {
       console.error('Erreur récupération profil DJ:', error);
-      showError(language === 'fr' ? 'Impossible de charger le profil.' : 'Unable to load profile.');
+      showError(fr ? 'Impossible de charger le profil.' : 'Unable to load profile.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const upcomingEventItems = useMemo(
+    () =>
+      (events.upcomingEvents || []).slice(0, 8).map((event) => ({
+        id: event.id,
+        title: event.title,
+        date: event.date,
+        location: event.venue?.name || event.location || event.city,
+        image: event.image || event.coverImage,
+        tags: [event.genre, dj?.genre].filter(Boolean),
+        onPress: () => navigate('eventDetail', { eventId: event.id }),
+      })),
+    [events.upcomingEvents, dj?.genre, navigate],
+  );
+
+  const openVideo = (video, index) => {
+    const videoUrl = video?.url || (typeof video === 'string' ? video : null);
+    if (!videoUrl || typeof videoUrl !== 'string') return;
+    const videoTitle = video?.title || `${fr ? 'Vidéo' : 'Video'} ${index + 1}`;
+    const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+    const isLocalFileUri =
+      videoUrl.startsWith('file://') ||
+      videoUrl.startsWith('content://') ||
+      videoUrl.startsWith('ph://') ||
+      videoUrl.startsWith('assets-library://');
+    if (isLocalFileUri) {
+      showError(fr ? 'Vidéo non accessible (upload local).' : 'Video not accessible (local upload).');
+      return;
+    }
+    let youtubeId = null;
+    if (isYouTube) {
+      const match = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+      if (match) youtubeId = match[1];
+    }
+    setSelectedVideo({
+      url: isYouTube ? videoUrl : normalizeMediaUrl(videoUrl),
+      title: videoTitle,
+      thumbnail: youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null,
+      isYouTube,
+    });
+    setVideoPlayerVisible(true);
   };
 
   if (loading) {
@@ -245,7 +277,7 @@ export default function DjProfilePage() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <NoxText variant="secondary" style={styles.loadingText}>
-            {language === 'fr' ? 'Chargement...' : 'Loading...'}
+            {fr ? 'Chargement...' : 'Loading...'}
           </NoxText>
         </View>
       </View>
@@ -258,451 +290,444 @@ export default function DjProfilePage() {
         <StatusBar style="light" />
         <View style={styles.errorContainer}>
           <NoxText variant="secondary" style={styles.errorText}>
-            {language === 'fr' ? 'Profil non trouvé' : 'Profile not found'}
+            {fr ? 'Profil non trouvé' : 'Profile not found'}
           </NoxText>
+          <NoxButton label={fr ? 'Retour' : 'Back'} onPress={goBack} style={{ marginTop: Spacing.lg }} />
         </View>
       </View>
     );
   }
 
-  return (
-    <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 140 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <StatusBar style="light" />
+  const cityLine = [dj.mainCity || dj.city, dj.country].filter(Boolean).join(', ');
+  const metaLine = [dj.genre, fr ? 'Artiste' : 'Artist', dj.mainCity || dj.city]
+    .filter(Boolean)
+    .join(' • ');
+  const ratingValue = Number(ratings?.averageRatingGlobal || dj.averageRatingGlobal || 0);
+  const eventsCount =
+    (events.upcomingEvents?.length || 0) + (events.pastEvents?.length || 0);
 
-        <View style={[styles.topBar, { paddingTop: (insets?.top ?? 0) + Spacing.sm }]}>
-          <TouchableOpacity onPress={handleBack} hitSlop={12} style={styles.topBarBtn}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-          <View style={styles.topBarCenter}>
-            <NoxText variant="titleSecondary">{dj.artistName}</NoxText>
-            <NoxText variant="secondary">
-              {dj.mainCity || dj.city || (language === 'fr' ? 'Artiste' : 'Artist')}
-            </NoxText>
-          </View>
-          <View style={styles.topBarBtn} />
-        </View>
+  const stats = [
+    { label: fr ? 'Followers' : 'Followers', value: dj.followersCount, force: true },
+    { label: fr ? 'Suivis' : 'Following', value: dj.followingCount, force: true },
+    { label: fr ? 'Événements' : 'Events', value: eventsCount || null, force: true },
+    {
+      label: fr ? 'Note' : 'Rating',
+      value: ratingValue > 0 ? `${ratingValue.toFixed(1)} ★` : null,
+      force: true,
+    },
+  ];
 
-        <View style={styles.profileHero}>
-          <View style={styles.banner}>
-            {bannerImage ? (
-              <Image
-                source={{ uri: normalizeMediaUrl(bannerImage) }}
-                style={styles.bannerImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <Ionicons name="musical-notes-outline" size={32} color={primaryAlpha(0.45)} />
-            )}
-          </View>
-          <View style={styles.avatarWrap}>
-            {normalizeMediaUrl(profileImage) ? (
-              <Image
-                source={{ uri: normalizeMediaUrl(profileImage) }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <NoxText variant="title">
-                  {dj.artistName?.charAt(0)?.toUpperCase() || 'D'}
-                </NoxText>
-              </View>
-            )}
-          </View>
-        </View>
+  const showFollow = !selectionMode && !!user?.token && dj.userId !== user?.id;
 
-        <View style={styles.identityBlock}>
-          <NoxText variant="title" style={styles.djName}>
-            {dj.artistName}
-          </NoxText>
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={Colors.textTertiary} />
-            <NoxText variant="secondary">
-              {dj.mainCity || dj.city || (language === 'fr' ? 'Ville non renseignée' : 'City not set')}
-            </NoxText>
-          </View>
+  const extraActions = selectionMode ? (
+    <NoxButton
+      label={
+        selectedDjIds.includes(dj.userId)
+          ? fr
+            ? 'Désélectionner'
+            : 'Deselect'
+          : fr
+            ? 'Sélectionner'
+            : 'Select'
+      }
+      variant={selectedDjIds.includes(dj.userId) ? 'secondary' : 'primary'}
+      onPress={() => {
+        const slotIndexToPass =
+          slotIndex !== null && slotIndex !== undefined ? slotIndex : undefined;
+        const pickToken = `${Date.now()}-${dj.userId}-${slotIndexToPass ?? 'x'}`;
+        navigate(returnTo || 'bookerDashboard', {
+          selectedDjId: dj.userId,
+          selectedDjName: dj.artistName,
+          action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
+          eventId: eventId || undefined,
+          slotIndex: slotIndexToPass,
+          slotIntent: slotIntent || (replaceDjId ? 'replace' : 'fill'),
+          pickToken,
+          ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
+        });
+      }}
+    />
+  ) : user?.activeProfileType === 'BOOKER' && dj.userId !== user?.id ? (
+    <NoxButton
+      label={
+        dj.availableStatus === false
+          ? fr
+            ? 'Indisponible'
+            : 'Unavailable'
+          : fr
+            ? 'Booker ce DJ'
+            : 'Book this DJ'
+      }
+      disabled={dj.availableStatus === false}
+      onPress={() => {
+        if (dj.availableStatus === false) {
+          showError(
+            fr
+              ? "Ce DJ n'est pas disponible pour le moment."
+              : 'This DJ is not available at the moment.',
+          );
+        }
+      }}
+    />
+  ) : null;
 
-          <View style={styles.quickStatsRow}>
-            <View style={styles.quickStatPill}>
-              <NoxText variant="secondary" style={styles.quickStatLabel}>
-                {language === 'fr' ? 'Note' : 'Rating'}
+  const renderAbout = () => (
+    <View>
+      {(dj.soundcloudUrl || dj.spotifyUrl) && (
+        <View style={pp.highlightRow}>
+          {dj.soundcloudUrl ? (
+            <TouchableOpacity
+              style={pp.highlightCard}
+              onPress={() => openBuiltInStream(dj.soundcloudUrl, 'soundcloud')}
+              activeOpacity={0.85}
+            >
+              <NoxText variant="secondary" style={pp.highlightLabel}>
+                {fr ? 'Mix du moment' : 'Featured mix'}
               </NoxText>
-              <View style={styles.quickStatValueRow}>
-                <NoxText variant="titleSecondary" style={styles.quickStatValue}>
-                  {(ratings?.averageRatingGlobal ?? 0).toFixed
-                    ? Number(ratings.averageRatingGlobal).toFixed(1)
-                    : '0.0'}
-                </NoxText>
-                <StarRating
-                  rating={Number(ratings?.averageRatingGlobal || 0)}
-                  size={14}
-                  showStars
-                  showValue={false}
-                />
-              </View>
-            </View>
-            <View style={[styles.quickStatPill, dj.availableStatus === false && styles.quickStatPillMuted]}>
-              <NoxText variant="secondary" style={styles.quickStatLabel}>
-                {language === 'fr' ? 'Dispo' : 'Avail.'}
-              </NoxText>
-              <NoxText variant="form" style={styles.quickStatValueSmall}>
-                {dj.availableStatus === false
-                  ? language === 'fr'
-                    ? 'Indisponible'
-                    : 'Unavailable'
-                  : language === 'fr'
-                    ? 'Disponible'
-                    : 'Available'}
-              </NoxText>
-            </View>
-          </View>
-
-          <View style={styles.headerBadgesRow}>
-            {dj.genre ? (
-              <View style={styles.badge}>
-                <NoxText variant="secondary" style={styles.badgeText}>
-                  {dj.genre}
-                </NoxText>
-              </View>
-            ) : null}
-            {dj.languages ? (
-              <View style={styles.badgeSecondary}>
-                <NoxText variant="secondary" style={styles.badgeSecondaryText}>
-                  {dj.languages}
-                </NoxText>
-              </View>
-            ) : null}
-          </View>
-
-          {!selectionMode && user?.token && dj.userId !== user?.id ? (
-            <NoxButton
-              label={
-                loadingFollow
-                  ? '…'
-                  : following
-                    ? language === 'fr'
-                      ? 'Abonné'
-                      : 'Following'
-                    : language === 'fr'
-                      ? 'Suivre'
-                      : 'Follow'
-              }
-              variant={following ? 'secondary' : 'primary'}
-              onPress={handleFollowToggle}
-              disabled={loadingFollow}
-              style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
-            />
-          ) : null}
-
-          {selectionMode ? (
-            <NoxButton
-              label={
-                selectedDjIds.includes(dj.userId)
-                  ? language === 'fr'
-                    ? 'Désélectionner'
-                    : 'Deselect'
-                  : language === 'fr'
-                    ? 'Sélectionner'
-                    : 'Select'
-              }
-              variant={selectedDjIds.includes(dj.userId) ? 'secondary' : 'primary'}
-              style={{ marginTop: Spacing.lg, alignSelf: 'stretch' }}
-              onPress={() => {
-                const slotIndexToPass =
-                  slotIndex !== null && slotIndex !== undefined ? slotIndex : undefined;
-                const pickToken = `${Date.now()}-${dj.userId}-${slotIndexToPass ?? 'x'}`;
-                navigate(returnTo || 'bookerDashboard', {
-                  selectedDjId: dj.userId,
-                  selectedDjName: dj.artistName,
-                  action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
-                  eventId: eventId || undefined,
-                  slotIndex: slotIndexToPass,
-                  slotIntent: slotIntent || (replaceDjId ? 'replace' : 'fill'),
-                  pickToken,
-                  ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 3 } : {}),
-                });
-              }}
-            />
-          ) : (
-            user?.activeProfileType === 'BOOKER' && (
-              <>
-                <NoxButton
-                  label={
-                    dj.availableStatus === false
-                      ? language === 'fr'
-                        ? 'Indisponible'
-                        : 'Unavailable'
-                      : language === 'fr'
-                        ? 'Booker ce DJ'
-                        : 'Book this DJ'
-                  }
-                  disabled={dj.availableStatus === false}
-                  style={{ marginTop: Spacing.md, alignSelf: 'stretch' }}
-                  onPress={() => {
-                    if (dj.availableStatus === false) {
-                      showError(
-                        language === 'fr'
-                          ? "Ce DJ n'est pas disponible pour le moment."
-                          : 'This DJ is not available at the moment.',
-                      );
-                    }
-                  }}
-                />
-                {dj.availableStatus === false ? (
-                  <NoxText variant="secondary" style={styles.unavailableHint}>
-                    {language === 'fr'
-                      ? 'Ce DJ est marqué comme indisponible.'
-                      : 'This DJ has marked themselves as unavailable.'}
-                  </NoxText>
-                ) : null}
-              </>
-            )
-          )}
-        </View>
-
-      {/* Bio */}
-      <NoxCard style={styles.card}>
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          {language === 'fr' ? 'Bio' : 'Bio'}
-        </NoxText>
-        <NoxText variant="description" style={[styles.bioText, !dj.bio && styles.bioTextEmpty]}>
-          {dj.bio ||
-            (language === 'fr'
-              ? "Ce DJ n'a pas encore ajouté de bio."
-              : 'This DJ has not added a bio yet.')}
-        </NoxText>
-      </NoxCard>
-
-      {/* SoundCloud + Spotify */}
-      <NoxCard style={styles.card}>
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          {language === 'fr' ? 'Musique' : 'Music'}
-        </NoxText>
-        <NoxText variant="secondary" style={styles.streamSectionIntro}>
-          {language === 'fr'
-            ? 'Lecture dans l’app via le lecteur intégré (Spotify / SoundCloud).'
-            : 'In-app playback via the built-in player (Spotify / SoundCloud).'}
-        </NoxText>
-        {!dj.spotifyUrl && !dj.soundcloudUrl ? (
-          <NoxText variant="secondary" style={styles.emptyHint}>
-            {language === 'fr'
-              ? 'Aucun lien Spotify / SoundCloud renseigné.'
-              : 'No Spotify / SoundCloud links yet.'}
-          </NoxText>
-        ) : (
-          <View style={styles.streamBlock}>
-            {dj.spotifyUrl ? (
-              <View style={styles.streamProviderBlock}>
-                <NoxText variant="form" style={styles.streamProviderLabel}>
-                  Spotify
-                </NoxText>
-                <NoxButton
-                  label={language === 'fr' ? 'Écouter dans l’app' : 'Listen in app'}
-                  onPress={() => openBuiltInStream(dj.spotifyUrl, 'spotify')}
-                  style={{ marginBottom: Spacing.sm }}
-                />
-                <NoxButton
-                  label={language === 'fr' ? 'Ouvrir Spotify' : 'Open Spotify'}
-                  variant="ghost"
-                  onPress={() => Linking.openURL(dj.spotifyUrl)}
-                />
-              </View>
-            ) : null}
-            {dj.soundcloudUrl ? (
-              <View style={[styles.streamProviderBlock, dj.spotifyUrl ? styles.streamProviderBlockSpaced : null]}>
-                <NoxText variant="form" style={styles.streamProviderLabel}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="play-circle" size={28} color={Colors.primary} />
+                <NoxText style={pp.highlightTitle} numberOfLines={2}>
                   SoundCloud
                 </NoxText>
-                <NoxButton
-                  label={language === 'fr' ? 'Écouter dans l’app' : 'Listen in app'}
-                  onPress={() => openBuiltInStream(dj.soundcloudUrl, 'soundcloud')}
-                  style={{ marginBottom: Spacing.sm }}
-                />
-                <NoxButton
-                  label={language === 'fr' ? 'Ouvrir SoundCloud' : 'Open SoundCloud'}
-                  variant="ghost"
-                  onPress={() => Linking.openURL(dj.soundcloudUrl)}
-                />
               </View>
-            ) : null}
-          </View>
-        )}
-      </NoxCard>
-
-      {/* Médias: un seul bouton qui regroupe photos + vidéos */}
-      <View style={styles.mediaSection}>
-        <TouchableOpacity
-          style={[styles.mediaButton, activeTab === 'media' && styles.mediaButtonActive]}
-          onPress={() => setActiveTab(activeTab === 'media' ? 'none' : 'media')}
-          activeOpacity={0.85}
-        >
-          <NoxText variant="form" style={styles.mediaButtonText}>
-            {language === 'fr' ? 'Médias (photos & vidéos)' : 'Media (photos & videos)'}
-          </NoxText>
-          <NoxText variant="secondary" style={styles.mediaButtonSub}>
-            {language === 'fr'
-              ? `${media.photos.length} photo(s) • ${media.videos.length} vidéo(s)`
-              : `${media.photos.length} photo(s) • ${media.videos.length} video(s)`}
-          </NoxText>
-        </TouchableOpacity>
-
-        {activeTab === 'media' && (
-          <View style={styles.mediaContent}>
-            {/* Vidéos */}
-            {media.videos && media.videos.length > 0 ? (
-              <>
-                <NoxText variant="secondary" style={styles.mediaSubtitle}>
-                  {language === 'fr' ? 'Vidéos' : 'Videos'}
-                </NoxText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoRow}>
-                  {media.videos
-                    .filter(video => {
-                      const videoUrl = video?.url || (typeof video === 'string' ? video : null);
-                      return videoUrl && typeof videoUrl === 'string';
-                    })
-                    .map((video, index) => {
-                      const videoUrl = video?.url || (typeof video === 'string' ? video : null);
-                      const videoTitle = video?.title || `${language === 'fr' ? 'Vidéo' : 'Video'} ${index + 1}`;
-                      if (!videoUrl || typeof videoUrl !== 'string') return null;
-
-                      const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-                      const isLocalFileUri = videoUrl.startsWith('file://') || videoUrl.startsWith('content://') ||
-                        videoUrl.startsWith('ph://') || videoUrl.startsWith('assets-library://');
-                      const isLocalAsset = videoUrl.startsWith('local:') ||
-                        (videoTitle && typeof videoTitle === 'string' && (
-                          videoTitle.toLowerCase().includes('tracer') ||
-                          videoTitle.toLowerCase().includes('gogg')
-                        ) && !videoUrl.startsWith('http'));
-
-                      let finalVideoUrl = videoUrl;
-                      let isUnavailable = false;
-                      if (isLocalFileUri) {
-                        isUnavailable = true;
-                      } else if (isLocalAsset) {
-                        finalVideoUrl = normalizeMediaUrl(videoUrl) || videoUrl;
-                      } else {
-                        finalVideoUrl = normalizeMediaUrl(videoUrl);
-                      }
-
-                      let youtubeId = null;
-                      if (isYouTube) {
-                        const match = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-                        if (match) youtubeId = match[1];
-                      }
-                      const thumbnailUrl = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null;
-
-                      return (
-                        <TouchableOpacity
-                          key={video?.id || index}
-                          style={[styles.videoCard, isUnavailable && styles.videoItemUnavailable]}
-                          onPress={() => {
-                            if (isUnavailable) {
-                              showError(language === 'fr'
-                                ? 'Vidéo non accessible (upload local).'
-                                : 'Video not accessible (local upload).');
-                              return;
-                            }
-                            setSelectedVideo({
-                              url: isYouTube ? videoUrl : finalVideoUrl,
-                              title: videoTitle,
-                              thumbnail: thumbnailUrl,
-                              isYouTube: isYouTube,
-                            });
-                            setVideoPlayerVisible(true);
-                          }}
-                          activeOpacity={0.7}
-                          disabled={isUnavailable}
-                        >
-                          <View style={styles.videoThumbnail}>
-                            {thumbnailUrl ? (
-                              <Image
-                                source={{ uri: thumbnailUrl }}
-                                style={styles.videoThumbnailImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <View style={styles.videoPlaceholder}>
-                                <Ionicons name="videocam-outline" size={28} color={Colors.primary} />
-                                <NoxText variant="secondary" style={styles.videoPlaceholderText} numberOfLines={2}>
-                                  {videoTitle}
-                                </NoxText>
-                              </View>
-                            )}
-                            {!isUnavailable && (
-                              <View style={styles.playButtonOverlay}>
-                                <Text style={styles.playIconWhite}>▶</Text>
-                              </View>
-                            )}
-                          </View>
-                          <NoxText
-                            variant="secondary"
-                            style={[styles.videoTitle, isUnavailable && styles.videoTitleUnavailable]}
-                            numberOfLines={2}
-                          >
-                            {videoTitle}
-                          </NoxText>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </ScrollView>
-              </>
-            ) : null}
-
-            {/* Photos */}
-            {media.photos && media.photos.length > 0 ? (
-              <>
-                <NoxText variant="secondary" style={styles.mediaSubtitle}>
-                  {language === 'fr' ? 'Photos' : 'Photos'}
-                </NoxText>
-                <View style={styles.photoGrid}>
-                  {media.photos
-                    .filter(photo => {
-                      const photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
-                      return photoUrl && typeof photoUrl === 'string';
-                    })
-                    .map((photo, index) => {
-                      let photoUrl = photo?.url || (typeof photo === 'string' ? photo : null);
-                      if (!photoUrl || typeof photoUrl !== 'string') return null;
-                      photoUrl = normalizeMediaUrl(photoUrl);
-                      return (
-                        <TouchableOpacity
-                          key={photo?.id || index}
-                          activeOpacity={0.85}
-                          onPress={() => {
-                            setSelectedPhotoUrl(photoUrl);
-                            setPhotoModalVisible(true);
-                          }}
-                        >
-                          <Image
-                          key={photo?.id || index}
-                          source={{ uri: photoUrl }}
-                          style={styles.photoItem}
-                          resizeMode="cover"
-                          />
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
-              </>
-            ) : null}
-
-            {(!media.photos?.length && !media.videos?.length) ? (
-              <NoxText variant="secondary" style={styles.noMedia}>
-                {language === 'fr' ? 'Aucun média disponible' : 'No media available'}
+            </TouchableOpacity>
+          ) : null}
+          {dj.spotifyUrl ? (
+            <TouchableOpacity
+              style={pp.highlightCard}
+              onPress={() => openBuiltInStream(dj.spotifyUrl, 'spotify')}
+              activeOpacity={0.85}
+            >
+              <NoxText variant="secondary" style={pp.highlightLabel}>
+                {fr ? 'Dernière release' : 'Latest release'}
               </NoxText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="musical-notes" size={24} color={Colors.primary} />
+                <NoxText style={pp.highlightTitle} numberOfLines={2}>
+                  Spotify
+                </NoxText>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
+
+      <PublicProfileEventCarousel
+        language={language}
+        items={upcomingEventItems}
+        onSeeAll={() => setActiveTab('events')}
+      />
+
+      <View style={[pp.sectionHeader, { marginTop: Spacing.xl }]}>
+        <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+          {fr ? 'À propos' : 'About'}
+        </NoxText>
+      </View>
+      <View style={pp.aboutGrid}>
+        <View style={pp.aboutDetails}>
+          {dj.genre ? (
+            <View style={pp.aboutRow}>
+              <Ionicons name="musical-notes-outline" size={16} color={Colors.primary} />
+              <NoxText variant="secondary" style={pp.aboutRowText}>
+                {dj.genre}
+              </NoxText>
+            </View>
+          ) : null}
+          {cityLine ? (
+            <View style={pp.aboutRow}>
+              <Ionicons name="location-outline" size={16} color={Colors.primary} />
+              <NoxText variant="secondary" style={pp.aboutRowText}>
+                {fr ? `Basé à ${cityLine}` : `Based in ${cityLine}`}
+              </NoxText>
+            </View>
+          ) : null}
+          <View style={pp.socialRow}>
+            {dj.instagramUrl ? (
+              <TouchableOpacity
+                style={pp.socialChip}
+                onPress={() => Linking.openURL(dj.instagramUrl)}
+              >
+                <Ionicons name="logo-instagram" size={18} color={Colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {dj.soundcloudUrl ? (
+              <TouchableOpacity
+                style={pp.socialChip}
+                onPress={() => Linking.openURL(dj.soundcloudUrl)}
+              >
+                <Ionicons name="cloud-outline" size={18} color={Colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {dj.youtubeUrl ? (
+              <TouchableOpacity
+                style={pp.socialChip}
+                onPress={() => Linking.openURL(dj.youtubeUrl)}
+              >
+                <Ionicons name="logo-youtube" size={18} color={Colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {dj.spotifyUrl ? (
+              <TouchableOpacity
+                style={pp.socialChip}
+                onPress={() => Linking.openURL(dj.spotifyUrl)}
+              >
+                <Ionicons name="musical-note-outline" size={18} color={Colors.text} />
+              </TouchableOpacity>
             ) : null}
           </View>
-        )}
+          {dj.equipment ? (
+            <View style={pp.aboutRow}>
+              <Ionicons name="hardware-chip-outline" size={16} color={Colors.primary} />
+              <NoxText variant="secondary" style={pp.aboutRowText}>
+                {dj.equipment}
+              </NoxText>
+            </View>
+          ) : null}
+        </View>
+        {dj.bio ? (
+          <View style={pp.quoteCard}>
+            <NoxText style={pp.quoteMark}>“</NoxText>
+            <NoxText variant="secondary" style={pp.quoteText} numberOfLines={6}>
+              {dj.bio}
+            </NoxText>
+            <NoxText variant="secondary" style={pp.quoteAttr}>
+              — {dj.artistName}
+            </NoxText>
+          </View>
+        ) : null}
       </View>
 
-      {/* Photo en plein écran */}
+      <View style={pp.sectionHeader}>
+        <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+          {fr ? 'Médias récents' : 'Recent media'}
+        </NoxText>
+        <TouchableOpacity onPress={() => setActiveTab('media')} hitSlop={8}>
+          <NoxText style={pp.seeAll}>{fr ? 'Voir tout >' : 'See all >'}</NoxText>
+        </TouchableOpacity>
+      </View>
+      {renderMediaGrid(4)}
+    </View>
+  );
+
+  const renderMediaGrid = (limit = 12) => {
+    const videos = (media.videos || []).slice(0, limit);
+    const photos = (media.photos || []).slice(0, Math.max(0, limit - videos.length));
+    const items = [
+      ...videos.map((v, i) => ({ kind: 'video', data: v, index: i })),
+      ...photos.map((p, i) => ({ kind: 'photo', data: p, index: i })),
+    ].slice(0, limit);
+
+    if (items.length === 0) {
+      return (
+        <NoxText variant="secondary" style={pp.emptyHint}>
+          {fr ? 'Aucun média disponible' : 'No media available'}
+        </NoxText>
+      );
+    }
+
+    return (
+      <View style={pp.mediaGrid}>
+        {items.map((item) => {
+          if (item.kind === 'video') {
+            const videoUrl = item.data?.url || item.data;
+            const isYouTube =
+              typeof videoUrl === 'string' &&
+              (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
+            let thumb = null;
+            if (isYouTube) {
+              const match = String(videoUrl).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+              if (match) thumb = `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+            }
+            return (
+              <TouchableOpacity
+                key={`v-${item.data?.id || item.index}`}
+                style={pp.mediaThumb}
+                onPress={() => openVideo(item.data, item.index)}
+                activeOpacity={0.85}
+              >
+                {thumb ? (
+                  <Image source={{ uri: thumb }} style={pp.mediaThumbImage} />
+                ) : (
+                  <View style={[pp.mediaThumbImage, { alignItems: 'center', justifyContent: 'center' }]}>
+                    <Ionicons name="videocam-outline" size={28} color={Colors.primary} />
+                  </View>
+                )}
+                <View style={pp.mediaPlay}>
+                  <Ionicons name="play" size={22} color={Colors.text} />
+                </View>
+              </TouchableOpacity>
+            );
+          }
+          const photoUrl = normalizeMediaUrl(item.data?.url || item.data);
+          return (
+            <TouchableOpacity
+              key={`p-${item.data?.id || item.index}`}
+              style={pp.mediaThumb}
+              onPress={() => {
+                setSelectedPhotoUrl(photoUrl);
+                setPhotoModalVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Image source={{ uri: photoUrl }} style={pp.mediaThumbImage} resizeMode="cover" />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderEvents = () => (
+    <View>
+      <PublicProfileEventCarousel
+        language={language}
+        title={fr ? 'À venir' : 'Upcoming'}
+        items={upcomingEventItems}
+      />
+      {(events.pastEvents || []).length > 0 ? (
+        <>
+          <View style={pp.sectionHeader}>
+            <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+              {fr ? 'Passés' : 'Past'}
+            </NoxText>
+          </View>
+          {(events.pastEvents || []).slice(0, 10).map((event) => {
+            const d = event.date ? new Date(event.date) : null;
+            const label =
+              d && !Number.isNaN(d.getTime())
+                ? d.toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : '';
+            return (
+              <TouchableOpacity
+                key={event.id}
+                style={[pp.aboutRow, { paddingVertical: Spacing.sm }]}
+                onPress={() => navigate('eventDetail', { eventId: event.id })}
+              >
+                <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <NoxText variant="form">{event.title}</NoxText>
+                  <NoxText variant="secondary" style={{ fontSize: 12 }}>
+                    {label}
+                  </NoxText>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      ) : null}
+    </View>
+  );
+
+  const renderReviews = () => {
+    const list = ratings.allRatings || [];
+    if (list.length === 0) {
+      return (
+        <NoxText variant="secondary" style={pp.emptyHint}>
+          {fr ? 'Aucun avis pour le moment' : 'No reviews yet'}
+        </NoxText>
+      );
+    }
+    return (
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {list.slice(0, 12).map((review) => (
+            <View key={review.id} style={pp.reviewCard}>
+              <View style={pp.reviewHeader}>
+                <View style={pp.reviewAvatar}>
+                  <Ionicons name="person" size={16} color={Colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <NoxText variant="form" numberOfLines={1}>
+                    {review.raterType === 'COMMUNITY'
+                      ? fr
+                        ? 'Communauté'
+                        : 'Community'
+                      : review.raterType === 'BOOKER'
+                        ? fr
+                          ? 'Organisateur'
+                          : 'Organizer'
+                        : fr
+                          ? 'Lieu'
+                          : 'Venue'}
+                  </NoxText>
+                  <StarRating rating={review.rating} size={14} showStars showValue={false} />
+                </View>
+              </View>
+              {review.comment ? (
+                <NoxText variant="secondary" style={pp.reviewComment} numberOfLines={4}>
+                  “{review.comment}”
+                </NoxText>
+              ) : null}
+            </View>
+          ))}
+        </ScrollView>
+        {list.length > 3 ? (
+          <TouchableOpacity
+            style={{ marginTop: Spacing.md }}
+            onPress={() => navigate('djRatings', { djId, djName: dj?.artistName })}
+          >
+            <NoxText style={pp.seeAll}>
+              {fr ? `Voir les ${list.length} avis` : `See all ${list.length} reviews`}
+            </NoxText>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={pp.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <PublicProfileHero
+          language={language}
+          onBack={goBack}
+          bannerImage={bannerImage}
+          profileImage={profileImage}
+          name={dj.artistName}
+          metaLine={metaLine}
+          locationLine={cityLine}
+          bio={dj.bio}
+          stats={stats}
+          showFollow={showFollow}
+          following={following}
+          loadingFollow={loadingFollow}
+          onFollowPress={handleFollowToggle}
+          shareMessage={fr ? `Découvre ${dj.artistName} sur NOX` : `Discover ${dj.artistName} on NOX`}
+          extraActions={extraActions}
+          fallbackIcon="musical-notes"
+        />
+
+        <PublicProfileTabs language={language} activeTab={activeTab} onChange={setActiveTab} />
+
+        <View style={pp.tabBody}>
+          {activeTab === 'about' ? renderAbout() : null}
+          {activeTab === 'feed' ? (
+            dj?.id ? (
+              <ProfileWallStream
+                wallFilter={{ djId: dj.id }}
+                isOwnProfile={!!(user?.id && dj.userId === user?.id)}
+                enabled
+              />
+            ) : null
+          ) : null}
+          {activeTab === 'events' ? renderEvents() : null}
+          {activeTab === 'media' ? renderMediaGrid(24) : null}
+          {activeTab === 'reviews' ? renderReviews() : null}
+        </View>
+      </ScrollView>
+
       <Modal
         visible={photoModalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => {
           setPhotoModalVisible(false);
@@ -725,142 +750,7 @@ export default function DjProfilePage() {
         </View>
       </Modal>
 
-      {/* Section Avis et Matériel */}
-      <View style={styles.bottomSection}>
-        <View style={styles.reviewsColumn}>
-          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            {language === 'fr' ? 'Avis' : 'Reviews'}
-          </NoxText>
-          {ratings.allRatings && ratings.allRatings.length > 0 ? (
-            ratings.allRatings.slice(0, 3).map((review) => (
-              <View key={review.id} style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <Ionicons name="chatbubble-outline" size={14} color={Colors.primary} />
-                  <NoxText variant="form" style={styles.reviewerName}>
-                    {review.raterType === 'COMMUNITY'
-                      ? language === 'fr' ? 'Communauté' : 'Community'
-                      : review.raterType === 'BOOKER'
-                      ? (language === 'fr' ? 'Organisateur' : 'Organizer')
-                      : language === 'fr' ? 'Lieu' : 'Venue'}
-                  </NoxText>
-                </View>
-                <StarRating rating={review.rating} size={16} showStars={false} />
-                {review.comment ? (
-                  <NoxText variant="secondary" style={styles.reviewComment}>
-                    {review.comment}
-                  </NoxText>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <NoxText variant="secondary" style={styles.noReviews}>
-              {language === 'fr' ? 'Aucun avis pour le moment' : 'No reviews yet'}
-            </NoxText>
-          )}
-          {ratings.allRatings && ratings.allRatings.length > 3 ? (
-            <TouchableOpacity
-              onPress={() => navigate('djRatings', { djId, djName: dj?.artistName })}
-              accessibilityRole="button"
-            >
-              <NoxText variant="form" style={styles.seeAllReviews}>
-                {language === 'fr'
-                  ? `Voir les ${ratings.allRatings.length} avis`
-                  : `See all ${ratings.allRatings.length} reviews`}
-              </NoxText>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.equipmentColumn}>
-          <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-            {language === 'fr' ? 'Matériel' : 'Equipment'}
-          </NoxText>
-          {dj.equipment ? (
-            <NoxText variant="description" style={styles.equipmentText}>
-              {dj.equipment}
-            </NoxText>
-          ) : (
-            <View style={styles.equipmentList}>
-              <NoxText variant="secondary" style={styles.equipmentItem}>• CDJ-3000</NoxText>
-              <NoxText variant="secondary" style={styles.equipmentItem}>• DJM-900NX32</NoxText>
-              <NoxText variant="secondary" style={styles.equipmentItem}>• Moniteurs Pioneer</NoxText>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Calendrier */}
-      <NoxCard style={[styles.card, { marginBottom: Spacing.xl }]}>
-        <NoxText variant="titleSecondary" style={styles.sectionTitle}>
-          {language === 'fr' ? 'Calendrier' : 'Calendar'}
-        </NoxText>
-
-        {events.upcomingEvents && events.upcomingEvents.length > 0 ? (
-          events.upcomingEvents.slice(0, 3).map((event) => {
-            const eventDate = new Date(event.date);
-            const monthNames = language === 'fr'
-              ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
-              : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-            const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
-
-            return (
-              <View key={event.id} style={styles.eventBox}>
-                <NoxText variant="form" style={styles.eventDate}>{formattedDate}</NoxText>
-                <NoxText variant="titleSecondary" style={styles.eventName}>{event.title}</NoxText>
-                {event.venue ? (
-                  <NoxText variant="secondary" style={styles.eventVenue}>{event.venue.name}</NoxText>
-                ) : null}
-              </View>
-            );
-          })
-        ) : (
-          <View style={styles.eventBox}>
-            <NoxText variant="secondary" style={styles.eventDate}>
-              {language === 'fr' ? 'Aucun événement à venir' : 'No upcoming events'}
-            </NoxText>
-          </View>
-        )}
-
-        {events.pastEvents && events.pastEvents.length > 0 ? (
-          <>
-            <NoxText variant="secondary" style={styles.pastEventsTitle}>
-              {language === 'fr' ? 'Événements passés' : 'Past events'}
-            </NoxText>
-            {events.pastEvents.slice(0, 5).map((event) => {
-              const eventDate = new Date(event.date);
-              const monthNames = language === 'fr'
-                ? ['JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC']
-                : ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-              const formattedDate = `${eventDate.getDate().toString().padStart(2, '0')} ${monthNames[eventDate.getMonth()]} ${eventDate.getFullYear()}`;
-
-              return (
-                <View key={event.id} style={styles.pastEventBox}>
-                  <NoxText variant="secondary" style={styles.pastEventDate}>{formattedDate}</NoxText>
-                  {event.title ? (
-                    <NoxText variant="form" style={styles.pastEventName}>{event.title}</NoxText>
-                  ) : null}
-                </View>
-              );
-            })}
-          </>
-        ) : null}
-      </NoxCard>
-
-      {dj?.id ? (
-        <NoxCard style={{ marginHorizontal: Spacing.xl, marginTop: Spacing.lg }}>
-          <NoxText variant="titleSecondary" style={{ marginBottom: Spacing.md }}>
-            {language === 'fr' ? 'Publications' : 'Posts'}
-          </NoxText>
-          <ProfileWallStream
-            wallFilter={{ djId: dj.id }}
-            isOwnProfile={!!(user?.id && dj.userId === user?.id)}
-            enabled
-          />
-        </NoxCard>
-      ) : null}
-
-      {/* Lecteur vidéo modal */}
-      {selectedVideo && (
+      {selectedVideo ? (
         <VideoPlayer
           videoUrl={selectedVideo.url}
           thumbnailUrl={selectedVideo.thumbnail}
@@ -872,15 +762,9 @@ export default function DjProfilePage() {
             setSelectedVideo(null);
           }}
         />
-      )}
+      ) : null}
 
-      {/* Toast pour les notifications */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        visible={toast.visible}
-        onHide={hideToast}
-      />
+      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
       <BuiltInStreamPlayerModal
         visible={streamPlayer.visible}
         embedUri={streamPlayer.uri}
@@ -888,8 +772,6 @@ export default function DjProfilePage() {
         language={language}
         onClose={() => setStreamPlayer({ visible: false, uri: null, title: '' })}
       />
-      </ScrollView>
-    </>
+    </View>
   );
 }
-

@@ -4,6 +4,20 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 15 au 19 septembre 2026
+
+### Modifié (mobile — profils publics Figma)
+- Shell commun **`PublicProfileHero`** + **`PublicProfileTabs`** + **`PublicProfileEventCarousel`** (À propos / Feed / Événements / Médias / Avis).
+- **`djProfile`** : hero Figma, onglet **À propos** par défaut (highlights streaming, events, détails, médias), Feed / Events / Médias / Avis dédiés ; mode sélection DJ conservé.
+- **`bookerProfile`** / **`venueProfile`** : même shell ; Suivre + partage ; sections absentes d’API laissées honnêtes (pas de faux adhérents / visiteurs).
+
+### Manques Figma / API (profils publics)
+- Followers / suivis / adhérents collectif / visiteurs an : absents ou partiels → affichage `—` ou omis.
+- CTA « Adhérer au collectif » (Orga) : pas d’API → non implémenté (Suivre conservé).
+- Médias / avis organisateur : non exposés sur le profil public booker.
+
+---
+
 ## Semaine du 8 au 11 septembre 2026
 
 ### Modifié (mobile — dashboard Lieu Figma)

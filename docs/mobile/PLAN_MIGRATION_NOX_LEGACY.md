@@ -101,7 +101,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `bookerDashboard` | `BookerDashboardPage.js` | **Hub Figma Orga (11 sept.)** | Sections Booking/Lieux/Contrats/Avis encore mappées → events |
 | `bookerEventDashboard` | `BookerEventDashboardPage.js` | **Header/stepper NOX (2 sept.)** | Steps internes à skinner |
 | `prestataireDashboard` | `PrestataireDashboardPage.js` | **Migrer UI** | Hors maquettes actuelles |
-| Profils publics | `DjProfilePage`, `VenueProfilePage`, `BookerProfilePage` | **NOX (31 juil.)** | Shell Figma + API inchangée |
+| Profils publics | `DjProfilePage`, `VenueProfilePage`, `BookerProfilePage` | **Hub Figma (16 sept.)** | Shell `PublicProfileHero` + 5 onglets ; manques API followers / adhérents |
 
 ### 3.5 Transversal (tous profils)
 

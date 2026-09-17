@@ -3,7 +3,7 @@
 -- Ajout de la colonne status avec valeur par défaut 'PENDING'
 ALTER TABLE "EventDj" ADD COLUMN "status" TEXT NOT NULL DEFAULT 'PENDING';
 -- Ajout de la colonne updatedAt (nullable d'abord pour les enregistrements existants)
-ALTER TABLE "EventDj" ADD COLUMN "updatedAt" DATETIME;
+ALTER TABLE "EventDj" ADD COLUMN "updatedAt" TIMESTAMP(3);
 -- Mettre à jour les enregistrements existants avec la date actuelle
 UPDATE "EventDj" SET "updatedAt" = datetime('now') WHERE "updatedAt" IS NULL;
 

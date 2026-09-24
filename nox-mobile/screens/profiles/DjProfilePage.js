@@ -28,12 +28,34 @@ import {
   PublicProfileHero,
   PublicProfileTabs,
   PublicProfileEventCarousel,
+  PublicProfileFilterChips,
+  PublicProfileSignature,
   publicProfileStyles as pp,
 } from '../../components/publicProfile';
 import { Spacing } from '../../constants/theme';
 import { resolveStreamingEmbed } from '../../utils/streamingEmbedUrl';
 import { styles } from './DjProfilePage.styles';
 
+function formatEventBadge(iso, language) {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = d.getDate();
+    const month = d
+      .toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })
+      .replace('.', '')
+      .toUpperCase();
+    return `${day} ${month}.`;
+  } catch {
+    return '';
+  }
+}
+
+function youtubeThumb(url) {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null;
+}
 export default function DjProfilePage() {
   const { language } = useLanguage();
   const { routeParams, goBack, navigate } = useNavigation();
@@ -56,6 +78,8 @@ export default function DjProfilePage() {
   const [ratings, setRatings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('about');
+  const [eventsFilter, setEventsFilter] = useState('all');
+  const [mediaFilter, setMediaFilter] = useState('all');
   const [media, setMedia] = useState({ photos: [], videos: [], audio: [] });
   const [profileImage, setProfileImage] = useState(null);
   const [bannerImage, setBannerImage] = useState(null);
@@ -530,14 +554,7 @@ export default function DjProfilePage() {
         {items.map((item) => {
           if (item.kind === 'video') {
             const videoUrl = item.data?.url || item.data;
-            const isYouTube =
-              typeof videoUrl === 'string' &&
-              (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
-            let thumb = null;
-            if (isYouTube) {
-              const match = String(videoUrl).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-              if (match) thumb = `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
-            }
+            const thumb = youtubeThumb(videoUrl);
             return (
               <TouchableOpacity
                 key={`v-${item.data?.id || item.index}`}
@@ -577,104 +594,370 @@ export default function DjProfilePage() {
     );
   };
 
-  const renderEvents = () => (
-    <View>
-      <PublicProfileEventCarousel
-        language={language}
-        title={fr ? 'À venir' : 'Upcoming'}
-        items={upcomingEventItems}
-      />
-      {(events.pastEvents || []).length > 0 ? (
-        <>
-          <View style={pp.sectionHeader}>
-            <NoxText variant="titleSecondary" style={pp.sectionTitle}>
-              {fr ? 'Passés' : 'Past'}
-            </NoxText>
+  const renderEventCard = (event, half = false) => {
+    const badge = formatEventBadge(event.date, language);
+    const imageUri = event.image ? normalizeMediaUrl(event.image) : null;
+    return (
+      <TouchableOpacity
+        key={event.id}
+        style={half ? pp.eventCardHalf : pp.featuredEventCard}
+        onPress={event.onPress}
+        activeOpacity={0.9}
+      >
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={pp.eventImage} />
+        ) : (
+          <View style={pp.eventImageFallback}>
+            <Ionicons name="calendar-outline" size={28} color={Colors.primary} />
           </View>
-          {(events.pastEvents || []).slice(0, 10).map((event) => {
-            const d = event.date ? new Date(event.date) : null;
-            const label =
-              d && !Number.isNaN(d.getTime())
-                ? d.toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })
-                : '';
-            return (
-              <TouchableOpacity
-                key={event.id}
-                style={[pp.aboutRow, { paddingVertical: Spacing.sm }]}
-                onPress={() => navigate('eventDetail', { eventId: event.id })}
+        )}
+        <View style={pp.eventOverlay} />
+        {badge ? (
+          <View style={pp.eventBadge}>
+            <NoxText style={pp.eventBadgeText}>{badge}</NoxText>
+          </View>
+        ) : null}
+        <View style={pp.eventBottom}>
+          <View style={{ flex: 1 }}>
+            <NoxText style={pp.eventTitle} numberOfLines={2}>
+              {event.title}
+            </NoxText>
+            {event.location ? (
+              <NoxText variant="secondary" style={pp.eventLoc} numberOfLines={1}>
+                {event.location}
+              </NoxText>
+            ) : null}
+            {!half ? (
+              <View style={pp.featuredEventCta}>
+                <NoxText style={pp.featuredEventCtaText}>
+                  {fr ? "Voir l'événement" : 'See event'}
+                </NoxText>
+              </View>
+            ) : null}
+          </View>
+          <View style={pp.eventArrow}>
+            <Ionicons name="arrow-forward" size={14} color={Colors.text} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEvents = () => {
+    const upcoming = upcomingEventItems;
+    const past = (events.pastEvents || []).map((event) => ({
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      location: event.venue?.name || event.location,
+      image: event.image || event.coverImage,
+      onPress: () => navigate('eventDetail', { eventId: event.id }),
+    }));
+    const showUpcoming = eventsFilter === 'all' || eventsFilter === 'upcoming';
+    const showPast = eventsFilter === 'all' || eventsFilter === 'past';
+    const featured = upcoming[0];
+    const restUpcoming = upcoming.slice(1, 5);
+
+    return (
+      <View>
+        <PublicProfileFilterChips
+          activeId={eventsFilter}
+          onChange={setEventsFilter}
+          chips={[
+            { id: 'all', label: fr ? 'Tous' : 'All' },
+            { id: 'upcoming', label: fr ? 'À venir' : 'Upcoming' },
+            { id: 'past', label: fr ? 'Passés' : 'Past' },
+          ]}
+        />
+        {showUpcoming ? (
+          <>
+            <View style={pp.sectionHeader}>
+              <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+                {fr ? 'À venir' : 'Upcoming'}
+              </NoxText>
+            </View>
+            {upcoming.length === 0 ? (
+              <NoxText variant="secondary" style={pp.emptyHint}>
+                {fr ? 'Aucun événement à venir.' : 'No upcoming events.'}
+              </NoxText>
+            ) : (
+              <>
+                {featured ? renderEventCard(featured, false) : null}
+                {restUpcoming.length > 0 ? (
+                  <View style={pp.eventsGrid2}>
+                    {restUpcoming.map((ev) => renderEventCard(ev, true))}
+                  </View>
+                ) : null}
+              </>
+            )}
+          </>
+        ) : null}
+        {showPast ? (
+          <>
+            <View style={pp.sectionHeader}>
+              <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+                {fr ? 'Événements passés' : 'Past events'}
+              </NoxText>
+            </View>
+            {past.length === 0 ? (
+              <NoxText variant="secondary" style={pp.emptyHint}>
+                {fr ? 'Aucun événement passé.' : 'No past events.'}
+              </NoxText>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {past.slice(0, 12).map((event) => {
+                  const imageUri = event.image ? normalizeMediaUrl(event.image) : null;
+                  const badge = formatEventBadge(event.date, language);
+                  return (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={pp.pastEventStripCard}
+                      onPress={event.onPress}
+                      activeOpacity={0.85}
+                    >
+                      <View style={pp.pastEventThumb}>
+                        {imageUri ? (
+                          <Image source={{ uri: imageUri }} style={pp.pastEventThumbImage} />
+                        ) : (
+                          <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
+                        )}
+                      </View>
+                      {badge ? (
+                        <NoxText variant="secondary" style={{ fontSize: 10 }}>
+                          {badge}
+                        </NoxText>
+                      ) : null}
+                      <NoxText variant="form" numberOfLines={2} style={{ fontSize: 12 }}>
+                        {event.title}
+                      </NoxText>
+                      {event.location ? (
+                        <NoxText variant="secondary" numberOfLines={1} style={{ fontSize: 11 }}>
+                          {event.location}
+                        </NoxText>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </>
+        ) : null}
+        {user?.token ? (
+          <View style={pp.notifCtaCard}>
+            <NoxText variant="form">
+              {fr
+                ? 'Reste informé des prochaines dates de cet artiste.'
+                : 'Stay informed about this artist’s next dates.'}
+            </NoxText>
+            <TouchableOpacity
+              style={pp.notifCtaBtn}
+              onPress={() => navigate('notifications')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="notifications-outline" size={18} color={Colors.text} />
+              <NoxText style={pp.notifCtaBtnText}>
+                {fr ? 'Activer les notifications' : 'Enable notifications'}
+              </NoxText>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <PublicProfileSignature
+          quote={dj.bio ? undefined : 'Same people. Different dimensions.'}
+          name={dj.artistName}
+          variant="artist"
+        />
+      </View>
+    );
+  };
+
+  const renderMediaTab = () => {
+    const photos = media.photos || [];
+    const videos = media.videos || [];
+    const showPhotos = mediaFilter === 'all' || mediaFilter === 'photos';
+    const showVideos = mediaFilter === 'all' || mediaFilter === 'videos';
+
+    return (
+      <View>
+        <PublicProfileFilterChips
+          activeId={mediaFilter}
+          onChange={setMediaFilter}
+          chips={[
+            { id: 'all', label: fr ? 'Tous' : 'All' },
+            { id: 'photos', label: 'Photos' },
+            { id: 'videos', label: fr ? 'Vidéos' : 'Videos' },
+          ]}
+        />
+        {showPhotos ? (
+          <>
+            <View style={pp.sectionHeader}>
+              <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+                Photos
+              </NoxText>
+            </View>
+            {photos.length === 0 ? (
+              <NoxText variant="secondary" style={pp.emptyHint}>
+                {fr ? 'Aucune photo.' : 'No photos.'}
+              </NoxText>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={pp.mediaSectionScroll}
               >
-                <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
-                <View style={{ flex: 1 }}>
-                  <NoxText variant="form">{event.title}</NoxText>
-                  <NoxText variant="secondary" style={{ fontSize: 12 }}>
-                    {label}
-                  </NoxText>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </>
-      ) : null}
-    </View>
-  );
+                {photos.slice(0, 20).map((photo, index) => {
+                  const photoUrl = normalizeMediaUrl(photo?.url || photo);
+                  return (
+                    <TouchableOpacity
+                      key={photo?.id || index}
+                      style={pp.mediaPhotoSquare}
+                      onPress={() => {
+                        setSelectedPhotoUrl(photoUrl);
+                        setPhotoModalVisible(true);
+                      }}
+                    >
+                      <Image source={{ uri: photoUrl }} style={pp.mediaThumbImage} resizeMode="cover" />
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </>
+        ) : null}
+        {showVideos ? (
+          <>
+            <View style={pp.sectionHeader}>
+              <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+                {fr ? 'Vidéos' : 'Videos'}
+              </NoxText>
+            </View>
+            {videos.length === 0 ? (
+              <NoxText variant="secondary" style={pp.emptyHint}>
+                {fr ? 'Aucune vidéo.' : 'No videos.'}
+              </NoxText>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={pp.mediaSectionScroll}
+              >
+                {videos.slice(0, 20).map((video, index) => {
+                  const videoUrl = video?.url || video;
+                  const thumb = youtubeThumb(videoUrl);
+                  const title = video?.title || `${fr ? 'Vidéo' : 'Video'} ${index + 1}`;
+                  return (
+                    <TouchableOpacity
+                      key={video?.id || index}
+                      style={pp.mediaVideoCard}
+                      onPress={() => openVideo(video, index)}
+                    >
+                      <View style={pp.mediaVideoThumb}>
+                        {thumb ? (
+                          <Image source={{ uri: thumb }} style={pp.mediaThumbImage} />
+                        ) : (
+                          <Ionicons name="play" size={28} color={Colors.primary} />
+                        )}
+                        <View style={pp.mediaPlay}>
+                          <Ionicons name="play" size={18} color={Colors.text} />
+                        </View>
+                      </View>
+                      <View style={pp.mediaVideoMeta}>
+                        <NoxText variant="form" numberOfLines={1} style={{ fontSize: 12 }}>
+                          {title}
+                        </NoxText>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </>
+        ) : null}
+        <PublicProfileSignature name={dj.artistName} variant="artist" />
+      </View>
+    );
+  };
 
   const renderReviews = () => {
     const list = ratings.allRatings || [];
+    const avg = Number(ratings.averageRatingGlobal || 0);
+    const dist = [5, 4, 3, 2, 1].map((star) => {
+      const count = list.filter((r) => Math.round(Number(r.rating) || 0) === star).length;
+      const pct = list.length ? Math.round((count / list.length) * 100) : 0;
+      return { star, pct, count };
+    });
+
     if (list.length === 0) {
       return (
-        <NoxText variant="secondary" style={pp.emptyHint}>
-          {fr ? 'Aucun avis pour le moment' : 'No reviews yet'}
-        </NoxText>
+        <View style={pp.emptyStateCard}>
+          <Ionicons name="star-outline" size={28} color={Colors.primary} />
+          <NoxText variant="secondary" style={{ textAlign: 'center' }}>
+            {fr ? 'Aucun avis pour le moment' : 'No reviews yet'}
+          </NoxText>
+        </View>
       );
     }
+
     return (
       <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {list.slice(0, 12).map((review) => (
-            <View key={review.id} style={pp.reviewCard}>
-              <View style={pp.reviewHeader}>
-                <View style={pp.reviewAvatar}>
-                  <Ionicons name="person" size={16} color={Colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <NoxText variant="form" numberOfLines={1}>
-                    {review.raterType === 'COMMUNITY'
-                      ? fr
-                        ? 'Communauté'
-                        : 'Community'
-                      : review.raterType === 'BOOKER'
-                        ? fr
-                          ? 'Organisateur'
-                          : 'Organizer'
-                        : fr
-                          ? 'Lieu'
-                          : 'Venue'}
-                  </NoxText>
-                  <StarRating rating={review.rating} size={14} showStars showValue={false} />
+        <View style={pp.reviewsSummaryRow}>
+          <View>
+            <NoxText style={pp.reviewsScoreBig}>{avg > 0 ? avg.toFixed(1) : '—'}</NoxText>
+            <StarRating rating={avg} size={16} showStars showValue={false} />
+            <NoxText variant="secondary" style={{ marginTop: 4, fontSize: 12 }}>
+              {fr ? `Sur ${list.length} avis` : `Based on ${list.length} reviews`}
+            </NoxText>
+          </View>
+          <View style={pp.reviewsBars}>
+            {dist.map((row) => (
+              <View key={row.star} style={pp.reviewsBarRow}>
+                <NoxText style={pp.reviewsBarLabel}>{row.star}</NoxText>
+                <View style={pp.reviewsBarTrack}>
+                  <View style={[pp.reviewsBarFill, { width: `${row.pct}%` }]} />
                 </View>
               </View>
-              {review.comment ? (
-                <NoxText variant="secondary" style={pp.reviewComment} numberOfLines={4}>
-                  “{review.comment}”
-                </NoxText>
-              ) : null}
-            </View>
-          ))}
-        </ScrollView>
-        {list.length > 3 ? (
-          <TouchableOpacity
-            style={{ marginTop: Spacing.md }}
-            onPress={() => navigate('djRatings', { djId, djName: dj?.artistName })}
-          >
-            <NoxText style={pp.seeAll}>
-              {fr ? `Voir les ${list.length} avis` : `See all ${list.length} reviews`}
-            </NoxText>
+            ))}
+          </View>
+        </View>
+
+        <View style={pp.sectionHeader}>
+          <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+            {fr ? 'Avis récents' : 'Recent reviews'}
+          </NoxText>
+          <TouchableOpacity onPress={() => navigate('djRatings', { djId, djName: dj?.artistName })}>
+            <NoxText style={pp.seeAll}>{fr ? 'Voir tout >' : 'See all >'}</NoxText>
           </TouchableOpacity>
-        ) : null}
+        </View>
+
+        {list.slice(0, 12).map((review) => (
+          <View key={review.id} style={pp.reviewListCard}>
+            <View style={pp.reviewHeader}>
+              <View style={pp.reviewAvatar}>
+                <Ionicons name="person" size={16} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <NoxText variant="form" numberOfLines={1}>
+                  {review.raterType === 'COMMUNITY'
+                    ? fr
+                      ? 'Communauté'
+                      : 'Community'
+                    : review.raterType === 'BOOKER'
+                      ? fr
+                        ? 'Organisateur'
+                        : 'Organizer'
+                      : fr
+                        ? 'Lieu'
+                        : 'Venue'}
+                </NoxText>
+                <StarRating rating={review.rating} size={14} showStars showValue={false} />
+              </View>
+            </View>
+            {review.comment ? (
+              <NoxText variant="secondary" style={pp.reviewComment}>
+                “{review.comment}”
+              </NoxText>
+            ) : null}
+          </View>
+        ))}
       </View>
     );
   };
@@ -711,16 +994,19 @@ export default function DjProfilePage() {
         <View style={pp.tabBody}>
           {activeTab === 'about' ? renderAbout() : null}
           {activeTab === 'feed' ? (
-            dj?.id ? (
-              <ProfileWallStream
-                wallFilter={{ djId: dj.id }}
-                isOwnProfile={!!(user?.id && dj.userId === user?.id)}
-                enabled
-              />
-            ) : null
+            <View>
+              {dj?.id ? (
+                <ProfileWallStream
+                  wallFilter={{ djId: dj.id }}
+                  isOwnProfile={!!(user?.id && dj.userId === user?.id)}
+                  enabled
+                />
+              ) : null}
+              <PublicProfileSignature name={dj.artistName} variant="artist" />
+            </View>
           ) : null}
           {activeTab === 'events' ? renderEvents() : null}
-          {activeTab === 'media' ? renderMediaGrid(24) : null}
+          {activeTab === 'media' ? renderMediaTab() : null}
           {activeTab === 'reviews' ? renderReviews() : null}
         </View>
       </ScrollView>

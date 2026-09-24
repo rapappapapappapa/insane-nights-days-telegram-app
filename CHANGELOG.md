@@ -4,6 +4,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 22 au 25 septembre 2026
+
+### Modifié (mobile — onglets profils publics Figma)
+- **Artiste** : Feed + signature ; Événements (chips Tous/À venir/Passés, featured + grille, strip passés, CTA notifs) ; Médias (Photos/Vidéos) ; Avis (score + distribution réelle).
+- **Orga** : mêmes onglets skinés ; events via feed public filtré `bookerId` si dispo ; Médias / Avis empty states honnêtes (pas d’API).
+- Composants : **`PublicProfileFilterChips`**, **`PublicProfileSignature`**.
+
+### Manques Figma / API (profils publics — suite)
+- Sets audio / playlists / filtres Sets·Reels·Studio (artiste) : pas d’API → omis.
+- Médias / avis organisateur : toujours non exposés côté API.
+
+---
+
 ## Semaine du 15 au 19 septembre 2026
 
 ### Modifié (mobile — profils publics Figma)

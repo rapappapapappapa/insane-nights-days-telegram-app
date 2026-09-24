@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, ScrollView, ActivityIndicator, Linking, TouchableOpacity } from 'react-native';
+import { View, ScrollView, ActivityIndicator, Linking, TouchableOpacity, Image } from 'react-native';
 import Colors from '../../constants/colors';
 import { Spacing } from '../../constants/theme';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { api } from '../../api/config';
+import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,8 @@ import {
   PublicProfileHero,
   PublicProfileTabs,
   PublicProfileEventCarousel,
+  PublicProfileFilterChips,
+  PublicProfileSignature,
   publicProfileStyles as pp,
 } from '../../components/publicProfile';
 
@@ -29,6 +31,21 @@ function bookerTypeLabel(type, fr) {
     Promoteur: fr ? 'Promoteur' : 'Promoter',
   };
   return map[type] || type || (fr ? 'Organisateur' : 'Organizer');
+}
+
+function formatEventBadge(iso, language) {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const day = d.getDate();
+    const month = d
+      .toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short' })
+      .replace('.', '')
+      .toUpperCase();
+    return `${day} ${month}.`;
+  } catch {
+    return '';
+  }
 }
 
 export default function BookerProfilePage() {
@@ -45,6 +62,7 @@ export default function BookerProfilePage() {
   const [loadingFollow, setLoadingFollow] = useState(false);
   const [activeTab, setActiveTab] = useState('about');
   const [events, setEvents] = useState([]);
+  const [eventsFilter, setEventsFilter] = useState('all');
 
   useEffect(() => {
     if (bookerId) fetchBookerProfile();
@@ -72,11 +90,27 @@ export default function BookerProfilePage() {
       const res = await api.getBookerProfileById(bookerId);
       if (res?.success && res.booker) {
         setBooker(res.booker);
-        const list =
+        let list =
           res.booker.upcomingEvents ||
           res.events ||
           res.booker.events ||
           [];
+        if (!Array.isArray(list) || list.length === 0) {
+          try {
+            const eventsRes = await api.getEvents();
+            const all = eventsRes?.events || eventsRes?.data || [];
+            if (Array.isArray(all)) {
+              list = all.filter(
+                (e) =>
+                  e.bookerId === bookerId ||
+                  e.booker?.id === bookerId ||
+                  e.organizerId === bookerId,
+              );
+            }
+          } catch {
+            list = [];
+          }
+        }
         setEvents(Array.isArray(list) ? list : []);
       } else {
         setBooker(null);
@@ -111,19 +145,25 @@ export default function BookerProfilePage() {
     }
   };
 
-  const eventItems = useMemo(
-    () =>
-      (events || []).slice(0, 8).map((event) => ({
-        id: event.id,
-        title: event.title,
-        date: event.date,
-        location: event.venue?.venueName || event.location || event.city,
-        image: event.image || event.coverImage,
-        tags: [event.genre].filter(Boolean),
-        onPress: () => navigate('eventDetail', { eventId: event.id }),
-      })),
-    [events, navigate],
-  );
+  const { upcomingItems, pastItems } = useMemo(() => {
+    const now = Date.now();
+    const mapped = (events || []).map((event) => ({
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      location: event.venue?.venueName || event.location || event.city,
+      image: event.image || event.coverImage,
+      tags: [event.genre].filter(Boolean),
+      onPress: () => navigate('eventDetail', { eventId: event.id }),
+    }));
+    const upcoming = mapped
+      .filter((e) => e.date && new Date(e.date).getTime() >= now - 12 * 60 * 60 * 1000)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const past = mapped
+      .filter((e) => e.date && new Date(e.date).getTime() < now - 12 * 60 * 60 * 1000)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    return { upcomingItems: upcoming, pastItems: past };
+  }, [events, navigate]);
 
   if (loading) {
     return (
@@ -180,6 +220,12 @@ export default function BookerProfilePage() {
 
   const isOwn = !!(user?.id && booker.userId === user.id);
   const showFollow = !!user?.token && !isOwn;
+  const quote =
+    booker.bio ||
+    booker.description ||
+    (fr
+      ? 'Des lieux, des gens, des sons, une même vision.'
+      : 'Places, people, sounds — one vision.');
 
   const extraActions = isOwn ? (
     <NoxButton
@@ -192,7 +238,7 @@ export default function BookerProfilePage() {
     <View>
       <PublicProfileEventCarousel
         language={language}
-        items={eventItems}
+        items={upcomingItems}
         onSeeAll={() => setActiveTab('events')}
         emptyText={fr ? 'Aucun événement à afficher.' : 'No events to show.'}
       />
@@ -219,10 +265,7 @@ export default function BookerProfilePage() {
             </View>
           ) : null}
           {booker.website ? (
-            <TouchableOpacity
-              style={pp.aboutRow}
-              onPress={() => Linking.openURL(booker.website)}
-            >
+            <TouchableOpacity style={pp.aboutRow} onPress={() => Linking.openURL(booker.website)}>
               <Ionicons name="globe-outline" size={16} color={Colors.primary} />
               <NoxText style={[pp.aboutRowText, { color: Colors.primary }]}>
                 {booker.website.replace(/^https?:\/\//, '')}
@@ -251,8 +294,83 @@ export default function BookerProfilePage() {
           </View>
         ) : null}
       </View>
+      <PublicProfileSignature quote={quote} name={displayName} variant="orga" />
     </View>
   );
+
+  const renderEvents = () => {
+    const showUpcoming = eventsFilter === 'all' || eventsFilter === 'upcoming';
+    const showPast = eventsFilter === 'all' || eventsFilter === 'past';
+    return (
+      <View>
+        <PublicProfileFilterChips
+          activeId={eventsFilter}
+          onChange={setEventsFilter}
+          chips={[
+            { id: 'all', label: fr ? 'Tous' : 'All' },
+            { id: 'upcoming', label: fr ? 'À venir' : 'Upcoming' },
+            { id: 'past', label: fr ? 'Passés' : 'Past' },
+          ]}
+        />
+        {showUpcoming ? (
+          <PublicProfileEventCarousel
+            language={language}
+            title={fr ? 'À venir' : 'Upcoming'}
+            items={upcomingItems}
+            emptyText={fr ? 'Aucun événement à venir.' : 'No upcoming events.'}
+          />
+        ) : null}
+        {showPast ? (
+          <>
+            <View style={pp.sectionHeader}>
+              <NoxText variant="titleSecondary" style={pp.sectionTitle}>
+                {fr ? 'Événements passés' : 'Past events'}
+              </NoxText>
+            </View>
+            {pastItems.length === 0 ? (
+              <NoxText variant="secondary" style={pp.emptyHint}>
+                {fr ? 'Aucun événement passé.' : 'No past events.'}
+              </NoxText>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {pastItems.slice(0, 12).map((event) => {
+                  const imageUri = event.image ? normalizeMediaUrl(event.image) : null;
+                  const badge = formatEventBadge(event.date, language);
+                  return (
+                    <TouchableOpacity
+                      key={event.id}
+                      style={pp.pastEventStripCard}
+                      onPress={event.onPress}
+                    >
+                      <View style={pp.pastEventThumb}>
+                        {imageUri ? (
+                          <Image
+                            source={{ uri: imageUri }}
+                            style={pp.pastEventThumbImage}
+                          />
+                        ) : (
+                          <Ionicons name="calendar-outline" size={22} color={Colors.primary} />
+                        )}
+                      </View>
+                      {badge ? (
+                        <NoxText variant="secondary" style={{ fontSize: 10 }}>
+                          {badge}
+                        </NoxText>
+                      ) : null}
+                      <NoxText variant="form" numberOfLines={2} style={{ fontSize: 12 }}>
+                        {event.title}
+                      </NoxText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </>
+        ) : null}
+        <PublicProfileSignature quote={quote} name={displayName} variant="orga" />
+      </View>
+    );
+  };
 
   return (
     <View style={pp.container}>
@@ -282,33 +400,47 @@ export default function BookerProfilePage() {
         <View style={pp.tabBody}>
           {activeTab === 'about' ? renderAbout() : null}
           {activeTab === 'feed' ? (
-            <ProfileWallStream
-              wallFilter={booker?.id ? { bookerId: booker.id } : null}
-              isOwnProfile={isOwn}
-              enabled={!!booker?.id}
-            />
+            <View>
+              <ProfileWallStream
+                wallFilter={booker?.id ? { bookerId: booker.id } : null}
+                isOwnProfile={isOwn}
+                enabled={!!booker?.id}
+              />
+              <PublicProfileSignature quote={quote} name={displayName} variant="orga" />
+            </View>
           ) : null}
-          {activeTab === 'events' ? (
-            <PublicProfileEventCarousel
-              language={language}
-              title={fr ? 'Événements' : 'Events'}
-              items={eventItems}
-              emptyText={fr ? 'Aucun événement.' : 'No events.'}
-            />
-          ) : null}
+          {activeTab === 'events' ? renderEvents() : null}
           {activeTab === 'media' ? (
-            <NoxText variant="secondary" style={pp.emptyHint}>
-              {fr
-                ? 'Médias organisateur non exposés pour ce profil.'
-                : 'Organizer media not available on this profile.'}
-            </NoxText>
+            <View>
+              <View style={pp.emptyStateCard}>
+                <Ionicons name="images-outline" size={28} color={Colors.primary} />
+                <NoxText variant="form" style={{ textAlign: 'center' }}>
+                  {fr ? 'Aucun média' : 'No media'}
+                </NoxText>
+                <NoxText variant="secondary" style={{ textAlign: 'center' }}>
+                  {fr
+                    ? 'Les médias organisateur ne sont pas encore exposés sur ce profil.'
+                    : 'Organizer media is not available on this profile yet.'}
+                </NoxText>
+              </View>
+              <PublicProfileSignature quote={quote} name={displayName} variant="orga" />
+            </View>
           ) : null}
           {activeTab === 'reviews' ? (
-            <NoxText variant="secondary" style={pp.emptyHint}>
-              {fr
-                ? 'Avis organisateur non exposés pour ce profil.'
-                : 'Organizer reviews not available on this profile.'}
-            </NoxText>
+            <View>
+              <View style={pp.emptyStateCard}>
+                <Ionicons name="star-outline" size={28} color={Colors.primary} />
+                <NoxText variant="form" style={{ textAlign: 'center' }}>
+                  {fr ? 'Aucun avis' : 'No reviews'}
+                </NoxText>
+                <NoxText variant="secondary" style={{ textAlign: 'center' }}>
+                  {fr
+                    ? 'Les avis organisateur ne sont pas encore exposés sur ce profil.'
+                    : 'Organizer reviews are not available on this profile yet.'}
+                </NoxText>
+              </View>
+              <PublicProfileSignature quote={quote} name={displayName} variant="orga" />
+            </View>
           ) : null}
         </View>
       </ScrollView>

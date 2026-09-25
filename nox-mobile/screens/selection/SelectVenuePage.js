@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Layout, Spacing } from '../../constants/theme';
-import { NoxText, NoxCard, NoxScreenHeader } from '../../components/nox';
+import { NoxText, NoxCard, NoxScreenHeader, NoxInput } from '../../components/nox';
 
 export default function SelectVenuePage() {
   const { language } = useLanguage();
@@ -26,6 +26,7 @@ export default function SelectVenuePage() {
 
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user?.token) {
@@ -62,6 +63,17 @@ export default function SelectVenuePage() {
     });
   };
 
+  const filteredVenues = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return venues;
+    return venues.filter((venue) => {
+      const name = String(venue.venueName || '').toLowerCase();
+      const address = String(venue.address || '').toLowerCase();
+      const city = String(venue.city || '').toLowerCase();
+      return name.includes(q) || address.includes(q) || city.includes(q);
+    });
+  }, [venues, searchQuery]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
@@ -76,6 +88,23 @@ export default function SelectVenuePage() {
         onBack={goBack}
       />
 
+      <View style={styles.searchWrap}>
+        <NoxInput
+          placeholder={fr ? 'Rechercher un lieu…' : 'Search a venue…'}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          icon={<Ionicons name="search-outline" size={20} color={Colors.textTertiary} />}
+          rightSlot={
+            searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={20} color={Colors.textTertiary} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -85,19 +114,27 @@ export default function SelectVenuePage() {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          {venues.length === 0 ? (
+          {filteredVenues.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIcon}>
                 <Ionicons name="business-outline" size={32} color={Colors.primary} />
               </View>
               <NoxText variant="titleSecondary" style={styles.emptyTitle}>
-                {fr ? 'Aucun lieu disponible' : 'No venues available'}
+                {venues.length === 0
+                  ? fr
+                    ? 'Aucun lieu disponible'
+                    : 'No venues available'
+                  : fr
+                    ? 'Aucun résultat'
+                    : 'No results'}
               </NoxText>
             </View>
           ) : (
-            venues.map((venue) => {
+            filteredVenues.map((venue) => {
               const isSelected = selectedVenueId === venue.id;
               return (
                 <TouchableOpacity
@@ -152,6 +189,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  searchWrap: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
   },
   loadingContainer: {
     flex: 1,

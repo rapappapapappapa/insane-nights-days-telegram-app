@@ -44,7 +44,9 @@ function resolveBookerDashboardSection(routeParams) {
     routeParams?.openChatEventDjId ||
     routeParams?.openChatEventId ||
     routeParams?.openChatEventVenueId ||
-    routeParams?.highlightEventId
+    routeParams?.highlightEventId ||
+    // Retour SelectDj / SelectVenue : traiter l’ajout comme « Mes événements »
+    (routeParams?.action && (routeParams?.selectedDjId || routeParams?.selectedVenueId))
   ) {
     return 'events';
   }
@@ -83,6 +85,9 @@ export default function BookerDashboardPage() {
     routeParams?.openChatEventId,
     routeParams?.openChatEventVenueId,
     routeParams?.highlightEventId,
+    routeParams?.selectedDjId,
+    routeParams?.selectedVenueId,
+    routeParams?.action,
   ]);
 
   const profile = useBookerProfile({ user, language, showError, showSuccess });
@@ -283,7 +288,7 @@ export default function BookerDashboardPage() {
     {
       id: 'booking',
       label: language === 'fr' ? 'Booking artistes' : 'Artist booking',
-      hint: language === 'fr' ? 'Inviter depuis un événement' : 'Invite from an event',
+      hint: language === 'fr' ? 'Choisir un event puis inviter' : 'Pick an event then invite',
       icon: 'people',
       accentColor: '#F472B6',
       accentBg: 'rgba(244,114,182,0.12)',
@@ -291,7 +296,7 @@ export default function BookerDashboardPage() {
     {
       id: 'lieux',
       label: language === 'fr' ? 'Lieux' : 'Venues',
-      hint: language === 'fr' ? 'Associer un lieu à un event' : 'Attach a venue to an event',
+      hint: language === 'fr' ? 'Choisir un event puis associer' : 'Pick an event then attach',
       icon: 'location',
       accentColor: '#A78BFA',
       accentBg: 'rgba(167,139,250,0.12)',
@@ -331,7 +336,7 @@ export default function BookerDashboardPage() {
     {
       id: 'avis',
       label: language === 'fr' ? 'Avis' : 'Reviews',
-      hint: language === 'fr' ? 'Voir mon profil public' : 'View my public profile',
+      hint: language === 'fr' ? 'Profil public (si données)' : 'Public profile (if any)',
       icon: 'star',
       accentColor: '#FBBF24',
       accentBg: 'rgba(251,191,36,0.12)',
@@ -360,19 +365,6 @@ export default function BookerDashboardPage() {
     setActiveSection('home');
   };
 
-  const firstUpcomingEventId = (() => {
-    const now = Date.now();
-    const upcoming = (myEvents || [])
-      .filter((e) => e?.id && e?.date)
-      .filter((e) => {
-        const t = new Date(e.date).getTime();
-        return Number.isFinite(t) && t >= now - 12 * 60 * 60 * 1000;
-      })
-      .filter((e) => e.status !== 'FINISHED' && e.status !== 'CANCELLED')
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-    return upcoming[0]?.id || null;
-  })();
-
   const openSection = (sectionId) => {
     if (sectionId === 'create-event') {
       navigate('bookerEventDashboard', {});
@@ -396,22 +388,8 @@ export default function BookerDashboardPage() {
       setActiveSection('profil');
       return;
     }
-    if (sectionId === 'booking' && firstUpcomingEventId) {
-      navigate('selectDj', {
-        eventId: firstUpcomingEventId,
-        returnTo: 'bookerDashboard',
-      });
-      return;
-    }
-    if (sectionId === 'lieux' && firstUpcomingEventId) {
-      navigate('selectVenue', {
-        eventId: firstUpcomingEventId,
-        replaceMode: true,
-        returnTo: 'bookerDashboard',
-      });
-      return;
-    }
-    // booking / lieux (sans event) / contrats / paiements → gestion via Mes événements
+    // booking / lieux / contrats / paiements → choisir l’event dans Mes événements
+    // (pas d’auto-sélection du 1er event à venir — évite le mauvais booking)
     if (['booking', 'lieux', 'contrats', 'paiements'].includes(sectionId)) {
       setActiveSection('events');
       fetchMyEvents();

@@ -233,6 +233,7 @@ export default function VenueProfilePage() {
           selectedVenueName: venue.venueName,
           action: replaceMode ? 'replaceVenue' : isSelected ? 'remove' : 'select',
           eventId: eventId || undefined,
+          highlightEventId: eventId || undefined,
           ...(returnTo === 'bookerEventDashboard' ? { resumeStep: 2 } : {}),
         });
       }}

@@ -364,6 +364,7 @@ export default function DjProfilePage() {
           selectedDjName: dj.artistName,
           action: selectedDjIds.includes(dj.userId) ? 'remove' : 'add',
           eventId: eventId || undefined,
+          highlightEventId: eventId || undefined,
           slotIndex: slotIndexToPass,
           slotIntent: slotIntent || (replaceDjId ? 'replace' : 'fill'),
           pickToken,

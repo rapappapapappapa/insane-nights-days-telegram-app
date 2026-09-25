@@ -195,7 +195,7 @@ export default function RegisterPrestatairePage() {
         value={bio}
         onChangeText={setBio}
         multiline
-        style={{ minHeight: 90, textAlignVertical: 'top' }}
+        inputStyle={{ minHeight: 90, textAlignVertical: 'top' }}
         onFocus={() => {
           if (Platform.OS === 'android') {
             setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);

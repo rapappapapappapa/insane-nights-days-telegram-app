@@ -25,6 +25,8 @@ export default function RegisterCommunityPage() {
   const accountEmail = (user?.email || '').trim();
   const accountBirth = formatBirthDateFr(user?.birthDate);
   const pseudoLocked = !!accountPseudo;
+  const emailLocked = !!accountEmail;
+  const birthLocked = !!accountBirth;
 
   const [formData, setFormData] = useState({
     pseudo: accountPseudo,
@@ -86,13 +88,15 @@ export default function RegisterCommunityPage() {
     if (loading) return;
 
     const pseudo = (pseudoLocked ? accountPseudo : formData.pseudo).trim();
+    const email = (emailLocked ? accountEmail : formData.email).trim();
+    const dateNaissance = (birthLocked ? accountBirth : formData.dateNaissance).trim();
 
-    if (!pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
+    if (!pseudo || !formData.nom || !formData.prenom || !email || !formData.pays || !dateNaissance) {
       showError(fr ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
 
-    if (!validateDate(formData.dateNaissance)) {
+    if (!validateDate(dateNaissance)) {
       showError(
         fr
           ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
@@ -117,9 +121,9 @@ export default function RegisterCommunityPage() {
         pseudo,
         nom: formData.nom,
         prenom: formData.prenom,
-        email: formData.email,
+        email,
         pays: formData.pays,
-        dateNaissance: formData.dateNaissance,
+        dateNaissance,
       });
 
       if (!response) {
@@ -227,16 +231,18 @@ export default function RegisterCommunityPage() {
         value={formData.prenom}
         onChangeText={(value) => handleChange('prenom', value)}
       />
-      <NoxInput
-        label="Email"
-        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        value={formData.email}
-        onChangeText={(value) => handleChange('email', value)}
-        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
-      />
+      {!emailLocked ? (
+        <NoxInput
+          label="Email"
+          placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          value={formData.email}
+          onChangeText={(value) => handleChange('email', value)}
+          icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+        />
+      ) : null}
       <NoxInput
         label={fr ? 'Pays' : 'Country'}
         placeholder="France"
@@ -248,20 +254,22 @@ export default function RegisterCommunityPage() {
           }
         }}
       />
-      <NoxInput
-        label={fr ? 'Date de naissance' : 'Date of birth'}
-        placeholder={fr ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-        keyboardType="numeric"
-        maxLength={10}
-        value={formData.dateNaissance}
-        onChangeText={(value) => handleChange('dateNaissance', value)}
-        icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
-        onFocus={() => {
-          if (Platform.OS === 'android') {
-            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
-          }
-        }}
-      />
+      {!birthLocked ? (
+        <NoxInput
+          label={fr ? 'Date de naissance' : 'Date of birth'}
+          placeholder={fr ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
+          keyboardType="numeric"
+          maxLength={10}
+          value={formData.dateNaissance}
+          onChangeText={(value) => handleChange('dateNaissance', value)}
+          icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
+          onFocus={() => {
+            if (Platform.OS === 'android') {
+              setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+            }
+          }}
+        />
+      ) : null}
     </RegisterRoleFormShell>
   );
 }

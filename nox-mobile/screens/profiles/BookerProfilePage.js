@@ -68,6 +68,12 @@ export default function BookerProfilePage() {
   const [eventsFilter, setEventsFilter] = useState('all');
 
   useEffect(() => {
+    if (allowedTabs.has(initialTab)) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
     if (bookerId) fetchBookerProfile();
   }, [bookerId]);
 

@@ -2,9 +2,8 @@ import React from 'react';
 import {
   View,
   TouchableOpacity,
-  TextInput,
 } from 'react-native';
-import { NoxText, NoxButton } from '../../nox';
+import { NoxText, NoxButton, NoxInput } from '../../nox';
 
 export default function BookerEventStep1Date(props) {
   const {
@@ -65,19 +64,15 @@ export default function BookerEventStep1Date(props) {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.inputGroup}>
-        <NoxText variant="label" style={styles.label}>
-          {language === 'fr' ? 'Durée de la soirée (heures)' : 'Event duration (hours)'} *
-        </NoxText>
-        <TextInput
-          style={styles.input}
-          placeholder={language === 'fr' ? 'Ex: 4' : 'Ex: 4'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-          keyboardType="numeric"
-          value={formData.durationHours}
-          onChangeText={(value) => handleChange('durationHours', value)}
-        />
-      </View>
+      <NoxInput
+        label={
+          language === 'fr' ? 'Durée de la soirée (heures) *' : 'Event duration (hours) *'
+        }
+        placeholder={language === 'fr' ? 'Ex: 4' : 'Ex: 4'}
+        keyboardType="numeric"
+        value={formData.durationHours}
+        onChangeText={(value) => handleChange('durationHours', value)}
+      />
 
       <NoxButton
         label={language === 'fr' ? 'Suivant →' : 'Next →'}

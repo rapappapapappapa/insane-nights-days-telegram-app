@@ -6,11 +6,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 25 septembre 2026
 
+### Corrigé (mobile — retour sélection DJ/lieu + hub Orga)
+- Retour **`selectDj` / `selectVenue`** vers `bookerDashboard` : ouvre **Mes événements** (`highlightEventId` + détection `selectedDjId`/`selectedVenueId`/`action`), aligné sur prestataire.
+- Hub Orga : Booking / Lieux mènent à **Mes événements** (choix explicite de l’event) au lieu d’auto-sélectionner le 1er à venir.
+- **`selectVenue`** : barre de recherche comme DJ / prestataire.
+- **`registerCommunity`** : plus de re-saisie email / naissance si déjà sur le compte ; **`BookerProfile`** sync `initialTab` ; bio prestataire via `inputStyle`.
+
 ### Modifié (mobile — backlog adaptables sans maquette HD)
 - **`registerCommunity` / `registerPrestataire`** : même shell **`RegisterRoleFormShell`** que DJ/Booker/Venue (étape 2, résumé compte, `NoxInput` / CTA « Activer mon profil… »).
 - **`createFeedPost`**, **`eventStaff`**, **`scanTicket`**, **`selectDj` / `selectVenue` / `selectPrestataire`**, **`communityProfileEdit` / `venueProfileEdit`**, **`communityFriends` / `bookerFriends`**, **`switchProfile`** : skin tokens NOX (`NoxScreenHeader`, `NoxInput`/`NoxButton`/`NoxText`/`NoxCard`, SafeArea) — logique API inchangée.
 - **Wizard booker** : étapes 1–5 en `NoxText` / `NoxButton` (shell déjà `NoxProDashboardHeader`).
-- **Hub Orga** : hints honnêtes + routes utiles — Booking/Lieux → `selectDj`/`selectVenue` si event à venir, sinon Mes événements ; Avis → profil public onglet Avis ; Communication → feed ; Contrats/Paiements → Mes événements.
+- **Hub Orga** : hints honnêtes — Booking/Lieux/Contrats/Paiements → Mes événements ; Avis → profil public ; Communication → feed.
 
 ### Modifié (mobile — édition profils & amis NOX)
 - **`CommunityProfileEditPage`** / **`VenueProfileEditPage`** : skin NOX (`SafeAreaView`, `StatusBar` light, `NoxScreenHeader`, `NoxInput`, `NoxButton`, `NoxText`) — logique API inchangée.
@@ -68,7 +74,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (mobile — dashboard Organisateur Figma)
 - **`bookerDashboard` accueil** : layout **`Dashboard_Orga_Pro`** — salutation + avatar + cloche, carte hero organisateur (« Voir mon profil »), grille **Mes outils** (10 tuiles Figma), carrousel **prochains événements** (statut Publié/Brouillon), bloc **Statistiques** (données réelles).
 - **Footer** : inchangé (nav radiale / logo NOX).
-- Mapping outils : créer event → wizard ; communication → `createFeedPost` ; booking/lieux → `selectDj`/`selectVenue` si event à venir (sinon Mes événements) ; contrats/paiements → events ; avis → profil public ; paramètres → profil.
+- Mapping outils : créer event → wizard ; communication → `createFeedPost` ; booking/lieux/contrats/paiements → Mes événements (choix event) ; avis → profil public ; paramètres → profil.
 
 ### Manques Figma / API (dashboard Orga)
 - Note moyenne organisateur, CA / tendances « +X% » : pas encore exposés côté API home booker.

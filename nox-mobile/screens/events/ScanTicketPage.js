@@ -29,17 +29,18 @@ import { NoxText, NoxButton, NoxScreenHeader } from '../../components/nox';
 const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
 const SCAN_ANY_DAY_TEST_STORAGE = '@nox_scan_test_any_day';
 
-/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Sans ça, le switch reste désactivé mais le bandeau reste visible (build prod). */
+/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Embarqué seulement si SHOW_SCAN_TEST_UI. */
 const SCAN_TEST_SECRET = (process.env.EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET || '').trim();
 
 /**
- * Bandeau « test scan hors jour » : visible par défaut (seuls orga/staff ouvrent cet écran).
- * Masquer en prod finale : EXPO_PUBLIC_HIDE_SCAN_TEST_UI=true
+ * Bandeau « test scan hors jour » : masqué par défaut (prod / stores).
+ * Opt-in staging : EXPO_PUBLIC_SHOW_SCAN_TEST_UI=true
+ * Legacy : EXPO_PUBLIC_HIDE_SCAN_TEST_UI=false n’affiche plus rien ; utiliser SHOW.
  */
 function shouldShowScanTestToggle() {
-  const hide = process.env.EXPO_PUBLIC_HIDE_SCAN_TEST_UI;
-  if (hide === '1' || hide === 'true') return false;
-  return true;
+  const show = process.env.EXPO_PUBLIC_SHOW_SCAN_TEST_UI;
+  if (show === '1' || show === 'true') return true;
+  return false;
 }
 
 export default function ScanTicketPage() {
@@ -61,9 +62,15 @@ export default function ScanTicketPage() {
   const resultScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (!showTestToggle) return;
     let cancelled = false;
     (async () => {
+      if (!showTestToggle) {
+        setScanAnyDayTest(false);
+        try {
+          await AsyncStorage.removeItem(SCAN_ANY_DAY_TEST_STORAGE);
+        } catch (_) {}
+        return;
+      }
       try {
         const v = await AsyncStorage.getItem(SCAN_ANY_DAY_TEST_STORAGE);
         if (!cancelled) setScanAnyDayTest(v === '1');

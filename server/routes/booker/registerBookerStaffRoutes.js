@@ -1,6 +1,7 @@
 /**
  * Booker : amis Communauté, staff événement, scan QR billets.
  */
+const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
 
 module.exports = function registerBookerStaffRoutes(app, deps) {
@@ -230,31 +231,38 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     const myCommunity = await prisma.userCommunity.findFirst({ where: { userId: req.user.id } });
     const isStaff = myCommunity && event.eventStaff.some((s) => s.communityId === myCommunity.id && s.role === 'STAFF_SCAN');
     if (!isBooker && !isStaff) return res.status(403).json({ success: false, message: 'Seul l\'organisateur ou le staff peut scanner.' });
-    // Fenêtre de scan : même jour UTC, OU ONGOING, OU SCAN_TICKET_ALLOW_ANY_DAY (explicite), OU défaut Railway si var absente, OU scanTestSecret
+    // Fenêtre de scan : même jour UTC, OU ONGOING, OU SCAN_TICKET_ALLOW_ANY_DAY=true (explicite), OU scanTestSecret aligné.
+    // Défaut strict : hors jour refusé sauf ONGOING / même jour / secret test serveur.
     const eventDate = new Date(event.date);
     const now = new Date();
     const sameDay =
       eventDate.getUTCFullYear() === now.getUTCFullYear() &&
       eventDate.getUTCMonth() === now.getUTCMonth() &&
       eventDate.getUTCDate() === now.getUTCDate();
-    const rawAllowAnyDay = process.env.SCAN_TICKET_ALLOW_ANY_DAY;
-    const deployedOnRailway = Boolean(
-      process.env.RAILWAY_PUBLIC_DOMAIN ||
-        process.env.RAILWAY_ENVIRONMENT ||
-        process.env.RAILWAY_SERVICE_NAME,
-    );
-    const scanTicketAllowAnyDay =
-      rawAllowAnyDay !== undefined && String(rawAllowAnyDay).trim() !== ''
-        ? String(rawAllowAnyDay).toLowerCase() === 'true'
-        : deployedOnRailway;
+    const rawAllowAnyDay = String(process.env.SCAN_TICKET_ALLOW_ANY_DAY || '')
+      .trim()
+      .toLowerCase();
+    const scanTicketAllowAnyDay = rawAllowAnyDay === 'true' || rawAllowAnyDay === '1';
     // Phase de test : même effet que ALLOW_ANY_DAY si le client envoie scanTestSecret identique à SCAN_TICKET_TEST_SECRET (≥ 8 car.).
     const serverTestSecret = process.env.SCAN_TICKET_TEST_SECRET;
     const clientTestSecret = req.body?.scanTestSecret;
-    const allowByTestSecret =
+    let allowByTestSecret = false;
+    if (
       typeof serverTestSecret === 'string' &&
       serverTestSecret.length >= 8 &&
       typeof clientTestSecret === 'string' &&
-      clientTestSecret === serverTestSecret;
+      clientTestSecret.length >= 8 &&
+      clientTestSecret.length === serverTestSecret.length
+    ) {
+      try {
+        allowByTestSecret = crypto.timingSafeEqual(
+          Buffer.from(clientTestSecret, 'utf8'),
+          Buffer.from(serverTestSecret, 'utf8')
+        );
+      } catch (_) {
+        allowByTestSecret = false;
+      }
+    }
     const allowScanByWindow =
       scanTicketAllowAnyDay || allowByTestSecret || event.status === 'ONGOING' || sameDay;
     if (!allowScanByWindow) {

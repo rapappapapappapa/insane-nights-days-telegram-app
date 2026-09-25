@@ -95,7 +95,7 @@ Voir le détail champ par champ : **[INFORMATIONS_LEGALES_A_COMPLETER.md](./INFO
 - [ ] Variables Railway prod : `STRIPE_*` (mode **live**), `YOUSIGN_*`, `RESEND_*`, `JWT_SECRET`, etc.
 - [ ] `EXPO_PUBLIC_API_BASE` en EAS Secrets → URL Railway prod
 - [ ] Stripe : clés **live** + webhook prod configuré
-- [ ] `EXPO_PUBLIC_HIDE_SCAN_TEST_UI=true` en prod (masquer le bandeau scan test)
+- [ ] Ne pas définir `EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET` / `EXPO_PUBLIC_SHOW_SCAN_TEST_UI` en prod store (bandeau test masqué par défaut)
 - [ ] Parcours complet testé : inscription → événement → achat billet → contrat → paiement → signature
 
 ---

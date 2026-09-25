@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 25 septembre 2026
 
+### Sécurisé (scan billets + stockage)
+- **Serveur** : `SCAN_TICKET_ALLOW_ANY_DAY` **strict par défaut** (plus d’auto-`true` sur Railway si la var est absente) ; comparaison du secret test en **timing-safe**.
+- **Mobile** : bandeau test scan **masqué par défaut** (`EXPO_PUBLIC_SHOW_SCAN_TEST_UI=true` pour staging) ; purge du flag AsyncStorage si UI masquée ; push token local via **SecureStore**.
+- Docs / `env.example` alignés.
+
 ### Corrigé (mobile — retour sélection DJ/lieu + hub Orga)
 - Retour **`selectDj` / `selectVenue`** vers `bookerDashboard` : ouvre **Mes événements** (`highlightEventId` + détection `selectedDjId`/`selectedVenueId`/`action`), aligné sur prestataire.
 - Hub Orga : Booking / Lieux mènent à **Mes événements** (choix explicite de l’event) au lieu d’auto-sélectionner le 1er à venir.

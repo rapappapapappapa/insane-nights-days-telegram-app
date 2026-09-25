@@ -50,7 +50,7 @@ nox-mobile/
 | `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID` | OAuth Google (iOS / Android / Web) |
 | `EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS` | Délai min. wizard événement booker |
 | `EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET` | Mode test scan billets (dev) |
-| `EXPO_PUBLIC_HIDE_SCAN_TEST_UI` | `true` pour masquer l’UI de test scan en prod |
+| `EXPO_PUBLIC_SHOW_SCAN_TEST_UI` | `true` en staging seulement (bandeau test scan ; masqué par défaut) |
 
 Défaut API si non défini : voir `api/endpointsConfig.js`.
 

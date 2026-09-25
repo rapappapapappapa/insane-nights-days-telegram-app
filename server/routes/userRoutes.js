@@ -37,11 +37,46 @@ router.post('/switch-profile', authenticateToken, userController.switchProfile);
 router.post('/change-password', authenticateToken, userController.changePassword);
 
 /**
+ * @route GET /api/user/me/export
+ * @desc Export des données personnelles (RGPD - droit à la portabilité)
+ * @access Private
+ */
+router.get('/me/export', authenticateToken, userController.exportUserData);
+
+/**
+ * @route DELETE /api/user/me
+ * @desc Suppression du compte (RGPD - droit à l'effacement)
+ * @access Private
+ */
+router.delete('/me', authenticateToken, userController.deleteAccount);
+
+/**
  * @route GET /api/user/me
  * @desc Récupère les informations de l'utilisateur connecté avec son dernier ticket
  * @access Private (nécessite authentification)
  */
 router.get('/me', authenticateToken, userController.getCurrentUser);
+
+/**
+ * @route POST /api/user/me/email/verification/send
+ * @desc Envoie un code de vérification email
+ * @access Private
+ */
+router.post('/me/email/verification/send', authenticateToken, userController.sendEmailVerification);
+
+/**
+ * @route POST /api/user/me/email/verification/confirm
+ * @desc Confirme la vérification email (code)
+ * @access Private
+ */
+router.post('/me/email/verification/confirm', authenticateToken, userController.confirmEmailVerification);
+
+/**
+ * @route POST /api/user/me/email/change
+ * @desc Change l'email d'un compte non vérifié (correction de saisie)
+ * @access Private
+ */
+router.post('/me/email/change', authenticateToken, userController.changeUnverifiedEmail);
 
 /**
  * @route GET /api/user/dj/profile
@@ -60,6 +95,97 @@ router.get('/dj/profile', authenticateToken, userController.getCurrentDjProfile)
 router.put('/dj/profile', authenticateToken, userController.updateDjProfile);
 
 /**
+ * @route GET /api/user/community/profile
+ * @desc Récupère le profil Communauté de l'utilisateur connecté
+ * @access Private
+ */
+router.get('/community/profile', authenticateToken, userController.getCommunityProfile);
+
+/**
+ * @route PUT /api/user/community/profile
+ * @desc Met à jour le profil Communauté (pseudo, genres)
+ * @access Private
+ */
+router.put('/community/profile', authenticateToken, userController.updateCommunityProfile);
+
+/**
+ * @route GET /api/user/community/friends
+ * @desc Liste des amis (Communauté)
+ * @access Private
+ */
+router.get('/community/friends', authenticateToken, userController.getCommunityFriends);
+
+/**
+ * @route GET /api/user/community/friends/requests
+ * @desc Demandes d'amis reçues
+ * @access Private
+ */
+router.get('/community/friends/requests', authenticateToken, userController.getCommunityFriendRequests);
+
+/**
+ * @route POST /api/user/community/friends/request
+ * @desc Envoyer une demande d'ami (body: { requestedCommunityId })
+ * @access Private
+ */
+router.post('/community/friends/request', authenticateToken, userController.sendCommunityFriendRequest);
+
+/**
+ * @route PUT /api/user/community/friends/requests/:id
+ * @desc Accepter/refuser une demande (body: { action: 'accept'|'decline' })
+ * @access Private
+ */
+router.put('/community/friends/requests/:id', authenticateToken, userController.respondToCommunityFriendRequest);
+
+/**
+ * @route DELETE /api/user/community/friends/:id
+ * @desc Retirer un ami
+ * @access Private
+ */
+router.delete('/community/friends/:id', authenticateToken, userController.removeCommunityFriend);
+
+/**
+ * @route GET /api/user/venue/profile
+ * @desc Récupère le profil Venue de l'utilisateur connecté
+ * @access Private
+ */
+router.get('/venue/profile', authenticateToken, userController.getVenueProfile);
+
+/**
+ * @route PUT /api/user/venue/profile
+ * @desc Met à jour le profil Venue (venueName, address)
+ * @access Private
+ */
+router.put('/venue/profile', authenticateToken, userController.updateVenueProfile);
+
+/**
+ * @route GET /api/user/community/pseudo/check
+ * @desc Vérifier si un pseudo est disponible (?pseudo=...)
+ * @access Private
+ */
+router.get('/community/pseudo/check', authenticateToken, userController.checkCommunityPseudoAvailable);
+
+/**
+ * @route GET /api/user/community/search
+ * @desc Rechercher des profils Communauté par pseudo (?q=...)
+ * @access Private
+ */
+router.get('/community/search', authenticateToken, userController.searchCommunities);
+
+/**
+ * @route GET /api/user/community/event-groups/invitations
+ * @desc Mes invitations à des groupes d'événements
+ * @access Private
+ */
+router.get('/community/event-groups/invitations', authenticateToken, userController.getEventGroupInvitations);
+
+/**
+ * @route GET /api/user/community/:communityId
+ * @desc Voir le profil public d'un profil Communauté (ami)
+ * @access Private
+ */
+router.get('/community/:communityId', authenticateToken, userController.getCommunityProfileById);
+
+/**
  * @route GET /api/user/:userId
  * @desc Récupère les informations d'un utilisateur par son ID
  * @access Public
@@ -68,7 +194,7 @@ router.put('/dj/profile', authenticateToken, userController.updateDjProfile);
  */
 router.get('/:userId', (req, res, next) => {
   // Éviter de matcher /dj comme userId (pour laisser passer /dj/profile)
-  if (req.params.userId === 'dj' || req.params.userId === 'profiles' || req.params.userId === 'me') {
+  if (['dj', 'profiles', 'me', 'community', 'venue'].includes(req.params.userId)) {
     return res.status(404).json({ success: false, message: 'Route non trouvée' });
   }
   userController.getUserById(req, res, next);

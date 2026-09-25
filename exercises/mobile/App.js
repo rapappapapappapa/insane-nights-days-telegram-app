@@ -12,7 +12,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Text style={styles.title}>Insane Nights & Days</Text>
+      <Text style={styles.title}>NOX</Text>
 
       {/* TODO: ajouter la navigation Home/Menu/Events/Profile/Tickets */}
       <TouchableOpacity style={styles.button} onPress={() => setCurrentPage('menu')}>

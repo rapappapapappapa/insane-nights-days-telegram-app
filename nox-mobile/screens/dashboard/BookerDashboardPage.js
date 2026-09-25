@@ -1,0 +1,676 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  useWindowDimensions,
+  RefreshControl,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useEventForm } from '../../contexts/EventFormContext';
+import Toast from '../../components/Toast';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { useNotifications } from '../../hooks/useNotifications';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
+import { styles } from './BookerDashboardPage.styles';
+import { BOOKER_EVENTS_REFRESH_FLAG, PAYMENT_TERMS_OPTIONS } from '../../utils/bookerDashboardUtils';
+import { useBookerProfile } from '../../hooks/useBookerProfile';
+import { useBookerEvents } from '../../hooks/useBookerEvents';
+import { useBookerMessaging } from '../../hooks/useBookerMessaging';
+import { useBookerDjVenueRoute } from '../../hooks/useBookerDjVenueRoute';
+import BookerProfilSection from '../../components/bookerDashboard/sections/BookerProfilSection';
+import BookerEventsSection from '../../components/bookerDashboard/sections/BookerEventsSection';
+import BookerDateTimePickers from '../../components/bookerDashboard/BookerDateTimePickers';
+import BookerChatModal from '../../components/bookerDashboard/BookerChatModal';
+import BookerContractModals from '../../components/bookerDashboard/BookerContractModals';
+import BookerEditEventModal from '../../components/bookerDashboard/BookerEditEventModal';
+import BookerDashboardHomeSection from '../../components/bookerDashboard/BookerDashboardHomeSection';
+import { NoxProDashboardHeader } from '../../components/nox';
+
+const BOOKER_DASHBOARD_SECTIONS = new Set(['profil', 'events']);
+
+function resolveBookerDashboardSection(routeParams) {
+  if (
+    routeParams?.openBookings ||
+    routeParams?.openChatEventDjId ||
+    routeParams?.openChatEventId ||
+    routeParams?.openChatEventVenueId ||
+    routeParams?.highlightEventId ||
+    // Retour SelectDj / SelectVenue : traiter l’ajout comme « Mes événements »
+    (routeParams?.action && (routeParams?.selectedDjId || routeParams?.selectedVenueId))
+  ) {
+    return 'events';
+  }
+  const section = routeParams?.openSection;
+  if (section && BOOKER_DASHBOARD_SECTIONS.has(section)) return section;
+  return 'home';
+}
+
+export default function BookerDashboardPage() {
+  const { height: contractModalWindowH } = useWindowDimensions();
+  const contractEditorModalCardHeight = Math.round(contractModalWindowH * 0.88);
+  const { language } = useLanguage();
+  const { navigate, goBack, routeParams } = useNavigation();
+  const { user } = useAuth();
+  const { toast, showError, showSuccess, hideToast } = useToast();
+  const { showConfirm } = useConfirm();
+  const { unreadCount, refreshUnreadCount, markAllAsRead } = useNotifications();
+  const { formData, setFormData, eventDateTime, setEventDateTime, resetForm, addDj, removeDj, setVenue } =
+    useEventForm();
+
+  const shouldOpenBookings =
+    !!routeParams?.openBookings ||
+    !!routeParams?.openChatEventDjId ||
+    !!routeParams?.openChatEventId ||
+    !!routeParams?.openChatEventVenueId ||
+    !!routeParams?.highlightEventId;
+
+  const [activeSection, setActiveSection] = useState(() => resolveBookerDashboardSection(routeParams));
+
+  useEffect(() => {
+    setActiveSection(resolveBookerDashboardSection(routeParams));
+  }, [
+    routeParams?.openSection,
+    routeParams?.openBookings,
+    routeParams?.openChatEventDjId,
+    routeParams?.openChatEventId,
+    routeParams?.openChatEventVenueId,
+    routeParams?.highlightEventId,
+    routeParams?.selectedDjId,
+    routeParams?.selectedVenueId,
+    routeParams?.action,
+  ]);
+
+  const profile = useBookerProfile({ user, language, showError, showSuccess });
+  const events = useBookerEvents({
+    user,
+    language,
+    showError,
+    showSuccess,
+    showConfirm,
+    routeParams,
+    setActiveSection,
+  });
+  const messaging = useBookerMessaging({
+    user,
+    language,
+    showError,
+    showSuccess,
+    markAllAsRead,
+    routeParams,
+    shouldOpenBookings,
+    setActiveSection,
+  });
+  const routeLegacy = useBookerDjVenueRoute({
+    user,
+    language,
+    showError,
+    showSuccess,
+    routeParams,
+    formData,
+    setFormData,
+    eventDateTime,
+    setEventDateTime,
+    addDj,
+    removeDj,
+    setVenue,
+    resetForm,
+    setActiveSection,
+    fetchMyEvents: events.fetchMyEvents,
+  });
+
+  const {
+    bookerProfile,
+    loadingProfile,
+    savingProfile,
+    profileForm,
+    setProfileForm,
+    profileImage,
+    uploadingProfileImage,
+    pickProfileImage,
+    saveBookerProfile,
+    loadBookerProfile,
+  } = profile;
+
+  const {
+    myEvents,
+    loadingEvents,
+    refreshingEvents,
+    pulseEventId,
+    deletingEventId,
+    publishingEventId,
+    markingPaymentEventDjId,
+    markingPaymentEventVenueId,
+    markingPaymentEventPrestataireId,
+    editEventVisible,
+    setEditEventVisible,
+    editEventDraft,
+    setEditEventDraft,
+    editEventSaving,
+    editEventUploading,
+    fetchMyEvents,
+    onRefreshEventsList,
+    markBookingAsPaid,
+    markVenueBookingAsPaid,
+    markPrestataireBookingAsPaid,
+    handlePublishToFeed,
+    handleDeleteEvent,
+    openEditEvent,
+    pickEditEventImage,
+    saveEditEvent,
+  } = events;
+
+  const {
+    chatModalVisible,
+    setChatModalVisible,
+    selectedChatEventDjId,
+    setSelectedChatEventDjId,
+    selectedChatEventVenueId,
+    setSelectedChatEventVenueId,
+    selectedChatEventId,
+    setSelectedChatEventId,
+    isGroupChat,
+    setIsGroupChat,
+    isVenueChat,
+    setIsVenueChat,
+    isPrestataireChat,
+    setIsPrestataireChat,
+    selectedChatEventPrestataireId,
+    setSelectedChatEventPrestataireId,
+    setChatMessages,
+    setNewMessageText,
+    setShowPaymentTermsModal,
+    setShowDealTypeModal,
+    setShowCancellationModal,
+    setShowEventEndModal,
+    chatScrollViewRef,
+    contractLoading,
+    contractData,
+    contractDraft,
+    setContractDraft,
+    contractAcceptAck,
+    setContractAcceptAck,
+    contractDraftReadAck,
+    setContractDraftReadAck,
+    contractEditorVisible,
+    setContractEditorVisible,
+    showPaymentTermsModal,
+    showCancellationModal,
+    showEventEndModal,
+    showDealTypeModal,
+    contractPdfPreview,
+    reopenChatAfterContractRef,
+    pendingOpenContractEditorRef,
+    openContractEditorFallbackTimerRef,
+    flushPendingContractEditor,
+    closeContractEditorSession,
+    openContractEditorFromChat,
+    setShowPaymentTermsModalForContract,
+    setShowDealTypeModalForContract,
+    setShowCancellationModalForContract,
+    setShowEventEndModalForContract,
+    openChat,
+    openGroupChat,
+    openVenueChat,
+    openPrestataireChat,
+    openContractPdfPreview,
+    closeContractPdfPreview,
+    confirmContractPdfPreview,
+    saveContractDraft,
+    sendMessage,
+    handleDeleteMessage,
+    contractEventEndOptions,
+    contractEventWindowHint,
+    djVenueGateBlocks,
+    contractBooking,
+    payingContract,
+    payContractWithStripe,
+    retryingSignature,
+    retryContractSignature,
+    chatMessages,
+    loadingChatMessages,
+    newMessageText,
+    sendingMessage,
+  } = messaging;
+
+  const {
+    showDatePicker,
+    setShowDatePicker,
+    showTimePicker,
+    setShowTimePicker,
+    tempDate,
+    setTempDate,
+    tempTime,
+    setTempTime,
+    handleChange,
+    fetchVenues,
+  } = routeLegacy;
+
+  useEffect(() => {
+    if (!user?.token) return;
+    (async () => {
+      try {
+        const flag = await AsyncStorage.getItem(BOOKER_EVENTS_REFRESH_FLAG);
+        if (flag === '1') await AsyncStorage.removeItem(BOOKER_EVENTS_REFRESH_FLAG);
+      } catch (_) {}
+      fetchVenues();
+      fetchMyEvents();
+      loadBookerProfile();
+    })();
+  }, [user?.token]);
+
+  const menuItems = [
+    {
+      id: 'create-event',
+      label: language === 'fr' ? 'Créer un événement' : 'Create event',
+      hint: language === 'fr' ? 'Billetterie, line-up, lieu' : 'Tickets, line-up, venue',
+      icon: 'calendar',
+      accentColor: Colors.primaryLight,
+      accentBg: 'rgba(40,82,232,0.2)',
+    },
+    {
+      id: 'events',
+      label: language === 'fr' ? 'Mes événements' : 'My events',
+      hint: language === 'fr' ? 'Brouillons, publiés, archivés' : 'Drafts, published, archived',
+      icon: 'list',
+      accentColor: '#34D399',
+      accentBg: 'rgba(52,211,153,0.12)',
+    },
+    {
+      id: 'booking',
+      label: language === 'fr' ? 'Booking artistes' : 'Artist booking',
+      hint: language === 'fr' ? 'Choisir un event puis inviter' : 'Pick an event then invite',
+      icon: 'people',
+      accentColor: '#F472B6',
+      accentBg: 'rgba(244,114,182,0.12)',
+    },
+    {
+      id: 'lieux',
+      label: language === 'fr' ? 'Lieux' : 'Venues',
+      hint: language === 'fr' ? 'Choisir un event puis associer' : 'Pick an event then attach',
+      icon: 'location',
+      accentColor: '#A78BFA',
+      accentBg: 'rgba(167,139,250,0.12)',
+    },
+    {
+      id: 'communication',
+      label: 'Communication',
+      hint: language === 'fr' ? 'Publier sur le feed' : 'Post to the feed',
+      icon: 'megaphone',
+      accentColor: '#F87171',
+      accentBg: 'rgba(248,113,113,0.12)',
+    },
+    {
+      id: 'contrats',
+      label: language === 'fr' ? 'Contrats' : 'Contracts',
+      hint: language === 'fr' ? 'Depuis la fiche événement' : 'From the event sheet',
+      icon: 'document-text',
+      accentColor: '#FBBF24',
+      accentBg: 'rgba(251,191,36,0.12)',
+    },
+    {
+      id: 'statistiques',
+      label: language === 'fr' ? 'Statistiques' : 'Statistics',
+      hint: language === 'fr' ? 'Voir le bloc stats du hub' : 'See hub stats block',
+      icon: 'bar-chart',
+      accentColor: '#818CF8',
+      accentBg: 'rgba(129,140,248,0.12)',
+    },
+    {
+      id: 'paiements',
+      label: language === 'fr' ? 'Paiements' : 'Payments',
+      hint: language === 'fr' ? 'Marquer payé sur un event' : 'Mark paid on an event',
+      icon: 'card',
+      accentColor: '#FCD34D',
+      accentBg: 'rgba(252,211,77,0.12)',
+    },
+    {
+      id: 'avis',
+      label: language === 'fr' ? 'Avis' : 'Reviews',
+      hint: language === 'fr' ? 'Profil public (si données)' : 'Public profile (if any)',
+      icon: 'star',
+      accentColor: '#FBBF24',
+      accentBg: 'rgba(251,191,36,0.12)',
+    },
+    {
+      id: 'profil',
+      label: language === 'fr' ? 'Paramètres' : 'Settings',
+      hint: language === 'fr' ? 'Équipe, rôles, préférences' : 'Team, roles, preferences',
+      icon: 'settings',
+      accentColor: '#C084FC',
+      accentBg: 'rgba(192,132,252,0.12)',
+    },
+  ];
+
+  const isHubView = activeSection === 'home';
+  const activeMenuItem = menuItems.find((item) => item.id === activeSection);
+  const headerTitle =
+    activeMenuItem?.label ||
+    (language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard');
+
+  const handleHeaderBack = () => {
+    if (isHubView) {
+      goBack();
+      return;
+    }
+    setActiveSection('home');
+  };
+
+  const openSection = (sectionId) => {
+    if (sectionId === 'create-event') {
+      navigate('bookerEventDashboard', {});
+      return;
+    }
+    if (sectionId === 'communication') {
+      navigate('createFeedPost');
+      return;
+    }
+    if (sectionId === 'statistiques') {
+      // Stats live on the hub; keep user on home (scroll already shows them).
+      setActiveSection('home');
+      return;
+    }
+    if (sectionId === 'avis') {
+      const id = bookerProfile?.id || bookerProfile?.bookerId;
+      if (id) {
+        navigate('bookerProfile', { bookerId: id, initialTab: 'reviews' });
+        return;
+      }
+      setActiveSection('profil');
+      return;
+    }
+    // booking / lieux / contrats / paiements → choisir l’event dans Mes événements
+    // (pas d’auto-sélection du 1er event à venir — évite le mauvais booking)
+    if (['booking', 'lieux', 'contrats', 'paiements'].includes(sectionId)) {
+      setActiveSection('events');
+      fetchMyEvents();
+      markAllAsRead();
+      return;
+    }
+    setActiveSection(sectionId);
+    if (sectionId === 'events') {
+      fetchMyEvents();
+      markAllAsRead();
+    }
+  };
+
+  const displayName =
+    profileForm?.pseudo ||
+    bookerProfile?.pseudo ||
+    bookerProfile?.name ||
+    user?.username?.split('@')?.[0] ||
+    '';
+
+  const orgName =
+    bookerProfile?.companyName ||
+    profileForm?.companyName ||
+    bookerProfile?.pseudo ||
+    displayName;
+
+  const renderContent = () => {
+    if (isHubView) {
+      return (
+        <BookerDashboardHomeSection
+          language={language}
+          styles={styles}
+          tiles={menuItems}
+          unreadCount={unreadCount}
+          displayName={displayName}
+          orgName={orgName}
+          bookerType={profileForm?.bookerType || bookerProfile?.bookerType}
+          city={profileForm?.city || bookerProfile?.city}
+          profileImage={profileImage || bookerProfile?.profileImage}
+          bookerId={bookerProfile?.id}
+          events={myEvents}
+          navigate={navigate}
+          onSelectSection={openSection}
+          onNotificationsPress={() => {
+            navigate('notifications');
+            refreshUnreadCount();
+          }}
+        />
+      );
+    }
+
+    return (
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 180 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        refreshControl={
+          activeSection === 'events' ? (
+            <RefreshControl
+              refreshing={refreshingEvents}
+              onRefresh={onRefreshEventsList}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          ) : undefined
+        }
+      >
+        {activeSection === 'profil' ? (
+          <>
+            {bookerProfile?.id ? (
+              <View style={styles.profilActionsRow}>
+                <TouchableOpacity
+                  style={styles.viewPublicProfileButton}
+                  onPress={() => navigate('bookerProfile', { bookerId: bookerProfile.id })}
+                >
+                  <Ionicons name="eye-outline" size={20} color={Colors.primary} />
+                  <Text style={styles.viewPublicProfileButtonText}>
+                    {language === 'fr' ? 'Voir mon profil public' : 'View my public profile'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <BookerProfilSection
+              language={language}
+              styles={styles}
+              loadingProfile={loadingProfile}
+              bookerProfile={bookerProfile}
+              profileImage={profileImage}
+              profileForm={profileForm}
+              setProfileForm={setProfileForm}
+              uploadingProfileImage={uploadingProfileImage}
+              pickProfileImage={pickProfileImage}
+              savingProfile={savingProfile}
+              saveBookerProfile={saveBookerProfile}
+            />
+          </>
+        ) : (
+          <BookerEventsSection
+            language={language}
+            styles={styles}
+            navigate={navigate}
+            myEvents={myEvents}
+            loadingEvents={loadingEvents}
+            pulseEventId={pulseEventId}
+            openVenueChat={openVenueChat}
+            openPrestataireChat={openPrestataireChat}
+            openGroupChat={openGroupChat}
+            openChat={openChat}
+            markBookingAsPaid={markBookingAsPaid}
+            markingPaymentEventDjId={markingPaymentEventDjId}
+            markVenueBookingAsPaid={markVenueBookingAsPaid}
+            markingPaymentEventVenueId={markingPaymentEventVenueId}
+            markPrestataireBookingAsPaid={markPrestataireBookingAsPaid}
+            markingPaymentEventPrestataireId={markingPaymentEventPrestataireId}
+            openEditEvent={openEditEvent}
+            handlePublishToFeed={handlePublishToFeed}
+            publishingEventId={publishingEventId}
+            handleDeleteEvent={handleDeleteEvent}
+            deletingEventId={deletingEventId}
+          />
+        )}
+      </ScrollView>
+    );
+  };
+
+  return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <StatusBar style="light" />
+        {!isHubView ? (
+          <NoxProDashboardHeader
+            title={headerTitle}
+            showBack
+            onBack={handleHeaderBack}
+            unreadCount={unreadCount}
+            onMessagesPress={() => {
+              openSection('events');
+              refreshUnreadCount();
+            }}
+            onMarkMessagesRead={markAllAsRead}
+          />
+        ) : null}
+
+        <View style={styles.mainContent}>{renderContent()}</View>
+
+      <BookerDateTimePickers
+        language={language}
+        styles={styles}
+        showDatePicker={showDatePicker}
+        setShowDatePicker={setShowDatePicker}
+        showTimePicker={showTimePicker}
+        setShowTimePicker={setShowTimePicker}
+        tempDate={tempDate}
+        setTempDate={setTempDate}
+        tempTime={tempTime}
+        setTempTime={setTempTime}
+        setEventDateTime={setEventDateTime}
+        handleChange={handleChange}
+      />
+
+      <BookerChatModal
+        language={language}
+        styles={styles}
+        navigate={navigate}
+        showConfirm={showConfirm}
+        chatModalVisible={chatModalVisible}
+        pendingOpenContractEditorRef={pendingOpenContractEditorRef}
+        openContractEditorFallbackTimerRef={openContractEditorFallbackTimerRef}
+        setContractEditorVisible={setContractEditorVisible}
+        reopenChatAfterContractRef={reopenChatAfterContractRef}
+        flushPendingContractEditor={flushPendingContractEditor}
+        setChatModalVisible={setChatModalVisible}
+        selectedChatEventDjId={selectedChatEventDjId}
+        selectedChatEventVenueId={selectedChatEventVenueId}
+        selectedChatEventId={selectedChatEventId}
+        selectedChatEventPrestataireId={selectedChatEventPrestataireId}
+        setSelectedChatEventDjId={setSelectedChatEventDjId}
+        setSelectedChatEventVenueId={setSelectedChatEventVenueId}
+        setSelectedChatEventId={setSelectedChatEventId}
+        setIsGroupChat={setIsGroupChat}
+        setIsVenueChat={setIsVenueChat}
+        setIsPrestataireChat={setIsPrestataireChat}
+        setSelectedChatEventPrestataireId={setSelectedChatEventPrestataireId}
+        setChatMessages={setChatMessages}
+        setNewMessageText={setNewMessageText}
+        setShowPaymentTermsModal={setShowPaymentTermsModal}
+        setShowDealTypeModal={setShowDealTypeModal}
+        setShowCancellationModal={setShowCancellationModal}
+        setShowEventEndModal={setShowEventEndModal}
+        refreshUnreadCount={refreshUnreadCount}
+        chatScrollViewRef={chatScrollViewRef}
+        isGroupChat={isGroupChat}
+        isVenueChat={isVenueChat}
+        isPrestataireChat={isPrestataireChat}
+        contractLoading={contractLoading}
+        contractData={contractData}
+        contractDraft={contractDraft}
+        setContractDraft={setContractDraft}
+        contractAcceptAck={contractAcceptAck}
+        setContractAcceptAck={setContractAcceptAck}
+        contractDraftReadAck={contractDraftReadAck}
+        setContractDraftReadAck={setContractDraftReadAck}
+        contractEventEndOptions={contractEventEndOptions}
+        contractEventWindowHint={contractEventWindowHint}
+        setShowPaymentTermsModalForContract={setShowPaymentTermsModalForContract}
+        setShowDealTypeModalForContract={setShowDealTypeModalForContract}
+        setShowCancellationModalForContract={setShowCancellationModalForContract}
+        setShowEventEndModalForContract={setShowEventEndModalForContract}
+        openContractEditorFromChat={openContractEditorFromChat}
+        openContractPdfPreview={openContractPdfPreview}
+        djVenueGateBlocks={djVenueGateBlocks}
+        contractBooking={contractBooking}
+        payingContract={payingContract}
+        payContractWithStripe={payContractWithStripe}
+        retryingSignature={retryingSignature}
+        retryContractSignature={retryContractSignature}
+        loadingChatMessages={loadingChatMessages}
+        chatMessages={chatMessages}
+        handleDeleteMessage={handleDeleteMessage}
+        newMessageText={newMessageText}
+        sendMessage={sendMessage}
+        sendingMessage={sendingMessage}
+      />
+
+      <BookerContractModals
+        language={language}
+        styles={styles}
+        contractEditorVisible={contractEditorVisible}
+        contractEditorModalCardHeight={contractEditorModalCardHeight}
+        closeContractEditorSession={closeContractEditorSession}
+        isVenueChat={isVenueChat}
+        contractDraft={contractDraft}
+        setContractDraft={setContractDraft}
+        PAYMENT_TERMS_OPTIONS={PAYMENT_TERMS_OPTIONS}
+        setShowPaymentTermsModalForContract={setShowPaymentTermsModalForContract}
+        setShowDealTypeModalForContract={setShowDealTypeModalForContract}
+        setShowCancellationModalForContract={setShowCancellationModalForContract}
+        contractEventEndOptions={contractEventEndOptions}
+        contractEventWindowHint={contractEventWindowHint}
+        setShowEventEndModalForContract={setShowEventEndModalForContract}
+        contractData={contractData}
+        saveContractDraft={saveContractDraft}
+        openContractPdfPreview={openContractPdfPreview}
+        showPaymentTermsModal={showPaymentTermsModal}
+        setShowPaymentTermsModal={setShowPaymentTermsModal}
+        showDealTypeModal={showDealTypeModal}
+        setShowDealTypeModal={setShowDealTypeModal}
+        showCancellationModal={showCancellationModal}
+        setShowCancellationModal={setShowCancellationModal}
+        showEventEndModal={showEventEndModal}
+        setShowEventEndModal={setShowEventEndModal}
+        contractPdfPreview={contractPdfPreview}
+        closeContractPdfPreview={closeContractPdfPreview}
+        confirmContractPdfPreview={confirmContractPdfPreview}
+      />
+
+      <BookerEditEventModal
+        language={language}
+        styles={styles}
+        editEventVisible={editEventVisible}
+        setEditEventVisible={setEditEventVisible}
+        editEventDraft={editEventDraft}
+        setEditEventDraft={setEditEventDraft}
+        editEventSaving={editEventSaving}
+        editEventUploading={editEventUploading}
+        pickEditEventImage={pickEditEventImage}
+        saveEditEvent={saveEditEvent}
+      />
+
+      {/* Toast pour les notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onHide={hideToast}
+      />
+      </KeyboardAvoidingView>
+  );
+}
+

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useEventForm } from '../../../contexts/EventFormContext';
+import { NoxText, NoxButton } from '../../nox';
 import BookerEventDjPickerModal from '../BookerEventDjPickerModal';
 
 export default function BookerEventStep3Djs(props) {
@@ -67,9 +68,9 @@ export default function BookerEventStep3Djs(props) {
 
   return (
     <>
-      <Text style={styles.sectionTitle}>
+      <NoxText variant="form" style={styles.sectionTitle}>
         {language === 'fr' ? 'Étape 3 : Choisir des DJs' : 'Step 3: Choose DJs'}
-      </Text>
+      </NoxText>
 
       {!formData.date && (
         <View style={styles.warningBox}>
@@ -91,11 +92,11 @@ export default function BookerEventStep3Djs(props) {
         </View>
       )}
 
-      <Text style={styles.stepDescription}>
+      <NoxText variant="secondary" style={styles.stepDescription}>
         {language === 'fr'
           ? 'Ajoute un ou plusieurs créneaux, puis choisis un DJ pour chacun (liste intégrée — plusieurs DJs possibles).'
           : 'Add one or more slots, then pick a DJ for each (built-in list — multiple DJs supported).'}
-      </Text>
+      </NoxText>
 
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
@@ -213,21 +214,24 @@ export default function BookerEventStep3Djs(props) {
 
       <View style={styles.stepButtons}>
         <TouchableOpacity style={styles.backButtonStep} onPress={() => setCurrentStep(2)}>
-          <Text style={styles.backButtonStepText}>
+          <NoxText style={styles.backButtonStepText}>
             ← {language === 'fr' ? 'Précédent' : 'Previous'}
-          </Text>
+          </NoxText>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.nextButton, filledCount === 0 && styles.nextButtonDisabled]}
+        <NoxButton
+          label={language === 'fr' ? 'Suivant →' : 'Next →'}
+          fullWidth={false}
           onPress={() => {
             if (filledCount > 0) setCurrentStep(4);
           }}
           disabled={filledCount === 0}
-        >
-          <Text style={styles.nextButtonText}>
-            {language === 'fr' ? 'Suivant →' : 'Next →'}
-          </Text>
-        </TouchableOpacity>
+          style={[
+            styles.nextButton,
+            { flex: 1, marginTop: 0 },
+            filledCount === 0 && styles.nextButtonDisabled,
+          ]}
+          textStyle={styles.nextButtonText}
+        />
       </View>
 
       <BookerEventDjPickerModal

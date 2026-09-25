@@ -5,17 +5,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ActivityIndicator,
   Switch,
   Animated,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Spacing, Radius } from '../../constants/theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,7 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { Ionicons } from '@expo/vector-icons';
+import { NoxText, NoxButton, NoxScreenHeader } from '../../components/nox';
 
 const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
 const SCAN_ANY_DAY_TEST_STORAGE = '@nox_scan_test_any_day';
@@ -42,7 +43,6 @@ function shouldShowScanTestToggle() {
 }
 
 export default function ScanTicketPage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { goBack, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -55,6 +55,7 @@ export default function ScanTicketPage() {
   const [scanning, setScanning] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [torchOn, setTorchOn] = useState(false);
   const showTestToggle = shouldShowScanTestToggle();
   const [scanAnyDayTest, setScanAnyDayTest] = useState(false);
   const resultScale = useRef(new Animated.Value(1)).current;
@@ -140,60 +141,70 @@ export default function ScanTicketPage() {
 
   if (!permission) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom']}>
+        <StatusBar style="light" />
         <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!permission.granted) {
     return (
-      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, styles.centered]} edges={['top', 'bottom']}>
         <StatusBar style="light" />
-        <Text style={styles.permissionText}>{fr ? 'Autorise l\'accès à la caméra pour scanner les billets.' : 'Allow camera access to scan tickets.'}</Text>
-        <TouchableOpacity
-          style={styles.permissionBtn}
+        <NoxText variant="description" style={styles.permissionText}>
+          {fr
+            ? "Autorise l'accès à la caméra pour scanner les billets."
+            : 'Allow camera access to scan tickets.'}
+        </NoxText>
+        <NoxButton
+          label={fr ? 'Autoriser' : 'Grant permission'}
           onPress={requestPermission}
-          accessibilityRole="button"
-          accessibilityLabel={fr ? 'Autoriser la caméra' : 'Allow camera'}
-        >
-          <Text style={styles.permissionBtnText}>{fr ? 'Autoriser' : 'Grant permission'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.backBtn}
+          style={styles.permissionBtn}
+          fullWidth={false}
+        />
+        <NoxButton
+          label={fr ? 'Retour' : 'Back'}
+          variant="ghost"
           onPress={goBack}
-          accessibilityRole="button"
-          accessibilityLabel={fr ? 'Retour' : 'Back'}
-        >
-          <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-      </View>
+          style={styles.backLink}
+          fullWidth={false}
+        />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={goBack}
-          accessibilityRole="button"
-          accessibilityLabel={fr ? 'Retour' : 'Back'}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{eventTitle || (fr ? 'Scanner billet' : 'Scan ticket')}</Text>
-        <View style={styles.headerBtn} />
-      </View>
+
+      <NoxScreenHeader
+        title={fr ? 'Scanner billet' : 'Scan ticket'}
+        subtitle={eventTitle || undefined}
+        onBack={goBack}
+        rightSlot={
+          <TouchableOpacity
+            onPress={() => setTorchOn((v) => !v)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={fr ? 'Lampe torche' : 'Flashlight'}
+          >
+            <Ionicons
+              name={torchOn ? 'flash' : 'flash-outline'}
+              size={22}
+              color={torchOn ? Colors.primary : Colors.text}
+            />
+          </TouchableOpacity>
+        }
+      />
 
       {showTestToggle ? (
         <View style={styles.testModeRow}>
           <View style={styles.testModeTextCol}>
-            <Text style={styles.testModeTitle}>
+            <NoxText variant="form" style={styles.testModeTitle}>
               {fr ? 'Test : scan hors jour événement' : 'Test: scan any event day'}
-            </Text>
-            <Text style={styles.testModeHint}>
+            </NoxText>
+            <NoxText variant="secondary" style={styles.testModeHint}>
               {SCAN_TEST_SECRET.length >= 8
                 ? fr
                   ? 'Active seulement si SCAN_TICKET_TEST_SECRET côté API correspond à la clé Expo.'
@@ -201,7 +212,7 @@ export default function ScanTicketPage() {
                 : fr
                   ? 'Ajoute EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET (≥ 8 car.) et la même valeur en SCAN_TICKET_TEST_SECRET sur le serveur.'
                   : 'Set EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET (≥ 8 chars) and SCAN_TICKET_TEST_SECRET on the server.'}
-            </Text>
+            </NoxText>
           </View>
           <Switch
             value={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8}
@@ -209,7 +220,7 @@ export default function ScanTicketPage() {
               if (SCAN_TEST_SECRET.length < 8) return;
               persistScanTestToggle(v);
             }}
-            trackColor={{ false: 'rgba(255,255,255,0.2)', true: 'rgba(77,163,255,0.45)' }}
+            trackColor={{ false: 'rgba(255,255,255,0.2)', true: primaryAlpha(0.45) }}
             thumbColor={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8 ? Colors.primary : '#888'}
             disabled={SCAN_TEST_SECRET.length < 8}
             accessibilityRole="switch"
@@ -222,16 +233,19 @@ export default function ScanTicketPage() {
         <CameraView
           style={styles.camera}
           facing="back"
+          enableTorch={torchOn}
           onBarcodeScanned={scanning && !processing ? handleBarCodeScanned : undefined}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         />
-        {processing && (
+        {processing ? (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.overlayText}>{fr ? 'Vérification...' : 'Verifying...'}</Text>
+            <NoxText variant="form" style={styles.overlayText}>
+              {fr ? 'Vérification…' : 'Verifying…'}
+            </NoxText>
           </View>
-        )}
-        {lastResult && !processing && (
+        ) : null}
+        {lastResult && !processing ? (
           <View style={styles.resultBackdrop} pointerEvents="none">
             <Animated.View
               style={[
@@ -240,11 +254,17 @@ export default function ScanTicketPage() {
                 { transform: [{ scale: resultScale }] },
               ]}
             >
-              <Ionicons name={lastResult.valid ? 'checkmark-circle' : 'close-circle'} size={56} color="#fff" />
-              <Text style={styles.resultText}>{lastResult.message}</Text>
+              <Ionicons
+                name={lastResult.valid ? 'checkmark-circle' : 'close-circle'}
+                size={56}
+                color="#fff"
+              />
+              <NoxText variant="button" style={styles.resultText}>
+                {lastResult.message}
+              </NoxText>
             </Animated.View>
           </View>
-        )}
+        ) : null}
         <View style={styles.scanFrame} pointerEvents="none">
           <View style={[styles.corner, styles.cornerTL]} />
           <View style={[styles.corner, styles.cornerTR]} />
@@ -254,38 +274,56 @@ export default function ScanTicketPage() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.hint}>{fr ? 'Place le QR code du billet dans le cadre' : 'Place the ticket QR code in the frame'}</Text>
+        <NoxText variant="secondary" style={styles.hint}>
+          {fr ? 'Place le QR code du billet dans le cadre' : 'Place the ticket QR code in the frame'}
+        </NoxText>
       </View>
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   centered: { justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: Colors.background },
-  headerBtn: { width: 40, alignItems: 'center' },
-  title: { flex: 1, color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  cameraWrapper: { flex: 1, position: 'relative', overflow: 'hidden' },
+  permissionText: {
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xxl,
+    marginBottom: Spacing.lg,
+  },
+  permissionBtn: { paddingHorizontal: Spacing.xxl },
+  backLink: { marginTop: Spacing.lg },
+  cameraWrapper: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    marginHorizontal: Spacing.xl,
+    borderRadius: Radius.card,
+  },
   camera: { flex: 1, width: '100%' },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', gap: 12 },
-  overlayText: { color: '#fff', fontSize: 16 },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  overlayText: { color: '#fff' },
   resultBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.72)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.xxl,
   },
   resultBadge: {
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: Spacing.xxl,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.card,
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.25)',
@@ -294,11 +332,8 @@ const styles = StyleSheet.create({
   resultInvalid: { backgroundColor: 'rgba(239,68,68,0.95)' },
   resultText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 12,
+    marginTop: Spacing.md,
     textAlign: 'center',
-    lineHeight: 22,
   },
   scanFrame: {
     position: 'absolute',
@@ -311,33 +346,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 28,
     height: 28,
-    borderColor: 'rgba(77,163,255,0.95)',
+    borderColor: primaryAlpha(0.95),
   },
   cornerTL: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 4 },
   cornerTR: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 4 },
   cornerBL: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 4 },
   cornerBR: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 4 },
-  footer: { padding: 20, backgroundColor: Colors.background },
-  hint: { color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' },
+  footer: { padding: Spacing.xl },
+  hint: { textAlign: 'center' },
   testModeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginHorizontal: 12,
-    marginBottom: 8,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
     backgroundColor: 'rgba(255,193,7,0.12)',
-    borderRadius: 12,
+    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: 'rgba(255,193,7,0.35)',
   },
   testModeTextCol: { flex: 1 },
   testModeTitle: { color: '#ffc107', fontSize: 13, fontWeight: '700' },
-  testModeHint: { color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 4, lineHeight: 15 },
-  permissionText: { color: '#fff', fontSize: 16, textAlign: 'center', marginBottom: 20, paddingHorizontal: 20 },
-  permissionBtn: { backgroundColor: Colors.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
-  permissionBtnText: { color: Colors.background, fontSize: 16, fontWeight: '700' },
-  backBtn: { marginTop: 20 },
-  backBtnText: { color: Colors.primary, fontSize: 16 },
+  testModeHint: { fontSize: 11, marginTop: Spacing.xs, lineHeight: 15 },
 });

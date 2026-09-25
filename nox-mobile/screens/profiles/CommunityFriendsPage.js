@@ -6,29 +6,46 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { Ionicons } from '@expo/vector-icons';
 import { openEventPreview } from '../../utils/noxNavigation';
+import {
+  NoxText,
+  NoxButton,
+  NoxCard,
+  NoxScreenHeader,
+  NoxSearchBar,
+  NoxTabs,
+} from '../../components/nox';
+
+function Avatar({ uri, initial }) {
+  if (uri) {
+    return <Image source={{ uri: normalizeMediaUrl(uri) }} style={styles.avatarSmall} />;
+  }
+  return (
+    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
+      <NoxText style={styles.avatarInitial}>{initial || '?'}</NoxText>
+    </View>
+  );
+}
 
 export default function CommunityFriendsPage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { goBack, navigate } = useNavigation();
   const { user } = useAuth();
@@ -200,174 +217,198 @@ export default function CommunityFriendsPage() {
     }
   };
 
+  const tabs = [
+    {
+      id: 'friends',
+      label: friends.length > 0 ? `${fr ? 'Amis' : 'Friends'} (${friends.length})` : (fr ? 'Amis' : 'Friends'),
+    },
+    {
+      id: 'requests',
+      label: requests.length > 0 ? `${fr ? 'Demandes' : 'Requests'} (${requests.length})` : (fr ? 'Demandes' : 'Requests'),
+    },
+    {
+      id: 'eventInvites',
+      label: eventInvites.length > 0
+        ? `${fr ? 'Événements' : 'Events'} (${eventInvites.length})`
+        : (fr ? 'Événements' : 'Events'),
+    },
+    {
+      id: 'bookerRequests',
+      label: bookerRequests.length > 0 ? `Orga (${bookerRequests.length})` : 'Orga',
+    },
+  ];
+
   if (!user?.token) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar style="light" />
-        <Text style={styles.errorText}>{fr ? 'Connecte-toi pour accéder aux amis.' : 'Log in to access friends.'}</Text>
-      </View>
+        <NoxScreenHeader title={fr ? 'Mes amis' : 'My friends'} onBack={goBack} />
+        <View style={styles.centered}>
+          <NoxText variant="form">
+            {fr ? 'Connecte-toi pour accéder aux amis.' : 'Log in to access friends.'}
+          </NoxText>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
-      <TouchableOpacity style={[styles.backBtn, { top: insets.top + 10 }]} onPress={goBack}>
-        <Text style={styles.backBtnText}>← {fr ? 'Retour' : 'Back'}</Text>
-      </TouchableOpacity>
+      <NoxScreenHeader
+        title={fr ? 'Mes amis' : 'My friends'}
+        subtitle={fr ? 'Recherche et gère tes amis Communauté' : 'Search and manage your Community friends'}
+        onBack={goBack}
+      />
 
-      <View style={[styles.header, { paddingTop: insets.top + 50 }]}>
-        <Text style={styles.title}>{fr ? 'Mes amis' : 'My friends'}</Text>
-        <Text style={styles.subtitle}>{fr ? 'Recherche et gère tes amis Communauté' : 'Search and manage your Community friends'}</Text>
-      </View>
-
-      {/* Ajouter un ami - Recherche par pseudo */}
-      <View style={styles.addFriendSection}>
-        <Text style={styles.addFriendTitle}>{fr ? 'Ajouter un ami' : 'Add a friend'}</Text>
-        <Text style={styles.addFriendHint}>{fr ? 'Recherche par pseudo (unique)' : 'Search by pseudo (unique)'}</Text>
+      <View style={styles.searchSection}>
+        <NoxText variant="form" style={styles.addTitle}>
+          {fr ? 'Ajouter un ami' : 'Add a friend'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.addHint}>
+          {fr ? 'Recherche par pseudo (unique)' : 'Search by pseudo (unique)'}
+        </NoxText>
         <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
+          <NoxSearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={fr ? 'Pseudo de ton ami...' : 'Your friend\'s pseudo...'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
+            placeholder={fr ? 'Pseudo de ton ami…' : "Your friend's pseudo…"}
+            style={styles.searchBar}
           />
-          <TouchableOpacity style={[styles.searchBtn, (searching || searchQuery.trim().length < 2) && styles.searchBtnDisabled]} onPress={handleSearch} disabled={searching || searchQuery.trim().length < 2}>
-            {searching ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="person-add" size={22} color="#fff" />}
+          <TouchableOpacity
+            style={[styles.searchBtn, (searching || searchQuery.trim().length < 2) && styles.searchBtnDisabled]}
+            onPress={handleSearch}
+            disabled={searching || searchQuery.trim().length < 2}
+            accessibilityRole="button"
+            accessibilityLabel={fr ? 'Rechercher' : 'Search'}
+          >
+            {searching ? (
+              <ActivityIndicator size="small" color={Colors.text} />
+            ) : (
+              <Ionicons name="person-add" size={20} color={Colors.text} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      {searching && <Text style={styles.searchingText}>{fr ? 'Recherche en cours...' : 'Searching...'}</Text>}
+      {searching ? (
+        <NoxText variant="secondary" style={styles.searchingText}>
+          {fr ? 'Recherche en cours…' : 'Searching…'}
+        </NoxText>
+      ) : null}
 
-      {hasSearched && !searching && searchResults.length === 0 && (
+      {hasSearched && !searching && searchResults.length === 0 ? (
         <View style={styles.emptySearchBox}>
-          <Ionicons name="search" size={32} color="rgba(255,255,255,0.4)" />
-          <Text style={styles.emptySearchText}>{fr ? 'Aucun profil trouvé avec ce pseudo.' : 'No profile found with this pseudo.'}</Text>
-          <Text style={styles.emptySearchHint}>
+          <Ionicons name="search" size={28} color={Colors.textTertiary} />
+          <NoxText variant="form" style={styles.emptySearchText}>
+            {fr ? 'Aucun profil trouvé avec ce pseudo.' : 'No profile found with this pseudo.'}
+          </NoxText>
+          <NoxText variant="secondary" style={styles.emptySearchHint}>
             {fr
               ? 'La personne doit avoir un pseudo Communauté défini (Mes Profils → Éditer profil Communauté).'
               : 'The person must have a Community pseudo set (My Profiles → Edit Community profile).'}
-          </Text>
+          </NoxText>
         </View>
-      )}
+      ) : null}
 
-      {searchResults.length > 0 && (
+      {searchResults.length > 0 ? (
         <View style={styles.searchResults}>
-          <Text style={styles.sectionTitle}>{fr ? 'Résultats — Clique sur + pour envoyer une demande' : 'Results — Tap + to send a request'}</Text>
+          <NoxText variant="secondary" style={styles.sectionTitle}>
+            {fr ? 'Résultats — Clique sur + pour envoyer une demande' : 'Results — Tap + to send a request'}
+          </NoxText>
           {searchResults.map((r) => (
             <View key={r.id} style={styles.resultRow}>
               <TouchableOpacity
-                style={styles.resultRowTouch}
+                style={styles.rowTouch}
                 onPress={() => navigate('communityProfile', { communityId: r.id })}
                 activeOpacity={0.7}
               >
-                {r.profileImage ? (
-                  <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
-                ) : (
-                  <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                    <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                  </View>
-                )}
-                <Text style={styles.resultPseudo}>{r.pseudo}</Text>
+                <Avatar uri={r.profileImage} initial={r.pseudo?.charAt(0)?.toUpperCase()} />
+                <NoxText variant="form" style={styles.rowLabel}>{r.pseudo}</NoxText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.addBtn, sendingRequest === r.id && styles.addBtnDisabled]}
+                style={[styles.iconBtn, styles.iconBtnPrimary, sendingRequest === r.id && styles.btnDisabled]}
                 onPress={() => handleSendRequest(r.id)}
                 disabled={sendingRequest === r.id}
               >
-                {sendingRequest === r.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.addBtnText}>+</Text>}
+                {sendingRequest === r.id ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Ionicons name="add" size={22} color={Colors.text} />
+                )}
               </TouchableOpacity>
             </View>
           ))}
         </View>
-      )}
+      ) : null}
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'friends' && styles.tabActive]} onPress={() => setActiveTab('friends')}>
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>{fr ? 'Amis' : 'Friends'}</Text>
-          {friends.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{friends.length}</Text></View>}
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'requests' && styles.tabActive]} onPress={() => setActiveTab('requests')}>
-          <Text style={[styles.tabText, activeTab === 'requests' && styles.tabTextActive]}>{fr ? 'Demandes' : 'Requests'}</Text>
-          {requests.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{requests.length}</Text></View>}
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'eventInvites' && styles.tabActive]} onPress={() => setActiveTab('eventInvites')}>
-          <Text style={[styles.tabText, activeTab === 'eventInvites' && styles.tabTextActive]}>{fr ? 'Événements' : 'Events'}</Text>
-          {eventInvites.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{eventInvites.length}</Text></View>}
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'bookerRequests' && styles.tabActive]} onPress={() => setActiveTab('bookerRequests')}>
-          <Text style={[styles.tabText, activeTab === 'bookerRequests' && styles.tabTextActive]}>{fr ? 'Orga' : 'Orga'}</Text>
-          {bookerRequests.length > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{bookerRequests.length}</Text></View>}
-        </TouchableOpacity>
-      </View>
+      <NoxTabs
+        tabs={tabs}
+        activeId={activeTab}
+        onChange={setActiveTab}
+        variant="subtle"
+        style={styles.tabs}
+      />
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        showsVerticalScrollIndicator={false}
       >
-        {loading ? (
+        {loading || loadingInvites ? (
           <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : activeTab === 'friends' ? (
           friends.length === 0 ? (
-            <Text style={styles.emptyText}>{fr ? 'Aucun ami pour le moment.' : 'No friends yet.'}</Text>
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr ? 'Aucun ami pour le moment.' : 'No friends yet.'}
+            </NoxText>
           ) : (
             friends.map((f) => (
-              <View key={f.id} style={styles.friendRow}>
+              <View key={f.id} style={styles.listRow}>
                 <TouchableOpacity
-                  style={styles.friendRowTouch}
+                  style={styles.rowTouch}
                   onPress={() => navigate('communityProfile', { communityId: f.communityId })}
                   activeOpacity={0.7}
                 >
-                  {f.profileImage ? (
-                    <Image source={{ uri: normalizeMediaUrl(f.profileImage) }} style={styles.avatarSmall} />
-                  ) : (
-                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                      <Text style={styles.avatarInitial}>{f.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.friendPseudo}>{f.pseudo}</Text>
+                  <Avatar uri={f.profileImage} initial={f.pseudo?.charAt(0)?.toUpperCase()} />
+                  <NoxText variant="form" style={styles.rowLabel}>{f.pseudo}</NoxText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.removeBtn, removingFriend === f.id && styles.removeBtnDisabled]}
+                  style={[styles.iconBtn, removingFriend === f.id && styles.btnDisabled]}
                   onPress={() => handleRemoveFriend(f.id)}
                   disabled={removingFriend === f.id}
                 >
-                  {removingFriend === f.id ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="person-remove" size={20} color={Colors.primary} />}
+                  {removingFriend === f.id ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Ionicons name="person-remove" size={20} color={Colors.primary} />
+                  )}
                 </TouchableOpacity>
               </View>
             ))
           )
         ) : activeTab === 'bookerRequests' ? (
           bookerRequests.length === 0 ? (
-            <Text style={styles.emptyText}>{fr ? 'Aucune demande d\'organisateur.' : 'No organizer requests.'}</Text>
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr ? "Aucune demande d'organisateur." : 'No organizer requests.'}
+            </NoxText>
           ) : (
             bookerRequests.map((r) => (
-              <View key={r.id} style={styles.requestRow}>
+              <View key={r.id} style={styles.listRow}>
                 <TouchableOpacity
-                  style={styles.requestRowTouch}
+                  style={styles.rowTouch}
                   onPress={() => r.bookerId && navigate('bookerProfile', { bookerId: r.bookerId })}
                   activeOpacity={0.7}
                 >
-                  {r.profileImage ? (
-                    <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
-                  ) : (
-                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                      <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.requestPseudo}>{r.pseudo} {fr ? '(organisateur)' : '(organizer)'}</Text>
+                  <Avatar uri={r.profileImage} initial={r.pseudo?.charAt(0)?.toUpperCase()} />
+                  <NoxText variant="form" style={styles.rowLabel}>
+                    {r.pseudo} {fr ? '(organisateur)' : '(organizer)'}
+                  </NoxText>
                 </TouchableOpacity>
                 <View style={styles.requestActions}>
                   <TouchableOpacity
-                    style={[styles.acceptBtn, respondingBookerRequest === r.id && styles.btnDisabled]}
+                    style={[styles.iconBtn, styles.iconBtnSuccess, respondingBookerRequest === r.id && styles.btnDisabled]}
                     onPress={async () => {
                       setRespondingBookerRequest(r.id);
                       try {
@@ -379,10 +420,14 @@ export default function CommunityFriendsPage() {
                     }}
                     disabled={respondingBookerRequest === r.id}
                   >
-                    {respondingBookerRequest === r.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>✓</Text>}
+                    {respondingBookerRequest === r.id ? (
+                      <ActivityIndicator size="small" color={Colors.text} />
+                    ) : (
+                      <Ionicons name="checkmark" size={20} color={Colors.text} />
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.declineBtn, respondingBookerRequest === r.id && styles.btnDisabled]}
+                    style={[styles.iconBtn, respondingBookerRequest === r.id && styles.btnDisabled]}
                     onPress={async () => {
                       setRespondingBookerRequest(r.id);
                       try {
@@ -394,7 +439,7 @@ export default function CommunityFriendsPage() {
                     }}
                     disabled={respondingBookerRequest === r.id}
                   >
-                    <Text style={styles.declineBtnText}>✕</Text>
+                    <Ionicons name="close" size={20} color={Colors.text} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -402,83 +447,89 @@ export default function CommunityFriendsPage() {
           )
         ) : activeTab === 'eventInvites' ? (
           eventInvites.length === 0 ? (
-            <Text style={styles.emptyText}>{fr ? 'Aucune invitation à un événement.' : 'No event invitations.'}</Text>
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr ? 'Aucune invitation à un événement.' : 'No event invitations.'}
+            </NoxText>
           ) : (
             eventInvites.map((inv) => (
-              <View key={inv.id} style={styles.eventInviteCard}>
+              <NoxCard key={inv.id} style={styles.inviteCard}>
                 <TouchableOpacity
                   onPress={() => inv.creator?.id && navigate('communityProfile', { communityId: inv.creator.id })}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.eventInviteTitle}>
-                    {(inv.creator?.pseudo || 'Quelqu\'un')} {fr ? 't\'invite à' : 'invites you to'}
-                  </Text>
+                  <NoxText variant="secondary" style={styles.inviteTitle}>
+                    {(inv.creator?.pseudo || "Quelqu'un")} {fr ? "t'invite à" : 'invites you to'}
+                  </NoxText>
                 </TouchableOpacity>
-                <Text style={styles.eventInviteEvent}>{inv.event?.title || 'Événement'}</Text>
-                {inv.event?.date && (
-                  <Text style={styles.eventInviteDate}>
+                <NoxText variant="form" style={styles.inviteEvent}>
+                  {inv.event?.title || 'Événement'}
+                </NoxText>
+                {inv.event?.date ? (
+                  <NoxText variant="secondary" style={styles.inviteDate}>
                     {new Date(inv.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })} • {inv.event?.time || ''}
-                  </Text>
-                )}
-                <View style={styles.eventInviteActions}>
-                  <TouchableOpacity
-                    style={[styles.eventInviteJoinBtn, respondingInvite === inv.id && styles.btnDisabled]}
+                  </NoxText>
+                ) : null}
+                <View style={styles.inviteActions}>
+                  <NoxButton
+                    label={fr ? 'Rejoindre' : 'Join'}
                     onPress={() => handleRespondEventInvite(inv.id, inv.groupId, 'join')}
+                    loading={respondingInvite === inv.id}
                     disabled={respondingInvite === inv.id}
-                  >
-                    {respondingInvite === inv.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.eventInviteJoinBtnText}>{fr ? 'Rejoindre' : 'Join'}</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.eventInviteDeclineBtn, respondingInvite === inv.id && styles.btnDisabled]}
+                    style={styles.inviteBtn}
+                  />
+                  <NoxButton
+                    label={fr ? 'Refuser' : 'Decline'}
+                    variant="secondary"
                     onPress={() => handleRespondEventInvite(inv.id, inv.groupId, 'decline')}
                     disabled={respondingInvite === inv.id}
-                  >
-                    <Text style={styles.eventInviteDeclineBtnText}>{fr ? 'Refuser' : 'Decline'}</Text>
-                  </TouchableOpacity>
+                    style={styles.inviteBtn}
+                  />
                 </View>
                 <TouchableOpacity
-                  style={styles.eventInviteLink}
+                  style={styles.eventLink}
                   onPress={() => openEventPreview(navigate, user?.activeProfileType, inv.event?.id)}
                 >
-                  <Text style={styles.eventInviteLinkText}>{fr ? 'Voir l\'événement →' : 'View event →'}</Text>
+                  <NoxText style={styles.eventLinkText}>
+                    {fr ? "Voir l'événement →" : 'View event →'}
+                  </NoxText>
                 </TouchableOpacity>
-              </View>
+              </NoxCard>
             ))
           )
         ) : (
           requests.length === 0 ? (
-            <Text style={styles.emptyText}>{fr ? 'Aucune demande en attente.' : 'No pending requests.'}</Text>
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr ? 'Aucune demande en attente.' : 'No pending requests.'}
+            </NoxText>
           ) : (
             requests.map((r) => (
-              <View key={r.id} style={styles.requestRow}>
+              <View key={r.id} style={styles.listRow}>
                 <TouchableOpacity
-                  style={styles.requestRowTouch}
+                  style={styles.rowTouch}
                   onPress={() => r.communityId && navigate('communityProfile', { communityId: r.communityId })}
                   activeOpacity={0.7}
                 >
-                  {r.profileImage ? (
-                    <Image source={{ uri: normalizeMediaUrl(r.profileImage) }} style={styles.avatarSmall} />
-                  ) : (
-                    <View style={[styles.avatarSmall, styles.avatarPlaceholder]}>
-                      <Text style={styles.avatarInitial}>{r.pseudo?.charAt(0)?.toUpperCase() || '?'}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.requestPseudo}>{r.pseudo}</Text>
+                  <Avatar uri={r.profileImage} initial={r.pseudo?.charAt(0)?.toUpperCase()} />
+                  <NoxText variant="form" style={styles.rowLabel}>{r.pseudo}</NoxText>
                 </TouchableOpacity>
                 <View style={styles.requestActions}>
                   <TouchableOpacity
-                    style={[styles.acceptBtn, respondingRequest === r.id && styles.btnDisabled]}
+                    style={[styles.iconBtn, styles.iconBtnSuccess, respondingRequest === r.id && styles.btnDisabled]}
                     onPress={() => handleRespondRequest(r.id, 'accept')}
                     disabled={respondingRequest === r.id}
                   >
-                    {respondingRequest === r.id ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.acceptBtnText}>✓</Text>}
+                    {respondingRequest === r.id ? (
+                      <ActivityIndicator size="small" color={Colors.text} />
+                    ) : (
+                      <Ionicons name="checkmark" size={20} color={Colors.text} />
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.declineBtn, respondingRequest === r.id && styles.btnDisabled]}
+                    style={[styles.iconBtn, respondingRequest === r.id && styles.btnDisabled]}
                     onPress={() => handleRespondRequest(r.id, 'decline')}
                     disabled={respondingRequest === r.id}
                   >
-                    <Text style={styles.declineBtnText}>✕</Text>
+                    <Ionicons name="close" size={20} color={Colors.text} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -488,74 +539,118 @@ export default function CommunityFriendsPage() {
       </ScrollView>
 
       <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  backBtn: { position: 'absolute', left: 16, zIndex: 10, padding: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8 },
-  backBtnText: { color: '#fff', fontSize: 16 },
-  header: { alignItems: 'center', paddingBottom: 16 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 4 },
-  addFriendSection: { paddingHorizontal: 20, marginBottom: 16, paddingVertical: 12, backgroundColor: 'rgba(77,163,255,0.08)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(77,163,255,0.25)' },
-  addFriendTitle: { color: Colors.primary, fontSize: 16, fontWeight: '800', marginBottom: 4 },
-  addFriendHint: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 10 },
-  searchRow: { flexDirection: 'row', gap: 8 },
-  searchInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, color: '#fff', fontSize: 16 },
-  searchBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+  },
+  searchSection: {
+    marginHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    backgroundColor: primaryAlpha(0.08),
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: primaryAlpha(0.25),
+  },
+  addTitle: { color: Colors.primary, marginBottom: Spacing.xs },
+  addHint: { fontSize: 12, marginBottom: Spacing.md },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  searchBar: { flex: 1 },
+  searchBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   searchBtnDisabled: { opacity: 0.5 },
-  searchingText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, paddingHorizontal: 20, marginBottom: 8 },
-  emptySearchBox: { padding: 24, marginHorizontal: 20, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, alignItems: 'center', gap: 8 },
-  emptySearchText: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
-  emptySearchHint: { color: 'rgba(255,255,255,0.5)', fontSize: 13 },
-  searchResults: { paddingHorizontal: 20, marginBottom: 16 },
-  sectionTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 8 },
-  resultRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
-  resultRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  resultPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  tabs: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 12, gap: 8 },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)', gap: 6 },
-  tabActive: { backgroundColor: 'rgba(77,163,255,0.3)', borderWidth: 1, borderColor: Colors.primary },
-  tabText: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
-  tabTextActive: { color: Colors.primary, fontWeight: '700' },
-  badge: { backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  searchingText: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.sm,
+    fontSize: 13,
+  },
+  emptySearchBox: {
+    marginHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.md,
+    padding: Spacing.xxl,
+    backgroundColor: Colors.backgroundInput,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  emptySearchText: { textAlign: 'center' },
+  emptySearchHint: { textAlign: 'center', fontSize: 13 },
+  searchResults: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: { fontSize: 13, marginBottom: Spacing.sm },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  tabs: { marginBottom: Spacing.sm },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  loader: { marginTop: 40 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 40, fontSize: 16 },
-  friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
-  friendRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  friendPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  requestRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 8, gap: 12 },
-  requestRowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  requestPseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  requestActions: { flexDirection: 'row', gap: 8 },
+  scrollContent: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingBottom: Spacing.xxxl,
+  },
+  loader: { marginTop: Spacing.xxxl },
+  emptyText: { textAlign: 'center', marginTop: Spacing.xxxl, fontSize: 15 },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  rowTouch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  rowLabel: { flex: 1 },
+  requestActions: { flexDirection: 'row', gap: Spacing.sm },
   avatarSmall: { width: 44, height: 44, borderRadius: 22 },
-  avatarPlaceholder: { backgroundColor: 'rgba(77,163,255,0.3)', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  addBtnDisabled: { opacity: 0.6 },
-  addBtnText: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  removeBtn: { padding: 8 },
-  removeBtnDisabled: { opacity: 0.6 },
-  acceptBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
-  declineBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  acceptBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  declineBtnText: { color: '#fff', fontSize: 16 },
+  avatarPlaceholder: {
+    backgroundColor: primaryAlpha(0.3),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: { color: Colors.text, fontSize: 18, fontWeight: '700' },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.backgroundInput,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnPrimary: { backgroundColor: Colors.primary },
+  iconBtnSuccess: { backgroundColor: Colors.success },
   btnDisabled: { opacity: 0.6 },
-  errorText: { color: '#fff', textAlign: 'center', marginTop: 60, fontSize: 16 },
-  eventInviteCard: { padding: 16, backgroundColor: '#141419', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(77,163,255,0.2)' },
-  eventInviteTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginBottom: 4 },
-  eventInviteEvent: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  eventInviteDate: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 12 },
-  eventInviteActions: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  eventInviteJoinBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
-  eventInviteJoinBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  eventInviteDeclineBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  eventInviteDeclineBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  eventInviteLink: { alignSelf: 'flex-start', paddingVertical: 4 },
-  eventInviteLinkText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
+  inviteCard: { marginBottom: Spacing.md, gap: Spacing.xs },
+  inviteTitle: { fontSize: 13, marginBottom: Spacing.xs },
+  inviteEvent: { fontSize: 16, fontWeight: '700' },
+  inviteDate: { fontSize: 13, marginBottom: Spacing.sm },
+  inviteActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  inviteBtn: { flex: 1, minHeight: 44 },
+  eventLink: { alignSelf: 'flex-start', paddingVertical: Spacing.xs, marginTop: Spacing.xs },
+  eventLinkText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },
 });

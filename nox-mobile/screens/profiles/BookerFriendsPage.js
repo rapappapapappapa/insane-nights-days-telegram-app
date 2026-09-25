@@ -5,30 +5,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Image,
   RefreshControl,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { Ionicons } from '@expo/vector-icons';
+import { NoxText, NoxScreenHeader, NoxSearchBar } from '../../components/nox';
 
 export default function BookerFriendsPage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
-  const { goBack, navigate } = useNavigation();
+  const { goBack } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
 
@@ -109,32 +108,39 @@ export default function BookerFriendsPage() {
   const isAlreadyFriend = (communityId) => friends.some((f) => f.communityId === communityId);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{fr ? 'Mes amis' : 'My friends'}</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <NoxScreenHeader
+        title={fr ? 'Mes amis' : 'My friends'}
+        subtitle={fr ? 'Staff pour tes événements' : 'Staff for your events'}
+        onBack={goBack}
+      />
 
-      <Text style={styles.subtitle}>
-        {fr ? 'Ajoute des profils Communauté comme amis pour les assigner comme staff sur tes événements.' : 'Add Community profiles as friends to assign them as staff on your events.'}
-      </Text>
+      <NoxText variant="secondary" style={styles.subtitle}>
+        {fr
+          ? 'Ajoute des profils Communauté comme amis pour les assigner comme staff sur tes événements.'
+          : 'Add Community profiles as friends to assign them as staff on your events.'}
+      </NoxText>
 
       <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder={fr ? 'Rechercher par pseudo...' : 'Search by pseudo...'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
+        <NoxSearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
+          placeholder={fr ? 'Rechercher par pseudo…' : 'Search by pseudo…'}
+          style={styles.searchBar}
         />
-        <TouchableOpacity style={styles.searchBtn} onPress={handleSearch} disabled={searching}>
-          {searching ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="search" size={22} color={Colors.primary} />}
+        <TouchableOpacity
+          style={[styles.searchBtn, searching && styles.searchBtnDisabled]}
+          onPress={handleSearch}
+          disabled={searching}
+          accessibilityRole="button"
+          accessibilityLabel={fr ? 'Rechercher' : 'Search'}
+        >
+          {searching ? (
+            <ActivityIndicator size="small" color={Colors.text} />
+          ) : (
+            <Ionicons name="search" size={20} color={Colors.text} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -142,25 +148,34 @@ export default function BookerFriendsPage() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {loading ? (
           <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : (
           <>
-            {hasSearched && (
+            {hasSearched ? (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{fr ? 'Résultats' : 'Results'}</Text>
+                <NoxText variant="form" style={styles.sectionTitle}>
+                  {fr ? 'Résultats' : 'Results'}
+                </NoxText>
                 {searchResults.length === 0 ? (
-                  <Text style={styles.emptyText}>{fr ? 'Aucun résultat' : 'No results'}</Text>
+                  <NoxText variant="secondary" style={styles.emptyText}>
+                    {fr ? 'Aucun résultat' : 'No results'}
+                  </NoxText>
                 ) : (
                   searchResults.map((r) => {
                     const isFriend = isAlreadyFriend(r.id);
                     return (
                       <View key={r.id} style={styles.friendRow}>
-                        <Image source={{ uri: normalizeMediaUrl(r.profileImage) || 'https://via.placeholder.com/48' }} style={styles.avatar} />
-                        <Text style={styles.pseudo}>{r.pseudo}</Text>
+                        <Image
+                          source={{ uri: normalizeMediaUrl(r.profileImage) || 'https://via.placeholder.com/48' }}
+                          style={styles.avatar}
+                        />
+                        <NoxText variant="form" style={styles.pseudo}>{r.pseudo}</NoxText>
                         {isFriend ? (
-                          <Text style={styles.badge}>{fr ? 'Ami' : 'Friend'}</Text>
+                          <NoxText style={styles.badge}>{fr ? 'Ami' : 'Friend'}</NoxText>
                         ) : (
                           <TouchableOpacity
                             style={[styles.addBtn, sendingRequest === r.id && styles.addBtnDisabled]}
@@ -168,9 +183,9 @@ export default function BookerFriendsPage() {
                             disabled={sendingRequest === r.id}
                           >
                             {sendingRequest === r.id ? (
-                              <ActivityIndicator size="small" color={Colors.background} />
+                              <ActivityIndicator size="small" color={Colors.text} />
                             ) : (
-                              <Text style={styles.addBtnText}>+</Text>
+                              <Ionicons name="add" size={22} color={Colors.text} />
                             )}
                           </TouchableOpacity>
                         )}
@@ -179,16 +194,26 @@ export default function BookerFriendsPage() {
                   })
                 )}
               </View>
-            )}
+            ) : null}
+
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{fr ? 'Mes amis' : 'My friends'} ({friends.length})</Text>
+              <NoxText variant="form" style={styles.sectionTitle}>
+                {fr ? 'Mes amis' : 'My friends'} ({friends.length})
+              </NoxText>
               {friends.length === 0 ? (
-                <Text style={styles.emptyText}>{fr ? 'Aucun ami pour l\'instant. Recherche des profils Communauté.' : 'No friends yet. Search for Community profiles.'}</Text>
+                <NoxText variant="secondary" style={styles.emptyText}>
+                  {fr
+                    ? "Aucun ami pour l'instant. Recherche des profils Communauté."
+                    : 'No friends yet. Search for Community profiles.'}
+                </NoxText>
               ) : (
                 friends.map((f) => (
                   <View key={f.id} style={styles.friendRow}>
-                    <Image source={{ uri: normalizeMediaUrl(f.profileImage) || 'https://via.placeholder.com/48' }} style={styles.avatar} />
-                    <Text style={styles.pseudo}>{f.pseudo}</Text>
+                    <Image
+                      source={{ uri: normalizeMediaUrl(f.profileImage) || 'https://via.placeholder.com/48' }}
+                      style={styles.avatar}
+                    />
+                    <NoxText variant="form" style={styles.pseudo}>{f.pseudo}</NoxText>
                   </View>
                 ))
               )}
@@ -196,40 +221,75 @@ export default function BookerFriendsPage() {
           </>
         )}
       </ScrollView>
+
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { padding: 8 },
-  title: { flex: 1, color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  headerRight: { width: 40 },
-  subtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, paddingHorizontal: 20, marginBottom: 16 },
-  searchRow: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 20 },
-  searchInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: '#fff',
-    fontSize: 16,
+  subtitle: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
   },
-  searchBtn: { marginLeft: 12, justifyContent: 'center', paddingHorizontal: 16 },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  searchBar: { flex: 1 },
+  searchBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBtnDisabled: { opacity: 0.6 },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
-  loader: { marginTop: 40 },
-  section: { paddingHorizontal: 20, marginBottom: 24 },
-  sectionTitle: { color: Colors.primary, fontSize: 16, fontWeight: '700', marginBottom: 12 },
-  friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 14 },
-  pseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  addBtn: { backgroundColor: Colors.primary, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  scrollContent: { paddingBottom: Spacing.xxxl },
+  loader: { marginTop: Spacing.xxxl },
+  section: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    marginBottom: Spacing.xxl,
+  },
+  sectionTitle: {
+    color: Colors.primary,
+    marginBottom: Spacing.md,
+  },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: Spacing.md,
+    backgroundColor: Colors.backgroundElevated,
+  },
+  pseudo: { flex: 1 },
+  addBtn: {
+    backgroundColor: Colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addBtnDisabled: { opacity: 0.6 },
-  addBtnText: { color: Colors.background, fontSize: 20, fontWeight: '800' },
-  badge: { color: '#10b981', fontSize: 13, fontWeight: '600' },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
+  badge: {
+    color: Colors.success,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  emptyText: { fontSize: 14 },
 });

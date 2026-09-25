@@ -5,7 +5,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
@@ -14,19 +13,20 @@ import {
   RefreshControl,
   Modal,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Spacing, Radius, Layout } from '../../constants/theme';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { Ionicons } from '@expo/vector-icons';
+import { NoxText, NoxButton, NoxCard, NoxScreenHeader } from '../../components/nox';
 
 export default function EventStaffPage() {
-  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { goBack, navigate, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -112,62 +112,99 @@ export default function EventStaffPage() {
   const availableFriends = friends.filter((f) => !staff.some((s) => s.communityId === f.communityId));
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-          <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{fr ? 'Staff' : 'Staff'}</Text>
-        <View style={styles.headerRight} />
-      </View>
-      {eventTitle ? <Text style={styles.eventTitle}>{eventTitle}</Text> : null}
+
+      <NoxScreenHeader
+        title={fr ? 'Staff' : 'Staff'}
+        subtitle={eventTitle || (fr ? 'Équipe & scan billets' : 'Team & ticket scanning')}
+        onBack={goBack}
+      />
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.scanBtn} onPress={() => navigate('scanTicket', { eventId, eventTitle })}>
-          <Ionicons name="qr-code" size={22} color={Colors.background} />
-          <Text style={styles.scanBtnText}>{fr ? 'Scanner billets' : 'Scan tickets'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
-          <Ionicons name="person-add" size={20} color={Colors.primary} />
-          <Text style={styles.addBtnText}>{fr ? 'Ajouter staff' : 'Add staff'}</Text>
-        </TouchableOpacity>
+        <NoxButton
+          label={fr ? 'Scanner billets' : 'Scan tickets'}
+          onPress={() => navigate('scanTicket', { eventId, eventTitle })}
+          iconLeft={<Ionicons name="qr-code-outline" size={18} color={Colors.text} style={{ marginRight: 8 }} />}
+          fullWidth={false}
+          style={styles.scanBtn}
+        />
+        <NoxButton
+          label={fr ? 'Ajouter staff' : 'Add staff'}
+          variant="secondary"
+          onPress={() => setAddModalVisible(true)}
+          iconLeft={<Ionicons name="person-add-outline" size={18} color={Colors.primary} style={{ marginRight: 8 }} />}
+          fullWidth={false}
+          style={styles.addBtn}
+        />
       </View>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       >
         {loading ? (
-          <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
+          <View style={styles.loaderWrap}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
         ) : staff.length === 0 ? (
-          <Text style={styles.emptyText}>{fr ? 'Aucun staff. Ajoute des amis pour qu\'ils puissent scanner les billets.' : 'No staff. Add friends so they can scan tickets.'}</Text>
+          <NoxCard style={styles.emptyCard}>
+            <Ionicons name="people-outline" size={32} color={Colors.primary} />
+            <NoxText variant="secondary" style={styles.emptyText}>
+              {fr
+                ? "Aucun staff. Ajoute des amis pour qu'ils puissent scanner les billets."
+                : 'No staff. Add friends so they can scan tickets.'}
+            </NoxText>
+          </NoxCard>
         ) : (
           staff.map((s) => (
-            <View key={s.communityId} style={styles.staffRow}>
-              <Image source={{ uri: normalizeMediaUrl(s.profileImage) || 'https://via.placeholder.com/48' }} style={styles.avatar} />
-              <Text style={styles.pseudo}>{s.pseudo}</Text>
-              <Text style={styles.roleBadge}>QR</Text>
+            <NoxCard key={s.communityId} style={styles.staffRow} padded={false}>
+              <Image
+                source={{ uri: normalizeMediaUrl(s.profileImage) || 'https://via.placeholder.com/48' }}
+                style={styles.avatar}
+              />
+              <NoxText variant="form" style={styles.pseudo} numberOfLines={1}>
+                {s.pseudo}
+              </NoxText>
+              <View style={styles.roleBadge}>
+                <NoxText variant="secondary" style={styles.roleBadgeText}>
+                  QR
+                </NoxText>
+              </View>
               <TouchableOpacity
                 style={[styles.removeBtn, removingStaff === s.communityId && styles.btnDisabled]}
                 onPress={() => handleRemoveStaff(s.communityId)}
                 disabled={removingStaff === s.communityId}
+                hitSlop={8}
               >
-                {removingStaff === s.communityId ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="close" size={20} color={Colors.primary} />}
+                {removingStaff === s.communityId ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <Ionicons name="close" size={20} color={Colors.primary} />
+                )}
               </TouchableOpacity>
-            </View>
+            </NoxCard>
           ))
         )}
       </ScrollView>
 
       <Modal visible={addModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{fr ? 'Ajouter un staff' : 'Add staff'}</Text>
-            <Text style={styles.modalHint}>{fr ? 'Seuls tes amis peuvent être staff.' : 'Only your friends can be staff.'}</Text>
+          <NoxCard style={styles.modalContent}>
+            <NoxText variant="titleSecondary" style={styles.modalTitle}>
+              {fr ? 'Ajouter un staff' : 'Add staff'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.modalHint}>
+              {fr ? 'Seuls tes amis peuvent être staff.' : 'Only your friends can be staff.'}
+            </NoxText>
             {availableFriends.length === 0 ? (
-              <Text style={styles.emptyText}>{fr ? 'Aucun ami disponible. Va dans Mes amis pour en ajouter.' : 'No friends available. Go to My friends to add some.'}</Text>
+              <NoxText variant="secondary" style={styles.emptyText}>
+                {fr
+                  ? 'Aucun ami disponible. Va dans Mes amis pour en ajouter.'
+                  : 'No friends available. Go to My friends to add some.'}
+              </NoxText>
             ) : (
               availableFriends.map((f) => (
                 <TouchableOpacity
@@ -175,54 +212,92 @@ export default function EventStaffPage() {
                   style={styles.friendRow}
                   onPress={() => handleAddStaff(f.communityId)}
                   disabled={addingStaff === f.communityId}
+                  activeOpacity={0.85}
                 >
-                  <Image source={{ uri: normalizeMediaUrl(f.profileImage) || 'https://via.placeholder.com/40' }} style={styles.avatarSmall} />
-                  <Text style={styles.friendPseudo}>{f.pseudo}</Text>
-                  {addingStaff === f.communityId ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="add" size={22} color={Colors.primary} />}
+                  <Image
+                    source={{ uri: normalizeMediaUrl(f.profileImage) || 'https://via.placeholder.com/40' }}
+                    style={styles.avatarSmall}
+                  />
+                  <NoxText variant="form" style={styles.friendPseudo} numberOfLines={1}>
+                    {f.pseudo}
+                  </NoxText>
+                  {addingStaff === f.communityId ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Ionicons name="add" size={22} color={Colors.primary} />
+                  )}
                 </TouchableOpacity>
               ))
             )}
-            <TouchableOpacity style={styles.modalClose} onPress={() => setAddModalVisible(false)}>
-              <Text style={styles.modalCloseText}>{fr ? 'Fermer' : 'Close'}</Text>
-            </TouchableOpacity>
-          </View>
+            <NoxButton
+              label={fr ? 'Fermer' : 'Close'}
+              variant="ghost"
+              onPress={() => setAddModalVisible(false)}
+              style={styles.modalClose}
+            />
+          </NoxCard>
         </View>
       </Modal>
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  backBtn: { padding: 8 },
-  title: { flex: 1, color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
-  headerRight: { width: 40 },
-  eventTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, paddingHorizontal: 20, marginBottom: 16 },
-  actions: { flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginBottom: 20 },
-  scanBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12 },
-  scanBtnText: { color: Colors.background, fontSize: 16, fontWeight: '700' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, borderColor: Colors.primary },
-  addBtnText: { color: Colors.primary, fontSize: 16, fontWeight: '700' },
+  actions: {
+    flexDirection: 'row',
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  scanBtn: { flex: 1 },
+  addBtn: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
-  loader: { marginTop: 40 },
-  staffRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 14 },
-  pseudo: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '600' },
-  roleBadge: { backgroundColor: 'rgba(77,163,255,0.2)', color: Colors.primary, fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginRight: 12 },
-  removeBtn: { padding: 8 },
+  scrollContent: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingBottom: Spacing.xxxl,
+  },
+  loaderWrap: { marginTop: Spacing.xxxl, alignItems: 'center' },
+  staffRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  pseudo: { flex: 1, fontWeight: '600' },
+  roleBadge: {
+    backgroundColor: primaryAlpha(0.2),
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
+  },
+  roleBadgeText: { color: Colors.primary, fontSize: 11, fontWeight: '700' },
+  removeBtn: { padding: Spacing.sm },
   btnDisabled: { opacity: 0.5 },
-  emptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, paddingHorizontal: 20 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#141419', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(77,163,255,0.3)' },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 4 },
-  modalHint: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 16 },
-  friendRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  avatarSmall: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-  friendPseudo: { flex: 1, color: '#fff', fontSize: 16 },
-  modalClose: { marginTop: 16, paddingVertical: 12, alignItems: 'center' },
-  modalCloseText: { color: Colors.primary, fontSize: 16, fontWeight: '600' },
+  emptyCard: { alignItems: 'center', gap: Spacing.md, padding: Spacing.xxl },
+  emptyText: { textAlign: 'center' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  modalContent: { padding: Spacing.xl },
+  modalTitle: { marginBottom: Spacing.xs },
+  modalHint: { marginBottom: Spacing.lg },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  avatarSmall: { width: 40, height: 40, borderRadius: 20, marginRight: Spacing.md },
+  friendPseudo: { flex: 1 },
+  modalClose: { marginTop: Spacing.lg },
 });

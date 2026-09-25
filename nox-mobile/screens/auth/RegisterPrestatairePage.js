@@ -1,33 +1,32 @@
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/colors';
-import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import Toast from '../../components/Toast';
-import { useToast } from '../../hooks/useToast';
-import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 import PrestataireGenreAndAvailabilityFields, {
   DEFAULT_AVAILABLE_DAYS,
 } from '../../components/PrestataireGenreAndAvailabilityFields';
+import { NoxInput } from '../../components/nox';
+import { useToast } from '../../hooks/useToast';
+import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
+import RegisterRoleFormShell from './RegisterRoleFormShell';
 
 export default function RegisterPrestatairePage() {
   const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const roleCopy = getRegisterRoleCopy('registerPrestataire', language);
+  const fr = language === 'fr';
+  const title = roleCopy?.profileTitle || (fr ? 'Profil prestataire' : 'Provider profile');
+
+  const accountPseudo = (user?.username || '').trim();
+  const accountEmail = (user?.email || '').trim();
+  const accountBirth = formatBirthDateFr(user?.birthDate);
 
   const [businessName, setBusinessName] = useState('');
   const [phonePro, setPhonePro] = useState('');
@@ -39,6 +38,7 @@ export default function RegisterPrestatairePage() {
   const [availableStatus, setAvailableStatus] = useState(true);
   const [customGenreInput, setCustomGenreInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef(null);
 
   const addCustomGenre = () => {
     const t = customGenreInput.trim();
@@ -56,7 +56,7 @@ export default function RegisterPrestatairePage() {
     if (loading) return;
     if (!businessName.trim() || !phonePro.trim()) {
       showError(
-        language === 'fr'
+        fr
           ? 'Nom d’activité et téléphone pro sont requis.'
           : 'Business name and professional phone are required.'
       );
@@ -64,14 +64,14 @@ export default function RegisterPrestatairePage() {
     }
     if (prestationGenres.length === 0) {
       showError(
-        language === 'fr'
+        fr
           ? 'Ajoutez au moins un genre de prestation (photo, vidéo, VJ…).'
           : 'Add at least one service type (photo, video, VJ…).'
       );
       return;
     }
     if (!user?.token) {
-      showError(language === 'fr' ? 'Token manquant.' : 'Missing token.');
+      showError(fr ? 'Token manquant.' : 'Missing token.');
       return;
     }
 
@@ -90,7 +90,7 @@ export default function RegisterPrestatairePage() {
       });
 
       if (!response?.success) {
-        showError(response?.message || (language === 'fr' ? 'Erreur lors de la création.' : 'Creation failed.'));
+        showError(response?.message || (fr ? 'Erreur lors de la création.' : 'Creation failed.'));
         return;
       }
 
@@ -114,161 +114,94 @@ export default function RegisterPrestatairePage() {
         console.warn('[RegisterPrestataire] getCurrentUser:', e?.message ?? e);
       }
 
-      showSuccess(
-        language === 'fr' ? 'Profil Prestataire créé !' : 'Service provider profile created!'
-      );
+      showSuccess(fr ? 'Profil Prestataire créé !' : 'Service provider profile created!');
       setTimeout(() => navigate(getPostAuthScreen('PRESTATAIRE')), 1200);
     } catch (error) {
       console.error('[RegisterPrestataire]', error);
-      showError(error?.message || (language === 'fr' ? 'Erreur réseau.' : 'Network error.'));
+      showError(error?.message || (fr ? 'Erreur réseau.' : 'Network error.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <RegisterRoleFormShell
+      title={title}
+      stepLabel={fr ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+      subtitle={
+        fr
+          ? 'Indique tes spécialités (plusieurs possibles) et tes disponibilités pour activer ton espace.'
+          : 'List your specialties (multiple allowed) and availability to activate your space.'
+      }
+      accountSummary={{
+        title: fr ? 'Compte NOX (déjà créé)' : 'NOX account (already created)',
+        lines: [
+          accountPseudo ? `${fr ? 'Pseudo' : 'Username'} · ${accountPseudo}` : null,
+          accountEmail ? `Email · ${accountEmail}` : null,
+          accountBirth ? `${fr ? 'Naissance' : 'Birth'} · ${accountBirth}` : null,
+        ].filter(Boolean),
+      }}
+      onBack={goBack}
+      submitLabel={fr ? 'Activer mon profil prestataire' : 'Activate my provider profile'}
+      onSubmit={handleSubmit}
+      loading={loading}
+      scrollRef={scrollViewRef}
+      toast={toast}
+      hideToast={hideToast}
     >
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-      </View>
+      <NoxInput
+        label={fr ? 'Nom d’activité' : 'Business name'}
+        placeholder={fr ? 'Ex. Studio Nord' : 'e.g. North Studio'}
+        value={businessName}
+        onChangeText={setBusinessName}
+        icon={<Ionicons name="briefcase-outline" size={20} color={Colors.textTertiary} />}
+      />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        <Text style={styles.title}>
-          {language === 'fr' ? 'Compte Prestataire' : 'Service provider account'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {language === 'fr'
-            ? 'Indiquez vos spécialités (plusieurs possibles) et vos disponibilités.'
-            : 'List your specialties (multiple allowed) and your availability.'}
-        </Text>
+      <PrestataireGenreAndAvailabilityFields
+        language={language}
+        prestationGenres={prestationGenres}
+        onChangePrestationGenres={setPrestationGenres}
+        availableDays={availableDays}
+        onChangeAvailableDays={setAvailableDays}
+        availableStatus={availableStatus}
+        onChangeAvailableStatus={setAvailableStatus}
+        customGenreInput={customGenreInput}
+        onChangeCustomGenreInput={setCustomGenreInput}
+        onAddCustomGenre={addCustomGenre}
+      />
 
-        <Text style={styles.label}>{language === 'fr' ? 'Nom d’activité' : 'Business name'}</Text>
-        <TextInput
-          style={styles.input}
-          value={businessName}
-          onChangeText={setBusinessName}
-          placeholder={language === 'fr' ? 'Ex. Studio Nord' : 'e.g. North Studio'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-
-        <PrestataireGenreAndAvailabilityFields
-          language={language}
-          prestationGenres={prestationGenres}
-          onChangePrestationGenres={setPrestationGenres}
-          availableDays={availableDays}
-          onChangeAvailableDays={setAvailableDays}
-          availableStatus={availableStatus}
-          onChangeAvailableStatus={setAvailableStatus}
-          customGenreInput={customGenreInput}
-          onChangeCustomGenreInput={setCustomGenreInput}
-          onAddCustomGenre={addCustomGenre}
-        />
-
-        <Text style={styles.label}>{language === 'fr' ? 'Téléphone pro' : 'Business phone'}</Text>
-        <TextInput
-          style={styles.input}
-          value={phonePro}
-          onChangeText={setPhonePro}
-          keyboardType="phone-pad"
-          placeholder="+33…"
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-
-        <Text style={styles.label}>{language === 'fr' ? 'Ville (optionnel)' : 'City (optional)'}</Text>
-        <TextInput
-          style={styles.input}
-          value={city}
-          onChangeText={setCity}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-
-        <Text style={styles.label}>{language === 'fr' ? 'Pays (optionnel)' : 'Country (optional)'}</Text>
-        <TextInput
-          style={styles.input}
-          value={country}
-          onChangeText={setCountry}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-
-        <Text style={styles.label}>{language === 'fr' ? 'Bio (optionnel)' : 'Bio (optional)'}</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {language === 'fr' ? 'Créer mon profil' : 'Create my profile'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-    </KeyboardAvoidingView>
+      <NoxInput
+        label={fr ? 'Téléphone pro' : 'Business phone'}
+        placeholder="+33…"
+        keyboardType="phone-pad"
+        value={phonePro}
+        onChangeText={setPhonePro}
+        icon={<Ionicons name="call-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label={fr ? 'Ville (optionnel)' : 'City (optional)'}
+        value={city}
+        onChangeText={setCity}
+        placeholder={fr ? 'Ta ville' : 'Your city'}
+      />
+      <NoxInput
+        label={fr ? 'Pays (optionnel)' : 'Country (optional)'}
+        value={country}
+        onChangeText={setCountry}
+        placeholder="France"
+      />
+      <NoxInput
+        label={fr ? 'Bio (optionnel)' : 'Bio (optional)'}
+        value={bio}
+        onChangeText={setBio}
+        multiline
+        style={{ minHeight: 90, textAlignVertical: 'top' }}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+    </RegisterRoleFormShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  topBar: { paddingTop: 50, paddingHorizontal: 16 },
-  backButton: { alignSelf: 'flex-start', paddingVertical: 8 },
-  backButtonText: { color: Colors.primary, fontSize: 16 },
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  title: {
-    color: Colors.text,
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 14,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  label: { color: Colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    padding: 14,
-    color: Colors.text,
-    fontSize: 16,
-  },
-  textArea: { minHeight: 90, textAlignVertical: 'top' },
-  button: {
-    marginTop: 28,
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});

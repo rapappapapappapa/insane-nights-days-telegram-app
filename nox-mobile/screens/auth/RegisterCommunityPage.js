@@ -1,93 +1,72 @@
-import React, { useState, useRef } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import Colors from '../../constants/colors';
-import { StatusBar } from 'expo-status-bar';
+import React, { useRef, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Colors from '../../constants/colors';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import Toast from '../../components/Toast';
+import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
+import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
+import RegisterRoleFormShell from './RegisterRoleFormShell';
+import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
 export default function RegisterCommunityPage() {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const { navigate, goBack } = useNavigation();
   const { user, updateUser } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const roleCopy = getRegisterRoleCopy('registerCommunity', language);
+  const fr = language === 'fr';
+  const title = roleCopy?.profileTitle || (fr ? 'Profil Communauté' : 'Community profile');
 
-  // Drawer global géré dans App.js
   const accountPseudo = (user?.username || '').trim();
+  const accountEmail = (user?.email || '').trim();
+  const accountBirth = formatBirthDateFr(user?.birthDate);
+  const pseudoLocked = !!accountPseudo;
+
   const [formData, setFormData] = useState({
     pseudo: accountPseudo,
     nom: '',
     prenom: '',
-    email: user?.email || '',
+    email: accountEmail,
     pays: '',
-    dateNaissance: '',
+    dateNaissance: accountBirth,
   });
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef(null);
-  /** Pseudo déjà saisi à la création de compte → ne pas redemander. */
-  const pseudoLocked = !!accountPseudo;
 
   const handleChange = (field, value) => {
-    // Validation spéciale pour la date de naissance
     if (field === 'dateNaissance') {
-      // N'autoriser que les chiffres
       const cleaned = value.replace(/[^0-9]/g, '');
-      
-      // Formater automatiquement avec des slashes
       let formatted = cleaned;
       if (cleaned.length > 2) {
-        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+        formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
       }
       if (cleaned.length > 4) {
-        formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
+        formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
       }
-      
-      // Limiter à 10 caractères (jj/mm/aaaa)
       const limited = formatted.length > 10 ? formatted.slice(0, 10) : formatted;
       setFormData((prev) => ({ ...prev, [field]: limited }));
-    } else {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      return;
     }
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const validateDate = (dateString) => {
-    // Format attendu: jj/mm/aaaa
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    if (!dateRegex.test(dateString)) {
-      return false;
-    }
-    
+    if (!dateRegex.test(dateString)) return false;
+
     const [, day, month, year] = dateString.match(dateRegex);
     const dayNum = parseInt(day, 10);
     const monthNum = parseInt(month, 10);
     const yearNum = parseInt(year, 10);
-    
-    // Vérifier les limites raisonnables
-    if (yearNum < 1900 || yearNum > new Date().getFullYear()) {
-      return false;
-    }
-    if (monthNum < 1 || monthNum > 12) {
-      return false;
-    }
-    if (dayNum < 1 || dayNum > 31) {
-      return false;
-    }
-    
-    // Vérifier que la date est valide (ex: pas le 31 février)
+
+    if (yearNum < 1900 || yearNum > new Date().getFullYear()) return false;
+    if (monthNum < 1 || monthNum > 12) return false;
+    if (dayNum < 1 || dayNum > 31) return false;
+
     const date = new Date(yearNum, monthNum - 1, dayNum);
     if (
       date.getFullYear() !== yearNum ||
@@ -96,14 +75,10 @@ export default function RegisterCommunityPage() {
     ) {
       return false;
     }
-    
-    // Vérifier que la personne a au moins 13 ans
+
     const today = new Date();
     const age = today.getFullYear() - yearNum;
-    if (age < 13) {
-      return false;
-    }
-    
+    if (age < 13) return false;
     return true;
   };
 
@@ -112,39 +87,31 @@ export default function RegisterCommunityPage() {
 
     const pseudo = (pseudoLocked ? accountPseudo : formData.pseudo).trim();
 
-    // Validation
     if (!pseudo || !formData.nom || !formData.prenom || !formData.email || !formData.pays || !formData.dateNaissance) {
-      showError(language === 'fr' ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
+      showError(fr ? 'Merci de remplir tous les champs.' : 'Please fill in all fields.');
       return;
     }
 
-    // Validation de la date de naissance
     if (!validateDate(formData.dateNaissance)) {
-      showError(language === 'fr' 
-        ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
-        : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.');
+      showError(
+        fr
+          ? 'La date de naissance doit être au format jj/mm/aaaa et vous devez avoir au moins 13 ans.'
+          : 'Date of birth must be in dd/mm/yyyy format and you must be at least 13 years old.'
+      );
+      return;
+    }
+
+    if (!user?.id || !user?.token) {
+      showError(
+        fr
+          ? 'Vous devez être connecté pour créer un profil.'
+          : 'You must be logged in to create a profile.'
+      );
       return;
     }
 
     setLoading(true);
-
     try {
-      if (!user?.id) {
-        showError(language === 'fr' 
-          ? 'Vous devez être connecté pour créer un profil.'
-          : 'You must be logged in to create a profile.');
-        setLoading(false);
-        return;
-      }
-
-      if (!user?.token) {
-        showError(language === 'fr'
-          ? 'Token d\'authentification manquant. Veuillez vous reconnecter.'
-          : 'Authentication token missing. Please log in again.');
-        setLoading(false);
-        return;
-      }
-
       const response = await api.createCommunityProfile({
         token: user.token,
         pseudo,
@@ -156,325 +123,145 @@ export default function RegisterCommunityPage() {
       });
 
       if (!response) {
-        showError(language === 'fr'
-          ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
-          : 'Unable to reach server. Check your connection.');
-        setLoading(false);
+        showError(
+          fr
+            ? 'Impossible de joindre le serveur. Vérifie ta connexion.'
+            : 'Unable to reach server. Check your connection.'
+        );
         return;
       }
 
       if (!response.success) {
-        showError(response.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
-        setLoading(false);
+        showError(
+          response.message || (fr ? 'Erreur lors de la création du profil.' : 'Error creating profile.')
+        );
         return;
       }
 
-      // Basculer automatiquement vers le profil COMMUNITY créé
       try {
         const switchResponse = await api.switchProfile(user.token, 'COMMUNITY');
-        if (switchResponse && switchResponse.success) {
+        if (switchResponse?.success) {
           updateUser({ activeProfileType: 'COMMUNITY' });
         }
       } catch (switchError) {
         console.error('Erreur bascule profil:', switchError);
-        // On continue quand même, le profil est créé
       }
 
-      // Succès !
-      const successMessage = language === 'fr'
-        ? `Votre numéro ISN : ${response.profile?.isnNumber || 'N/A'}\n\nProfil Communauté créé avec succès !`
-        : `Your ISN number: ${response.profile?.isnNumber || 'N/A'}\n\nCommunity profile created successfully!`;
-      showSuccess(successMessage);
+      showSuccess(
+        fr
+          ? `Votre numéro ISN : ${response.profile?.isnNumber || 'N/A'}\n\nProfil Communauté créé avec succès !`
+          : `Your ISN number: ${response.profile?.isnNumber || 'N/A'}\n\nCommunity profile created successfully!`
+      );
       setTimeout(() => navigate('communityOnboarding'), 2000);
     } catch (error) {
       console.error('Erreur création profil Communauté:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
+      showError(
+        error.message || (fr ? 'Erreur lors de la création du profil.' : 'Error creating profile.')
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <RegisterRoleFormShell
+      title={title}
+      stepLabel={fr ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
+      subtitle={
+        fr
+          ? 'Ton compte est prêt. Complète ton profil pour obtenir ton numéro ISN — ce n’est pas un second compte.'
+          : 'Your account is ready. Complete your profile for your ISN number — not a second account.'
+      }
+      accountSummary={{
+        title: fr ? 'Compte NOX (déjà créé)' : 'NOX account (already created)',
+        lines: [
+          accountPseudo ? `${fr ? 'Pseudo' : 'Username'} · ${accountPseudo}` : null,
+          accountEmail ? `Email · ${accountEmail}` : null,
+          accountBirth ? `${fr ? 'Naissance' : 'Birth'} · ${accountBirth}` : null,
+        ].filter(Boolean),
+      }}
+      onBack={goBack}
+      submitLabel={fr ? 'Activer mon profil Communauté' : 'Activate my Community profile'}
+      onSubmit={handleSubmit}
+      loading={loading}
+      scrollRef={scrollViewRef}
+      toast={toast}
+      hideToast={hideToast}
     >
-      <StatusBar style="light" />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-        <View style={{ width: 44 }} />
-      </View>
-
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          <View style={styles.header}>
-            <Text style={styles.stepBadge}>
-              {language === 'fr' ? 'Étape 2 sur 2 — Profil' : 'Step 2 of 2 — Profile'}
-            </Text>
-            <Text style={styles.title}>
-              {language === 'fr' ? 'Profil Communauté' : 'Community profile'}
-            </Text>
-            <Text style={styles.subtitle}>
-              {language === 'fr'
-                ? 'Ton compte est prêt. Complète ton profil pour obtenir ton numéro ISN — ce n’est pas un second compte.'
-                : 'Your account is ready. Complete your profile for your ISN number — not a second account.'}
-            </Text>
-          </View>
-
-          <View style={styles.form}>
-            {pseudoLocked ? (
-              <View style={styles.pseudoLockedBox}>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Pseudo' : 'Username'}
-                </Text>
-                <Text style={styles.pseudoLockedValue}>{accountPseudo}</Text>
-                <Text style={styles.pseudoLockedHint}>
-                  {language === 'fr'
-                    ? 'Repris depuis ton compte — pas besoin de le resaisir.'
-                    : 'Taken from your account — no need to enter it again.'}
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.label}>
-                  {language === 'fr' ? 'Pseudo' : 'Username'}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={language === 'fr' ? 'Ton pseudo' : 'Your username'}
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  autoCapitalize="none"
-                  value={formData.pseudo}
-                  onChangeText={(value) => handleChange('pseudo', value)}
-                />
-              </>
-            )}
-
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Nom' : 'Last name'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'Ton nom' : 'Your last name'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              autoCapitalize="words"
-              value={formData.nom}
-              onChangeText={(value) => handleChange('nom', value)}
-            />
-
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Prénom' : 'First name'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'Ton prénom' : 'Your first name'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              autoCapitalize="words"
-              value={formData.prenom}
-              onChangeText={(value) => handleChange('prenom', value)}
-            />
-
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Email' : 'Email'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'ton.email@example.com' : 'your.email@example.com'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              value={formData.email}
-              onChangeText={(value) => handleChange('email', value)}
-            />
-
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Pays' : 'Country'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'France' : 'France'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              value={formData.pays}
-              onChangeText={(value) => handleChange('pays', value)}
-              onFocus={() => {
-                if (Platform.OS === 'android') {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 300);
-                }
-              }}
-            />
-
-            <Text style={styles.label}>
-              {language === 'fr' ? 'Date de naissance' : 'Date of birth'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder={language === 'fr' ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              keyboardType="numeric"
-              maxLength={10}
-              value={formData.dateNaissance}
-              onChangeText={(value) => handleChange('dateNaissance', value)}
-              onFocus={() => {
-                if (Platform.OS === 'android') {
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 300);
-                }
-              }}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.background} />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {language === 'fr' ? 'Créer mon compte' : 'Create my account'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Toast pour les notifications */}
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          visible={toast.visible}
-          onHide={hideToast}
+      {pseudoLocked ? (
+        <View style={styles.legalBlock}>
+          <NoxText variant="form" style={styles.legalTitle}>
+            {fr ? 'Pseudo' : 'Username'}
+          </NoxText>
+          <NoxText variant="title" style={{ fontSize: 18 }}>
+            {accountPseudo}
+          </NoxText>
+          <NoxText variant="secondary" style={styles.hint}>
+            {fr
+              ? 'Repris depuis ton compte — pas besoin de le resaisir.'
+              : 'Taken from your account — no need to enter it again.'}
+          </NoxText>
+        </View>
+      ) : (
+        <NoxInput
+          label={fr ? 'Pseudo' : 'Username'}
+          placeholder={fr ? 'Ton pseudo' : 'Your username'}
+          autoCapitalize="none"
+          value={formData.pseudo}
+          onChangeText={(value) => handleChange('pseudo', value)}
+          icon={<Ionicons name="person-outline" size={20} color={Colors.textTertiary} />}
         />
-    </KeyboardAvoidingView>
+      )}
+
+      <NoxInput
+        label={fr ? 'Nom' : 'Last name'}
+        placeholder={fr ? 'Ton nom' : 'Your last name'}
+        autoCapitalize="words"
+        value={formData.nom}
+        onChangeText={(value) => handleChange('nom', value)}
+      />
+      <NoxInput
+        label={fr ? 'Prénom' : 'First name'}
+        placeholder={fr ? 'Ton prénom' : 'Your first name'}
+        autoCapitalize="words"
+        value={formData.prenom}
+        onChangeText={(value) => handleChange('prenom', value)}
+      />
+      <NoxInput
+        label="Email"
+        placeholder={fr ? 'ton.email@example.com' : 'your.email@example.com'}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        value={formData.email}
+        onChangeText={(value) => handleChange('email', value)}
+        icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
+      />
+      <NoxInput
+        label={fr ? 'Pays' : 'Country'}
+        placeholder="France"
+        value={formData.pays}
+        onChangeText={(value) => handleChange('pays', value)}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+      <NoxInput
+        label={fr ? 'Date de naissance' : 'Date of birth'}
+        placeholder={fr ? 'jj/mm/aaaa' : 'dd/mm/yyyy'}
+        keyboardType="numeric"
+        maxLength={10}
+        value={formData.dateNaissance}
+        onChangeText={(value) => handleChange('dateNaissance', value)}
+        icon={<Ionicons name="calendar-outline" size={20} color={Colors.textTertiary} />}
+        onFocus={() => {
+          if (Platform.OS === 'android') {
+            setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300);
+          }
+        }}
+      />
+    </RegisterRoleFormShell>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  menuButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.35)',
-    backgroundColor: 'rgba(11,11,14,0.65)',
-    minHeight: 44,
-    minWidth: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  stepBadge: {
-    color: Colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  form: {
-    gap: 18,
-    marginBottom: 24,
-  },
-  label: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  pseudoLockedBox: {
-    gap: 6,
-  },
-  pseudoLockedValue: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  pseudoLockedHint: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  input: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-});
-

@@ -4,11 +4,9 @@ import {
   View,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Image,
 } from 'react-native';
-import Colors from '../../../constants/colors';
-import { getEventMinLeadDaysFromEnv } from '../../../utils/bookerEventWizardUtils';
+import { NoxText, NoxButton } from '../../nox';
 
 export default function BookerEventStep4Details(props) {
     const {
@@ -77,9 +75,9 @@ export default function BookerEventStep4Details(props) {
 
   return (
 <>
-                  <Text style={styles.sectionTitle}>
+                  <NoxText variant="form" style={styles.sectionTitle}>
                     {language === 'fr' ? 'Étape 4 : Détails' : 'Step 4: Details'}
-                  </Text>
+                  </NoxText>
     
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>
@@ -278,14 +276,14 @@ export default function BookerEventStep4Details(props) {
                     )}
                   </View>
     
-                  <Text style={[styles.sectionTitle, { marginTop: 22 }]}>
+                  <NoxText variant="form" style={[styles.sectionTitle, { marginTop: 22 }]}>
                     {language === 'fr' ? 'Location de matériel (optionnel)' : 'Equipment rental (optional)'}
-                  </Text>
-                  <Text style={styles.helperText}>
+                  </NoxText>
+                  <NoxText variant="secondary" style={styles.helperText}>
                     {language === 'fr'
                       ? 'Catalogue NOX + ton matériel enregistré. Rien n’est facturé automatiquement ici — à préciser avec les prestataires / lieu.'
                       : 'NOX catalog + your saved gear. Nothing is billed here — clarify with vendors / venue.'}
-                  </Text>
+                  </NoxText>
     
                   <TouchableOpacity
                     style={styles.equipToggleRow}
@@ -470,26 +468,27 @@ export default function BookerEventStep4Details(props) {
                       style={styles.backButtonStep}
                       onPress={() => setCurrentStep(3)}
                     >
-                      <Text style={styles.backButtonStepText}>
+                      <NoxText style={styles.backButtonStepText}>
                         ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                      </Text>
+                      </NoxText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.nextButton,
-                        (!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)) && styles.nextButtonDisabled,
-                      ]}
+                    <NoxButton
+                      label={language === 'fr' ? 'Suivant →' : 'Next →'}
+                      fullWidth={false}
                       onPress={() => {
                         if (hasBookerEventTitle(formData) && hasBookerEventPrice(formData)) {
                           setCurrentStep(5);
                         }
                       }}
                       disabled={!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)}
-                    >
-                      <Text style={styles.nextButtonText}>
-                        {language === 'fr' ? 'Suivant →' : 'Next →'}
-                      </Text>
-                    </TouchableOpacity>
+                      style={[
+                        styles.nextButton,
+                        { flex: 1, marginTop: 0 },
+                        (!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)) &&
+                          styles.nextButtonDisabled,
+                      ]}
+                      textStyle={styles.nextButtonText}
+                    />
                   </View>
                 </>
   );

@@ -44,8 +44,8 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `onboarding` | `OnboardingPage.js` | **Garder NOX** | Ajouter splash Figma (`01_SPLASH`) en option |
 | `login` | `LoginPage.js` | **Garder NOX** | |
 | `accountType` | `AccountTypePage.js` | **Garder NOX** | Prestataire = hors Figma mais produit |
-| `registerCommunity` | `RegisterCommunityPage.js` | **Migrer UI** | Fusionner avec Sign Up Figma ou alléger champs |
-| `registerDj/Booker/Venue/Prestataire` | `Register*.js` | **NOX Sign Up (3 sept.)** DJ/Booker/Venue | Prestataire encore legacy |
+| `registerCommunity` | `RegisterCommunityPage.js` | **✅ Fait (sem. 22–25)** | `RegisterRoleFormShell` + Sign Up tokens |
+| `registerDj/Booker/Venue/Prestataire` | `Register*.js` | **✅ Fait** | Tous sur `RegisterRoleFormShell` (Prestataire sem. 22–25) |
 | — | Écran OTP (`AUTH / Verif`) | **À créer** | `AuthVerifyEmailPage.js` post-inscription |
 | — | Opt-in push | **À créer** | `NotificationsOptInPage.js` (Figma 08) |
 
@@ -63,10 +63,10 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `notifications` | `NotificationsPage.js` | **NOX (31 juil.)** | Aligné Figma 08 communauté |
 | `profile` | `ProfilePage.js` | **Hub compte NOX (31 juil.)** | Inspiré 08_Reglage Lieux ; pas de maquette HD compte |
 | — | `CommunityProfilePage.js` | **Migrer UI** | Profil public + onglets Events/Wall (Figma 05) |
-| `communityFriends` | `CommunityFriendsPage.js` | **Migrer UI** | Entrée NX ou profil, pas drawer seul |
+| `communityFriends` | `CommunityFriendsPage.js` | **✅ Fait (sem. 22–25)** | Skin NOX ; entrée NX ou profil |
 | `welcome` | *(supprimé)* | **✅ Fait** | Alias → `proHome` |
 | `home` | *(supprimé)* | **✅ Fait** | Alias → home du profil / `splash` |
-| `feed` / `createFeedPost` | `CreateFeedPostPage.js` | **✅ Fait** | Alias `feed` → home profil ; styles dans `FeedPage.styles.js` |
+| `feed` / `createFeedPost` | `CreateFeedPostPage.js` | **✅ Fait (sem. 22–25)** | Alias `feed` → home ; create post skinné NOX |
 
 ### 3.3 Lieu (profil `VENUE`)
 
@@ -78,10 +78,10 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `lieuxAvailability` | `LieuxAvailabilityPage.js` | **Garder NOX** | Calendrier alimenté + bloquer dates |
 | `lieuxRequestDetail` | `LieuxRequestDetailPage.js` | **Garder NOX** | Pills footer, plus de `venueDashboard` |
 | `venueDashboard` | *(supprimé)* | **✅ Fait** | Alias → `lieuxDashboard` ; composants `venueDashboard/*` conservés |
-| `venueProfileEdit` | `VenueProfileEditPage.js` | **Réutiliser tel quel** | Sous-écran réglages jusqu’à `lieuxSettings` |
+| `venueProfileEdit` | `VenueProfileEditPage.js` | **✅ Fait (sem. 22–25)** | Skin NOX ; sous-écran réglages |
 | `eventDetail` | `EventDetailPage.js` | **Ne pas utiliser** | Remplacer par `lieuxEventDetail` (à créer) |
-| `scanTicket` | `ScanTicketPage.js` | **Migrer UI** | Wrapper NOX + sélecteur event |
-| `eventStaff` | `EventStaffPage.js` | **Réutiliser logique** | Intégrer dans `lieuxStaff` |
+| `scanTicket` | `ScanTicketPage.js` | **✅ Fait (sem. 22–25)** | Skin NOX aligné `lieuxScanner` |
+| `eventStaff` | `EventStaffPage.js` | **✅ Fait (sem. 22–25)** | Skin NOX ; logique staff conservée |
 | — | `lieuxFeed` | **✅ Fait** | Figma `11_Feed` |
 | — | `lieuxEvents` | **✅ Fait** | Figma `12_Events` |
 | — | `lieuxEventDetail` | **✅ Fait** | Figma `13_Detail_Event validé` |
@@ -110,7 +110,7 @@ Légende : **Garder NOX** · **Réutiliser tel quel** · **Migrer UI** · **Supp
 | `tickets` | `TicketsPage.js` | **NOX wallet (31 juil.)** — garder logique QR / historique |
 | `purchases` / `purchaseSuccess` | `PurchasesPage.js` | **NOX checkout (2 sept.)** |
 | `scanTicket` / `staffEvents` | Scan + liste events staff | **Migrer UI** — accès staff |
-| `switchProfile` | `SwitchProfilePage.js` | **Garder NOX** |
+| `switchProfile` | `SwitchProfilePage.js` | **✅ Fait (sem. 22–25)** | Skin NOX (header + cards) |
 | `legal` | `LegalPage.js` | **Réutiliser tel quel** |
 | `admin` | `AdminPage.js` | **Réutiliser tel quel** |
 

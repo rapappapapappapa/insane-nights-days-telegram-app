@@ -6,6 +6,26 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 25 septembre 2026
 
+### Modifié (mobile — backlog adaptables sans maquette HD)
+- **`registerCommunity` / `registerPrestataire`** : même shell **`RegisterRoleFormShell`** que DJ/Booker/Venue (étape 2, résumé compte, `NoxInput` / CTA « Activer mon profil… »).
+- **`createFeedPost`**, **`eventStaff`**, **`scanTicket`**, **`selectDj` / `selectVenue` / `selectPrestataire`**, **`communityProfileEdit` / `venueProfileEdit`**, **`communityFriends` / `bookerFriends`**, **`switchProfile`** : skin tokens NOX (`NoxScreenHeader`, `NoxInput`/`NoxButton`/`NoxText`/`NoxCard`, SafeArea) — logique API inchangée.
+- **Wizard booker** : étapes 1–5 en `NoxText` / `NoxButton` (shell déjà `NoxProDashboardHeader`).
+- **Hub Orga** : hints honnêtes + routes utiles — Booking/Lieux → `selectDj`/`selectVenue` si event à venir, sinon Mes événements ; Avis → profil public onglet Avis ; Communication → feed ; Contrats/Paiements → Mes événements.
+
+### Modifié (mobile — édition profils & amis NOX)
+- **`CommunityProfileEditPage`** / **`VenueProfileEditPage`** : skin NOX (`SafeAreaView`, `StatusBar` light, `NoxScreenHeader`, `NoxInput`, `NoxButton`, `NoxText`) — logique API inchangée.
+- **`CommunityFriendsPage`** / **`BookerFriendsPage`** : même shell + `NoxSearchBar` / `NoxTabs` (amis communauté) — recherche, demandes et listes conservées.
+
+### Modifié (mobile — création post feed NOX)
+- **`createFeedPost`** : écran skinné tokens NOX (`NoxScreenHeader`, `NoxInput`, `NoxButton`, `NoxText`, SafeArea) ; logique API / validation inchangée.
+
+### Modifié (mobile — staff événement & scan billets NOX)
+- **`EventStaffPage`** / **`ScanTicketPage`** : skin NOX (`SafeAreaView`, `NoxScreenHeader`, `NoxButton`, `NoxText`, `NoxCard`, tokens) aligné sur `LieuxScannerPage`.
+- Logique métier inchangée (liste staff, amis, API, QR, toggle test hors jour) ; torche ajoutée sur le scan comme lieux.
+
+### Modifié (mobile — listes sélection wizard NOX)
+- **`selectDj` / `selectVenue` / `selectPrestataire`** : shell NOX (`SafeAreaView`, `NoxScreenHeader`, `NoxCard`, `NoxText`) ; recherche via `NoxInput` ; chips note DJ alignées Discover ; logique / params de navigation inchangés.
+
 ### Modifié (mobile — onglets profils publics Figma)
 - **Artiste** : Feed + signature ; Événements (chips Tous/À venir/Passés, featured + grille, strip passés, CTA notifs) ; Médias (Photos/Vidéos) ; Avis (score + distribution réelle).
 - **Orga** : mêmes onglets skinés ; events via feed public filtré `bookerId` si dispo ; Médias / Avis empty states honnêtes (pas d’API).
@@ -14,6 +34,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Manques Figma / API (profils publics — suite)
 - Sets audio / playlists / filtres Sets·Reels·Studio (artiste) : pas d’API → omis.
 - Médias / avis organisateur : toujours non exposés côté API.
+
+### Manques Figma / API (hub Orga — suite)
+- Écrans dédiés Booking / Lieux / Contrats / Paiements / Avis : toujours absents — tuiles redirigées vers surfaces existantes avec hints clarifiés.
 
 ---
 
@@ -45,7 +68,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (mobile — dashboard Organisateur Figma)
 - **`bookerDashboard` accueil** : layout **`Dashboard_Orga_Pro`** — salutation + avatar + cloche, carte hero organisateur (« Voir mon profil »), grille **Mes outils** (10 tuiles Figma), carrousel **prochains événements** (statut Publié/Brouillon), bloc **Statistiques** (données réelles).
 - **Footer** : inchangé (nav radiale / logo NOX).
-- Mapping outils : créer event → wizard ; communication → `createFeedPost` ; booking/lieux/contrats/paiements/avis → section événements ; paramètres → profil.
+- Mapping outils : créer event → wizard ; communication → `createFeedPost` ; booking/lieux → `selectDj`/`selectVenue` si event à venir (sinon Mes événements) ; contrats/paiements → events ; avis → profil public ; paramètres → profil.
 
 ### Manques Figma / API (dashboard Orga)
 - Note moyenne organisateur, CA / tendances « +X% » : pas encore exposés côté API home booker.
@@ -77,8 +100,8 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Pas de planche HD dédiée par rôle — inspiré **`AUTH / Sign Up`** (`03-onboarding-auth-splash`).
 
 ### Manques Figma (inscriptions)
-- **`registerCommunity`** / **`registerPrestataire`** encore legacy.
-- Aucune maquette « Compte DJ / Orga / Lieu » distincte du Sign Up global.
+- Aucune maquette « Compte DJ / Orga / Lieu / Communauté / Prestataire » distincte du Sign Up global (shell commun OK depuis sem. 22–25).
+- **`registerCommunity`** / **`registerPrestataire`** : skinnés (sem. 22–25) — plus legacy.
 
 ### Modifié (mobile — checkout billet Figma)
 - **`eventDetail` (`checkoutOnly`)** : récap + section paiement dans une **`NoxCard`**, libellés FR (« Paiement », « Payer X€ », hint Stripe).

@@ -283,7 +283,7 @@ export default function BookerDashboardPage() {
     {
       id: 'booking',
       label: language === 'fr' ? 'Booking artistes' : 'Artist booking',
-      hint: language === 'fr' ? 'Rechercher & inviter' : 'Search & invite',
+      hint: language === 'fr' ? 'Inviter depuis un événement' : 'Invite from an event',
       icon: 'people',
       accentColor: '#F472B6',
       accentBg: 'rgba(244,114,182,0.12)',
@@ -291,7 +291,7 @@ export default function BookerDashboardPage() {
     {
       id: 'lieux',
       label: language === 'fr' ? 'Lieux' : 'Venues',
-      hint: language === 'fr' ? 'Gérer mes lieux favoris' : 'Manage favorite venues',
+      hint: language === 'fr' ? 'Associer un lieu à un event' : 'Attach a venue to an event',
       icon: 'location',
       accentColor: '#A78BFA',
       accentBg: 'rgba(167,139,250,0.12)',
@@ -299,7 +299,7 @@ export default function BookerDashboardPage() {
     {
       id: 'communication',
       label: 'Communication',
-      hint: language === 'fr' ? 'Visuels, réseaux, promos' : 'Visuals, social, promos',
+      hint: language === 'fr' ? 'Publier sur le feed' : 'Post to the feed',
       icon: 'megaphone',
       accentColor: '#F87171',
       accentBg: 'rgba(248,113,113,0.12)',
@@ -307,7 +307,7 @@ export default function BookerDashboardPage() {
     {
       id: 'contrats',
       label: language === 'fr' ? 'Contrats' : 'Contracts',
-      hint: language === 'fr' ? 'Templates & signatures' : 'Templates & signatures',
+      hint: language === 'fr' ? 'Depuis la fiche événement' : 'From the event sheet',
       icon: 'document-text',
       accentColor: '#FBBF24',
       accentBg: 'rgba(251,191,36,0.12)',
@@ -315,7 +315,7 @@ export default function BookerDashboardPage() {
     {
       id: 'statistiques',
       label: language === 'fr' ? 'Statistiques' : 'Statistics',
-      hint: language === 'fr' ? 'Ventes, audience, revenus' : 'Sales, audience, revenue',
+      hint: language === 'fr' ? 'Voir le bloc stats du hub' : 'See hub stats block',
       icon: 'bar-chart',
       accentColor: '#818CF8',
       accentBg: 'rgba(129,140,248,0.12)',
@@ -323,7 +323,7 @@ export default function BookerDashboardPage() {
     {
       id: 'paiements',
       label: language === 'fr' ? 'Paiements' : 'Payments',
-      hint: language === 'fr' ? 'Stripe & reversements' : 'Stripe & payouts',
+      hint: language === 'fr' ? 'Marquer payé sur un event' : 'Mark paid on an event',
       icon: 'card',
       accentColor: '#FCD34D',
       accentBg: 'rgba(252,211,77,0.12)',
@@ -331,7 +331,7 @@ export default function BookerDashboardPage() {
     {
       id: 'avis',
       label: language === 'fr' ? 'Avis' : 'Reviews',
-      hint: language === 'fr' ? 'Notes des artistes & public' : 'Artist & public ratings',
+      hint: language === 'fr' ? 'Voir mon profil public' : 'View my public profile',
       icon: 'star',
       accentColor: '#FBBF24',
       accentBg: 'rgba(251,191,36,0.12)',
@@ -360,6 +360,19 @@ export default function BookerDashboardPage() {
     setActiveSection('home');
   };
 
+  const firstUpcomingEventId = (() => {
+    const now = Date.now();
+    const upcoming = (myEvents || [])
+      .filter((e) => e?.id && e?.date)
+      .filter((e) => {
+        const t = new Date(e.date).getTime();
+        return Number.isFinite(t) && t >= now - 12 * 60 * 60 * 1000;
+      })
+      .filter((e) => e.status !== 'FINISHED' && e.status !== 'CANCELLED')
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    return upcoming[0]?.id || null;
+  })();
+
   const openSection = (sectionId) => {
     if (sectionId === 'create-event') {
       navigate('bookerEventDashboard', {});
@@ -374,8 +387,32 @@ export default function BookerDashboardPage() {
       setActiveSection('home');
       return;
     }
-    // booking / lieux / contrats / paiements / avis → closest existing surface = events
-    if (['booking', 'lieux', 'contrats', 'paiements', 'avis'].includes(sectionId)) {
+    if (sectionId === 'avis') {
+      const id = bookerProfile?.id || bookerProfile?.bookerId;
+      if (id) {
+        navigate('bookerProfile', { bookerId: id, initialTab: 'reviews' });
+        return;
+      }
+      setActiveSection('profil');
+      return;
+    }
+    if (sectionId === 'booking' && firstUpcomingEventId) {
+      navigate('selectDj', {
+        eventId: firstUpcomingEventId,
+        returnTo: 'bookerDashboard',
+      });
+      return;
+    }
+    if (sectionId === 'lieux' && firstUpcomingEventId) {
+      navigate('selectVenue', {
+        eventId: firstUpcomingEventId,
+        replaceMode: true,
+        returnTo: 'bookerDashboard',
+      });
+      return;
+    }
+    // booking / lieux (sans event) / contrats / paiements → gestion via Mes événements
+    if (['booking', 'lieux', 'contrats', 'paiements'].includes(sectionId)) {
       setActiveSection('events');
       fetchMyEvents();
       markAllAsRead();

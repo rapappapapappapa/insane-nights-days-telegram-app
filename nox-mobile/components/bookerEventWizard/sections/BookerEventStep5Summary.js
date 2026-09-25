@@ -3,11 +3,8 @@ import {
   Text,
   View,
   TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Image,
 } from 'react-native';
-import Colors from '../../../constants/colors';
+import { NoxText, NoxButton } from '../../nox';
 import { summarizeEquipmentRentalBlurb, djSlotsToFormDjFields } from '../../../utils/bookerEventWizardUtils';
 import { ticketPricingBreakdown, NOX_COMMISSION_RATE, TVA_RATE } from '../../../utils/ticketPricingUtils';
 
@@ -79,14 +76,14 @@ export default function BookerEventStep5Summary(props) {
 
   return (
 <>
-                  <Text style={styles.sectionTitle}>
+                  <NoxText variant="form" style={styles.sectionTitle}>
                     {language === 'fr' ? 'Étape 5 : Récapitulatif' : 'Step 5: Summary'}
-                  </Text>
-                  <Text style={styles.stepDescription}>
+                  </NoxText>
+                  <NoxText variant="secondary" style={styles.stepDescription}>
                     {language === 'fr'
                       ? 'Aucun paiement Stripe n’est demandé ici : tu confirmes la création de l’événement ; les montants définitifs passent par les contrats (chat).'
                       : 'No Stripe payment here: you confirm event creation; final amounts are set via contracts (chat).'}
-                  </Text>
+                  </NoxText>
     
                   <View style={styles.summaryCard}>
                     <Text style={styles.summaryTitle}>
@@ -283,23 +280,30 @@ export default function BookerEventStep5Summary(props) {
                       style={styles.backButtonStep}
                       onPress={() => setCurrentStep(4)}
                     >
-                      <Text style={styles.backButtonStepText}>
+                      <NoxText style={styles.backButtonStepText}>
                         ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                      </Text>
+                      </NoxText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.createButton, creating && styles.createButtonDisabled]}
+                    <NoxButton
+                      label={
+                        language === 'fr'
+                          ? "Confirmer et créer l'événement"
+                          : 'Confirm and create event'
+                      }
+                      fullWidth={false}
                       onPress={handleCreateEvent}
-                      disabled={creating || !hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)}
-                    >
-                      {creating ? (
-                        <ActivityIndicator color={Colors.background} />
-                      ) : (
-                        <Text style={styles.createButtonText}>
-                          {language === 'fr' ? 'Confirmer et créer l\'événement' : 'Confirm and create event'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                      loading={creating}
+                      disabled={
+                        creating ||
+                        !hasBookerEventTitle(formData) ||
+                        !hasBookerEventPrice(formData)
+                      }
+                      style={[
+                        styles.createButton,
+                        creating && styles.createButtonDisabled,
+                      ]}
+                      textStyle={styles.createButtonText}
+                    />
                   </View>
                 </>
   );

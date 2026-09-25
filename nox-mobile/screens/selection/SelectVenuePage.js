@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import Colors from '../../constants/colors';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
-import StarRating from '../../components/StarRating';
+import Colors, { primaryAlpha } from '../../constants/colors';
+import { Layout, Spacing } from '../../constants/theme';
+import { NoxText, NoxCard, NoxScreenHeader } from '../../components/nox';
 
 export default function SelectVenuePage() {
   const { language } = useLanguage();
+  const fr = language === 'fr';
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
   const { selectedVenueId, returnTo, eventId, replaceMode } = routeParams || {};
-  
+
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,84 +62,89 @@ export default function SelectVenuePage() {
     });
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="light" />
+
+      <NoxScreenHeader
+        title={fr ? 'Sélectionner un lieu' : 'Select a venue'}
+        subtitle={
+          fr
+            ? 'Appuyez sur un lieu pour voir son profil et le sélectionner'
+            : 'Tap on a venue to view their profile and select it'
+        }
+        onBack={goBack}
+      />
+
+      {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>
-            {language === 'fr' ? 'Chargement...' : 'Loading...'}
-          </Text>
+          <NoxText variant="secondary">{fr ? 'Chargement…' : 'Loading…'}</NoxText>
         </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>← {language === 'fr' ? 'Retour' : 'Back'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {language === 'fr' ? 'Sélectionner un lieu' : 'Select a venue'}
-        </Text>
-        <Text style={styles.headerSubtitle}>
-          {language === 'fr' 
-            ? 'Appuyez sur un lieu pour voir son profil et le sélectionner'
-            : 'Tap on a venue to view their profile and select it'}
-        </Text>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {venues.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {language === 'fr' ? 'Aucun lieu disponible' : 'No venues available'}
-            </Text>
-          </View>
-        ) : (
-          venues.map((venue) => {
-            const isSelected = selectedVenueId === venue.id;
-            return (
-              <TouchableOpacity
-                key={venue.id}
-                style={[styles.venueCard, isSelected && styles.venueCardSelected]}
-                onPress={() => handleVenuePress(venue)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.venueCardHeader}>
-                  <View style={styles.venueIcon}>
-                    <Text style={styles.venueIconText}>🏢</Text>
-                  </View>
-                  <View style={styles.venueInfo}>
-                    <Text style={styles.venueName}>{venue.venueName}</Text>
-                    <Text style={styles.venueAddress}>
-                      📍 {venue.address}
-                    </Text>
-                    {venue.averageRatingGlobal > 0 && (
-                      <View style={styles.venueRating}>
-                        <StarRating rating={venue.averageRatingGlobal} size={16} showStars={false} />
-                        <Text style={styles.ratingText}>
-                          {venue.averageRatingGlobal.toFixed(1)}
-                        </Text>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {venues.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="business-outline" size={32} color={Colors.primary} />
+              </View>
+              <NoxText variant="titleSecondary" style={styles.emptyTitle}>
+                {fr ? 'Aucun lieu disponible' : 'No venues available'}
+              </NoxText>
+            </View>
+          ) : (
+            venues.map((venue) => {
+              const isSelected = selectedVenueId === venue.id;
+              return (
+                <TouchableOpacity
+                  key={venue.id}
+                  onPress={() => handleVenuePress(venue)}
+                  activeOpacity={0.85}
+                >
+                  <NoxCard
+                    style={[styles.card, isSelected && styles.cardSelected]}
+                    padded={false}
+                  >
+                    <View style={styles.cardRow}>
+                      <View style={styles.avatar}>
+                        <Ionicons name="business-outline" size={22} color={primaryAlpha(0.7)} />
                       </View>
-                    )}
-                  </View>
-                  {isSelected && (
-                    <View style={styles.selectedBadge}>
-                      <Text style={styles.selectedBadgeText}>✓</Text>
+                      <View style={styles.cardInfo}>
+                        <NoxText variant="form" style={styles.cardTitle} numberOfLines={1}>
+                          {venue.venueName}
+                        </NoxText>
+                        <NoxText variant="secondary" numberOfLines={2}>
+                          {venue.address}
+                        </NoxText>
+                        {venue.averageRatingGlobal > 0 ? (
+                          <View style={styles.ratingRow}>
+                            <NoxText variant="form" style={styles.ratingValue}>
+                              {venue.averageRatingGlobal.toFixed(1)}
+                            </NoxText>
+                            <Ionicons name="star" size={14} color={Colors.primary} />
+                          </View>
+                        ) : null}
+                      </View>
+                      {isSelected ? (
+                        <View style={styles.selectedBadge}>
+                          <Ionicons name="checkmark" size={18} color={Colors.text} />
+                        </View>
+                      ) : (
+                        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+                      )}
                     </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
-    </View>
+                  </NoxCard>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -145,120 +153,78 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  header: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(77,163,255,0.2)',
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  backButtonText: {
-    color: Colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    marginTop: 12,
+    gap: Spacing.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingBottom: Spacing.xxxl,
+    gap: Spacing.md,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: Spacing.xxxl * 2,
+    gap: Spacing.md,
   },
-  emptyText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 16,
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: primaryAlpha(0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  venueCard: {
-    backgroundColor: '#1a1a1f',
-    borderWidth: 1,
-    borderColor: 'rgba(77,163,255,0.3)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+  emptyTitle: {
+    textAlign: 'center',
   },
-  venueCardSelected: {
+  card: {
+    padding: Spacing.lg,
+  },
+  cardSelected: {
     borderColor: Colors.primary,
-    backgroundColor: 'rgba(77,163,255,0.1)',
+    backgroundColor: primaryAlpha(0.12),
   },
-  venueCardHeader: {
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.md,
   },
-  venueIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.primary,
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: primaryAlpha(0.12),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  venueIconText: {
-    fontSize: 28,
-  },
-  venueInfo: {
+  cardInfo: {
     flex: 1,
+    gap: 2,
   },
-  venueName: {
-    color: '#fff',
-    fontSize: 18,
+  cardTitle: {
     fontWeight: '700',
-    marginBottom: 4,
   },
-  venueAddress: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  venueRating: {
+  ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    marginTop: 4,
   },
-  ratingText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
+  ratingValue: {
+    color: Colors.primary,
   },
   selectedBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  selectedBadgeText: {
-    color: Colors.background,
-    fontSize: 18,
-    fontWeight: '700',
-  },
 });
-

@@ -53,14 +53,17 @@ export default function BookerProfilePage() {
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const { bookerId } = routeParams || {};
+  const { bookerId, initialTab } = routeParams || {};
   const fr = language === 'fr';
+  const allowedTabs = new Set(['about', 'feed', 'events', 'media', 'reviews']);
 
   const [booker, setBooker] = useState(null);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
-  const [activeTab, setActiveTab] = useState('about');
+  const [activeTab, setActiveTab] = useState(
+    allowedTabs.has(initialTab) ? initialTab : 'about'
+  );
   const [events, setEvents] = useState([]);
   const [eventsFilter, setEventsFilter] = useState('all');
 

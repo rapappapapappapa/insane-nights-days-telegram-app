@@ -11,10 +11,11 @@ export function getHomeScreenForProfile(activeProfileType) {
     case 'DJ':
       return 'djDashboard';
     case 'BOOKER':
+      return 'bookerDashboard';
     case 'PRESTATAIRE':
-      return 'proHome';
+      return 'prestataireDashboard';
     default:
-      return 'proHome';
+      return 'splash';
   }
 }
 

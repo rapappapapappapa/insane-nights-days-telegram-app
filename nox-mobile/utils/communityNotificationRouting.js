@@ -1,35 +1,43 @@
 /**
  * Deep links notifications feed → écran NOX selon profil actif.
- * DJ : pas de fil sur l'accueil — les notifs feed mènent à l'écran Notifications.
+ * Fil social (timeline) = Communauté uniquement.
+ * DJ / Orga / Lieu : réponses via mur perso (`ownWall`) ; liste notifs sinon.
  */
 
 export function getFeedHomeScreen(activeProfileType) {
   if (activeProfileType === 'COMMUNITY') return 'communityHome';
-  if (activeProfileType === 'DJ') return 'notifications';
-  return 'proHome';
+  return 'notifications';
 }
 
 export function resolveFeedNotificationNavigation(notif, activeProfileType) {
   const type = (notif?.type || '').toLowerCase();
-  const home = getFeedHomeScreen(activeProfileType);
   const postId = notif?.post?.id || null;
-
-  if (activeProfileType === 'DJ') {
-    return { screen: 'notifications', params: {} };
-  }
-
-  if (!postId) {
-    return { screen: home, params: {} };
-  }
-
   const openComments = type === 'comment' || type === 'reply';
 
-  return {
-    screen: home,
-    params: {
-      highlightPostId: postId,
-      feedTab: 'posts',
-      openComments: openComments || undefined,
-    },
-  };
+  if (activeProfileType === 'COMMUNITY') {
+    if (!postId) {
+      return { screen: 'communityHome', params: {} };
+    }
+    return {
+      screen: 'communityHome',
+      params: {
+        highlightPostId: postId,
+        feedTab: 'posts',
+        openComments: openComments || undefined,
+      },
+    };
+  }
+
+  // Profils pro : ouvrir le post (+ commentaires si réponse) sur leur mur
+  if (['DJ', 'BOOKER', 'VENUE', 'PRESTATAIRE'].includes(activeProfileType) && postId) {
+    return {
+      screen: 'ownWall',
+      params: {
+        highlightPostId: postId,
+        openComments: openComments || undefined,
+      },
+    };
+  }
+
+  return { screen: 'notifications', params: {} };
 }

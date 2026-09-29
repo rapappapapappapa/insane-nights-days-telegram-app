@@ -25,12 +25,16 @@ import { Spacing } from '../../constants/theme';
  * @param {{ userId?: string, djId?: string, bookerId?: string, venueId?: string }} wallFilter
  * @param {boolean} isOwnProfile — affiche CTA création si DJ/Booker/Lieu
  * @param {boolean} enabled — false tant que l'onglet Mur n'est pas actif
+ * @param {string|null} [highlightPostId] — surbrillance / ouverture commentaires (notifs)
+ * @param {boolean} [openCommentsOnHighlight]
  */
 export default function ProfileWallStream({
   wallFilter,
   isOwnProfile = false,
   enabled = true,
   onTotalChange,
+  highlightPostId = null,
+  openCommentsOnHighlight = false,
 }) {
   const { user, handleTokenExpired } = useAuth();
   const { language } = useLanguage();
@@ -74,6 +78,7 @@ export default function ProfileWallStream({
     dispatchPostState: dispatchEngagement,
     handleToggleLike,
     toggleComments,
+    expandComments,
     handleCreateComment,
   } = useFeedPostEngagement({
     user,
@@ -85,6 +90,30 @@ export default function ProfileWallStream({
     refreshFeedNotifications,
     onAuthError: handleTokenError,
   });
+
+  const highlightHandledRef = React.useRef(null);
+  const [activeHighlightId, setActiveHighlightId] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!highlightPostId || loading) return;
+    if (highlightHandledRef.current === highlightPostId) return;
+    const target = String(highlightPostId);
+    const item = posts.find(
+      (p) => String(p.id) === target || String(p.originalPost?.id || '') === target
+    );
+    if (!item) return;
+    highlightHandledRef.current = highlightPostId;
+    setActiveHighlightId(item.id);
+    if (openCommentsOnHighlight) {
+      expandComments(item.id);
+    }
+    const clearTimer = setTimeout(() => setActiveHighlightId(null), 4000);
+    return () => clearTimeout(clearTimer);
+  }, [highlightPostId, openCommentsOnHighlight, loading, posts, expandComments]);
+
+  React.useEffect(() => {
+    highlightHandledRef.current = null;
+  }, [highlightPostId]);
 
   const { reportModalVisible, reportReasons, reportPost, handleReportReason, closeReportModal } =
     useFeedReport({ user, language, showError, showSuccess });
@@ -253,11 +282,12 @@ export default function ProfileWallStream({
           dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: item.id, text });
         }}
         onSendComment={() => handleCreateComment(item.id)}
+        highlighted={activeHighlightId === item.id}
       />
     );
   };
 
-  if (!wallFilter?.userId && !wallFilter?.djId && !wallFilter?.bookerId) {
+  if (!wallFilter?.userId && !wallFilter?.djId && !wallFilter?.bookerId && !wallFilter?.venueId) {
     return (
       <View style={styles.block}>
         <EmptyState

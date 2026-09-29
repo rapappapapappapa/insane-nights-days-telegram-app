@@ -86,7 +86,7 @@ export default function LieuxDashboardPage() {
       {
         id: 'communication',
         label: 'Communication',
-        hint: fr ? 'Publier, réseaux, promos' : 'Publish, social, promos',
+        hint: fr ? 'Mes posts & réponses' : 'My posts & replies',
         icon: 'megaphone',
         accentColor: '#C084FC',
         accentBg: 'rgba(192,132,252,0.12)',
@@ -146,7 +146,7 @@ export default function LieuxDashboardPage() {
         navigate('lieuxMedia');
         break;
       case 'communication':
-        navigate('createFeedPost');
+        navigate('ownWall');
         break;
       case 'finances':
         navigate('lieuxEvents');

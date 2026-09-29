@@ -169,7 +169,7 @@ export default function LieuxDashboardHomeSection({
             <Image source={{ uri: avatarUri }} style={styles.hubTopAvatar} />
           ) : (
             <View style={[styles.hubTopAvatar, styles.hubTopAvatarFallback]}>
-              <Ionicons name="business" size={20} color={Colors.primary} />
+              <Ionicons name="business" size={22} color={Colors.primary} />
             </View>
           )}
         </TouchableOpacity>

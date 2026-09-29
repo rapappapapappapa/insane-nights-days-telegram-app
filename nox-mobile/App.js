@@ -26,6 +26,7 @@ import OnboardingPage from './screens/onboarding/OnboardingPage';
 import ProHomePage from './screens/pro/ProHomePage';
 import LegacyScreenRedirect from './components/LegacyScreenRedirect';
 import CreateFeedPostPage from './screens/feed/CreateFeedPostPage';
+import OwnWallPage from './screens/feed/OwnWallPage';
 
 import LoginPage from './screens/auth/LoginPage';
 import SplashPage from './screens/auth/SplashPage';
@@ -153,7 +154,8 @@ const SCREENS = {
   staffEvents: StaffEventsPage,
   venueProfileEdit: VenueProfileEditPage,
   feed: () => <LegacyScreenRedirect legacyKey="feed" />,
-  createFeedPost: CreateFeedPostPage, // ✅ AJOUT: Route pour créer un post
+  createFeedPost: CreateFeedPostPage,
+  ownWall: OwnWallPage,
   tutorial: TutorialPage, // ✅ AJOUT: Route pour le tutoriel
   notifications: NotificationsPage, // ✅ AJOUT: Route notifications (feed)
   admin: AdminPage, // ✅ AJOUT: Route admin (visible uniquement pour admins)

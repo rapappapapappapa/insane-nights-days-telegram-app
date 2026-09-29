@@ -4,6 +4,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 29 septembre au 2 octobre 2026
+
+### Modifié (mobile — hubs pro alignés Communauté + fil réservé)
+- **Headers hubs** DJ / Orga / Lieu : avatar **48**, cloche **40** (carte comme Communauté), greeting **18** — harmonisé avec `communityHome`.
+- **Fil social** : lecture du fil réservée au profil **COMMUNITY** ; `proHome` redirige vers le hub du rôle.
+- Accueil BOOKER / PRESTATAIRE → dashboards ; drawer « Fil pro » retiré.
+- **Pro peuvent toujours publier** (`createFeedPost`) ; nouvel écran **`ownWall`** (« Mes publications ») pour voir posts + réponses ; notif commentaire/like → mur avec surbrillance ; arc NX « Mes posts ».
+
+---
+
 ## Semaine du 22 au 25 septembre 2026
 
 ### Sécurisé (scan billets + stockage)

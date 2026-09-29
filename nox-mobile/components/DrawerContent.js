@@ -20,16 +20,6 @@ import * as Updates from 'expo-updates';
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
 const MENU_DEF = [
   {
-    id: 'proHome',
-    icon: 'newspaper-outline',
-    titleFr: 'Accueil',
-    titleEn: 'Home',
-    descFr: 'Fil pro & raccourcis',
-    descEn: 'Pro feed & shortcuts',
-    onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['BOOKER', 'PRESTATAIRE'],
-  },
-  {
     id: 'communityHome',
     icon: 'home-outline',
     titleFr: 'Accueil',
@@ -307,44 +297,44 @@ export default function DrawerContent({ navigation }) {
       case 'DJ':
         return {
           id: dashboardId,
-          icon: 'headset-outline',
-          titleFr: 'Tableau de bord DJ',
-          titleEn: 'DJ dashboard',
-          descFr: 'Messages, bookings, statut',
-          descEn: 'Messages, bookings, status',
+          icon: 'home-outline',
+          titleFr: 'Accueil',
+          titleEn: 'Home',
+          descFr: 'Hub DJ & outils',
+          descEn: 'DJ hub & tools',
           showBadge: true,
           badgeCount: unreadByProfileType?.DJ ?? unreadCount,
         };
       case 'BOOKER':
         return {
           id: dashboardId,
-          icon: 'clipboard-outline',
-          titleFr: 'Tableau de bord organisateur',
-          titleEn: 'Organizer dashboard',
-          descFr: 'Messages et événements',
-          descEn: 'Messages & events',
+          icon: 'home-outline',
+          titleFr: 'Accueil',
+          titleEn: 'Home',
+          descFr: 'Hub organisateur & outils',
+          descEn: 'Organizer hub & tools',
           showBadge: true,
           badgeCount: unreadByProfileType?.BOOKER ?? unreadCount,
         };
       case 'VENUE':
         return {
           id: dashboardId,
-          icon: 'location-outline',
-          titleFr: 'Espace lieu',
-          titleEn: 'Venue space',
-          descFr: 'Demandes, événements, actions rapides',
-          descEn: 'Requests, events, quick actions',
+          icon: 'home-outline',
+          titleFr: 'Accueil',
+          titleEn: 'Home',
+          descFr: 'Hub lieu & outils',
+          descEn: 'Venue hub & tools',
           showBadge: false,
           badgeCount: 0,
         };
       case 'PRESTATAIRE':
         return {
           id: dashboardId,
-          icon: 'construct-outline',
-          titleFr: 'Tableau de bord prestataire',
-          titleEn: 'Service provider dashboard',
-          descFr: 'Profil et missions (MVP)',
-          descEn: 'Profile & jobs (MVP)',
+          icon: 'home-outline',
+          titleFr: 'Accueil',
+          titleEn: 'Home',
+          descFr: 'Hub prestataire & outils',
+          descEn: 'Provider hub & tools',
           showBadge: false,
           badgeCount: 0,
         };

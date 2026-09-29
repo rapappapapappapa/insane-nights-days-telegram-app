@@ -62,20 +62,20 @@ const VENUE_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'demandes', screen: 'lieuxDemandes', icon: 'mail-unread-outline', labelFr: 'Demandes', labelEn: 'Requests' },
   AGENDA_ITEM,
-  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
+  { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
-/** Raccourcis organisateurs / prestataires (fil pro + booking). */
+/** Raccourcis organisateurs / prestataires (booking + mur perso, pas de fil communauté). */
 const PRO_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
   AGENDA_ITEM,
-  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
+  { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
   { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
 ];
 
-/** DJ : accueil = dashboard pro, sans fil — le feed reste côté profil Communauté. */
+/** DJ : accueil = dashboard ; mur perso pour posts / réponses (pas de fil communauté). */
 const DJ_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   {
@@ -87,7 +87,7 @@ const DJ_ITEMS = [
     labelEn: 'Bookings',
   },
   AGENDA_ITEM,
-  { id: 'social', screen: 'createFeedPost', icon: 'share-social-outline', labelFr: 'Publier', labelEn: 'Post' },
+  { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
   { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
 ];
 

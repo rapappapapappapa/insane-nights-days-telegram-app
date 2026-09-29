@@ -1377,17 +1377,17 @@ export const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   hubTopAvatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   hubTopAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
   },
   hubTopAvatarFallback: {
     backgroundColor: Colors.backgroundElevated,
@@ -1398,8 +1398,8 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   hubGreeting: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 18,
+    lineHeight: 24,
   },
   hubSubtitle: {
     fontSize: 13,
@@ -1408,10 +1408,14 @@ export const styles = StyleSheet.create({
     marginTop: 2,
   },
   hubNotifBtn: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
   },
   hubNotifBadge: {
     position: 'absolute',

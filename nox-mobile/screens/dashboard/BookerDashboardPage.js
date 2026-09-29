@@ -304,7 +304,7 @@ export default function BookerDashboardPage() {
     {
       id: 'communication',
       label: 'Communication',
-      hint: language === 'fr' ? 'Publier sur le feed' : 'Post to the feed',
+      hint: language === 'fr' ? 'Mes posts & réponses' : 'My posts & replies',
       icon: 'megaphone',
       accentColor: '#F87171',
       accentBg: 'rgba(248,113,113,0.12)',
@@ -371,7 +371,7 @@ export default function BookerDashboardPage() {
       return;
     }
     if (sectionId === 'communication') {
-      navigate('createFeedPost');
+      navigate('ownWall');
       return;
     }
     if (sectionId === 'statistiques') {

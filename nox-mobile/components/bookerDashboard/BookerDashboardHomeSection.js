@@ -152,7 +152,7 @@ export default function BookerDashboardHomeSection({
             <Image source={{ uri: avatarUri }} style={styles.hubTopAvatar} />
           ) : (
             <View style={[styles.hubTopAvatar, styles.hubTopAvatarFallback]}>
-              <Ionicons name="person" size={20} color={Colors.primary} />
+              <Ionicons name="person" size={22} color={Colors.primary} />
             </View>
           )}
         </TouchableOpacity>

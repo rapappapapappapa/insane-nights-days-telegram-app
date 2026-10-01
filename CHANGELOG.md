@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 29 septembre au 2 octobre 2026
 
+### Sécurisé (billets QR + scan lieux + race scan)
+- **`GET /api/tickets/:ticketId/qr`** : auth JWT + ownership (plus de QR public via `ticketId`).
+- **Scan** : lieux acceptés (`Event.venueId` / `EventVenue` ACCEPTED) autorisés comme booker/staff ; lecture staff idem.
+- Scan **atomique** (`updateMany` si `status ≠ used`) contre double entrée concurrente.
+- Notif feed **PRESTATAIRE** : plus de route vers `ownWall` (écran incompatible) → liste notifications.
+- Client `getTicketQR(token, ticketId)` ; docs staff/API alignées.
+
 ### Modifié (mobile — hubs pro alignés Communauté + fil réservé)
 - **Headers hubs** DJ / Orga / Lieu : avatar **48**, cloche **40** (carte comme Communauté), greeting **18** — harmonisé avec `communityHome`.
 - **Fil social** : lecture du fil réservée au profil **COMMUNITY** ; `proHome` redirige vers le hub du rôle.

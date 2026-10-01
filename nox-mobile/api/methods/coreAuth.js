@@ -329,9 +329,12 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(API_CONFIG.ENDPOINTS.PAYMENTS_ME, {}, token);
   },
 
-  // Générer QR code pour un ticket
-  getTicketQR: async (ticketId) => {
-    return apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_QR}/${ticketId}/qr`);
+  // Générer QR code pour un ticket (propriétaire uniquement)
+  getTicketQR: async (token, ticketId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_QR}/${ticketId}/qr`, {}, token);
   },
 
   // Supprimer un ticket (TEMPORAIRE - à supprimer en production)

@@ -29,18 +29,21 @@ import { NoxText, NoxButton, NoxScreenHeader } from '../../components/nox';
 const BOOKER_EVENTS_REFRESH_FLAG = '@nox_refresh_booker_events';
 const SCAN_ANY_DAY_TEST_STORAGE = '@nox_scan_test_any_day';
 
-/** Secret partagé avec SCAN_TICKET_TEST_SECRET (serveur). Embarqué seulement si SHOW_SCAN_TEST_UI. */
-const SCAN_TEST_SECRET = (process.env.EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET || '').trim();
-
 /**
  * Bandeau « test scan hors jour » : masqué par défaut (prod / stores).
  * Opt-in staging : EXPO_PUBLIC_SHOW_SCAN_TEST_UI=true
- * Legacy : EXPO_PUBLIC_HIDE_SCAN_TEST_UI=false n’affiche plus rien ; utiliser SHOW.
+ * Ne jamais définir EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET sur un build store :
+ * Metro inline toutes les EXPO_PUBLIC_* présentes dans le source.
  */
 function shouldShowScanTestToggle() {
   const show = process.env.EXPO_PUBLIC_SHOW_SCAN_TEST_UI;
-  if (show === '1' || show === 'true') return true;
-  return false;
+  return show === '1' || show === 'true';
+}
+
+/** Lu uniquement si le bandeau test est actif (évite d’envoyer le secret en prod). */
+function getScanTestSecretIfAllowed() {
+  if (!shouldShowScanTestToggle()) return '';
+  return (process.env.EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET || '').trim();
 }
 
 export default function ScanTicketPage() {
@@ -102,6 +105,8 @@ export default function ScanTicketPage() {
   };
 
   const fr = language === 'fr';
+  const scanTestSecret = getScanTestSecretIfAllowed();
+  const scanTestSecretReady = scanTestSecret.length >= 8;
 
   const handleBarCodeScanned = async ({ data }) => {
     if (!data || processing || !user?.token || !eventId) return;
@@ -115,9 +120,10 @@ export default function ScanTicketPage() {
           qrCode = parsed.qrCode || parsed.data || data;
         } catch {}
       }
+      const testSecret = getScanTestSecretIfAllowed();
       const scanOpts =
-        showTestToggle && scanAnyDayTest && SCAN_TEST_SECRET.length >= 8
-          ? { scanTestSecret: SCAN_TEST_SECRET }
+        showTestToggle && scanAnyDayTest && testSecret.length >= 8
+          ? { scanTestSecret: testSecret }
           : {};
       const res = await api.scanTicket(user.token, eventId, qrCode, scanOpts);
       if (res?.success && res.valid) {
@@ -212,7 +218,7 @@ export default function ScanTicketPage() {
               {fr ? 'Test : scan hors jour événement' : 'Test: scan any event day'}
             </NoxText>
             <NoxText variant="secondary" style={styles.testModeHint}>
-              {SCAN_TEST_SECRET.length >= 8
+              {scanTestSecretReady
                 ? fr
                   ? 'Active seulement si SCAN_TICKET_TEST_SECRET côté API correspond à la clé Expo.'
                   : 'Only works if server SCAN_TICKET_TEST_SECRET matches the Expo key.'
@@ -222,14 +228,14 @@ export default function ScanTicketPage() {
             </NoxText>
           </View>
           <Switch
-            value={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8}
+            value={scanAnyDayTest && scanTestSecretReady}
             onValueChange={(v) => {
-              if (SCAN_TEST_SECRET.length < 8) return;
+              if (!scanTestSecretReady) return;
               persistScanTestToggle(v);
             }}
             trackColor={{ false: 'rgba(255,255,255,0.2)', true: primaryAlpha(0.45) }}
-            thumbColor={scanAnyDayTest && SCAN_TEST_SECRET.length >= 8 ? Colors.primary : '#888'}
-            disabled={SCAN_TEST_SECRET.length < 8}
+            thumbColor={scanAnyDayTest && scanTestSecretReady ? Colors.primary : '#888'}
+            disabled={!scanTestSecretReady}
             accessibilityRole="switch"
             accessibilityLabel={fr ? 'Autoriser le scan test hors jour' : 'Allow test scan any day'}
           />

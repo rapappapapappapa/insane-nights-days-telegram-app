@@ -4,6 +4,21 @@
 const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
 
+/** Lieu confirmé sur l'event (venue principale ou invitation ACCEPTED). */
+async function isAcceptedVenueForEvent(userId, event) {
+  const myVenue = await prisma.userVenue.findFirst({ where: { userId } });
+  if (!myVenue) return false;
+  if (event.venueId && event.venueId === myVenue.id) return true;
+  const link = await prisma.eventVenue.findFirst({
+    where: {
+      eventId: event.id,
+      venueId: myVenue.id,
+      status: 'ACCEPTED',
+    },
+  });
+  return Boolean(link);
+}
+
 module.exports = function registerBookerStaffRoutes(app, deps) {
   const { authenticateToken } = deps;
 
@@ -135,7 +150,7 @@ app.put('/api/booker/friends/:id/respond', authenticateToken, async (req, res) =
   }
 });
 
-/** GET /api/events/:eventId/staff - Liste du staff (booker ou staff) */
+/** GET /api/events/:eventId/staff - Liste du staff (booker, staff ou lieu accepté) */
 app.get('/api/events/:eventId/staff', authenticateToken, async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -147,7 +162,8 @@ app.get('/api/events/:eventId/staff', authenticateToken, async (req, res) => {
     const isBooker = event.booker?.userId === req.user.id;
     const myCommunity = await prisma.userCommunity.findFirst({ where: { userId: req.user.id } });
     const isStaff = myCommunity && event.eventStaff.some((s) => s.communityId === myCommunity.id);
-    if (!isBooker && !isStaff) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    const isVenue = await isAcceptedVenueForEvent(req.user.id, event);
+    if (!isBooker && !isStaff && !isVenue) return res.status(403).json({ success: false, message: 'Accès refusé.' });
     res.json({
       success: true,
       staff: event.eventStaff.map((s) => ({
@@ -230,7 +246,13 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     const isBooker = event.booker?.userId === req.user.id;
     const myCommunity = await prisma.userCommunity.findFirst({ where: { userId: req.user.id } });
     const isStaff = myCommunity && event.eventStaff.some((s) => s.communityId === myCommunity.id && s.role === 'STAFF_SCAN');
-    if (!isBooker && !isStaff) return res.status(403).json({ success: false, message: 'Seul l\'organisateur ou le staff peut scanner.' });
+    const isVenue = await isAcceptedVenueForEvent(req.user.id, event);
+    if (!isBooker && !isStaff && !isVenue) {
+      return res.status(403).json({
+        success: false,
+        message: 'Seul l\'organisateur, le staff ou le lieu accepté peut scanner.',
+      });
+    }
     // Fenêtre de scan : même jour UTC, OU ONGOING, OU SCAN_TICKET_ALLOW_ANY_DAY=true (explicite), OU scanTestSecret aligné.
     // Défaut strict : hors jour refusé sauf ONGOING / même jour / secret test serveur.
     const eventDate = new Date(event.date);
@@ -287,10 +309,14 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     if (!ticket) return res.json({ success: false, valid: false, message: 'Billet introuvable.' });
     if (ticket.eventId !== eventId) return res.json({ success: false, valid: false, message: 'Ce billet n\'est pas pour cet événement.' });
     if (ticket.status === 'used') return res.json({ success: false, valid: false, message: 'Billet déjà utilisé.' });
-    await prisma.ticket.update({
-      where: { id: ticket.id },
+    // Atomique : un seul scan concurrent gagne (évite double entrée)
+    const claimed = await prisma.ticket.updateMany({
+      where: { id: ticket.id, status: { not: 'used' } },
       data: { status: 'used', scannedAt: new Date() },
     });
+    if (claimed.count === 0) {
+      return res.json({ success: false, valid: false, message: 'Billet déjà utilisé.' });
+    }
     const c = ticket.user?.communities?.[0];
     let holderDisplayName = c?.pseudo || '';
     if (!holderDisplayName) {

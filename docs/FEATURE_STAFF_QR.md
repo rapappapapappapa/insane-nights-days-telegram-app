@@ -34,15 +34,16 @@ Permettre aux organisateurs (bookers) d'ajouter des profils Communauté comme "a
 - `PUT /api/booker/friends/:id/decline` - Refuser
 
 ### Staff événement
-- `GET /api/events/:eventId/staff` - Liste du staff (booker ou staff)
+- `GET /api/events/:eventId/staff` - Liste du staff (booker, staff, **ou lieu accepté**)
 - `POST /api/events/:eventId/staff` - Ajouter staff (body: { communityId, role }) — booker uniquement, community doit être ami
 - `DELETE /api/events/:eventId/staff/:communityId` - Retirer un staff
 
 ### Scan ticket
 - `POST /api/events/:eventId/scan-ticket` - body: `{ qrCode: "TICKET_…" | chaîne / JSON scanné }`, optionnel : **`scanTestSecret`** (string, ≥ 8 car.) si **`SCAN_TICKET_TEST_SECRET`** est défini côté serveur avec la même valeur — contourne la contrainte « jour de l’événement » comme **`SCAN_TICKET_ALLOW_ANY_DAY=true`**.
-- Autorisation : booker de l'événement OU staff avec rôle STAFF_SCAN
+- Autorisation : booker de l'événement **OU** staff avec rôle STAFF_SCAN **OU** lieu accepté (`Event.venueId` ou `EventVenue` status `ACCEPTED`)
 - Fenêtre de scan : **même jour calendaire (UTC)** que `event.date`, **ou** événement au statut **ONGOING**, **ou** **`SCAN_TICKET_ALLOW_ANY_DAY=true`** (explicite). **Défaut strict** si la variable est absente (y compris sur Railway). Contournement test : secret aligné app/serveur (voir ci‑dessous).
 - **Phase de test (app)** : bandeau *Test : scan hors jour* **masqué par défaut**. Opt-in staging : **`EXPO_PUBLIC_SHOW_SCAN_TEST_UI=true`** + **`EXPO_PUBLIC_SCAN_TICKET_TEST_SECRET`** (≥ 8 car.) aligné sur **`SCAN_TICKET_TEST_SECRET`** API. Ne pas embarquer le secret dans un build store.
+- Scan **atomique** (`updateMany` où `status ≠ used`) pour éviter une double entrée concurrente.
 - Réponse si valid : ticket `used` + `scannedAt` ; JSON inclut `ticket.holderDisplayName`, `ticket.entered: true` pour l’UI.
 - La liste **Participants (billets)** sur le dashboard organisateur (`GET /api/booker/events` → `ticketHolders`) reflète `entered` dès rechargement (pull-to-refresh ou retour depuis l’écran scan ; l’app pose un flag AsyncStorage après un scan réussi).
 

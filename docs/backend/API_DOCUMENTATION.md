@@ -262,7 +262,7 @@ Récupère tous les tickets d'un utilisateur.
 Supprime un ticket (nécessite authentification).
 
 #### `GET /api/tickets/:ticketId/qr`
-Génère un QR code pour un ticket.
+Génère un QR code pour un ticket (**authentification requise**, propriétaire du billet uniquement).
 
 ---
 

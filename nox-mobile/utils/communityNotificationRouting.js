@@ -1,7 +1,7 @@
 /**
  * Deep links notifications feed → écran NOX selon profil actif.
  * Fil social (timeline) = Communauté uniquement.
- * DJ / Orga / Lieu : réponses via mur perso (`ownWall`) ; liste notifs sinon.
+ * DJ / Orga / Lieu : réponses via mur perso (`ownWall`) ; PRESTATAIRE → liste notifs.
  */
 
 export function getFeedHomeScreen(activeProfileType) {
@@ -28,8 +28,8 @@ export function resolveFeedNotificationNavigation(notif, activeProfileType) {
     };
   }
 
-  // Profils pro : ouvrir le post (+ commentaires si réponse) sur leur mur
-  if (['DJ', 'BOOKER', 'VENUE', 'PRESTATAIRE'].includes(activeProfileType) && postId) {
+  // Profils pro avec mur (DJ / Orga / Lieu) — PRESTATAIRE n’a pas ownWall
+  if (['DJ', 'BOOKER', 'VENUE'].includes(activeProfileType) && postId) {
     return {
       screen: 'ownWall',
       params: {

@@ -109,7 +109,11 @@ app.delete('/api/tickets/:ticketId', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/tickets/:ticketId/qr', async (req, res) => {
+/**
+ * @route GET /api/tickets/:ticketId/qr
+ * @access Private — propriétaire du billet uniquement
+ */
+app.get('/api/tickets/:ticketId/qr', authenticateToken, async (req, res) => {
   try {
     const ticket = await prisma.ticket.findUnique({
       where: { id: req.params.ticketId },
@@ -125,6 +129,10 @@ app.get('/api/tickets/:ticketId/qr', async (req, res) => {
 
     if (!ticket) {
       return res.status(404).json({ success: false, message: 'Ticket non trouvé' });
+    }
+
+    if (ticket.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
 
     const qrCodeDataURL = await QRCode.toDataURL(ticket.qrCode);

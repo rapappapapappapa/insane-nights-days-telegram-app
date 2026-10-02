@@ -8,6 +8,10 @@ const {
   resolvePurchaseTier,
 } = require('../utils/ticketTiers');
 
+/** QR billet : 24 hex (entropie correcte), unique via contrainte DB. */
+function makeTicketQrCode(uuidv4) {
+  return `TICKET_${uuidv4().replace(/-/g, '').slice(0, 24).toUpperCase()}`;
+}
 module.exports = function registerTicketsAndPaymentsRoutes(app, deps) {
   const {
     authenticateToken,
@@ -158,7 +162,7 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
             tierId: tierRes.tierId,
             price: 0,
             status: 'valid',
-            qrCode: `TICKET_${uuidv4().replace(/-/g, '').slice(0, 16).toUpperCase()}`,
+            qrCode: makeTicketQrCode(uuidv4),
           },
         });
         newTickets.push({
@@ -340,7 +344,7 @@ app.post('/api/webhooks/stripe', async (req, res) => {
               tierId: tierResolved.tierId,
               price: tierResolved.unitEuros,
               status: 'valid',
-              qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
+              qrCode: makeTicketQrCode(uuidv4),
             },
           });
         }
@@ -475,7 +479,22 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
     const unitAmount = eurosToCents(tierRes.unitEuros);
     if (unitAmount === null) return res.status(500).json({ success: false, message: 'Prix événement invalide.' });
     const amount = unitAmount * quantity;
-    if (amount < 50) return res.status(400).json({ success: false, message: 'Montant trop faible pour Stripe.' });
+    // Gratuit → client doit utiliser POST /api/tickets/buy (pas Stripe)
+    if (amount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Billet gratuit : utilise POST /api/tickets/buy.',
+        code: 'USE_FREE_BUY',
+      });
+    }
+    // Stripe EUR : minimum 0,50 €
+    if (amount < 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Montant trop faible pour Stripe (min. 0,50 €). Mets le tarif à 0 € (gratuit) ou ≥ 0,50 €.',
+        code: 'AMOUNT_BELOW_STRIPE_MIN',
+      });
+    }
 
     const intent = await stripe.paymentIntents.create({
       amount,
@@ -644,7 +663,7 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
             tierId: tierResolved.tierId,
             price: tierResolved.unitEuros,
             status: 'valid',
-            qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
+            qrCode: makeTicketQrCode(uuidv4),
           },
         });
         newTickets.push({

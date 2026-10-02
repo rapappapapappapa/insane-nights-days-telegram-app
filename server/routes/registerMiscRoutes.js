@@ -94,9 +94,13 @@ app.delete('/api/tickets/:ticketId', authenticateToken, async (req, res) => {
       await calculateVenueRatings(venueId);
     }
 
-    // Supprimer le ticket
-    await prisma.ticket.delete({
-      where: { id: ticketId },
+    // Supprimer le ticket + libérer une place (sold)
+    await prisma.$transaction(async (tx) => {
+      await tx.ticket.delete({ where: { id: ticketId } });
+      await tx.event.updateMany({
+        where: { id: ticket.eventId, sold: { gt: 0 } },
+        data: { sold: { decrement: 1 } },
+      });
     });
 
     res.json({

@@ -114,11 +114,13 @@ async function createContractSignatureRequest({ name, externalId, pdfBuffer, fil
 
 /**
  * Vérifie la signature HMAC d'un webhook Yousign (header `x-yousign-signature-256`).
- * Si aucun secret n'est configuré, accepte (utile en sandbox au tout début).
+ * En production, refuse si YOUSIGN_WEBHOOK_SECRET est absent.
  */
 function verifyYousignWebhookSignature(rawBody, signatureHeader) {
   const secret = process.env.YOUSIGN_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    return process.env.NODE_ENV !== 'production';
+  }
   if (!rawBody || !signatureHeader) return false;
   const digest = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
   const expected = Buffer.from(`sha256=${digest}`, 'utf8');

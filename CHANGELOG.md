@@ -6,6 +6,14 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 29 septembre au 2 octobre 2026
 
+### Sécurisé (suite — QR, sold, bootstrap, Yousign, nav)
+- QR billets : **24 hex** (tous chemins buy / Stripe).
+- Suppression ticket : **décrémente `sold`** (place libérée).
+- Intent Stripe : codes `USE_FREE_BUY` / `AMOUNT_BELOW_STRIPE_MIN` (0 € ou ≥ 0,50 €).
+- Bootstrap admin : comparaison **timing-safe** + verrouillage dès qu’un ADMIN existe (`ADMIN_BOOTSTRAP_ALLOW` pour forcer).
+- Webhook Yousign : refuse sans secret en **production**.
+- Arc NX **PRESTATAIRE** : plus de « Mes posts » / `ownWall`.
+
 ### Sécurisé (Stripe billets + auth + PII)
 - **Achat payant** : plus de bypass « sans paiement » ; mobile → PaymentSheet Stripe (clés `sk_test_` / `pk_test_` OK) ; `POST /api/tickets/buy` réservé aux **0 €**, capacité atomique.
 - **Wallet** `POST /api/wallet/connect` : désactivé (410).

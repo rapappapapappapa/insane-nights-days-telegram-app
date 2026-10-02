@@ -66,13 +66,22 @@ const VENUE_ITEMS = [
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
-/** Raccourcis organisateurs / prestataires (booking + mur perso, pas de fil communauté). */
-const PRO_ITEMS = [
+/** Raccourcis organisateurs (booking + mur perso). */
+const BOOKER_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
   AGENDA_ITEM,
   { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
   { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+];
+
+/** Prestataire : pas de mur perso (OwnWall = DJ/BOOKER/VENUE seulement). */
+const PRESTATAIRE_ITEMS = [
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
+  { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
+  AGENDA_ITEM,
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
 /** DJ : accueil = dashboard ; mur perso pour posts / réponses (pas de fil communauté). */
@@ -100,9 +109,8 @@ const PRO_DASHBOARDS = {
 function getNavItemDefs(activeProfileType) {
   if (activeProfileType === 'VENUE') return VENUE_ITEMS;
   if (activeProfileType === 'DJ') return DJ_ITEMS;
-  if (activeProfileType === 'BOOKER' || activeProfileType === 'PRESTATAIRE') {
-    return PRO_ITEMS;
-  }
+  if (activeProfileType === 'BOOKER') return BOOKER_ITEMS;
+  if (activeProfileType === 'PRESTATAIRE') return PRESTATAIRE_ITEMS;
   return COMMUNITY_ITEMS;
 }
 

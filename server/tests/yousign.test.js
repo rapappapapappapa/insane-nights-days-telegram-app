@@ -47,9 +47,16 @@ test('verifyYousignWebhookSignature valide le HMAC sha256', () => {
   else process.env.YOUSIGN_WEBHOOK_SECRET = saved;
 });
 
-test('verifyYousignWebhookSignature accepte tout si aucun secret configuré', () => {
-  const saved = process.env.YOUSIGN_WEBHOOK_SECRET;
+test('verifyYousignWebhookSignature refuse sans secret en production', () => {
+  const savedSecret = process.env.YOUSIGN_WEBHOOK_SECRET;
+  const savedEnv = process.env.NODE_ENV;
   delete process.env.YOUSIGN_WEBHOOK_SECRET;
+  process.env.NODE_ENV = 'production';
+  assert.equal(verifyYousignWebhookSignature(Buffer.from('x'), 'sha256=peu-importe'), false);
+  process.env.NODE_ENV = 'development';
   assert.equal(verifyYousignWebhookSignature(Buffer.from('x'), 'sha256=peu-importe'), true);
-  if (saved !== undefined) process.env.YOUSIGN_WEBHOOK_SECRET = saved;
+  if (savedSecret !== undefined) process.env.YOUSIGN_WEBHOOK_SECRET = savedSecret;
+  else delete process.env.YOUSIGN_WEBHOOK_SECRET;
+  if (savedEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = savedEnv;
 });

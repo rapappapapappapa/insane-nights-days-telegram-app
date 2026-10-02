@@ -1,12 +1,35 @@
+const crypto = require('crypto');
 const prisma = require('../lib/prisma');
+
+function timingSafeEqualString(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const ba = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
+function bootstrapKeyOk(req) {
+  const key = req.get('x-admin-bootstrap-key') || req.body?.bootstrapKey;
+  const expected = process.env.ADMIN_BOOTSTRAP_KEY;
+  if (!expected || typeof key !== 'string') return false;
+  return timingSafeEqualString(key, expected);
+}
+
+function bootstrapAllowAfterFirstAdmin() {
+  const raw = String(process.env.ADMIN_BOOTSTRAP_ALLOW || '')
+    .trim()
+    .toLowerCase();
+  return raw === 'true' || raw === '1';
+}
 
 module.exports = function registerAdminAndReportsRoutes(app, deps) {
   const { authenticateToken, requireAdmin, bcrypt, MEDIA_STORAGE, deleteFromR2 } = deps;
 
 /**
  * ✅ Admin bootstrap (1ère mise en place)
- * Permet de créer/promouvoir un ADMIN sans accès DB direct.
- * Protégé par ADMIN_BOOTSTRAP_KEY (à mettre dans Railway env).
+ * Protégé par ADMIN_BOOTSTRAP_KEY (timing-safe).
+ * Désactivé dès qu’un ADMIN existe, sauf ADMIN_BOOTSTRAP_ALLOW=true.
  *
  * POST /api/admin/bootstrap
  * headers: x-admin-bootstrap-key
@@ -14,10 +37,18 @@ module.exports = function registerAdminAndReportsRoutes(app, deps) {
  */
 app.post('/api/admin/bootstrap', async (req, res) => {
   try {
-    const key = req.get('x-admin-bootstrap-key') || req.body?.bootstrapKey;
-    const expected = process.env.ADMIN_BOOTSTRAP_KEY;
-    if (!expected || key !== expected) {
+    if (!bootstrapKeyOk(req)) {
       return res.status(403).json({ success: false, message: 'Clé bootstrap invalide.' });
+    }
+
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+    if (adminCount > 0 && !bootstrapAllowAfterFirstAdmin()) {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Bootstrap désactivé : un admin existe déjà. Pour forcer, définis ADMIN_BOOTSTRAP_ALLOW=true (puis retire-le).',
+        code: 'BOOTSTRAP_LOCKED',
+      });
     }
 
     const { email, username, password } = req.body ?? {};
@@ -63,9 +94,7 @@ app.post('/api/admin/bootstrap', async (req, res) => {
  */
 app.post('/api/admin/seed-demo', async (req, res) => {
   try {
-    const key = req.get('x-admin-bootstrap-key') || req.body?.bootstrapKey;
-    const expected = process.env.ADMIN_BOOTSTRAP_KEY;
-    if (!expected || key !== expected) {
+    if (!bootstrapKeyOk(req)) {
       return res.status(403).json({ success: false, message: 'Clé bootstrap invalide.' });
     }
 

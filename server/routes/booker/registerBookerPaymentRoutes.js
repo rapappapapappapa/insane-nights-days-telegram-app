@@ -89,6 +89,15 @@ app.put('/api/booker/event-djs/:eventDjId/payment', authenticateToken, async (re
           ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
           : ed.invoiceNumber;
 
+    // PENDING_PAYMENT : paiement contrat uniquement via Stripe (pas de PAID manuel)
+    if (status === 'PAID' && ed.contractStatus === 'PENDING_PAYMENT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Paiement contrat en attente : utilise Stripe (create-payment-intent), pas le marquage manuel PAID.',
+        code: 'STRIPE_REQUIRED',
+      });
+    }
+
     const next = await prisma.eventDj.update({
       where: { id: eventDjId },
       data: {
@@ -99,13 +108,6 @@ app.put('/api/booker/event-djs/:eventDjId/payment', authenticateToken, async (re
         invoiceNumber: nextInvoiceNumber,
       },
     });
-
-    if (status === 'PAID' && ed.contractStatus === 'PENDING_PAYMENT') {
-      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
-      await fulfillContractPaymentAndStartSignature('dj', eventDjId, {
-        paymentIntentId: ed.stripePaymentIntentId || undefined,
-      });
-    }
 
     return res.json({
       success: true,
@@ -159,6 +161,14 @@ app.put('/api/booker/event-venues/:eventVenueId/payment', authenticateToken, asy
           ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
           : ev.invoiceNumber;
 
+    if (status === 'PAID' && ev.contractStatus === 'PENDING_PAYMENT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Paiement contrat en attente : utilise Stripe (create-payment-intent), pas le marquage manuel PAID.',
+        code: 'STRIPE_REQUIRED',
+      });
+    }
+
     const next = await prisma.eventVenue.update({
       where: { id: eventVenueId },
       data: {
@@ -169,13 +179,6 @@ app.put('/api/booker/event-venues/:eventVenueId/payment', authenticateToken, asy
         invoiceNumber: nextInvoiceNumber,
       },
     });
-
-    if (status === 'PAID' && ev.contractStatus === 'PENDING_PAYMENT') {
-      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
-      await fulfillContractPaymentAndStartSignature('venue', eventVenueId, {
-        paymentIntentId: ev.stripePaymentIntentId || undefined,
-      });
-    }
 
     return res.json({
       success: true,
@@ -228,6 +231,14 @@ app.put('/api/booker/event-prestataires/:eventPrestataireId/payment', authentica
           ? `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`
           : ep.invoiceNumber;
 
+    if (status === 'PAID' && ep.contractStatus === 'PENDING_PAYMENT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Paiement contrat en attente : utilise Stripe (create-payment-intent), pas le marquage manuel PAID.',
+        code: 'STRIPE_REQUIRED',
+      });
+    }
+
     const next = await prisma.eventPrestataire.update({
       where: { id: eventPrestataireId },
       data: {
@@ -238,13 +249,6 @@ app.put('/api/booker/event-prestataires/:eventPrestataireId/payment', authentica
         invoiceNumber: nextInvoiceNumber,
       },
     });
-
-    if (status === 'PAID' && ep.contractStatus === 'PENDING_PAYMENT') {
-      const { fulfillContractPaymentAndStartSignature } = require('../../utils/contractSignature');
-      await fulfillContractPaymentAndStartSignature('prestataire', eventPrestataireId, {
-        paymentIntentId: ep.stripePaymentIntentId || undefined,
-      });
-    }
 
     return res.json({
       success: true,

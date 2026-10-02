@@ -276,16 +276,15 @@ const getUserById = async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId.trim() }, // L'ID est un UUID (String), pas besoin de parseInt
-      include: {
-        tickets: {
-          include: {
-            event: true,
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
+      where: { id: userId.trim() },
+      select: {
+        id: true,
+        username: true,
+        score: true,
+        level: true,
+        sbtActive: true,
+        createdAt: true,
+        _count: { select: { tickets: true } },
       },
     });
 
@@ -293,39 +292,17 @@ const getUserById = async (req, res) => {
       return sendError(res, 'Utilisateur non trouvé', 404);
     }
 
-    const ticketsCount = user.tickets.length;
-    const lastTicket = user.tickets[0] || null;
+    const ticketsCount = user._count?.tickets ?? 0;
 
+    // Endpoint public : pas d’email ni détail billets (PII).
     return sendSuccess(res, {
       user: {
         id: user.id,
-        email: user.email,
         username: user.username,
         score: user.score ?? 0,
         level: user.level ?? 1,
         sbtActive: user.sbtActive ?? false,
         tickets: ticketsCount,
-        lastTicket: lastTicket
-          ? {
-              id: lastTicket.id,
-              title: lastTicket.event?.title || 'Événement supprimé',
-              quantity: lastTicket.quantity || 1,
-              location: lastTicket.event?.location || '',
-              lastPurchasedAt: lastTicket.purchaseDate 
-                ? new Date(lastTicket.purchaseDate).toISOString()
-                : (lastTicket.createdAt ? new Date(lastTicket.createdAt).toISOString() : null),
-              eventDate: lastTicket.event?.date 
-                ? (lastTicket.event.date instanceof Date 
-                    ? lastTicket.event.date.toISOString() 
-                    : lastTicket.event.date)
-                : null,
-              createdAt: lastTicket.createdAt 
-                ? (lastTicket.createdAt instanceof Date 
-                    ? lastTicket.createdAt.toISOString() 
-                    : lastTicket.createdAt)
-                : null,
-            }
-          : null,
         eventsParticipated: ticketsCount,
         createdAt: user.createdAt,
       },

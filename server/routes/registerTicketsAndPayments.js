@@ -78,13 +78,6 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       });
     }
 
-    if (event.sold + quantity > event.capacity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Pas assez de places disponibles',
-      });
-    }
-
     const tierRes = resolvePurchaseTier(event, tierIdBody);
     if (tierRes.error === 'TIER_REQUIRED') {
       return res.status(400).json({
@@ -114,6 +107,15 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       });
     }
 
+    // Payant → Stripe uniquement. Cet endpoint ne délivre que les billets gratuits (0 €).
+    if (!(Number(tierRes.unitEuros) === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cet événement est payant. Utilise le paiement Stripe (create-ticket-intent).',
+        code: 'STRIPE_REQUIRED',
+      });
+    }
+
     const tiers = parseTicketTiersFromDb(event.ticketTiers);
     if (tierRes.tierId && tiers) {
       const def = tiers.find((t) => t.id === tierRes.tierId);
@@ -131,57 +133,71 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       }
     }
 
-    const newTickets = [];
-    for (let i = 0; i < quantity; i++) {
-      const ticket = await prisma.ticket.create({
-        data: {
-          userId,
-          eventId,
-          tierId: tierRes.tierId,
-          price: tierRes.unitEuros,
-          status: 'valid',
-          qrCode: `TICKET_${uuidv4().slice(0, 8).toUpperCase()}`,
+    const result = await prisma.$transaction(async (tx) => {
+      // Réserve atomique les places (évite survente concurrente)
+      const reserved = await tx.event.updateMany({
+        where: {
+          id: eventId,
+          status: 'UPCOMING',
+          sold: { lte: event.capacity - quantity },
         },
+        data: { sold: { increment: quantity } },
       });
-      newTickets.push({
-        id: ticket.id,
-        userId: ticket.userId,
-        eventId: ticket.eventId,
-        price: ticket.price,
-        status: ticket.status,
-        qrCode: ticket.qrCode,
-        purchaseDate: ticket.purchaseDate.toISOString(),
+      if (reserved.count === 0) {
+        const err = new Error('CAPACITY');
+        err.code = 'CAPACITY';
+        throw err;
+      }
+
+      const newTickets = [];
+      for (let i = 0; i < quantity; i++) {
+        const ticket = await tx.ticket.create({
+          data: {
+            userId,
+            eventId,
+            tierId: tierRes.tierId,
+            price: 0,
+            status: 'valid',
+            qrCode: `TICKET_${uuidv4().replace(/-/g, '').slice(0, 16).toUpperCase()}`,
+          },
+        });
+        newTickets.push({
+          id: ticket.id,
+          userId: ticket.userId,
+          eventId: ticket.eventId,
+          price: ticket.price,
+          status: ticket.status,
+          qrCode: ticket.qrCode,
+          purchaseDate: ticket.purchaseDate.toISOString(),
+        });
+      }
+
+      const newScore = (user.score || 0) + 50 * quantity;
+      const newLevel = Math.floor(newScore / 200) + 1;
+      await tx.user.update({
+        where: { id: userId },
+        data: { score: newScore, level: newLevel },
       });
-    }
 
-    // Mettre à jour le nombre de tickets vendus
-    await prisma.event.update({
-      where: { id: eventId },
-      data: { sold: event.sold + quantity },
-    });
-
-    // Mettre à jour le score de l'utilisateur
-    const newScore = (user.score || 0) + 50 * quantity;
-    const newLevel = Math.floor(newScore / 200) + 1;
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        score: newScore,
-        level: newLevel,
-      },
+      return { newTickets, newScore, newLevel };
     });
 
     res.json({
       success: true,
-      message: `🎟️ ${quantity} ticket(s) acheté(s) avec succès`,
-      tickets: newTickets,
+      message: `🎟️ ${quantity} ticket(s) gratuit(s) délivré(s)`,
+      tickets: result.newTickets,
       updatedUser: {
-        score: newScore,
-        level: newLevel,
+        score: result.newScore,
+        level: result.newLevel,
       },
     });
   } catch (error) {
+    if (error?.code === 'CAPACITY') {
+      return res.status(400).json({
+        success: false,
+        message: 'Pas assez de places disponibles',
+      });
+    }
     console.error('Erreur achat ticket:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }

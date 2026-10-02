@@ -220,10 +220,12 @@ const googleAuth = async (req, res) => {
         return sendError(res, 'Ce compte email est déjà lié à un autre compte Google.', 409);
       }
       if (!user.googleId) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { googleId },
-        });
+        // Pas d’auto-link : éviter la prise de compte via OAuth sur un email existant.
+        return sendError(
+          res,
+          'Un compte existe déjà avec cet email. Connecte-toi avec ton mot de passe (ou le provider déjà lié).',
+          409
+        );
       }
       const token = jwt.sign(
         { userId: user.id, email: user.email },
@@ -354,10 +356,11 @@ const appleAuth = async (req, res) => {
           return sendError(res, 'Ce compte email est déjà lié à un autre compte Apple.', 409);
         }
         if (!user.appleId) {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: { appleId },
-          });
+          return sendError(
+            res,
+            'Un compte existe déjà avec cet email. Connecte-toi avec ton mot de passe (ou le provider déjà lié).',
+            409
+          );
         }
         const token = jwt.sign(
           { userId: user.id, email: user.email },
@@ -577,51 +580,14 @@ const resetPassword = async (req, res) => {
 };
 
 /**
- * Connexion via wallet TON (mock pour l'instant)
- * @param {Object} req - Requête Express
- * @param {Object} res - Réponse Express
+ * Connexion wallet TON — désactivée (ancien mock sans preuve de possession).
  */
 const connectWallet = async (req, res) => {
-  try {
-    const { walletAddress, username } = req.body;
-
-    if (!walletAddress) {
-      return sendError(res, 'Adresse wallet requise.', 400);
-    }
-
-    // Pour l'instant, on simule une connexion wallet
-    // Dans une vraie implémentation, on vérifierait la signature du wallet
-    let user = await prisma.user.findFirst({
-      where: { email: walletAddress },
-    });
-
-    if (!user) {
-      // Créer un utilisateur avec l'adresse wallet comme email
-      user = await prisma.user.create({
-        data: {
-          email: walletAddress,
-          username: username || `Wallet_${walletAddress.slice(0, 8)}`,
-          password: null,
-          score: 100,
-          level: 1,
-        },
-      });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
-
-    return sendSuccess(res, {
-      message: 'Wallet connecté avec succès.',
-      user: sanitizeUser(user),
-      token: token,
-    });
-  } catch (error) {
-    handleError(error, res, 'Erreur lors de la connexion wallet.');
-  }
+  return sendError(
+    res,
+    'La connexion wallet est désactivée. Utilise email, Google ou Apple.',
+    410
+  );
 };
 
 function suggestUsernameFromEmail(email) {

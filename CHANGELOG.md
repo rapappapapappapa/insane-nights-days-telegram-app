@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 29 septembre au 2 octobre 2026
 
+### Sécurisé (Stripe billets + auth + PII)
+- **Achat payant** : plus de bypass « sans paiement » ; mobile → PaymentSheet Stripe (clés `sk_test_` / `pk_test_` OK) ; `POST /api/tickets/buy` réservé aux **0 €**, capacité atomique.
+- **Wallet** `POST /api/wallet/connect` : désactivé (410).
+- **OAuth** Google/Apple : plus d’auto-lien sur un email déjà inscrit sans provider lié.
+- **`GET /api/user/:userId`** public : plus d’email ni détail billets.
+- Contrats **PENDING_PAYMENT** : marquage manuel `PAID` refusé → Stripe obligatoire.
+
 ### Sécurisé (billets QR + scan lieux + race scan)
 - **`GET /api/tickets/:ticketId/qr`** : auth JWT + ownership (plus de QR public via `ticketId`).
 - **Scan** : lieux acceptés (`Event.venueId` / `EventVenue` ACCEPTED) autorisés comme booker/staff ; lecture staff idem.

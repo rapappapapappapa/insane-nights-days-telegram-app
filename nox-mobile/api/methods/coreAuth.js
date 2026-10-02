@@ -3,11 +3,8 @@ import { apiCache } from '../../utils/apiCache';
 
 export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName, API_CONFIG }) {
   return {
-  connectWallet: async (walletAddress, username) => {
-    return apiRequest(API_CONFIG.ENDPOINTS.WALLET_CONNECT, {
-      method: 'POST',
-      body: JSON.stringify({ walletAddress, username }),
-    });
+  connectWallet: async () => {
+    throw new Error('La connexion wallet est désactivée. Utilise email, Google ou Apple.');
   },
 
   // Inscription utilisateur

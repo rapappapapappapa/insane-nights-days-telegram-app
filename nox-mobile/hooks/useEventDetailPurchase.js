@@ -5,7 +5,9 @@ import * as Stripe from '../utils/stripe';
 import { isTicketTierSelectable } from '../utils/eventDetailPageUtils';
 
 /**
- * Paliers billetterie + achat Stripe / démo (page détail événement).
+ * Paliers billetterie + achat Stripe (page détail événement).
+ * Payant → PaymentSheet natif (clés sk_test_ / pk_test_ OK).
+ * Gratuit (0 €) → POST /api/tickets/buy.
  */
 export function useEventDetailPurchase({
   event,
@@ -15,7 +17,7 @@ export function useEventDetailPurchase({
   navigate,
   showError,
   showSuccess,
-  showConfirm,
+  showConfirm: _showConfirm,
   fetchEvent,
 }) {
   const [buyingTicket, setBuyingTicket] = useState(false);
@@ -78,6 +80,17 @@ export function useEventDetailPurchase({
     return `${p}€`;
   }, [event?.price, event?.hasMultipleTicketPrices, hasMultipleTicketTiers, language]);
 
+  const goPurchaseSuccess = (amount) => {
+    setTimeout(() => {
+      navigate('purchaseSuccess', {
+        eventId,
+        eventTitle: event?.title,
+        quantity: 1,
+        amount,
+      });
+    }, 600);
+  };
+
   const handleBuyTicket = async () => {
     if (!user?.isAuthenticated) {
       showError(language === 'fr' ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.');
@@ -95,35 +108,29 @@ export function useEventDetailPurchase({
 
     setBuyingTicket(true);
     try {
+      const isFree = Number(unitPriceForPurchase) === 0;
+
+      // Billet gratuit : pas de Stripe
+      if (isFree) {
+        const response = await api.buyTicket(user.token, eventId, 1, tierIdForApi);
+        if (response && response.success) {
+          showSuccess(
+            response.message || (language === 'fr' ? 'Ticket gratuit délivré.' : 'Free ticket issued.')
+          );
+          fetchEvent();
+          goPurchaseSuccess(0);
+        } else {
+          showError(response?.message || (language === 'fr' ? "Erreur lors de l'achat." : 'Error purchasing ticket.'));
+        }
+        return;
+      }
+
+      // Payant : Stripe natif uniquement (clés test OK en démo)
       if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
-        showConfirm(
-          language === 'fr' ? 'Paiement Stripe indisponible (Web)' : 'Stripe unavailable (Web)',
+        showError(
           language === 'fr'
-            ? 'Stripe natif n’est pas disponible sur la version web. Voulez-vous continuer en mode démo (achat ticket sans paiement) ?'
-            : 'Native Stripe is not available on web. Continue in demo mode (buy ticket without payment)?',
-          [
-            { text: language === 'fr' ? 'Annuler' : 'Cancel', style: 'cancel' },
-            {
-              text: language === 'fr' ? 'Continuer' : 'Continue',
-              onPress: async () => {
-                const response = await api.buyTicket(user.token, eventId, 1, tierIdForApi);
-                if (response && response.success) {
-                  showSuccess(response.message || (language === 'fr' ? 'Ticket acheté (mode test).' : 'Ticket bought (test mode).'));
-                  fetchEvent();
-                  setTimeout(() => {
-                    navigate('purchaseSuccess', {
-                      eventId,
-                      eventTitle: event?.title,
-                      quantity: 1,
-                      amount: unitPriceForPurchase,
-                    });
-                  }, 600);
-                } else {
-                  showError(response?.message || (language === 'fr' ? "Erreur lors de l'achat." : 'Error purchasing ticket.'));
-                }
-              },
-            },
-          ]
+            ? 'Le paiement Stripe est disponible sur l’app iOS / Android (carte de test en mode démo). Ouvre Nox sur ton téléphone.'
+            : 'Stripe payments work on the iOS / Android app (test cards in demo mode). Open Nox on your phone.'
         );
         return;
       }
@@ -168,14 +175,7 @@ export function useEventDetailPurchase({
       if (confirmRes?.success) {
         showSuccess(confirmRes.message || (language === 'fr' ? 'Paiement validé, ticket créé !' : 'Payment succeeded, ticket created!'));
         fetchEvent();
-        setTimeout(() => {
-          navigate('purchaseSuccess', {
-            eventId,
-            eventTitle: event?.title,
-            quantity: 1,
-            amount: unitPriceForPurchase,
-          });
-        }, 600);
+        goPurchaseSuccess(unitPriceForPurchase);
       } else {
         showError(
           confirmRes?.message ||

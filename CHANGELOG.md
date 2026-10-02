@@ -6,6 +6,12 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 29 septembre au 2 octobre 2026
 
+### Nettoyé (low — API, wallet, UX Stripe, docs)
+- Client : retrait `WALLET_CONNECT` / `connectWallet` ; fallback API documenté (`EXPO_PUBLIC_API_BASE` → Railway).
+- Commentaire filtres Community Home mis à jour (déjà implémentés).
+- Message Stripe contrats (web) aligné sur billets : utiliser l’app iOS/Android + cartes test.
+- Docs API : wallet = **410**.
+
 ### Sécurisé (suite — QR, sold, bootstrap, Yousign, nav)
 - QR billets : **24 hex** (tous chemins buy / Stripe).
 - Suppression ticket : **décrémente `sold`** (place libérée).

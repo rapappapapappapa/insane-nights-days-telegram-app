@@ -215,8 +215,8 @@ export function useBookerContractFlows({
     if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
       showError(
         language === 'fr'
-          ? 'Paiement Stripe indisponible sur cette plateforme.'
-          : 'Stripe payment is not available on this platform.'
+          ? 'Le paiement Stripe des contrats est disponible sur l’app iOS / Android (carte de test en mode démo). Ouvre Nox sur ton téléphone.'
+          : 'Contract Stripe payments work on the iOS / Android app (test cards in demo mode). Open Nox on your phone.'
       );
       return;
     }

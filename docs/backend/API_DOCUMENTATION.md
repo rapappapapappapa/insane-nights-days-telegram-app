@@ -12,7 +12,7 @@ API REST pour l'application mobile **Nox** (Expo) et le client web legacy.
 Auth : **JWT** dans le header `Authorization: Bearer <token>`.  
 Connexion également via **Google** et **Apple** (`POST /api/auth/google`, `/api/auth/apple`).
 
-> ⚠️ La route `POST /api/wallet/connect` (wallet TON mock) est **obsolète** — ne pas utiliser dans le mobile actuel.
+> ⚠️ `POST /api/wallet/connect` répond **410 Gone** (mock TON désactivé). Auth : email / Google / Apple.
 
 ---
 
@@ -90,9 +90,9 @@ Body : `{ "identityToken": "…" }` (+ champs inscription si mode register).
 
 ---
 
-### ~~Wallet TON~~ (obsolète)
+### ~~Wallet TON~~ (désactivé)
 
-~~`POST /api/wallet/connect`~~ — mock développement initial, **non utilisé** par l'app Nox actuelle.
+`POST /api/wallet/connect` → **410 Gone**. Ne plus appeler depuis le client.
 
 ---
 

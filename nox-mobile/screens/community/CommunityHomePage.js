@@ -102,7 +102,7 @@ export default function CommunityHomePage() {
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
   const [discoveryError, setDiscoveryError] = useState(null);
 
-  // Filtres suggestions (backlog TODO.md) : style, ville, tri note / followers 7j
+  // Filtres suggestions : style, ville, tri note / followers 7j
   const [styleFilter, setStyleFilter] = useState(null);
   const [cityFilter, setCityFilter] = useState(null);
   const [sortMode, setSortMode] = useState(null); // null | 'rating' | 'followers'

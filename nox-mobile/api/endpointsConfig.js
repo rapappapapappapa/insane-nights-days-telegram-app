@@ -1,10 +1,12 @@
 /** Constantes de base URL et chemins d'endpoints (client mobile). */
+const DEFAULT_API_BASE =
+  'https://insane-nights-days-telegram-app-production.up.railway.app';
+
 export const API_CONFIG = {
-  // TODO: repasser à https://api.nox.world quand le DNS du sous-domaine sera configuré (Railway custom domain)
-  BASE_URL: (process.env.EXPO_PUBLIC_API_BASE || 'https://insane-nights-days-telegram-app-production.up.railway.app').replace(/\/$/, ''),
+  // Priorité : EXPO_PUBLIC_API_BASE (EAS / .env). Fallback Railway tant que api.nox.world n’est pas branché.
+  BASE_URL: (process.env.EXPO_PUBLIC_API_BASE || DEFAULT_API_BASE).replace(/\/$/, ''),
   TIMEOUT: 10000,
   ENDPOINTS: {
-    WALLET_CONNECT: '/api/wallet/connect',
     USER_PROFILE: '/api/user',
     EVENTS: '/api/events',
     EVENT_DETAIL: '/api/events',

@@ -6,8 +6,8 @@ CREATE TABLE "VenueMedia" (
     "url" TEXT NOT NULL,
     "title" TEXT,
     "thumbnail" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "VenueMedia_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "UserVenue" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 

@@ -19,10 +19,10 @@ async function createVenuesAndAssignEvents() {
       
       const venuesData = [
         {
-          venueName: 'Club Insane',
+          venueName: 'Club Nox',
           address: '123 Rue de la Nuit, 75001 Paris',
-          email: 'clubinsane@venue.com',
-          username: 'clubinsane',
+          email: 'clubnox@venue.com',
+          username: 'clubnox',
         },
         {
           venueName: 'Warehouse Underground',

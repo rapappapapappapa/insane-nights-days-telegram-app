@@ -24,7 +24,7 @@ import GoogleSignInSection, { isGoogleOAuthConfigured } from '../../components/G
 import AppleSignInSection from '../../components/AppleSignInSection';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { styles } from './LoginPage.styles';
-import { resolvePostAuthNavigation } from '../../utils/noxRoleNavigation';
+import { rememberPostAuthScreen, resolvePostAuthNavigation } from '../../utils/noxRoleNavigation';
 import { getRegisterRoleCopy } from '../../utils/registerFlow';
 import { resolveApiErrorMessage } from '../../constants/networkErrors';
 
@@ -55,6 +55,10 @@ export default function LoginPage() {
 
   const nextScreen = routeParams?.nextScreen || null;
   const roleCopy = getRegisterRoleCopy(nextScreen, language);
+
+  useEffect(() => {
+    if (nextScreen) rememberPostAuthScreen(nextScreen);
+  }, [nextScreen]);
   /** Inscription uniquement après choix de rôle. Pas de formulaire générique. */
   const isRoleSignup = !!nextScreen && !!roleCopy;
 
@@ -111,7 +115,13 @@ export default function LoginPage() {
       setPassword('');
       showSuccess(language === 'fr' ? 'Connexion réussie !' : 'Login successful!');
       setTimeout(() => {
-        const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+        const authUser = {
+          ...result.user,
+          isAuthenticated: true,
+          emailVerified: result.user?.emailVerified ?? false,
+          activeProfileType: result.user?.activeProfileType ?? null,
+        };
+        const { screen, params } = resolvePostAuthNavigation(authUser, nextScreen);
         navigate(screen, params);
       }, 300);
     } else {
@@ -166,7 +176,13 @@ export default function LoginPage() {
       setCertifiedMajor(false);
       setAcceptedCgu(false);
       setTimeout(() => {
-        const { screen, params } = resolvePostAuthNavigation(result.user, nextScreen);
+        const authUser = {
+          ...result.user,
+          isAuthenticated: true,
+          emailVerified: result.user?.emailVerified ?? false,
+          activeProfileType: result.user?.activeProfileType ?? null,
+        };
+        const { screen, params } = resolvePostAuthNavigation(authUser, nextScreen);
         navigate(screen, params);
       }, 300);
     } else {

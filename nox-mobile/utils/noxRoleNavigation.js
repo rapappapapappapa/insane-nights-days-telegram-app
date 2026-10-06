@@ -142,13 +142,44 @@ export function getProDashboardScreen(activeProfileType) {
 }
 
 /**
+ * Rôle choisi à l’inscription. Survit aux navigate() qui oublient `nextScreen`
+ * (garde email dans App.js, timeout login).
+ */
+let pendingPostAuthScreen = null;
+
+export function rememberPostAuthScreen(nextScreen) {
+  if (typeof nextScreen === 'string' && nextScreen.startsWith('register')) {
+    pendingPostAuthScreen = nextScreen;
+  }
+}
+
+export function peekPostAuthScreen() {
+  return pendingPostAuthScreen;
+}
+
+export function clearPostAuthScreen() {
+  pendingPostAuthScreen = null;
+}
+
+function resolveChosenRoleScreen(nextScreen) {
+  if (typeof nextScreen === 'string' && nextScreen.startsWith('register')) return nextScreen;
+  if (typeof pendingPostAuthScreen === 'string' && pendingPostAuthScreen.startsWith('register')) {
+    return pendingPostAuthScreen;
+  }
+  return null;
+}
+
+/**
  * Écran après login/register si pas de `nextScreen` explicite.
- * Sans profil actif, le choix de rôle — pas le splash (sinon « Continuer » boucle).
+ * Sans profil actif : le formulaire du rôle déjà choisi, sinon le choix de rôle.
+ * Pas le splash (sinon « Continuer » boucle).
  */
 export function getPostAuthScreen(activeProfileType, nextScreen) {
-  if (nextScreen) return nextScreen;
-  if (!activeProfileType) return 'accountType';
-  return getHomeScreenForProfile(activeProfileType);
+  if (activeProfileType) {
+    clearPostAuthScreen();
+    return getHomeScreenForProfile(activeProfileType);
+  }
+  return resolveChosenRoleScreen(nextScreen) || 'accountType';
 }
 
 /** Home réelle d’un compte déjà connecté (profil manquant → choix de rôle). */
@@ -177,10 +208,11 @@ export function needsEmailVerification(user) {
   return !!user?.isAuthenticated && user?.emailVerified === false;
 }
 
-/** Après login/register : OTP si email non vérifié, sinon home ou nextScreen. */
+/** Après login/register : OTP si email non vérifié, sinon home ou formulaire du rôle. */
 export function resolvePostAuthNavigation(user, nextScreen) {
+  const chosen = resolveChosenRoleScreen(nextScreen);
   if (needsEmailVerification(user)) {
-    return { screen: 'authVerifyEmail', params: { nextScreen: nextScreen || null } };
+    return { screen: 'authVerifyEmail', params: chosen ? { nextScreen: chosen } : undefined };
   }
-  return { screen: getPostAuthScreen(user?.activeProfileType, nextScreen), params: undefined };
+  return { screen: getPostAuthScreen(user?.activeProfileType, chosen), params: undefined };
 }

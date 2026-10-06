@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { rememberPostAuthScreen } from '../../utils/noxRoleNavigation';
 import { NoxText, NoxRoleCard } from '../../components/nox';
 import Colors from '../../constants/colors';
 import { ROLE_THEMES, styles } from './AccountTypePage.styles';
@@ -75,6 +76,7 @@ export default function AccountTypePage() {
   const handleAccountTypeSelect = (type) => {
     const nextScreen = NEXT_SCREEN_BY_TYPE[type];
     if (!nextScreen) return;
+    rememberPostAuthScreen(nextScreen);
     // Déjà connecté (email validé, pas encore de profil) : le formulaire de profil.
     // Repasser par login renvoie ici tout de suite (garde App.js).
     if (loggedIn) {

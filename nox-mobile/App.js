@@ -18,7 +18,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
-import { getHomeScreenForProfile, getAuthenticatedLandingScreen, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
+import { getHomeScreenForProfile, getAuthenticatedLandingScreen, shouldShowDrawerMenuButton, needsEmailVerification, peekPostAuthScreen } from './utils/noxRoleNavigation';
 import { shouldShowTutorial } from './utils/tutorialStorage';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
@@ -233,7 +233,11 @@ function AppContent() {
       const homeScreen = getAuthenticatedLandingScreen(user?.activeProfileType);
       if (user?.isAuthenticated) {
         if (needsEmailVerification(user) && currentPage !== 'authVerifyEmail') {
-          navigate('authVerifyEmail');
+          const chosen =
+            typeof routeParams?.nextScreen === 'string' && routeParams.nextScreen.startsWith('register')
+              ? routeParams.nextScreen
+              : peekPostAuthScreen();
+          navigate('authVerifyEmail', chosen ? { nextScreen: chosen } : undefined);
         } else if (
           !needsEmailVerification(user) &&
           homeScreen !== currentPage &&

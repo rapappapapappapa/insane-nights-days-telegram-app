@@ -94,13 +94,32 @@ export default function AuthVerifyEmailPage() {
     try {
       const res = await api.sendEmailVerificationCode(user.token);
       if (res?.success) {
-        showSuccess(fr ? 'Code envoyé par email.' : 'Code sent by email.');
         if (res.debugCode) setDebugCode(String(res.debugCode));
+        if (res.emailSent === false) {
+          showError(
+            res.message ||
+              (fr
+                ? 'Email non envoyé. Tape le code affiché ou « Continuer sans valider ».'
+                : 'Email not sent. Use the on-screen code or “Continue without verifying”.')
+          );
+        } else {
+          showSuccess(fr ? 'Code envoyé par email.' : 'Code sent by email.');
+        }
       } else {
-        showError(res?.message || (fr ? 'Envoi impossible.' : 'Could not send code.'));
+        showError(
+          (res?.message || (fr ? 'Envoi impossible.' : 'Could not send code.')) +
+            (fr
+              ? ' Tu peux « Continuer sans valider » pour entrer dans l’app.'
+              : ' You can “Continue without verifying” to enter the app.')
+        );
       }
     } catch (e) {
-      showError(e?.message || (fr ? 'Erreur réseau.' : 'Network error.'));
+      showError(
+        (e?.message || (fr ? 'Erreur réseau.' : 'Network error.')) +
+          (fr
+            ? ' Tu peux « Continuer sans valider » pour entrer dans l’app.'
+            : ' You can “Continue without verifying” to enter the app.')
+      );
     } finally {
       setSending(false);
     }
@@ -161,6 +180,19 @@ export default function AuthVerifyEmailPage() {
               ? `Nous avons envoyé un code à 6 chiffres à ${user.email || 'ton adresse'}.`
               : `We sent a 6-digit code to ${user.email || 'your address'}.`}
           </NoxText>
+          {debugCode ? (
+            <NoxText variant="secondary" style={styles.debug}>
+              {fr
+                ? `Pas d’email reçu ? Code temporaire : ${debugCode}`
+                : `No email? Temporary code: ${debugCode}`}
+            </NoxText>
+          ) : (
+            <NoxText variant="secondary" style={[styles.subtitle, { marginTop: Spacing.sm }]}>
+              {fr
+                ? 'Pas d’email ? Utilise « Continuer sans valider » ci-dessous pour entrer dans l’app.'
+                : 'No email? Use “Continue without verifying” below to enter the app.'}
+            </NoxText>
+          )}
           {roleCopy ? (
             <NoxText variant="secondary" style={[styles.subtitle, { marginTop: Spacing.sm }]}>
               {fr
@@ -180,12 +212,6 @@ export default function AuthVerifyEmailPage() {
             autoComplete="one-time-code"
             textContentType="oneTimeCode"
           />
-
-          {debugCode ? (
-            <NoxText variant="secondary" style={styles.debug}>
-              {fr ? 'Code dev (email non envoyé) :' : 'Dev code (email not sent):'} {debugCode}
-            </NoxText>
-          ) : null}
 
           <NoxButton
             label={fr ? 'Valider' : 'Confirm'}

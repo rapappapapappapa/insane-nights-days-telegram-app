@@ -141,9 +141,19 @@ export function getProDashboardScreen(activeProfileType) {
   }
 }
 
-/** Écran après login/register si pas de `nextScreen` explicite. */
+/**
+ * Écran après login/register si pas de `nextScreen` explicite.
+ * Sans profil actif, le choix de rôle — pas le splash (sinon « Continuer » boucle).
+ */
 export function getPostAuthScreen(activeProfileType, nextScreen) {
   if (nextScreen) return nextScreen;
+  if (!activeProfileType) return 'accountType';
+  return getHomeScreenForProfile(activeProfileType);
+}
+
+/** Home réelle d’un compte déjà connecté (profil manquant → choix de rôle). */
+export function getAuthenticatedLandingScreen(activeProfileType) {
+  if (!activeProfileType) return 'accountType';
   return getHomeScreenForProfile(activeProfileType);
 }
 

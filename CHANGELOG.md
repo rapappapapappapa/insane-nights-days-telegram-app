@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (auth — skip vérif email bouclait sur le splash)
+- Sans profil actif, « Continuer sans valider » et le splash connecté mènent au **choix de rôle** (`accountType`), plus à une boucle splash → onboarding → splash.
+
 ### Corrigé (auth — vérif email sans mailer)
 - Envoi OTP : le code est **persisté avant** l’email ; si Resend/SMTP absent ou en échec → plus de mur 500, message clair + `debugCode` si mailer non configuré, et invitation à « Continuer sans valider ».
 - Écran `authVerifyEmail` : hint visible quand aucun email n’arrive.

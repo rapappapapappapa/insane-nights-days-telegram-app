@@ -18,7 +18,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PushNotification from './components/PushNotification';
 import Drawer from './components/Drawer';
 import NoxRadialNav from './components/nox/NoxRadialNav';
-import { getHomeScreenForProfile, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
+import { getHomeScreenForProfile, getAuthenticatedLandingScreen, shouldShowDrawerMenuButton, needsEmailVerification } from './utils/noxRoleNavigation';
 import { shouldShowTutorial } from './utils/tutorialStorage';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
@@ -220,7 +220,7 @@ function AppContent() {
   
   useEffect(() => {
     if (user?.isAuthenticated) {
-      setBackFallback(getHomeScreenForProfile(user?.activeProfileType));
+      setBackFallback(getAuthenticatedLandingScreen(user?.activeProfileType));
     } else {
       setBackFallback('splash');
     }
@@ -230,12 +230,13 @@ function AppContent() {
   // Connecté sur splash/login/home legacy → home du rôle actif
   useEffect(() => {
     if (!isInitializing) {
-      const homeScreen = getHomeScreenForProfile(user?.activeProfileType);
+      const homeScreen = getAuthenticatedLandingScreen(user?.activeProfileType);
       if (user?.isAuthenticated) {
         if (needsEmailVerification(user) && currentPage !== 'authVerifyEmail') {
           navigate('authVerifyEmail');
         } else if (
           !needsEmailVerification(user) &&
+          homeScreen !== currentPage &&
           (currentPage === 'home' || currentPage === 'onboarding' || currentPage === 'splash' || currentPage === 'login')
         ) {
           navigate(homeScreen);
@@ -282,7 +283,7 @@ function AppContent() {
   useEffect(() => {
     if (Platform.OS !== 'android') return undefined;
     const homeScreen = user?.isAuthenticated
-      ? getHomeScreenForProfile(user?.activeProfileType)
+      ? getAuthenticatedLandingScreen(user?.activeProfileType)
       : 'splash';
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (tryHardwareBack()) return true;

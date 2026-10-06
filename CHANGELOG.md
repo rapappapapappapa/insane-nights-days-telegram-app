@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (auth — choix de rôle bloqué après validation email)
+- Compte déjà connecté sans profil : un rôle ouvre le formulaire de profil (`registerDj`, etc.), plus l’écran login qui renvoyait aussitôt sur « Choisis ton rôle ».
+
 ### Corrigé (auth — formulaire inscription sans rôle retiré)
 - `LoginPage` n’affiche plus le formulaire générique « Rejoins le réseau ». L’inscription n’existe qu’après un rôle (`nextScreen`).
 

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { NoxText, NoxRoleCard } from '../../components/nox';
 import Colors from '../../constants/colors';
 import { ROLE_THEMES, styles } from './AccountTypePage.styles';
@@ -57,25 +58,29 @@ const accountTypes = [
   },
 ];
 
+const NEXT_SCREEN_BY_TYPE = {
+  community: 'registerCommunity',
+  dj: 'registerDj',
+  booker: 'registerBooker',
+  venue: 'registerVenue',
+  prestataire: 'registerPrestataire',
+};
+
 export default function AccountTypePage() {
   const { language } = useLanguage();
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const loggedIn = !!user?.isAuthenticated;
 
   const handleAccountTypeSelect = (type) => {
-    const nextScreen =
-      type === 'community'
-        ? 'registerCommunity'
-        : type === 'dj'
-          ? 'registerDj'
-          : type === 'booker'
-            ? 'registerBooker'
-            : type === 'venue'
-              ? 'registerVenue'
-              : type === 'prestataire'
-                ? 'registerPrestataire'
-                : null;
-
+    const nextScreen = NEXT_SCREEN_BY_TYPE[type];
     if (!nextScreen) return;
+    // Déjà connecté (email validé, pas encore de profil) : le formulaire de profil.
+    // Repasser par login renvoie ici tout de suite (garde App.js).
+    if (loggedIn) {
+      navigate(nextScreen);
+      return;
+    }
     navigate('login', { mode: 'register', nextScreen });
   };
 
@@ -84,14 +89,18 @@ export default function AccountTypePage() {
       <StatusBar style="light" />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigate('onboarding')}
-            accessibilityRole="button"
-            accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
-          >
-            <Ionicons name="chevron-back" size={26} color={Colors.text} />
-          </TouchableOpacity>
+          {loggedIn ? (
+            <View style={styles.backBtn} />
+          ) : (
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigate('onboarding')}
+              accessibilityRole="button"
+              accessibilityLabel={language === 'fr' ? 'Retour' : 'Back'}
+            >
+              <Ionicons name="chevron-back" size={26} color={Colors.text} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -100,9 +109,13 @@ export default function AccountTypePage() {
               {language === 'fr' ? 'Choisis ton rôle' : 'Choose your role'}
             </NoxText>
             <NoxText variant="secondary" style={styles.subtitle}>
-              {language === 'fr'
-                ? 'Étape suivante : créer ton compte, puis compléter ton profil métier (pas un second compte).'
-                : 'Next: create your account, then complete your role profile (not a second account).'}
+              {loggedIn
+                ? language === 'fr'
+                  ? 'Ton compte est validé. Choisis un rôle pour compléter ton profil — ce n’est pas un second compte.'
+                  : 'Your account is verified. Pick a role to complete your profile — not a second account.'
+                : language === 'fr'
+                  ? 'Étape suivante : créer ton compte, puis compléter ton profil métier (pas un second compte).'
+                  : 'Next: create your account, then complete your role profile (not a second account).'}
             </NoxText>
           </View>
 

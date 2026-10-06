@@ -185,7 +185,7 @@ const SCREENS = {
 };
 
 function AppContent() {
-  const { currentPage, navigate, goBack, tryHardwareBack, setBackFallback } = useNavigation();
+  const { currentPage, routeParams, navigate, goBack, tryHardwareBack, setBackFallback } = useNavigation();
   const { language } = useLanguage();
   const { user, isInitializing, refreshCurrentUser } = useAuth();
   const { hasNewMessage, clearNewMessage, latest } = useNotifications();
@@ -239,13 +239,22 @@ function AppContent() {
           homeScreen !== currentPage &&
           (currentPage === 'home' || currentPage === 'onboarding' || currentPage === 'splash' || currentPage === 'login')
         ) {
-          navigate(homeScreen);
+          const registerNext = routeParams?.nextScreen;
+          if (
+            currentPage === 'login' &&
+            typeof registerNext === 'string' &&
+            registerNext.startsWith('register')
+          ) {
+            navigate(registerNext);
+          } else {
+            navigate(homeScreen);
+          }
         }
       } else if (!user?.isAuthenticated && (currentPage === 'welcome' || currentPage === 'proHome')) {
         navigate('splash');
       }
     }
-  }, [user?.isAuthenticated, user?.activeProfileType, currentPage, navigate, isInitializing]);
+  }, [user?.isAuthenticated, user?.activeProfileType, currentPage, routeParams?.nextScreen, navigate, isInitializing]);
 
   // Guide NOX au premier lancement (une fois par appareil)
   useEffect(() => {

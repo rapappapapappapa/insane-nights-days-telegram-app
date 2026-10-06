@@ -429,21 +429,19 @@ export default function LoginPage() {
               </>
             )}
 
-            {!nextScreen ? (
+            {!nextScreen && mode === 'login' ? (
               <View style={styles.modeSwitchRow}>
                 <Text style={styles.modeSwitchText}>
-                  {mode === 'register'
-                    ? (language === 'fr' ? 'Déjà un compte ?' : 'Already have an account?')
-                    : (language === 'fr' ? 'Pas encore de compte ?' : 'No account yet?')}
+                  {language === 'fr' ? 'Pas encore de compte ?' : 'No account yet?'}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setMode(mode === 'register' ? 'login' : 'register')}
+                  onPress={() => navigate('accountType')}
                   disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel={language === 'fr' ? 'Créer un compte' : 'Sign up'}
                 >
                   <Text style={styles.modeSwitchLink}>
-                    {mode === 'register'
-                      ? (language === 'fr' ? 'Se connecter' : 'Log in')
-                      : (language === 'fr' ? 'Créer un compte' : 'Sign up')}
+                    {language === 'fr' ? 'Créer un compte' : 'Sign up'}
                   </Text>
                 </TouchableOpacity>
               </View>

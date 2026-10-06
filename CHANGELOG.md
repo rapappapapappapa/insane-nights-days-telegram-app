@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (auth — créer un compte depuis la connexion)
+- Lien « Créer un compte » sous le login (après « J’ai déjà un compte ») ouvre le **choix de rôle**, plus un formulaire sans type de profil.
+
 ### Corrigé (auth — skip vérif email bouclait sur le splash)
 - Sans profil actif, « Continuer sans valider » et le splash connecté mènent au **choix de rôle** (`accountType`), plus à une boucle splash → onboarding → splash.
 

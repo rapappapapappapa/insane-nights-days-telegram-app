@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (auth — formulaire inscription sans rôle retiré)
+- `LoginPage` n’affiche plus le formulaire générique « Rejoins le réseau ». L’inscription n’existe qu’après un rôle (`nextScreen`).
+
 ### Corrigé (auth — créer un compte depuis la connexion)
 - Lien « Créer un compte » sous le login (après « J’ai déjà un compte ») ouvre le **choix de rôle**, plus un formulaire sans type de profil.
 

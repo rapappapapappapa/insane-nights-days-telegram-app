@@ -55,12 +55,13 @@ export default function LoginPage() {
 
   const nextScreen = routeParams?.nextScreen || null;
   const roleCopy = getRegisterRoleCopy(nextScreen, language);
-  const isRoleSignup = mode === 'register' && !!nextScreen && !!roleCopy;
+  /** Inscription uniquement après choix de rôle. Pas de formulaire générique. */
+  const isRoleSignup = !!nextScreen && !!roleCopy;
 
   useEffect(() => {
-    if (nextScreen) setMode('register');
-    else if (routeParams?.mode === 'login') setMode('login');
-  }, [nextScreen, routeParams?.mode]);
+    if (isRoleSignup) setMode('register');
+    else setMode('login');
+  }, [isRoleSignup]);
 
   const handleBirthDateChange = (value) => {
     const cleaned = value.replace(/[^0-9]/g, '');
@@ -201,25 +202,17 @@ export default function LoginPage() {
               </Text>
             ) : null}
             <Text style={styles.title}>
-              {mode === 'register'
-                ? isRoleSignup
-                  ? roleCopy.accountTitle
-                  : language === 'fr'
-                    ? 'Rejoins le réseau'
-                    : 'Join the network'
+              {isRoleSignup
+                ? roleCopy.accountTitle
                 : language === 'fr'
                   ? 'Accède au réseau'
                   : 'Access the network'}
             </Text>
             <Text style={styles.subtitle}>
-              {mode === 'register'
-                ? isRoleSignup
-                  ? language === 'fr'
-                    ? `Crée ton accès NOX. Ensuite tu compléteras ton profil ${roleCopy.label} — ce n’est pas un second compte.`
-                    : `Create your NOX access. Then you’ll complete your ${roleCopy.label} profile — not a second account.`
-                  : language === 'fr'
-                    ? 'Crée ton compte NOX en quelques secondes'
-                    : 'Create your NOX account in seconds'
+              {isRoleSignup
+                ? language === 'fr'
+                  ? `Crée ton accès NOX. Ensuite tu compléteras ton profil ${roleCopy.label} — ce n’est pas un second compte.`
+                  : `Create your NOX access. Then you’ll complete your ${roleCopy.label} profile — not a second account.`
                 : language === 'fr'
                   ? 'Connecte-toi pour retrouver ta scène'
                   : 'Log in to get back to your scene'}
@@ -227,7 +220,7 @@ export default function LoginPage() {
           </View>
 
           <View style={styles.form}>
-            {showSocialDivider && mode === 'login' ? (
+            {showSocialDivider && !isRoleSignup ? (
               <>
                 {showAppleAuth ? (
                   <AppleSignInSection
@@ -284,7 +277,7 @@ export default function LoginPage() {
               icon={<Ionicons name="mail-outline" size={20} color={Colors.textTertiary} />}
             />
 
-            {mode === 'register' ? (
+            {isRoleSignup ? (
               <NoxInput
                 label={language === 'fr' ? 'Pseudo' : 'Username'}
                 placeholder={language === 'fr' ? 'ton.pseudo' : 'your username'}
@@ -324,7 +317,7 @@ export default function LoginPage() {
               }
             />
 
-            {mode === 'register' ? (
+            {isRoleSignup ? (
               <>
                 <NoxInput
                   label={language === 'fr' ? 'Confirmer le mot de passe' : 'Confirm password'}
@@ -384,15 +377,7 @@ export default function LoginPage() {
                   </View>
                 </View>
                 <NoxButton
-                  label={
-                    isRoleSignup
-                      ? language === 'fr'
-                        ? 'Continuer — profil ensuite'
-                        : 'Continue — profile next'
-                      : language === 'fr'
-                        ? 'Créer mon compte'
-                        : 'Create account'
-                  }
+                  label={language === 'fr' ? 'Continuer — profil ensuite' : 'Continue — profile next'}
                   onPress={handleRegister}
                   loading={loading}
                   disabled={loading}

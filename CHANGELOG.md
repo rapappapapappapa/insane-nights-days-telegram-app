@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (auth — email obligatoire)
+- Plus de « Continuer sans valider ». Tant que le code email n’est pas saisi, l’app reste sur l’écran de vérification.
+- Le serveur ne renvoie plus le code dans la réponse, même si l’envoi échoue.
+
 ### Corrigé (mobile — retour Stripe, cache comptes, relances)
 - PaymentSheet revient sur `com.insanenightsdays.mobile://stripe-redirect`, le schéma déclaré dans l’app. Android peut rouvrir Nox après une authentification bancaire.
 - Le cache GET est séparé par compte (empreinte du jeton) et vidé à la déconnexion.

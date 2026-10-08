@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { api } from '../api/config';
 import { saveToken, getToken, deleteToken, saveUserData, getUserData, isTokenExpired } from '../utils/tokenStorage';
 import { getLocalExpoPushToken, clearLocalExpoPushToken } from '../utils/pushTokenStorage';
-import { clearPostAuthScreen, resetEmailVerificationSkip } from '../utils/noxRoleNavigation';
+import { clearPostAuthScreen } from '../utils/noxRoleNavigation';
 import logger from '../utils/logger';
 import { getNetworkUnreachableMessage } from '../constants/networkErrors';
 import { apiCache } from '../utils/apiCache';
@@ -299,7 +299,6 @@ export function AuthProvider({ children }) {
     }
     await clearLocalExpoPushToken();
     await deleteToken();
-    resetEmailVerificationSkip();
     clearPostAuthScreen();
     apiCache.clear();
     setUser({

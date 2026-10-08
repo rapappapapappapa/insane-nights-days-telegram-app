@@ -477,29 +477,15 @@ const sendEmailVerification = async (req, res) => {
 
     const mailerReady = isConfigured();
     if (!mailerReady) {
-      console.warn('[sendEmailVerification] Mailer non configuré — code disponible en debugCode');
-      return sendSuccess(res, {
-        message:
-          'Email non configuré sur le serveur. Utilise le code affiché ou « Continuer sans valider ».',
-        emailSent: false,
-        debugCode: code,
-        canSkip: true,
-      });
+      console.error('[sendEmailVerification] Mailer non configuré');
+      return sendError(res, 'Impossible d\'envoyer l\'email. Réessaie plus tard.', 503);
     }
 
     try {
       await sendMail({ to: user.email, subject, text, html });
     } catch (e) {
       console.error('[sendEmailVerification] Envoi échoué:', e?.message || e);
-      const showDebug =
-        process.env.EMAIL_SHOW_DEBUG_CODE === 'true' || process.env.EMAIL_SHOW_DEBUG_CODE === '1';
-      return sendSuccess(res, {
-        message:
-          'Impossible d\'envoyer l\'email pour le moment. Tu peux « Continuer sans valider » ou réessayer plus tard.',
-        emailSent: false,
-        canSkip: true,
-        ...(showDebug ? { debugCode: code } : {}),
-      });
+      return sendError(res, 'Impossible d\'envoyer l\'email. Réessaie plus tard.', 503);
     }
 
     return sendSuccess(res, { message: 'Code envoyé.', emailSent: true });

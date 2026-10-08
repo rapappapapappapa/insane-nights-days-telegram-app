@@ -139,12 +139,16 @@ export const apiRequest = async (endpoint, options = {}, token = null, customTim
   };
 
   try {
-    const data = await retryApiCall(performRequest, {
-      maxRetries: 2,
-      delay: 500,
-      shouldRetry: isRetryableError,
-      exponentialBackoff: true,
-    });
+    // Relances automatiques seulement pour les lectures. Un POST/PUT/PATCH/DELETE
+    // déjà accepté par le serveur ne doit pas être renvoyé si la réponse se perd.
+    const data = isGetRequest
+      ? await retryApiCall(performRequest, {
+          maxRetries: 2,
+          delay: 500,
+          shouldRetry: isRetryableError,
+          exponentialBackoff: true,
+        })
+      : await performRequest();
 
     if (isGetRequest && cacheKey && data) {
       apiCache.set(cacheKey, data);

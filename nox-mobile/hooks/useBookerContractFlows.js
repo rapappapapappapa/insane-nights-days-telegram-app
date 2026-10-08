@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../api/config';
 import * as Stripe from '../utils/stripe';
+import { APP_URL_SCHEME, STRIPE_RETURN_URL } from '../constants/stripeRedirect';
 import {
   draftFromPayload,
   buildVenueContractPayload,
@@ -247,13 +248,13 @@ export function useBookerContractFlows({
 
       await Stripe.initStripe({
         publishableKey: intentRes.publishableKey,
-        urlScheme: 'nox-mobile',
+        urlScheme: APP_URL_SCHEME,
       });
 
       const init = await Stripe.initPaymentSheet({
         merchantDisplayName: 'Nox',
         paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
-        returnURL: 'nox-mobile://stripe-redirect',
+        returnURL: STRIPE_RETURN_URL,
       });
       if (init?.error) {
         showError(init.error.message || (language === 'fr' ? 'Erreur Stripe.' : 'Stripe error.'));

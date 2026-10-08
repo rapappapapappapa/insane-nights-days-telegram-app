@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../api/config';
 import * as Stripe from '../utils/stripe';
+import { APP_URL_SCHEME, STRIPE_RETURN_URL } from '../constants/stripeRedirect';
 import { isTicketTierSelectable } from '../utils/eventDetailPageUtils';
 
 /**
@@ -144,7 +145,7 @@ export function useEventDetailPurchase({
       try {
         await Stripe.initStripe({
           publishableKey: intentRes.publishableKey,
-          urlScheme: 'nox-mobile',
+          urlScheme: APP_URL_SCHEME,
         });
       } catch (e) {
         showError(
@@ -158,7 +159,7 @@ export function useEventDetailPurchase({
         merchantDisplayName: 'Nox',
         paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
         allowsDelayedPaymentMethods: true,
-        returnURL: 'nox-mobile://stripe-redirect',
+        returnURL: STRIPE_RETURN_URL,
       });
       if (init?.error) {
         showError(init.error.message || (language === 'fr' ? 'Erreur initialisation paiement.' : 'Payment init error.'));

@@ -5,6 +5,7 @@ import { getLocalExpoPushToken, clearLocalExpoPushToken } from '../utils/pushTok
 import { clearPostAuthScreen, resetEmailVerificationSkip } from '../utils/noxRoleNavigation';
 import logger from '../utils/logger';
 import { getNetworkUnreachableMessage } from '../constants/networkErrors';
+import { apiCache } from '../utils/apiCache';
 
 const AuthContext = createContext();
 
@@ -300,6 +301,7 @@ export function AuthProvider({ children }) {
     await deleteToken();
     resetEmailVerificationSkip();
     clearPostAuthScreen();
+    apiCache.clear();
     setUser({
       id: null,
       email: '',

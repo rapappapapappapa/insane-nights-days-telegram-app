@@ -5,6 +5,16 @@
 
 import logger from './logger';
 
+/** Empreinte courte et stable, sans exposer le jeton. */
+function hashToken(token) {
+  let h = 0;
+  const value = String(token);
+  for (let i = 0; i < value.length; i += 1) {
+    h = (Math.imul(31, h) + value.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(16);
+}
+
 class ApiCache {
   constructor(defaultTtl = 5 * 60 * 1000) {
     // TTL par défaut : 5 minutes
@@ -20,9 +30,9 @@ class ApiCache {
    * @returns {string} - La clé de cache
    */
   generateKey(endpoint, options = {}, token = null) {
-    // Ne pas inclure le token dans la clé pour permettre le partage de cache entre utilisateurs
-    // Mais inclure un hash si nécessaire pour différencier les requêtes authentifiées
-    const tokenHash = token ? 'auth' : 'public';
+    // Empreinte du jeton : deux comptes sur le même téléphone ne partagent pas le cache.
+    // Le jeton lui-même n’est pas stocké dans la clé (elle peut apparaître dans les logs).
+    const tokenHash = token ? `u${hashToken(token)}` : 'public';
     const optionsStr = JSON.stringify({
       method: options.method || 'GET',
       body: options.body ? '[BODY]' : undefined, // Ne pas mettre le body complet pour éviter des clés trop longues

@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 6 au 10 octobre 2026
 
+### Corrigé (mobile — retour Stripe, cache comptes, relances)
+- PaymentSheet revient sur `com.insanenightsdays.mobile://stripe-redirect`, le schéma déclaré dans l’app. Android peut rouvrir Nox après une authentification bancaire.
+- Le cache GET est séparé par compte (empreinte du jeton) et vidé à la déconnexion.
+- Les relances automatiques ne concernent plus que les lectures. Un achat ou une création n’est pas renvoyé si la réponse réseau se perd.
+
 ### Corrigé (auth — choix de rôle bloqué après validation email)
 - Après le code email, l’inscription reprend le **rôle déjà choisi** (formulaire de profil), au lieu de réafficher « Choisis ton rôle ».
 - Le rôle est mémorisé : les redirections vers la vérif email ne l’effacent plus.

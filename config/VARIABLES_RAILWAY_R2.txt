@@ -1,0 +1,13 @@
+Variables à mettre dans Railway pour R2 :
+
+MEDIA_STORAGE=r2
+
+R2_ENDPOINT=https://6433eb196f0fff405dcf666812f936ab.r2.cloudflarestorage.com
+
+R2_ACCESS_KEY_ID=69cd8db3a5325c7484c8fcb11cf543fc
+
+R2_SECRET_ACCESS_KEY=96323f1e3a66af3b0fc3941607338de84d38f1b02dc21c3b6c1deb2431f21fa3
+
+R2_BUCKET=nox-media
+
+R2_PUBLIC_BASE_URL=https://pub-88793aa72de9483eb35adc3402eb060d.r2.dev

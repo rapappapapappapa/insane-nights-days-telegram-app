@@ -1,0 +1,16 @@
+---
+description: Après tout correctif ou fonctionnalité notable dans ce dépôt, mettre à jour le CHANGELOG, committer et pousser.
+globs:
+alwaysApply: true
+---
+
+# CHANGELOG + Git
+
+Lorsque tu modifies le code de façon notable (correctif, feature, régression évitée) :
+
+1. Ajouter une entrée courte dans **`CHANGELOG.md`** sous la **semaine en cours** (en-tête `## Semaine du … au …`, ou en créer une si besoin), en français comme le reste du fichier.
+2. **Titres de sous-section sans date du jour** — ex. `### Corrigé (scope — sujet)` ; pas de suffixe `— 14 août` (la semaine suffit).
+3. **En-têtes de semaine** — `## Semaine du … au … mois année` uniquement ; pas de `(mar. - ven.)` ni jour précis.
+4. **`git add`** les fichiers concernés + **`CHANGELOG.md`**, **`git commit`** avec message clair en français, puis **`git push origin railway-phase1`** (sauf si l’utilisateur impose une autre branche).
+
+Ne pas omettre le CHANGELOG pour des changements visibles par l’équipe ou les déploiements.

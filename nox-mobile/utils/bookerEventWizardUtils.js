@@ -1,0 +1,365 @@
+export const EVENT_CREATION_DRAFT_KEY = '@nox_booker_event_creation_draft_v2';
+export const DRAFT_VERSION = 2;
+
+/** Aligné avec EVENT_MIN_LEAD_DAYS côté serveur. 0 = désactiver (EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS=0). */
+export function getEventMinLeadDaysFromEnv() {
+  const raw = process.env.EXPO_PUBLIC_EVENT_MIN_LEAD_DAYS;
+  if (raw === '0') return 0;
+  const n = parseInt(String(raw ?? '7'), 10);
+  return Number.isFinite(n) && n >= 0 ? n : 7;
+}
+
+export function getMinEventCalendarDate(leadDays) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const min = new Date(today);
+  min.setDate(min.getDate() + leadDays);
+  return min;
+}
+
+/** Titre saisi (évite !title qui rate les espaces). */
+export function hasBookerEventTitle(formData) {
+  return formData?.title != null && String(formData.title).trim().length > 0;
+}
+
+/**
+ * Prix billetterie saisi : 0 € est valide.
+ * Bug évité : `!formData.price` désactivait le bouton quand price était le nombre 0 (ex. brouillon JSON).
+ */
+export function hasBookerEventPrice(formData) {
+  const p = formData?.price;
+  if (p === '' || p == null) return false;
+  if (typeof p === 'number') return !Number.isNaN(p);
+  const t = String(p).trim();
+  if (t === '') return false;
+  return !Number.isNaN(parseFloat(t.replace(',', '.')));
+}
+
+export function stepRequirementsHint(step, lang) {
+  const fr = lang === 'fr';
+  const leadDays = getEventMinLeadDaysFromEnv();
+  switch (step) {
+    case 1:
+      if (leadDays > 0) {
+        return fr
+          ? `Obligatoire : date au moins ${leadDays} jour(s) après aujourd'hui, heure de début, durée (h).`
+          : `Required: date at least ${leadDays} day(s) from today, start time, duration (h).`;
+      }
+      return fr ? 'Obligatoire : date, heure de début, durée (h).' : 'Required: date, start time, duration (h).';
+    case 2:
+      return fr ? 'Obligatoire : choisir un lieu pour l’événement.' : 'Required: choose a venue.';
+    case 3:
+      return fr
+        ? 'Obligatoire : au moins un DJ ; créneau début–fin par DJ, dans la plage de l’événement.'
+        : 'Required: at least one DJ; start–end slot per DJ within the event window.';
+    case 4:
+      return fr
+        ? 'Obligatoire : titre et prix billetterie. Image de couverture et autres champs : optionnels.'
+        : 'Required: title and ticket price. Cover image and other fields: optional.';
+    case 5:
+      return fr
+        ? 'Vérifie le récapitulatif puis confirme. Les montants lieu ci-dessous sont indicatifs ; les contrats fixent les prix fermes.'
+        : 'Review the summary then confirm. Venue amounts shown are indicative; contracts set final prices.';
+    default:
+      return '';
+  }
+}
+
+export const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
+
+/** Reconstruit les créneaux depuis le contexte (survit au démontage navigation selectDj → profil DJ). */
+export function buildDjSlotsFromFormData(fd) {
+  const layout = fd?.djSlotsLayout;
+  if (Array.isArray(layout) && layout.length > 0) {
+    return layout.map((s) => ({
+      djId: s.djId ?? null,
+      slotStart: s.slotStart || '',
+      slotEnd: s.slotEnd || '',
+    }));
+  }
+  const ids = fd?.djIds || [];
+  if (!ids.length) return [emptyDjSlot()];
+  const assigns = fd?.djSlotAssignments || [];
+  return [
+    ...ids.map((id, i) => ({
+      djId: id,
+      slotStart: assigns[i]?.slotStart || '',
+      slotEnd: assigns[i]?.slotEnd || '',
+    })),
+    emptyDjSlot(),
+  ];
+}
+
+/**
+ * Évite d'écraser les DJs déjà choisis quand le state local repart à vide au remontage.
+ * Union : on part des slots locaux et on ré-injecte tout DJ du formulaire absent
+ * (le state local est perdu à chaque navigation vers la sélection DJ — écran démonté).
+ * Un DJ présent dans formData ne peut donc jamais disparaître lors d'une fusion,
+ * même si les deux sources sont désynchronisées (slot vide ajouté, ordre différent…).
+ */
+export function mergeDjSlotsWithForm(prev, fd) {
+  const formIds = fd?.djIds || [];
+  const assigns = fd?.djSlotAssignments || [];
+  const prevArr = Array.isArray(prev) ? prev : [];
+  const prevHasDj = prevArr.some((s) => s.djId);
+
+  let result;
+  if (!prevHasDj && formIds.length > 0) {
+    result = buildDjSlotsFromFormData(fd);
+  } else if (prevArr.length > 0) {
+    result = prevArr.map((s) => ({ ...s }));
+  } else {
+    result = [emptyDjSlot()];
+  }
+
+  // Conserver les créneaux vides ajoutés (« + Ajouter un créneau ») même si formData n’a pas encore suivi.
+  const prevLen = prevArr.length;
+  while (result.length < prevLen) {
+    result.push(emptyDjSlot());
+  }
+
+  const knownIds = new Set(result.filter((s) => s.djId).map((s) => s.djId));
+  formIds.forEach((id, i) => {
+    if (!id || knownIds.has(id)) return;
+    const slot = {
+      djId: id,
+      slotStart: assigns[i]?.slotStart || '',
+      slotEnd: assigns[i]?.slotEnd || '',
+    };
+    const emptyIdx = result.findIndex((s) => !s.djId);
+    if (emptyIdx !== -1) result[emptyIdx] = slot;
+    else result.push(slot);
+    knownIds.add(id);
+  });
+  return result;
+}
+
+/**
+ * Assigne un DJ à un créneau sans écraser les autres DJs déjà choisis.
+ * @param {'fill'|'replace'} intent — fill : créneau vide ciblé uniquement ; replace : remplace le DJ du créneau
+ */
+export function assignDjToSlotAtIndex(slots, slotIndex, djId, intent = 'fill') {
+  if (!djId) return Array.isArray(slots) ? slots.map((s) => ({ ...s })) : [emptyDjSlot()];
+
+  const rows = (Array.isArray(slots) && slots.length > 0 ? slots : [emptyDjSlot()]).map((s) => ({
+    ...s,
+  }));
+
+  if (rows.some((s) => s.djId === djId)) return rows;
+
+  const idx =
+    slotIndex !== undefined && slotIndex !== null && Number.isFinite(Number(slotIndex)) && Number(slotIndex) >= 0
+      ? Math.floor(Number(slotIndex))
+      : -1;
+
+  if (idx >= 0) {
+    while (rows.length <= idx) rows.push(emptyDjSlot());
+    if (intent === 'replace' || !rows[idx].djId) {
+      rows[idx] = { ...rows[idx], djId };
+      return rows;
+    }
+  }
+
+  const emptyIdx = rows.findIndex((s) => !s.djId);
+  if (emptyIdx !== -1) {
+    rows[emptyIdx] = { ...rows[emptyIdx], djId };
+    return rows;
+  }
+
+  rows.push({ ...emptyDjSlot(), djId });
+  return rows;
+}
+
+/** Fusion formData brouillon + live en préservant la grille DJ la plus complète. */
+export function mergeFormDataPreservingDjGrid(prev, incoming) {
+  const merged = { ...(incoming || {}) };
+  // Ne pas écraser date/heure/lieu/titre par un brouillon AsyncStorage en retard (debounce 700 ms).
+  ['title', 'date', 'time', 'venueId', 'durationHours', 'price', 'capacity', 'genre', 'description'].forEach(
+    (key) => {
+      const inc = merged[key];
+      const pv = prev?.[key];
+      const incEmpty = inc === '' || inc == null;
+      const pvSet = pv !== '' && pv != null && !(typeof pv === 'string' && !pv.trim());
+      if (incEmpty && pvSet) merged[key] = pv;
+    }
+  );
+  const prevLayout = prev?.djSlotsLayout;
+  const incLayout = merged?.djSlotsLayout;
+  if (Array.isArray(prevLayout) && prevLayout.length > 0) {
+    if (!Array.isArray(incLayout) || prevLayout.length > incLayout.length) {
+      merged.djSlotsLayout = prevLayout;
+    }
+  }
+  const prevIds = prev?.djIds || [];
+  const incIds = merged?.djIds || [];
+  if (prevIds.length > incIds.length) {
+    merged.djIds = prevIds;
+    merged.djSlotAssignments = prev?.djSlotAssignments || [];
+  } else if (prevIds.length === incIds.length && Array.isArray(prevLayout) && prevLayout.length > 0) {
+    merged.djSlotsLayout = prevLayout;
+    merged.djSlotAssignments = prev?.djSlotAssignments || merged.djSlotAssignments;
+  }
+  return merged;
+}
+
+/** Créneaux remplis uniquement (ordre d’affichage conservé). */
+export function getFilledDjSlots(slots) {
+  return (Array.isArray(slots) ? slots : []).filter((s) => s?.djId);
+}
+
+/** Payload DJ dérivé de la grille — source de vérité unique (création API + brouillon). */
+export function djSlotsToFormDjFields(slots) {
+  const rows = (Array.isArray(slots) ? slots : []).map((s) => ({
+    djId: s?.djId ?? null,
+    slotStart: s?.slotStart || '',
+    slotEnd: s?.slotEnd || '',
+  }));
+  const filled = rows.filter((s) => s.djId);
+  return {
+    djIds: filled.map((s) => s.djId),
+    djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+    djSlotsLayout: rows,
+  };
+}
+
+/** Synchronise djIds / créneaux horaires dans le formulaire global (survit au démontage navigation). */
+export function syncDjSlotsToFormData(setFormData, slotsAfter) {
+  const fields = djSlotsToFormDjFields(slotsAfter);
+  setFormData((prev) => ({
+    ...prev,
+    ...fields,
+  }));
+}
+
+/**
+ * Premier rendu du wizard : si on revient depuis la sélection lieu/DJ, éviter l’étape 1
+ * (state local repart à 1 au remontage de l’écran ; le brouillon « Reprendre » peut aussi
+ * réappliquer un currentStep obsolète).
+ */
+export function getInitialStepFromRouteParams(routeParams) {
+  const p = routeParams || {};
+  if (
+    p.selectedVenueId &&
+    (p.action === 'select' || p.action === 'replaceVenue')
+  ) {
+    return 2;
+  }
+  if (p.selectedDjId && (p.action === 'add' || p.action === 'remove')) {
+    return 3;
+  }
+  return 1;
+}
+
+/** Normalise resumeStep (nombre ou chaîne « 2 » / « 3 » selon les ponts natifs). */
+export function parseResumeStepFromParams(p) {
+  const raw = p?.resumeStep;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n < 1 || n > 5) return null;
+  return n;
+}
+
+/** Si les routeParams ne sont pas encore fiables au 1er rendu, reprendre l’étape persistée dans EventFormContext. */
+export function getMergedInitialBookerWizardStep(routeParams, ctxStep) {
+  const p = routeParams || {};
+  const rs = parseResumeStepFromParams(p);
+  if (rs != null) {
+    return rs;
+  }
+  const fromRoute = getInitialStepFromRouteParams(routeParams);
+  if (fromRoute > 1) return fromRoute;
+  const c = ctxStep ?? 1;
+  return Math.min(5, Math.max(1, c));
+}
+
+/** Retour depuis profil lieu/DJ : ne pas réappliquer le JSON AsyncStorage (écraserait la sélection en cours). */
+export function isReturnFromVenueOrDjPicker(rp) {
+  if (!rp || typeof rp !== 'object') return false;
+  const a = rp.action;
+  if (
+    rp.selectedVenueId &&
+    (a === 'select' || a === 'replaceVenue' || a === 'remove')
+  ) {
+    return true;
+  }
+  if (rp.selectedDjId && (a === 'add' || a === 'remove')) {
+    return true;
+  }
+  return false;
+}
+
+export function parseHM(str) {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mi = parseInt(m[2], 10);
+  if (h > 23 || mi > 59 || h < 0 || mi < 0) return null;
+  return h * 60 + mi;
+}
+
+export function formatHM(mins) {
+  const m = Math.round(mins);
+  const h24 = Math.floor(m / 60) % 24;
+  const mi = m % 60;
+  return `${String(h24).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+}
+
+export function applyEqualDjSlotTimes(slots, timeStr, durationH) {
+  const evS = parseHM(timeStr);
+  if (evS == null || durationH == null || Number.isNaN(durationH) || durationH <= 0) {
+    return slots;
+  }
+  const evE = evS + durationH * 60;
+  const idxs = slots.map((s, i) => (s.djId ? i : null)).filter((i) => i !== null);
+  const n = idxs.length;
+  if (n === 0) return slots;
+  const chunk = (evE - evS) / n;
+  const next = slots.map((s) => ({ ...s }));
+  idxs.forEach((slotIdx, j) => {
+    next[slotIdx].slotStart = formatHM(evS + chunk * j);
+    next[slotIdx].slotEnd = formatHM(evS + chunk * (j + 1));
+  });
+  return next;
+}
+
+/** Retourne true si [slotStart, slotEnd] est inclus dans [heure début événement, début + durée] (gestion après minuit). */
+export function slotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationH) {
+  const evS = parseHM(eventTimeStr);
+  if (evS == null) return false;
+  if (durationH == null || Number.isNaN(durationH) || durationH <= 0) {
+    return true;
+  }
+  const evE = evS + durationH * 60;
+  let s = parseHM(slotStart);
+  let e = parseHM(slotEnd);
+  if (s == null || e == null) return false;
+  while (e < s) e += 24 * 60;
+  if (s < evS) s += 24 * 60;
+  if (e < s) e += 24 * 60;
+  return s >= evS && e <= evE && e > s;
+}
+
+/** Résumé texte location matériel (récap wizard). */
+export function summarizeEquipmentRentalBlurb(formData, rentalPresets, language) {
+  if (!formData?.equipmentRentalEnabled) return null;
+  const parts = [];
+  (formData.equipmentRentalPresetIds || []).forEach((id) => {
+    const p = rentalPresets.find((x) => x.id === id);
+    if (p?.label) parts.push(p.label);
+  });
+  (formData.equipmentRentalOrganizerLines || []).forEach((l) => {
+    if (l?.label) parts.push(`${l.label} ×${l.qty || 1}`);
+  });
+  const notes = (formData.equipmentRentalNotes || '').trim();
+  if (parts.length === 0 && !notes) {
+    return language === 'fr'
+      ? 'Option activée — ajoute des articles NOX ou ton matériel.'
+      : 'Enabled — add NOX presets or your gear.';
+  }
+  let s = parts.join(' · ');
+  if (notes) {
+    s += (s ? ' — ' : '') + (language === 'fr' ? `Note : ${notes}` : `Note: ${notes}`);
+  }
+  return s;
+}

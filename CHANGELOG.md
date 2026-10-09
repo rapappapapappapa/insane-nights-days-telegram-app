@@ -4,7 +4,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
-## Semaine du 6 au 10 octobre 2026
+## Semaine du 5 au 9 octobre 2026
 
 ### Corrigé (auth — email obligatoire)
 - Plus de « Continuer sans valider ». Tant que le code email n’est pas saisi, l’app reste sur l’écran de vérification.

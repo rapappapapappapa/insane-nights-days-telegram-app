@@ -376,13 +376,10 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
       },
       token
     );
-    // ✅ Invalidation cache (au cas où /me ou /profiles ont été mis en cache avant)
+    // Le profil actif change, le jeton reste le même : tout le cache GET de ce compte est périmé.
     if (res?.success) {
       try {
-        const meEndpoint = `${API_CONFIG.ENDPOINTS.USER_PROFILE}/me`;
-        const profilesEndpoint = API_CONFIG.ENDPOINTS.USER_PROFILES;
-        apiCache.delete(apiCache.generateKey(meEndpoint, {}, token));
-        apiCache.delete(apiCache.generateKey(profilesEndpoint, {}, token));
+        apiCache.clear();
       } catch (e) {
         logger.warn('[api.switchProfile] cache invalidation failed:', e?.message ?? e);
       }

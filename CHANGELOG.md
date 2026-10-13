@@ -4,6 +4,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 13 au 15 octobre 2026
+
+### Corrigé (mobile — cache au changement de profil)
+- Après un basculement de rôle réussi, tout le cache GET du compte est vidé. Les listes (billets, paiements, profil, notifications) repartent du serveur au lieu de resservir une réponse vieille de quelques minutes.
+
+---
+
 ## Semaine du 5 au 9 octobre 2026
 
 ### Corrigé (auth — email obligatoire)

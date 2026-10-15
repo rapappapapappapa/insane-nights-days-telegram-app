@@ -4,6 +4,7 @@ import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../api/config';
+import { resolveApiErrorMessage } from '../constants/networkErrors';
 import {
   EVENT_CREATION_DRAFT_KEY,
   DRAFT_VERSION,
@@ -637,7 +638,7 @@ export function useBookerEventWizard({
         setPostCreateModal({ eventId: newEventId || null, title: createdTitle });
       } catch (error) {
         console.error('Erreur création événement:', error);
-        showError(error.message || (language === 'fr' ? 'Erreur lors de la création de l\'événement.' : 'Error creating event.'));
+        showError(resolveApiErrorMessage(error, language));
       } finally {
         setCreating(false);
       }

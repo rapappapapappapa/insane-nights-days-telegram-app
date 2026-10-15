@@ -13,6 +13,7 @@ import { NoxInput } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 
 export default function RegisterPrestatairePage() {
@@ -118,7 +119,7 @@ export default function RegisterPrestatairePage() {
       setTimeout(() => navigate(getPostAuthScreen('PRESTATAIRE')), 1200);
     } catch (error) {
       console.error('[RegisterPrestataire]', error);
-      showError(error?.message || (fr ? 'Erreur réseau.' : 'Network error.'));
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

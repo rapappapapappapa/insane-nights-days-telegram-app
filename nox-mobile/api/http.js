@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import { apiCache } from '../utils/apiCache';
 import { retryApiCall, isRetryableError } from '../utils/retry';
 import { API_CONFIG } from './endpointsConfig';
+import { NetworkUnreachableError } from '../constants/networkErrors';
 
 export const getMimeType = (uri, type) => {
   const extension = uri.split('.').pop().toLowerCase();
@@ -156,9 +157,16 @@ export const apiRequest = async (endpoint, options = {}, token = null, customTim
 
     return data;
   } catch (error) {
-    if (error?.message?.includes('Network request failed')) {
+    const transport =
+      error instanceof NetworkUnreachableError ||
+      error?.message?.includes('Network request failed') ||
+      error?.message?.includes('Network Error') ||
+      error?.status === 408 ||
+      String(error?.message || '').includes('Timeout');
+    if (transport) {
       logger.error('[apiRequest] Backend inaccessible (réseau)', { endpoint, url });
-      return null;
+      if (error instanceof NetworkUnreachableError) throw error;
+      throw new NetworkUnreachableError(error?.message || 'Network request failed');
     }
     logger.error('API Request Error:', {
       message: error?.message || 'Unknown error',

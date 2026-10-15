@@ -10,6 +10,7 @@ import CityAutocomplete from '../../components/CityAutocomplete';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
@@ -179,7 +180,7 @@ export default function RegisterDjPage() {
       setTimeout(() => navigate(getPostAuthScreen('DJ')), 1500);
     } catch (error) {
       console.error('Erreur création profil DJ:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

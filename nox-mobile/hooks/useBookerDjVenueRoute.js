@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { api } from '../api/config';
+import { resolveApiErrorMessage } from '../constants/networkErrors';
 
 /**
  * Retour SelectDj/SelectVenue + création d'événement legacy (wizard in-page).
@@ -416,10 +417,7 @@ export function useBookerDjVenueRoute({
       }, 2000);
     } catch (error) {
       console.error('Erreur création événement:', error);
-      showError(
-        error.message ||
-          (language === 'fr' ? "Erreur lors de la création de l'événement." : 'Error creating event.')
-      );
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setCreating(false);
     }

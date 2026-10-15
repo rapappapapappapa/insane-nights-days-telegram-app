@@ -9,6 +9,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (mobile — cache au changement de profil)
 - Après un basculement de rôle réussi, tout le cache GET du compte est vidé. Les listes (billets, paiements, profil, notifications) repartent du serveur au lieu de resservir une réponse vieille de quelques minutes.
 
+### Corrigé (mobile — échec réseau explicite)
+- Une coupure réseau lève `NetworkUnreachableError`. Ce n’est plus une réponse vide, que les écrans prenaient pour « rien à afficher ».
+- Au démarrage, si le serveur est injoignable, la session déjà enregistrée sur le téléphone est conservée. Un jeton refusé par le serveur déconnecte toujours.
+
 ---
 
 ## Semaine du 5 au 9 octobre 2026

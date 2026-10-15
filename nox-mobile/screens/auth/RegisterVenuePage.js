@@ -9,6 +9,7 @@ import { api } from '../../api/config';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getRegisterRoleCopy } from '../../utils/registerFlow';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -308,7 +309,7 @@ export default function RegisterVenuePage() {
       setTimeout(() => navigate('lieuxDashboard'), 1500);
     } catch (error) {
       console.error('Erreur création profil Lieu:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

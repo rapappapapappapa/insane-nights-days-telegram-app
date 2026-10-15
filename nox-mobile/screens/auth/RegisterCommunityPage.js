@@ -9,6 +9,7 @@ import { api } from '../../api/config';
 import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { formatBirthDateFr, getRegisterRoleCopy } from '../../utils/registerFlow';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -159,9 +160,7 @@ export default function RegisterCommunityPage() {
       setTimeout(() => navigate('communityOnboarding'), 2000);
     } catch (error) {
       console.error('Erreur création profil Communauté:', error);
-      showError(
-        error.message || (fr ? 'Erreur lors de la création du profil.' : 'Error creating profile.')
-      );
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

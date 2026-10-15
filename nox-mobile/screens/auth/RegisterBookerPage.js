@@ -10,6 +10,7 @@ import { NoxInput, NoxText } from '../../components/nox';
 import { useToast } from '../../hooks/useToast';
 import { getPostAuthScreen } from '../../utils/noxRoleNavigation';
 import { getRegisterRoleCopy } from '../../utils/registerFlow';
+import { resolveApiErrorMessage } from '../../constants/networkErrors';
 import RegisterRoleFormShell from './RegisterRoleFormShell';
 import { registerRoleStyles as styles } from './RegisterRoleForm.styles';
 
@@ -188,7 +189,7 @@ export default function RegisterBookerPage() {
       setTimeout(() => navigate(getPostAuthScreen('BOOKER')), 1500);
     } catch (error) {
       console.error('Erreur création profil Organisateur:', error);
-      showError(error.message || (language === 'fr' ? 'Erreur lors de la création du profil.' : 'Error creating profile.'));
+      showError(resolveApiErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

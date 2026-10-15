@@ -4,8 +4,13 @@ import { saveToken, getToken, deleteToken, saveUserData, getUserData, isTokenExp
 import { getLocalExpoPushToken, clearLocalExpoPushToken } from '../utils/pushTokenStorage';
 import { clearPostAuthScreen } from '../utils/noxRoleNavigation';
 import logger from '../utils/logger';
-import { getNetworkUnreachableMessage } from '../constants/networkErrors';
+import { getNetworkUnreachableMessage, isNetworkFailure } from '../constants/networkErrors';
 import { apiCache } from '../utils/apiCache';
+
+function sessionErrorMessage(error, fallback) {
+  if (isNetworkFailure(error)) return getNetworkUnreachableMessage('fr');
+  return error?.payload?.message || error?.message || fallback;
+}
 
 const AuthContext = createContext();
 
@@ -68,21 +73,36 @@ export function AuthProvider({ children }) {
               });
             }
           } catch (error) {
-            // Erreur lors de la vérification (réseau, token invalide, etc.)
             logger.warn('[AuthContext] Erreur vérification token:', error.message);
-            await deleteToken();
-            setUser({
-              id: null,
-              email: '',
-              username: '',
-              role: 'USER',
-              emailVerified: false,
-              level: 1,
-              score: 0,
-              activeProfileType: null,
-              isAuthenticated: false,
-              token: null,
-            });
+            if (isNetworkFailure(error) && savedUserData) {
+              setUser({
+                id: savedUserData.id ?? null,
+                email: savedUserData.email ?? '',
+                username: savedUserData.username ?? '',
+                role: savedUserData.role ?? 'USER',
+                emailVerified: savedUserData.emailVerified ?? false,
+                birthDate: savedUserData.birthDate ?? null,
+                score: savedUserData.score ?? 0,
+                level: savedUserData.level ?? 1,
+                activeProfileType: savedUserData.activeProfileType ?? null,
+                isAuthenticated: true,
+                token: savedToken,
+              });
+            } else {
+              await deleteToken();
+              setUser({
+                id: null,
+                email: '',
+                username: '',
+                role: 'USER',
+                emailVerified: false,
+                level: 1,
+                score: 0,
+                activeProfileType: null,
+                isAuthenticated: false,
+                token: null,
+              });
+            }
           }
         } else {
           // Pas de token valide, nettoyer
@@ -142,8 +162,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      const msg = error?.payload?.message || error?.message || 'Erreur de connexion.';
-      return { success: false, error: msg };
+      return { success: false, error: sessionErrorMessage(error, 'Erreur de connexion.') };
     }
   }, []);
 
@@ -190,8 +209,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      const msg = error?.payload?.message || error?.message || "Erreur d'inscription.";
-      return { success: false, error: msg };
+      return { success: false, error: sessionErrorMessage(error, "Erreur d'inscription.") };
     }
   }, []);
 
@@ -236,8 +254,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      const msg = error?.payload?.message || error?.message || 'Erreur connexion Google.';
-      return { success: false, error: msg };
+      return { success: false, error: sessionErrorMessage(error, 'Erreur connexion Google.') };
     }
   }, []);
 
@@ -282,8 +299,7 @@ export function AuthProvider({ children }) {
 
       return { success: true, user: response.user, token: response.token };
     } catch (error) {
-      const msg = error?.payload?.message || error?.message || 'Erreur connexion Apple.';
-      return { success: false, error: msg };
+      return { success: false, error: sessionErrorMessage(error, 'Erreur connexion Apple.') };
     }
   }, []);
 

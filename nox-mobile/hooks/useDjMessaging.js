@@ -154,8 +154,10 @@ export function useDjMessaging({
       setChatModalVisible(true);
       setChatMessages([]);
       await loadChatMessages(eventDjId, false);
+      if (chatClosingRef.current) return;
       // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
       await markAllAsRead();
+      if (chatClosingRef.current) return;
       // ✅ Charger le contrat (chat privé)
       await loadContract(eventDjId);
     };
@@ -168,6 +170,7 @@ export function useDjMessaging({
       setChatModalVisible(true);
       setChatMessages([]);
       await loadChatMessages(eventId, true);
+      if (chatClosingRef.current) return;
       // ✅ Quand on ouvre les messages, on marque comme lu (remet le compteur à 0)
       await markAllAsRead();
     };
@@ -351,6 +354,7 @@ export function useDjMessaging({
           ? await api.getGroupMessages(user.token, id)
           : await api.getMessages(user.token, id);
         if (response && response.success && response.messages) {
+          if (chatClosingRef.current) return;
           const incoming = response.messages;
           if (silent) {
             setChatMessages((prev) => {

@@ -9,7 +9,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Keyboard,
-  Platform,
   BackHandler,
   StyleSheet,
 } from 'react-native';
@@ -76,6 +75,7 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
+  const [frozen, setFrozen] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
@@ -83,10 +83,12 @@ export default function DjChatModal(props) {
   chatVisibleRef.current = chatModalVisible;
   const inputRef = useRef(null);
   const closeChatRef = useRef(() => {});
+  const finishCloseRef = useRef(() => {});
 
   useEffect(() => {
     if (!chatModalVisible) return;
     if (chatClosingRef) chatClosingRef.current = false;
+    setFrozen(false);
   }, [chatModalVisible, chatClosingRef]);
 
   useEffect(() => {
@@ -101,6 +103,12 @@ export default function DjChatModal(props) {
     });
     return () => sub.remove();
   }, [chatModalVisible]);
+
+  useEffect(() => {
+    if (!frozen) return undefined;
+    const timer = setTimeout(() => finishCloseRef.current(), 320);
+    return () => clearTimeout(timer);
+  }, [frozen]);
 
   const scrollChatToEnd = (animated) => {
     if (chatClosingRef?.current || !chatVisibleRef.current) return;
@@ -124,15 +132,20 @@ export default function DjChatModal(props) {
   };
 
   const closeChat = () => {
+    if (frozen) return;
     if (chatClosingRef) chatClosingRef.current = true;
     inputRef.current?.blur?.();
     Keyboard.dismiss();
     reopenChatAfterContractRef.current = false;
     flushPendingContractEditor?.();
-    setChatModalVisible(false);
-    resetChatSession();
+    setFrozen(true);
   };
   closeChatRef.current = closeChat;
+  finishCloseRef.current = () => {
+    setChatModalVisible(false);
+    resetChatSession();
+    setFrozen(false);
+  };
 
   if (!chatModalVisible) return null;
 
@@ -141,15 +154,14 @@ export default function DjChatModal(props) {
             <View style={styles.chatModalContainer}>
               <KeyboardAvoidingView
                 style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: insets.bottom + 96 }]}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? topGap : 0}
+                behavior={undefined}
+                keyboardVerticalOffset={0}
               >
                 <ScrollView
                   ref={chatScrollViewRef}
                   style={{ flex: 1 }}
                   contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
                   keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
                   showsVerticalScrollIndicator={true}
                 >
                 {/* Header du chat */}
@@ -428,10 +440,18 @@ export default function DjChatModal(props) {
                                   msg.isOwn ? styles.chatMessageTimeOwn : styles.chatMessageTimeOther,
                                 ]}
                               >
-                                {new Date(msg.createdAt).toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                {(() => {
+                                  const date = new Date(msg.createdAt);
+                                  if (Number.isNaN(date.getTime())) return '';
+                                  try {
+                                    return date.toLocaleTimeString(language === 'fr' ? 'fr-FR' : 'en-US', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    });
+                                  } catch (_) {
+                                    return '';
+                                  }
+                                })()}
                               </Text>
                             </View>
                           </TouchableOpacity>
@@ -472,6 +492,12 @@ export default function DjChatModal(props) {
                 </View>
               </KeyboardAvoidingView>
             </View>
+            {frozen ? (
+              <View
+                style={StyleSheet.absoluteFillObject}
+                onStartShouldSetResponder={() => true}
+              />
+            ) : null}
           </View>
   );
 }

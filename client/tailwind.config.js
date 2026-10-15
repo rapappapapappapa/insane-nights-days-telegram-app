@@ -6,7 +6,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'insane': {
+        'nox': {
           'black': '#000000',
           'orange': '#FF6B35',
           'white': '#FFFFFF',

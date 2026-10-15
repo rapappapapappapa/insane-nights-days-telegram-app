@@ -51,7 +51,7 @@ fi
 echo "✅ URL trouvée: $URL"
 
 # Mettre à jour config.js
-CONFIG_FILE="insane-nights-days-mobile/api/config.js"
+CONFIG_FILE="nox-mobile/api/config.js"
 if [ -f "$CONFIG_FILE" ]; then
     # Sauvegarder l'ancienne URL
     OLD_URL=$(grep -oE "https://[a-zA-Z0-9-]+\.trycloudflare\.com" "$CONFIG_FILE" | head -1)

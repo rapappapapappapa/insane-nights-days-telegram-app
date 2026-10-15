@@ -1,0 +1,6 @@
+﻿NOX Android preview (APK)
+Build: 079cf0fd-0ede-4f01-81fe-51850b6402e1
+Page Expo: https://expo.dev/accounts/rapapapapapp/projects/insane-nights-days-mobile/builds/079cf0fd-0ede-4f01-81fe-51850b6402e1
+APK direct: https://expo.dev/artifacts/eas/uEvlLLu1S6pixmkaHUvv-gFPbGHvBYk4ErkWP-9n0fc.apk
+Expire: 2026-10-13T17:57:08.820Z
+Commit: d8119e5fe8e13dc5a485be144f63927b6aaab6f5

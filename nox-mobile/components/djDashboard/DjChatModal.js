@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
-  Keyboard,
   BackHandler,
   StyleSheet,
 } from 'react-native';
@@ -75,20 +74,18 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
-  const [frozen, setFrozen] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
-  const inputRef = useRef(null);
   const closeChatRef = useRef(() => {});
-  const finishCloseRef = useRef(() => {});
+  const keptRef = useRef(false);
+  if (chatModalVisible) keptRef.current = true;
 
   useEffect(() => {
     if (!chatModalVisible) return;
     if (chatClosingRef) chatClosingRef.current = false;
-    setFrozen(false);
   }, [chatModalVisible, chatClosingRef]);
 
   useEffect(() => {
@@ -104,12 +101,6 @@ export default function DjChatModal(props) {
     return () => sub.remove();
   }, [chatModalVisible]);
 
-  useEffect(() => {
-    if (!frozen) return undefined;
-    const timer = setTimeout(() => finishCloseRef.current(), 320);
-    return () => clearTimeout(timer);
-  }, [frozen]);
-
   const scrollChatToEnd = (animated) => {
     if (chatClosingRef?.current || !chatVisibleRef.current) return;
     const node = chatScrollViewRef?.current;
@@ -117,54 +108,31 @@ export default function DjChatModal(props) {
     node.scrollToEnd({ animated });
   };
 
-  const resetChatSession = () => {
-    setContractOpen(false);
-    setSelectedChatEventDjId(null);
-    setSelectedChatEventId(null);
-    setIsGroupChat(false);
-    setChatMessages([]);
-    setNewMessageText('');
-    setContractEditorVisible(false);
-    setShowPaymentTermsModal(false);
-    setShowCancellationModal(false);
-    setShowEventEndModal(false);
-    refreshUnreadCount?.();
-  };
-
   const closeChat = () => {
-    if (frozen) return;
     if (chatClosingRef) chatClosingRef.current = true;
-    inputRef.current?.blur?.();
-    Keyboard.dismiss();
     reopenChatAfterContractRef.current = false;
     flushPendingContractEditor?.();
-    setFrozen(true);
+    setChatModalVisible(false);
+    setTimeout(() => {
+      if (chatVisibleRef.current) return;
+      refreshUnreadCount?.();
+    }, 400);
   };
   closeChatRef.current = closeChat;
-  finishCloseRef.current = () => {
-    setChatModalVisible(false);
-    resetChatSession();
-    setFrozen(false);
-  };
 
-  if (!chatModalVisible) return null;
+  if (!chatModalVisible && !keptRef.current) return null;
 
   return (
-          <View style={overlayStyle}>
+          <View
+            pointerEvents={chatModalVisible ? 'auto' : 'none'}
+            style={[overlayStyle, !chatModalVisible && hiddenOverlayStyle]}
+          >
             <View style={styles.chatModalContainer}>
               <KeyboardAvoidingView
                 style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: insets.bottom + 96 }]}
                 behavior={undefined}
                 keyboardVerticalOffset={0}
               >
-                <ScrollView
-                  ref={chatScrollViewRef}
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
-                >
-                {/* Header du chat */}
                 <View style={styles.chatHeaderContainer}>
                 <View style={styles.chatHeader}>
                   <TouchableOpacity
@@ -181,6 +149,13 @@ export default function DjChatModal(props) {
                   <View style={{ width: 40 }} />
                 </View>
                 </View>
+                <ScrollView
+                  ref={chatScrollViewRef}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={true}
+                >
     
                 {!isGroupChat && selectedChatEventDjId ? (
                   <View style={styles.contractCard}>
@@ -466,7 +441,6 @@ export default function DjChatModal(props) {
                 {/* Input pour envoyer un message */}
                 <View style={styles.chatInputContainer}>
                   <TextInput
-                    ref={inputRef}
                     style={styles.chatInput}
                     value={newMessageText}
                     onChangeText={setNewMessageText}
@@ -492,12 +466,6 @@ export default function DjChatModal(props) {
                 </View>
               </KeyboardAvoidingView>
             </View>
-            {frozen ? (
-              <View
-                style={StyleSheet.absoluteFillObject}
-                onStartShouldSetResponder={() => true}
-              />
-            ) : null}
           </View>
   );
 }
@@ -506,3 +474,9 @@ const overlayStyle = [
   StyleSheet.absoluteFillObject,
   { zIndex: 40, elevation: 40 },
 ];
+
+const hiddenOverlayStyle = {
+  opacity: 0,
+  zIndex: 0,
+  elevation: 0,
+};

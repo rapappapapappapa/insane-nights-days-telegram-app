@@ -30,6 +30,14 @@ function contractStatusLabel(status, fr) {
   return fr ? 'Brouillon' : 'Draft';
 }
 
+/** Tant que frozen, la liste déjà à l'écran n'est pas reconstruite. */
+const StableTree = React.memo(
+  function StableTree({ children }) {
+    return children;
+  },
+  (_prev, next) => next.frozen === true,
+);
+
 export default function DjChatModal(props) {
   const {
     language,
@@ -74,42 +82,27 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
-  const [retained, setRetained] = useState(false);
-  const [dormant, setDormant] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
   const closeChatRef = useRef(() => {});
-  const wasVisibleRef = useRef(false);
-  const releaseRef = useRef(() => {});
-  releaseRef.current = () => {
-    if (chatVisibleRef.current || reopenChatAfterContractRef?.current) return;
-    setDormant(true);
-    setContractOpen(false);
-    setChatMessages([]);
-    setNewMessageText('');
-    refreshUnreadCount?.();
-  };
-
-  if (chatModalVisible && !retained) {
-    setRetained(true);
-  }
-  if (chatModalVisible && dormant) {
-    setDormant(false);
-  }
+  const keptRef = useRef(false);
+  if (chatModalVisible) keptRef.current = true;
 
   useEffect(() => {
-    const wasVisible = wasVisibleRef.current;
-    wasVisibleRef.current = chatModalVisible;
-    if (chatModalVisible && chatClosingRef) chatClosingRef.current = false;
-    if (!wasVisible || chatModalVisible || reopenChatAfterContractRef?.current) {
+    if (chatModalVisible) {
+      if (chatClosingRef) chatClosingRef.current = false;
       return undefined;
     }
-    const timer = setTimeout(() => releaseRef.current(), 400);
+    if (!keptRef.current || reopenChatAfterContractRef?.current) return undefined;
+    const timer = setTimeout(() => {
+      if (chatVisibleRef.current) return;
+      refreshUnreadCount?.();
+    }, 400);
     return () => clearTimeout(timer);
-  }, [chatModalVisible, chatClosingRef, reopenChatAfterContractRef]);
+  }, [chatModalVisible, chatClosingRef, reopenChatAfterContractRef, refreshUnreadCount]);
 
   useEffect(() => {
     setContractOpen(false);
@@ -138,9 +131,8 @@ export default function DjChatModal(props) {
     setChatModalVisible(false);
   };
   closeChatRef.current = closeChat;
-  const showThread = chatModalVisible || !dormant;
 
-  if (!chatModalVisible && !retained) return null;
+  if (!chatModalVisible && !keptRef.current) return null;
 
   return (
           <View
@@ -148,6 +140,7 @@ export default function DjChatModal(props) {
             style={[overlayStyle, !chatModalVisible && hiddenOverlayStyle]}
           >
             <View style={styles.chatModalContainer}>
+              <StableTree frozen={!chatModalVisible}>
               <KeyboardAvoidingView
                 style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: insets.bottom + 96 }]}
                 behavior={undefined}
@@ -176,8 +169,6 @@ export default function DjChatModal(props) {
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
                 >
-                {showThread ? (
-                <>
                 {!isGroupChat && selectedChatEventDjId ? (
                   <View style={styles.contractCard}>
                     <TouchableOpacity
@@ -456,8 +447,6 @@ export default function DjChatModal(props) {
                     )}
                   </View>
                 )}
-                </>
-                ) : null}
     
                 </ScrollView>
     
@@ -488,6 +477,7 @@ export default function DjChatModal(props) {
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>
+              </StableTree>
             </View>
           </View>
   );

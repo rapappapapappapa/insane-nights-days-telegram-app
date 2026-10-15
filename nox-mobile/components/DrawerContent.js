@@ -21,6 +21,7 @@ import * as Updates from 'expo-updates';
 const MENU_DEF = [
   {
     id: 'communityHome',
+    group: 'role',
     icon: 'home-outline',
     titleFr: 'Accueil',
     titleEn: 'Home',
@@ -31,6 +32,7 @@ const MENU_DEF = [
   },
   {
     id: 'login',
+    group: 'role',
     icon: 'log-in-outline',
     titleFr: 'Connexion',
     titleEn: 'Sign in',
@@ -39,41 +41,101 @@ const MENU_DEF = [
     onlyWhenLoggedOut: true,
   },
   {
+    id: 'profile',
+    group: 'role',
+    icon: 'person-circle-outline',
+    titleFr: 'Profil',
+    titleEn: 'Profile',
+    descFr: 'Compte, mot de passe, rôles',
+    descEn: 'Account, password, roles',
+    onlyWhenLoggedIn: true,
+  },
+  {
+    id: 'tickets',
+    group: 'work',
+    icon: 'ticket-outline',
+    titleFr: 'Billets',
+    titleEn: 'Tickets',
+    descFr: 'Gérer mes billets',
+    descEn: 'Manage my tickets',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
+    id: 'purchases',
+    group: 'work',
+    icon: 'receipt-outline',
+    titleFr: 'Achats',
+    titleEn: 'Purchases',
+    descFr: 'Historique des paiements',
+    descEn: 'Payment history',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
+    id: 'communityFriends',
+    group: 'work',
+    icon: 'people-outline',
+    titleFr: 'Amis',
+    titleEn: 'Friends',
+    descFr: 'Amis communauté',
+    descEn: 'Community friends',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
+    id: 'staffEvents',
+    group: 'work',
+    icon: 'qr-code-outline',
+    titleFr: 'Scanner',
+    titleEn: 'Scan',
+    descFr: 'Événements où tu es staff',
+    descEn: 'Events where you are staff',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['COMMUNITY'],
+  },
+  {
+    id: 'bookerFriends',
+    group: 'work',
+    icon: 'people-outline',
+    titleFr: 'Staff',
+    titleEn: 'Staff',
+    descFr: 'Communauté pour le staff événements',
+    descEn: 'Community for event staff',
+    onlyWhenLoggedIn: true,
+    onlyForActiveProfileTypes: ['BOOKER'],
+  },
+  {
     id: 'discover',
+    group: 'discover',
     icon: 'calendar-outline',
-    titleFr: 'Événements',
-    titleEn: 'Events',
+    titleFr: 'Agenda',
+    titleEn: 'Agenda',
     descFr: 'Découvrir les événements',
     descEn: 'Discover events',
     resolveDiscover: true,
   },
   {
     id: 'djList',
+    group: 'discover',
     icon: 'musical-notes-outline',
-    titleFr: 'Liste des DJs',
-    titleEn: 'DJ list',
-    descFr: 'Découvrir les DJs',
+    titleFr: 'DJs',
+    titleEn: 'DJs',
+    descFr: 'Découvrir les artistes',
     descEn: 'Discover DJs',
   },
   {
     id: 'ranking',
+    group: 'discover',
     icon: 'trophy-outline',
-    titleFr: 'Classement DJs',
-    titleEn: 'DJ ranking',
-    descFr: 'Consulter le top artistes',
+    titleFr: 'Classement',
+    titleEn: 'Ranking',
+    descFr: 'Top artistes',
     descEn: 'Top artists',
   },
   {
-    id: 'tutorial',
-    icon: 'help-circle-outline',
-    titleFr: 'Guide NOX',
-    titleEn: 'NOX guide',
-    descFr: 'Découvrir l’application',
-    descEn: 'Learn how the app works',
-    onlyWhenLoggedIn: true,
-  },
-  {
     id: 'notifications',
+    group: 'more',
     icon: 'notifications-outline',
     titleFr: 'Notifications',
     titleEn: 'Notifications',
@@ -82,65 +144,18 @@ const MENU_DEF = [
     onlyWhenLoggedIn: true,
   },
   {
-    id: 'tickets',
-    icon: 'ticket-outline',
-    titleFr: 'Mes billets',
-    titleEn: 'My tickets',
-    descFr: 'Gérer mes billets',
-    descEn: 'Manage my tickets',
-    onlyForActiveProfileTypes: ['COMMUNITY'],
-  },
-  {
-    id: 'purchases',
-    icon: 'receipt-outline',
-    titleFr: 'Mes achats',
-    titleEn: 'My purchases',
-    descFr: 'Historique des paiements',
-    descEn: 'Payment history',
+    id: 'tutorial',
+    group: 'more',
+    icon: 'help-circle-outline',
+    titleFr: 'Guide',
+    titleEn: 'Guide',
+    descFr: 'Découvrir l’application',
+    descEn: 'Learn how the app works',
     onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['COMMUNITY'],
-  },
-  {
-    id: 'profile',
-    icon: 'person-circle-outline',
-    titleFr: 'Mes profils',
-    titleEn: 'My profiles',
-    descFr: 'DJ, organisateur, communauté…',
-    descEn: 'DJ, booker, community…',
-    onlyWhenLoggedIn: true,
-  },
-  {
-    id: 'communityFriends',
-    icon: 'people-outline',
-    titleFr: 'Mes amis',
-    titleEn: 'My friends',
-    descFr: 'Amis communauté',
-    descEn: 'Community friends',
-    onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['COMMUNITY'],
-  },
-  {
-    id: 'staffEvents',
-    icon: 'qr-code-outline',
-    titleFr: 'Scanner billets',
-    titleEn: 'Scan tickets',
-    descFr: 'Événements où tu es staff',
-    descEn: 'Events where you are staff',
-    onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['COMMUNITY'],
-  },
-  {
-    id: 'bookerFriends',
-    icon: 'people-outline',
-    titleFr: 'Mes amis',
-    titleEn: 'My friends',
-    descFr: 'Communauté pour le staff événements',
-    descEn: 'Community for event staff',
-    onlyWhenLoggedIn: true,
-    onlyForActiveProfileTypes: ['BOOKER'],
   },
   {
     id: 'admin',
+    group: 'more',
     icon: 'shield-checkmark-outline',
     titleFr: 'Administration',
     titleEn: 'Admin',
@@ -149,6 +164,13 @@ const MENU_DEF = [
     onlyWhenLoggedIn: true,
     onlyWhenAdmin: true,
   },
+];
+
+const DRAWER_GROUPS = [
+  { id: 'role', titleFr: 'Mon rôle', titleEn: 'My role' },
+  { id: 'work', titleFr: 'Outils', titleEn: 'Tools' },
+  { id: 'discover', titleFr: 'Découvrir', titleEn: 'Discover' },
+  { id: 'more', titleFr: 'Plus', titleEn: 'More' },
 ];
 
 export default function DrawerContent({ navigation }) {
@@ -297,6 +319,7 @@ export default function DrawerContent({ navigation }) {
       case 'DJ':
         return {
           id: dashboardId,
+          group: 'role',
           icon: 'home-outline',
           titleFr: 'Accueil',
           titleEn: 'Home',
@@ -308,6 +331,7 @@ export default function DrawerContent({ navigation }) {
       case 'BOOKER':
         return {
           id: dashboardId,
+          group: 'role',
           icon: 'home-outline',
           titleFr: 'Accueil',
           titleEn: 'Home',
@@ -319,6 +343,7 @@ export default function DrawerContent({ navigation }) {
       case 'VENUE':
         return {
           id: dashboardId,
+          group: 'role',
           icon: 'home-outline',
           titleFr: 'Accueil',
           titleEn: 'Home',
@@ -330,6 +355,7 @@ export default function DrawerContent({ navigation }) {
       case 'PRESTATAIRE':
         return {
           id: dashboardId,
+          group: 'role',
           icon: 'home-outline',
           titleFr: 'Accueil',
           titleEn: 'Home',
@@ -373,12 +399,21 @@ export default function DrawerContent({ navigation }) {
         </Text>
 
         {isLoggedIn && (
-          <View style={styles.profilePill}>
+          <TouchableOpacity
+            style={styles.profilePill}
+            activeOpacity={0.8}
+            onPress={() => handleMenuItemPress('switchProfile')}
+            accessibilityRole="button"
+            accessibilityLabel={language === 'fr' ? 'Changer de rôle' : 'Switch role'}
+          >
             <Text style={styles.profilePillText}>
               {language === 'fr' ? 'Profil actif :' : 'Active profile:'}{' '}
               {getProfileLabel(activeProfileType)}
             </Text>
-          </View>
+            <Text style={styles.profilePillHint}>
+              {language === 'fr' ? 'Changer de rôle' : 'Switch role'}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {isLoggedIn && activeProfileType === 'DJ' && activeDjGenre ? (
@@ -404,36 +439,47 @@ export default function DrawerContent({ navigation }) {
       </View>
 
       <View style={styles.menuList}>
-        {itemsToRender.map(item => {
-          // Filtrage simple basé sur l'état de connexion
-          if (item.onlyWhenLoggedOut && isLoggedIn) return null;
-          if (item.onlyWhenLoggedIn && !isLoggedIn) return null;
-          if (item.onlyWhenAdmin && !isAdmin) return null;
-          if (item.onlyForActiveProfileTypes && isLoggedIn) {
-            const active = activeProfileType;
-            if (!active || !item.onlyForActiveProfileTypes.includes(active)) return null;
-          }
-          
-          const title = menuLabel(item);
-          const description = menuDesc(item);
+        {DRAWER_GROUPS.map((group) => {
+          const groupItems = itemsToRender.filter((item) => {
+            if ((item.group || 'more') !== group.id) return false;
+            if (item.onlyWhenLoggedOut && isLoggedIn) return false;
+            if (item.onlyWhenLoggedIn && !isLoggedIn) return false;
+            if (item.onlyWhenAdmin && !isAdmin) return false;
+            if (item.onlyForActiveProfileTypes && isLoggedIn) {
+              const active = activeProfileType;
+              if (!active || !item.onlyForActiveProfileTypes.includes(active)) return false;
+            }
+            return true;
+          });
+          if (groupItems.length === 0) return null;
+          const groupTitle = language === 'fr' ? group.titleFr : group.titleEn;
           return (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={() => handleMenuItemPress(item.id, item.params)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`${title}. ${description}`}
-            >
-              <View style={styles.menuEmojiContainer}>
-                <Ionicons name={item.icon} size={26} color={Colors.primary} />
-                {item.showBadge && (item.badgeCount || 0) > 0 && <NotificationBadge count={item.badgeCount} />}
-              </View>
-              <View style={styles.menuItemText}>
-                <Text style={styles.menuTitle}>{title}</Text>
-                <Text style={styles.menuDescription}>{description}</Text>
-              </View>
-            </TouchableOpacity>
+            <View key={group.id}>
+              <Text style={styles.groupTitle}>{groupTitle}</Text>
+              {groupItems.map((item) => {
+                const title = menuLabel(item);
+                const description = menuDesc(item);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.menuItem}
+                    onPress={() => handleMenuItemPress(item.id, item.params)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${title}. ${description}`}
+                  >
+                    <View style={styles.menuEmojiContainer}>
+                      <Ionicons name={item.icon} size={26} color={Colors.primary} />
+                      {item.showBadge && (item.badgeCount || 0) > 0 && <NotificationBadge count={item.badgeCount} />}
+                    </View>
+                    <View style={styles.menuItemText}>
+                      <Text style={styles.menuTitle}>{title}</Text>
+                      <Text style={styles.menuDescription}>{description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           );
         })}
       </View>
@@ -556,6 +602,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '800',
+    textAlign: 'center',
+  },
+  profilePillHint: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 2,
   },
   genrePill: {
     marginTop: 8,
@@ -590,7 +644,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   menuList: {
-    paddingTop: 16,
+    paddingTop: 8,
+  },
+  groupTitle: {
+    color: Colors.textTertiary,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 4,
   },
   menuItem: {
     flexDirection: 'row',

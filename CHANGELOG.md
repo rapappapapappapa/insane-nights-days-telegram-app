@@ -16,6 +16,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Corrigé (mobile — photo du fil)
 - L’image choisie dans la galerie envoie le nom et le type fournis par le sélecteur. Une adresse Android `content://` sans extension ne devient plus un nom de fichier invalide.
 
+### Modifié (mobile — menus)
+- L’arc et le tiroir partagent les mêmes mots : Accueil, Agenda, Billets, Profil. Le raccourci communauté n’affiche plus « Home » ni « Tickets ».
+- Le tiroir est rangé en Mon rôle, Outils, Découvrir, Plus. Le rôle actif en haut ouvre le changement de rôle. Côté organisateur, l’entrée staff ne s’appelle plus « Mes amis ».
+- L’arc DJ et organisateur se termine par Profil, comme le lieu et la communauté. Les notifications restent dans le tiroir.
+
 ---
 
 ## Semaine du 5 au 9 octobre 2026

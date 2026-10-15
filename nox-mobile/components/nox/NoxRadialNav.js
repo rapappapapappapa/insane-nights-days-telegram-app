@@ -51,10 +51,10 @@ const AGENDA_ITEM = {
 };
 
 const COMMUNITY_ITEMS = [
-  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Home', labelEn: 'Home' },
-  { id: 'tickets', screen: 'tickets', icon: 'ticket-outline', labelFr: 'Tickets', labelEn: 'Tickets' },
+  { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
+  { id: 'tickets', screen: 'tickets', icon: 'ticket-outline', labelFr: 'Billets', labelEn: 'Tickets' },
   AGENDA_ITEM,
-  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Alerts' },
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
@@ -72,7 +72,7 @@ const BOOKER_ITEMS = [
   { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
   AGENDA_ITEM,
   { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
-  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
 /** Prestataire : pas de mur perso (OwnWall = DJ/BOOKER/VENUE seulement). */
@@ -80,7 +80,7 @@ const PRESTATAIRE_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'booking', screenKey: 'dashboard', icon: 'briefcase-outline', labelFr: 'Booking', labelEn: 'Booking' },
   AGENDA_ITEM,
-  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Alerts' },
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
@@ -92,12 +92,12 @@ const DJ_ITEMS = [
     screen: 'djDashboard',
     routeParams: { openBookings: true },
     icon: 'briefcase-outline',
-    labelFr: 'Bookings',
-    labelEn: 'Bookings',
+    labelFr: 'Booking',
+    labelEn: 'Booking',
   },
   AGENDA_ITEM,
   { id: 'social', screen: 'ownWall', icon: 'newspaper-outline', labelFr: 'Mes posts', labelEn: 'My posts' },
-  { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Notifs' },
+  { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];
 
 const PRO_DASHBOARDS = {

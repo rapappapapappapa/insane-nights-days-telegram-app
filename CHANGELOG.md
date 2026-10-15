@@ -21,6 +21,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Le tiroir est rangé en Mon rôle, Outils, Découvrir, Plus. Le rôle actif en haut ouvre le changement de rôle. Côté organisateur, l’entrée staff ne s’appelle plus « Mes amis ».
 - L’arc DJ et organisateur se termine par Profil, comme le lieu et la communauté. Les notifications restent dans le tiroir.
 
+### Modifié (mobile — discussion DJ)
+- Dans le chat privé DJ, les messages s’affichent tout de suite. Le contrat est un bouton avec son état (brouillon, envoyé, signé…) et le détail s’ouvre seulement au toucher.
+
 ---
 
 ## Semaine du 5 au 9 octobre 2026

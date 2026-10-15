@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Text,
   View,
@@ -20,7 +20,15 @@ import {
 import Colors from '../../constants/colors';
 import { PAYMENT_TERMS_OPTIONS, cleanText } from '../../utils/djDashboardUtils';
 
-/** Modal chat + contrat inline (dashboard DJ). */
+/** Modal chat + contrat replié (dashboard DJ). */
+function contractStatusLabel(status, fr) {
+  if (status === 'SIGNED') return fr ? 'Signé' : 'Signed';
+  if (status === 'PENDING_SIGNATURE') return fr ? 'Signature en cours' : 'Signature pending';
+  if (status === 'PENDING_PAYMENT') return fr ? 'En attente paiement' : 'Awaiting payment';
+  if (status === 'SENT') return fr ? 'Envoyé' : 'Sent';
+  return fr ? 'Brouillon' : 'Draft';
+}
+
 export default function DjChatModal(props) {
   const {
     language,
@@ -52,7 +60,6 @@ export default function DjChatModal(props) {
     contractAcceptAck,
     setContractAcceptAck,
     contractBooking,
-    venueContractGate,
     djVenueGateBlocks,
     openContractEditorFromChat,
     openContractPdfPreview,
@@ -63,6 +70,13 @@ export default function DjChatModal(props) {
     sendMessage,
     sendingMessage,
   } = props;
+
+  const [contractOpen, setContractOpen] = useState(false);
+  const fr = language === 'fr';
+
+  useEffect(() => {
+    setContractOpen(false);
+  }, [selectedChatEventDjId, isGroupChat, chatModalVisible]);
 
   return (
           <Modal
@@ -140,187 +154,176 @@ export default function DjChatModal(props) {
                     <Text style={styles.chatCloseButtonText}>✕</Text>
                   </TouchableOpacity>
                   <Text style={styles.chatHeaderTitle}>
-                    {isGroupChat 
-                      ? (language === 'fr' ? 'Chat de groupe' : 'Group chat')
-                      : (language === 'fr' ? 'Chat' : 'Chat')
-                    }
+                    {isGroupChat
+                      ? (fr ? 'Chat de groupe' : 'Group chat')
+                      : (fr ? 'Discussion' : 'Discussion')}
                   </Text>
                   <View style={{ width: 40 }} />
                 </View>
                 </View>
     
-                {/* ✅ Contrat (uniquement chat privé) */}
                 {!isGroupChat && selectedChatEventDjId ? (
                   <View style={styles.contractCard}>
-                  <TouchableOpacity
-                    activeOpacity={0.92}
-                    disabled={contractLoading || !contractData}
-                    onPress={() => {
-                      if (contractLoading || !contractData) return;
-                      if (contractData.status === 'SENT' && contractData.sentBy === 'BOOKER') {
-                        openContractEditorFromChat();
-                      }
-                    }}
-                  >
-                    <View>
-                    <View style={styles.contractTopRow}>
-                      <Text style={styles.contractTitle}>
-                        🧾 {language === 'fr' ? 'Contrat de booking' : 'Booking contract'}
-                      </Text>
-                      {contractLoading ? (
-                        <ActivityIndicator size="small" color={Colors.primary} />
-                      ) : (
-                        <Text style={styles.contractStatus}>
-                          {contractData?.status === 'SIGNED'
-                            ? (language === 'fr' ? 'Signé' : 'Signed')
-                            : contractData?.status === 'PENDING_SIGNATURE'
-                              ? (language === 'fr' ? 'Signature en cours' : 'Signature pending')
-                              : contractData?.status === 'PENDING_PAYMENT'
-                                ? (language === 'fr' ? 'En attente paiement' : 'Awaiting payment')
-                                : contractData?.status === 'SENT'
-                                  ? (language === 'fr' ? 'Envoyé' : 'Sent')
-                                  : (language === 'fr' ? 'Brouillon' : 'Draft')}
+                    <TouchableOpacity
+                      activeOpacity={0.92}
+                      onPress={() => setContractOpen((open) => !open)}
+                      accessibilityRole="button"
+                      accessibilityLabel={fr ? 'Contrat' : 'Contract'}
+                    >
+                      <View style={styles.contractTopRow}>
+                        <Text style={styles.contractTitle}>
+                          {fr ? 'Contrat' : 'Contract'}
                         </Text>
-                      )}
-                    </View>
-    
-                    {contractBooking?.eventTitle ? (
-                      <Text style={styles.contractMeta} numberOfLines={2}>
-                        🎵 {contractBooking.eventTitle}
-                      </Text>
-                    ) : null}
-    
-                    <Text style={styles.contractLine}>
-                      💰 {language === 'fr' ? 'Prix' : 'Price'}:{' '}
-                      <Text style={styles.contractLineStrong}>
-                        {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (language === 'fr' ? 'À définir' : 'To define')}
-                      </Text>
-                      {contractData?.payload?.depositPercent != null ? ` • ${language === 'fr' ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositPercent} %` : ''}
-                    </Text>
-    
-                    {contractData?.payload?.paymentTerms ? (
-                      <Text style={styles.contractSmall} numberOfLines={2}>
-                        💳 {PAYMENT_TERMS_OPTIONS.find(o => o.value === contractData.payload.paymentTerms)?.[language === 'fr' ? 'labelFr' : 'labelEn'] || cleanText(contractData.payload.paymentTerms)}
-                      </Text>
-                    ) : null}
-                    {contractData?.payload?.eventEnd ? (
-                      <Text style={styles.contractSmall} numberOfLines={1}>
-                        🕐 {language === 'fr' ? 'Fin' : 'End'}: {cleanText(String(contractData.payload.eventEnd))}
-                      </Text>
-                    ) : null}
-                    {contractData?.payload?.cancellation ? (
-                      <Text style={styles.contractSmall} numberOfLines={4}>
-                        🧯 {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
-                      </Text>
-                    ) : null}
-    
-                    {djVenueGateBlocks ? (
-                      <Text style={styles.contractHint}>
-                        {language === 'fr'
-                          ? 'Le contrat avec le lieu doit être accepté avant de finaliser ton contrat.'
-                          : 'The venue contract must be accepted before you can finalize your contract.'}
-                      </Text>
-                    ) : null}
-                    </View>
-                  </TouchableOpacity>
-    
-                    {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
-                      <TouchableOpacity
-                        style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
-                        onPress={() =>
-                          openContractPdfPreview({
-                            previewPayload: buildDjContractPayload(contractDraft),
-                            pendingAction: 'preview',
-                          })
-                        }
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.contractButtonText}>
-                          {language === 'fr' ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-    
-                    {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
-                      <View style={styles.contractAckRow}>
-                        <TouchableOpacity
-                          style={[
-                            styles.contractAckCheckbox,
-                            contractAcceptAck && styles.contractAckCheckboxChecked,
-                          ]}
-                          onPress={() => setContractAcceptAck(!contractAcceptAck)}
-                          activeOpacity={0.7}
-                        >
-                          {contractAcceptAck ? (
-                            <Text style={styles.contractAckCheckmark}>✓</Text>
-                          ) : null}
-                        </TouchableOpacity>
-                        <Text style={styles.contractAckText}>{contractAcceptAckLabel(language)}</Text>
+                        {contractLoading ? (
+                          <ActivityIndicator size="small" color={Colors.primary} />
+                        ) : (
+                          <Text style={styles.contractStatus}>
+                            {contractStatusLabel(contractData?.status, fr)}
+                            {contractOpen ? '  ▾' : '  ▸'}
+                          </Text>
+                        )}
                       </View>
-                    ) : null}
-    
-                    <View style={styles.contractActionsRow}>
-                      {contractData?.status === 'SENT' ? (
-                        contractData?.sentBy === 'BOOKER' ? (
-                          <>
-                            <TouchableOpacity
-                              style={[styles.contractButton, styles.contractButtonSecondary]}
-                              onPress={openContractEditorFromChat}
-                            >
-                              <Text style={styles.contractButtonText}>
-                                {language === 'fr' ? 'Contre-proposer' : 'Counter'}
-                              </Text>
-                            </TouchableOpacity>
+                    </TouchableOpacity>
+
+                    {contractOpen ? (
+                      <View>
+                        {contractBooking?.eventTitle ? (
+                          <Text style={styles.contractMeta} numberOfLines={2}>
+                            {contractBooking.eventTitle}
+                          </Text>
+                        ) : null}
+
+                        <Text style={styles.contractLine}>
+                          {fr ? 'Prix' : 'Price'}:{' '}
+                          <Text style={styles.contractLineStrong}>
+                            {contractData?.payload?.priceEur != null ? `${contractData.payload.priceEur} €` : (fr ? 'À définir' : 'To define')}
+                          </Text>
+                          {contractData?.payload?.depositPercent != null ? ` • ${fr ? 'Acompte' : 'Deposit'}: ${contractData.payload.depositPercent} %` : ''}
+                        </Text>
+
+                        {contractData?.payload?.paymentTerms ? (
+                          <Text style={styles.contractSmall} numberOfLines={2}>
+                            {PAYMENT_TERMS_OPTIONS.find(o => o.value === contractData.payload.paymentTerms)?.[fr ? 'labelFr' : 'labelEn'] || cleanText(contractData.payload.paymentTerms)}
+                          </Text>
+                        ) : null}
+                        {contractData?.payload?.eventEnd ? (
+                          <Text style={styles.contractSmall} numberOfLines={1}>
+                            {fr ? 'Fin' : 'End'}: {cleanText(String(contractData.payload.eventEnd))}
+                          </Text>
+                        ) : null}
+                        {contractData?.payload?.cancellation ? (
+                          <Text style={styles.contractSmall} numberOfLines={4}>
+                            {cleanText(cancellationPolicyLabel(contractData.payload.cancellation, language))}
+                          </Text>
+                        ) : null}
+
+                        {djVenueGateBlocks ? (
+                          <Text style={styles.contractHint}>
+                            {fr
+                              ? 'Le contrat avec le lieu doit être accepté avant de finaliser ton contrat.'
+                              : 'The venue contract must be accepted before you can finalize your contract.'}
+                          </Text>
+                        ) : null}
+
+                        {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
+                          <TouchableOpacity
+                            style={[styles.contractButton, styles.contractButtonSecondary, styles.contractPdfPreviewBtn]}
+                            onPress={() =>
+                              openContractPdfPreview({
+                                previewPayload: buildDjContractPayload(contractDraft),
+                                pendingAction: 'preview',
+                              })
+                            }
+                            activeOpacity={0.85}
+                          >
+                            <Text style={styles.contractButtonText}>
+                              {fr ? 'Voir le contrat (PDF)' : 'View contract (PDF)'}
+                            </Text>
+                          </TouchableOpacity>
+                        ) : null}
+
+                        {contractData?.status === 'SENT' && contractData?.sentBy === 'BOOKER' ? (
+                          <View style={styles.contractAckRow}>
                             <TouchableOpacity
                               style={[
-                                styles.contractButton,
-                                styles.contractButtonPrimary,
-                                (djVenueGateBlocks || !contractAcceptAck) && { opacity: 0.45 },
+                                styles.contractAckCheckbox,
+                                contractAcceptAck && styles.contractAckCheckboxChecked,
                               ]}
-                              onPress={() =>
-                                openContractPdfPreview({
-                                  previewPayload: buildDjContractPayload(contractDraft),
-                                  pendingAction: 'accept',
-                                })
-                              }
-                              disabled={djVenueGateBlocks || !contractAcceptAck}
+                              onPress={() => setContractAcceptAck(!contractAcceptAck)}
+                              activeOpacity={0.7}
                             >
-                              <Text style={styles.contractButtonTextDark}>
-                                {language === 'fr' ? 'Accepter' : 'Accept'}
-                              </Text>
+                              {contractAcceptAck ? (
+                                <Text style={styles.contractAckCheckmark}>✓</Text>
+                              ) : null}
                             </TouchableOpacity>
-                          </>
-                        ) : (
-                          <Text style={styles.contractHint}>
-                            {language === 'fr'
-                              ? 'En attente de la réponse de l\'organisateur.'
-                              : 'Waiting for organizer response.'}
-                          </Text>
-                        )
-                      ) : contractData?.status === 'SIGNED' ? (
-                        <Text style={styles.contractHint}>
-                          {language === 'fr' ? '✅ Contrat signé.' : '✅ Contract signed.'}
-                        </Text>
-                      ) : contractData?.status === 'PENDING_PAYMENT' ? (
-                        <Text style={styles.contractHint}>
-                          {language === 'fr'
-                            ? '💳 Contrat accepté — l’organisateur paie dans son dashboard (chat → bouton « Payer avec Stripe »). Pas de lien par email pour le paiement.'
-                            : '💳 Contract accepted — the organizer pays from their dashboard (chat → “Pay with Stripe” button). No payment email link.'}
-                        </Text>
-                      ) : contractData?.status === 'PENDING_SIGNATURE' ? (
-                        <Text style={styles.contractHint}>
-                          {language === 'fr'
-                            ? '✍️ Signature électronique en cours : un email Yousign a été envoyé aux deux parties. Le contrat sera validé une fois signé.'
-                            : '✍️ Electronic signature in progress: a Yousign email was sent to both parties. The contract will be finalized once signed.'}
-                        </Text>
-                      ) : (
-                        <Text style={styles.contractHint}>
-                          {language === 'fr'
-                            ? 'En attente de l\'organisateur.'
-                            : 'Waiting for organizer.'}
-                        </Text>
-                      )}
-                    </View>
+                            <Text style={styles.contractAckText}>{contractAcceptAckLabel(language)}</Text>
+                          </View>
+                        ) : null}
+
+                        <View style={styles.contractActionsRow}>
+                          {contractData?.status === 'SENT' ? (
+                            contractData?.sentBy === 'BOOKER' ? (
+                              <>
+                                <TouchableOpacity
+                                  style={[styles.contractButton, styles.contractButtonSecondary]}
+                                  onPress={openContractEditorFromChat}
+                                >
+                                  <Text style={styles.contractButtonText}>
+                                    {fr ? 'Contre-proposer' : 'Counter'}
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.contractButton,
+                                    styles.contractButtonPrimary,
+                                    (djVenueGateBlocks || !contractAcceptAck) && { opacity: 0.45 },
+                                  ]}
+                                  onPress={() =>
+                                    openContractPdfPreview({
+                                      previewPayload: buildDjContractPayload(contractDraft),
+                                      pendingAction: 'accept',
+                                    })
+                                  }
+                                  disabled={djVenueGateBlocks || !contractAcceptAck}
+                                >
+                                  <Text style={styles.contractButtonTextDark}>
+                                    {fr ? 'Accepter' : 'Accept'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </>
+                            ) : (
+                              <Text style={styles.contractHint}>
+                                {fr
+                                  ? 'En attente de la réponse de l\'organisateur.'
+                                  : 'Waiting for organizer response.'}
+                              </Text>
+                            )
+                          ) : contractData?.status === 'SIGNED' ? (
+                            <Text style={styles.contractHint}>
+                              {fr ? 'Contrat signé.' : 'Contract signed.'}
+                            </Text>
+                          ) : contractData?.status === 'PENDING_PAYMENT' ? (
+                            <Text style={styles.contractHint}>
+                              {fr
+                                ? 'Contrat accepté. L’organisateur paie depuis son tableau de bord.'
+                                : 'Contract accepted. The organizer pays from their dashboard.'}
+                            </Text>
+                          ) : contractData?.status === 'PENDING_SIGNATURE' ? (
+                            <Text style={styles.contractHint}>
+                              {fr
+                                ? 'Signature en cours. Un email a été envoyé aux deux parties.'
+                                : 'Signature in progress. An email was sent to both parties.'}
+                            </Text>
+                          ) : (
+                            <Text style={styles.contractHint}>
+                              {fr
+                                ? 'En attente de l\'organisateur.'
+                                : 'Waiting for organizer.'}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
     

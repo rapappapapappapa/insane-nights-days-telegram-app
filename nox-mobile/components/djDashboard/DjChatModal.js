@@ -7,11 +7,11 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
-  Modal,
   KeyboardAvoidingView,
   Keyboard,
   Platform,
-  StatusBar as NativeStatusBar,
+  BackHandler,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { normalizeMediaUrl } from '../../api/config';
@@ -76,35 +76,31 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
-  const [shellOnly, setShellOnly] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
-  const topGap = Math.max(
-    insets.top,
-    Platform.OS === 'android' ? NativeStatusBar.currentHeight || 0 : 0,
-  );
+  const topGap = Math.max(insets.top, 0);
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
-  const closeResetTimerRef = useRef(null);
   const inputRef = useRef(null);
-
-  useEffect(() => () => {
-    if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
-  }, []);
+  const closeChatRef = useRef(() => {});
 
   useEffect(() => {
     if (!chatModalVisible) return;
     if (chatClosingRef) chatClosingRef.current = false;
-    setShellOnly(false);
-    if (closeResetTimerRef.current) {
-      clearTimeout(closeResetTimerRef.current);
-      closeResetTimerRef.current = null;
-    }
   }, [chatModalVisible, chatClosingRef]);
 
   useEffect(() => {
     setContractOpen(false);
   }, [selectedChatEventDjId, isGroupChat]);
+
+  useEffect(() => {
+    if (!chatModalVisible) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeChatRef.current();
+      return true;
+    });
+    return () => sub.remove();
+  }, [chatModalVisible]);
 
   const scrollChatToEnd = (animated) => {
     if (chatClosingRef?.current || !chatVisibleRef.current) return;
@@ -133,44 +129,18 @@ export default function DjChatModal(props) {
     Keyboard.dismiss();
     reopenChatAfterContractRef.current = false;
     flushPendingContractEditor?.();
-    setContractOpen(false);
-    setShellOnly(true);
-    if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
-    closeResetTimerRef.current = setTimeout(() => {
-      setChatModalVisible(false);
-      closeResetTimerRef.current = setTimeout(() => {
-        closeResetTimerRef.current = null;
-        if (chatVisibleRef.current) return;
-        resetChatSession();
-      }, 420);
-    }, 90);
+    setChatModalVisible(false);
+    resetChatSession();
   };
+  closeChatRef.current = closeChat;
+
+  if (!chatModalVisible) return null;
 
   return (
-          <Modal
-            visible={chatModalVisible}
-            transparent={true}
-            animationType="slide"
-            presentationStyle="overFullScreen"
-            statusBarTranslucent
-            navigationBarTranslucent
-            onDismiss={() => {
-              if (!pendingOpenContractEditorRef.current) return;
-              pendingOpenContractEditorRef.current = false;
-              if (openContractEditorFallbackTimerRef.current) {
-                clearTimeout(openContractEditorFallbackTimerRef.current);
-                openContractEditorFallbackTimerRef.current = null;
-              }
-              setContractEditorVisible(true);
-            }}
-            onRequestClose={closeChat}
-          >
+          <View style={overlayStyle}>
             <View style={styles.chatModalContainer}>
-              {shellOnly ? (
-                <View style={[styles.chatModalContent, { marginTop: topGap }]} />
-              ) : (
               <KeyboardAvoidingView
-                style={[styles.chatModalContent, { marginTop: topGap }]}
+                style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: insets.bottom + 96 }]}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? topGap : 0}
               >
@@ -501,8 +471,12 @@ export default function DjChatModal(props) {
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>
-              )}
             </View>
-          </Modal>
+          </View>
   );
 }
+
+const overlayStyle = [
+  StyleSheet.absoluteFillObject,
+  { zIndex: 40, elevation: 40 },
+];

@@ -75,6 +75,7 @@ export default function DjChatModal(props) {
 
   const [contractOpen, setContractOpen] = useState(false);
   const [retained, setRetained] = useState(false);
+  const [dormant, setDormant] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
@@ -85,22 +86,18 @@ export default function DjChatModal(props) {
   const releaseRef = useRef(() => {});
   releaseRef.current = () => {
     if (chatVisibleRef.current || reopenChatAfterContractRef?.current) return;
-    setRetained(false);
+    setDormant(true);
     setContractOpen(false);
-    setSelectedChatEventDjId(null);
-    setSelectedChatEventId(null);
-    setIsGroupChat(false);
     setChatMessages([]);
     setNewMessageText('');
-    setContractEditorVisible(false);
-    setShowPaymentTermsModal(false);
-    setShowCancellationModal(false);
-    setShowEventEndModal(false);
     refreshUnreadCount?.();
   };
 
   if (chatModalVisible && !retained) {
     setRetained(true);
+  }
+  if (chatModalVisible && dormant) {
+    setDormant(false);
   }
 
   useEffect(() => {
@@ -141,6 +138,7 @@ export default function DjChatModal(props) {
     setChatModalVisible(false);
   };
   closeChatRef.current = closeChat;
+  const showThread = chatModalVisible || !dormant;
 
   if (!chatModalVisible && !retained) return null;
 
@@ -178,7 +176,8 @@ export default function DjChatModal(props) {
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
                 >
-    
+                {showThread ? (
+                <>
                 {!isGroupChat && selectedChatEventDjId ? (
                   <View style={styles.contractCard}>
                     <TouchableOpacity
@@ -457,6 +456,8 @@ export default function DjChatModal(props) {
                     )}
                   </View>
                 )}
+                </>
+                ) : null}
     
                 </ScrollView>
     

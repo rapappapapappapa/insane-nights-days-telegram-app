@@ -25,7 +25,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Dans le chat privé DJ, les messages s’affichent tout de suite. Le contrat est un bouton avec son état (brouillon, envoyé, signé…) et le détail s’ouvre seulement au toucher.
 
 ### Corrigé (mobile — fermeture du chat DJ)
-- La croix masque la discussion tout de suite, puis la retire une fois le geste terminé. Ce nettoyage ne part plus au lancement de l’écran.
+- La croix masque la discussion sans détruire sa vue native, ce qui fermait l’application. Une fois le geste terminé, les messages sont vidés. Le conteneur, lui, reste en place.
 
 ---
 

@@ -74,19 +74,52 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
+  const [retained, setRetained] = useState(false);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
   const closeChatRef = useRef(() => {});
-  const keptRef = useRef(false);
-  if (chatModalVisible) keptRef.current = true;
+  const releaseTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!chatModalVisible) return;
-    if (chatClosingRef) chatClosingRef.current = false;
-  }, [chatModalVisible, chatClosingRef]);
+    if (chatModalVisible) {
+      if (releaseTimerRef.current) {
+        clearTimeout(releaseTimerRef.current);
+        releaseTimerRef.current = null;
+      }
+      setRetained(true);
+      if (chatClosingRef) chatClosingRef.current = false;
+      return undefined;
+    }
+
+    if (reopenChatAfterContractRef?.current) return undefined;
+
+    releaseTimerRef.current = setTimeout(() => {
+      releaseTimerRef.current = null;
+      if (chatVisibleRef.current || reopenChatAfterContractRef?.current) return;
+      setRetained(false);
+      setContractOpen(false);
+      setSelectedChatEventDjId(null);
+      setSelectedChatEventId(null);
+      setIsGroupChat(false);
+      setChatMessages([]);
+      setNewMessageText('');
+      setContractEditorVisible(false);
+      setShowPaymentTermsModal(false);
+      setShowCancellationModal(false);
+      setShowEventEndModal(false);
+      refreshUnreadCount?.();
+    }, 400);
+
+    return () => {
+      if (releaseTimerRef.current) {
+        clearTimeout(releaseTimerRef.current);
+        releaseTimerRef.current = null;
+      }
+    };
+  }, [chatModalVisible, chatClosingRef, reopenChatAfterContractRef, refreshUnreadCount, setChatMessages, setContractEditorVisible, setIsGroupChat, setNewMessageText, setSelectedChatEventDjId, setSelectedChatEventId, setShowCancellationModal, setShowEventEndModal, setShowPaymentTermsModal]);
 
   useEffect(() => {
     setContractOpen(false);
@@ -113,14 +146,10 @@ export default function DjChatModal(props) {
     reopenChatAfterContractRef.current = false;
     flushPendingContractEditor?.();
     setChatModalVisible(false);
-    setTimeout(() => {
-      if (chatVisibleRef.current) return;
-      refreshUnreadCount?.();
-    }, 400);
   };
   closeChatRef.current = closeChat;
 
-  if (!chatModalVisible && !keptRef.current) return null;
+  if (!chatModalVisible && !retained) return null;
 
   return (
           <View

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Text,
   View,
@@ -73,10 +73,51 @@ export default function DjChatModal(props) {
 
   const [contractOpen, setContractOpen] = useState(false);
   const fr = language === 'fr';
+  const chatVisibleRef = useRef(chatModalVisible);
+  chatVisibleRef.current = chatModalVisible;
+  const closeResetTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
+  }, []);
 
   useEffect(() => {
+    if (!chatModalVisible && closeResetTimerRef.current) return;
+    if (chatModalVisible && closeResetTimerRef.current) {
+      clearTimeout(closeResetTimerRef.current);
+      closeResetTimerRef.current = null;
+    }
     setContractOpen(false);
   }, [selectedChatEventDjId, isGroupChat, chatModalVisible]);
+
+  const scrollChatToEnd = (animated) => {
+    if (!chatVisibleRef.current) return;
+    const node = chatScrollViewRef?.current;
+    if (!node?.scrollToEnd) return;
+    node.scrollToEnd({ animated });
+  };
+
+  const closeChat = () => {
+    reopenChatAfterContractRef.current = false;
+    flushPendingContractEditor();
+    setChatModalVisible(false);
+    if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
+    closeResetTimerRef.current = setTimeout(() => {
+      closeResetTimerRef.current = null;
+      if (chatVisibleRef.current) return;
+      setContractOpen(false);
+      setSelectedChatEventDjId(null);
+      setSelectedChatEventId(null);
+      setIsGroupChat(false);
+      setChatMessages([]);
+      setNewMessageText('');
+      setContractEditorVisible(false);
+      setShowPaymentTermsModal(false);
+      setShowCancellationModal(false);
+      setShowEventEndModal(false);
+      refreshUnreadCount?.();
+    }, 450);
+  };
 
   return (
           <Modal
@@ -93,22 +134,7 @@ export default function DjChatModal(props) {
               }
               setContractEditorVisible(true);
             }}
-            onRequestClose={() => {
-              reopenChatAfterContractRef.current = false;
-              flushPendingContractEditor();
-              setChatModalVisible(false);
-              setSelectedChatEventDjId(null);
-              setSelectedChatEventId(null);
-              setIsGroupChat(false);
-              setChatMessages([]);
-              setNewMessageText('');
-              setContractEditorVisible(false);
-              setShowPaymentTermsModal(false);
-              setShowCancellationModal(false);
-              setShowEventEndModal(false);
-              // Rafraîchir le compteur après fermeture
-              refreshUnreadCount();
-            }}
+            onRequestClose={closeChat}
           >
             <View style={styles.chatModalContainer}>
               <KeyboardAvoidingView
@@ -123,32 +149,12 @@ export default function DjChatModal(props) {
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
                   showsVerticalScrollIndicator={true}
-                  onContentSizeChange={() => {
-                    if (chatScrollViewRef.current) {
-                      chatScrollViewRef.current.scrollToEnd({ animated: true });
-                    }
-                  }}
                 >
                 {/* Header du chat */}
                 <View style={styles.chatHeaderContainer}>
                 <View style={styles.chatHeader}>
                   <TouchableOpacity
-                    onPress={() => {
-                      reopenChatAfterContractRef.current = false;
-                      flushPendingContractEditor();
-                      setChatModalVisible(false);
-                      setSelectedChatEventDjId(null);
-                      setSelectedChatEventId(null);
-                      setIsGroupChat(false);
-                      setChatMessages([]);
-                      setNewMessageText('');
-                      setContractEditorVisible(false);
-                      setShowPaymentTermsModal(false);
-                      setShowCancellationModal(false);
-                      setShowEventEndModal(false);
-                      // Rafraîchir le compteur après fermeture
-                      refreshUnreadCount();
-                    }}
+                    onPress={closeChat}
                     style={styles.chatCloseButton}
                   >
                     <Text style={styles.chatCloseButtonText}>✕</Text>
@@ -446,12 +452,7 @@ export default function DjChatModal(props) {
                     multiline
                     maxLength={500}
                     onFocus={() => {
-                      // Scroll vers le bas quand on focus l'input
-                      setTimeout(() => {
-                        if (chatScrollViewRef.current) {
-                          chatScrollViewRef.current.scrollToEnd({ animated: true });
-                        }
-                      }, 100);
+                      setTimeout(() => scrollChatToEnd(true), 100);
                     }}
                   />
                   <TouchableOpacity

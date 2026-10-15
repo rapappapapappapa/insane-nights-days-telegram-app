@@ -32,6 +32,8 @@ export function useDjMessaging({
     const [sendingMessage, setSendingMessage] = useState(false);
     const [newMessageText, setNewMessageText] = useState('');
     const chatScrollViewRef = useRef(null);
+    const chatModalVisibleRef = useRef(false);
+    chatModalVisibleRef.current = chatModalVisible;
   
     // ✅ Contrat (MVP) - intégré au chat privé Booker <-> DJ
     const [contractLoading, setContractLoading] = useState(false);
@@ -354,6 +356,7 @@ export function useDjMessaging({
               const changed = prevLast !== nextLast || incoming.length !== prev.length;
               if (changed) {
                 setTimeout(() => {
+                  if (!chatModalVisibleRef.current) return;
                   chatScrollViewRef.current?.scrollToEnd({ animated: true });
                 }, 60);
               }
@@ -362,9 +365,8 @@ export function useDjMessaging({
           } else {
             setChatMessages(incoming);
             setTimeout(() => {
-              if (chatScrollViewRef.current) {
-                chatScrollViewRef.current.scrollToEnd({ animated: true });
-              }
+              if (!chatModalVisibleRef.current || !chatScrollViewRef.current) return;
+              chatScrollViewRef.current.scrollToEnd({ animated: true });
             }, 100);
           }
         }

@@ -9,8 +9,11 @@ import {
   Image,
   Modal,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
+  StatusBar as NativeStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { normalizeMediaUrl } from '../../api/config';
 import {
   buildDjContractPayload,
@@ -52,6 +55,7 @@ export default function DjChatModal(props) {
     setShowEventEndModal,
     refreshUnreadCount,
     chatScrollViewRef,
+    chatClosingRef,
     isGroupChat,
     selectedChatEventDjId,
     contractLoading,
@@ -72,51 +76,74 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
+  const [shellOnly, setShellOnly] = useState(false);
   const fr = language === 'fr';
+  const insets = useSafeAreaInsets();
+  const topGap = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? NativeStatusBar.currentHeight || 0 : 0,
+  );
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
   const closeResetTimerRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => () => {
     if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
   }, []);
 
   useEffect(() => {
-    if (!chatModalVisible && closeResetTimerRef.current) return;
-    if (chatModalVisible && closeResetTimerRef.current) {
+    if (!chatModalVisible) return;
+    if (chatClosingRef) chatClosingRef.current = false;
+    setShellOnly(false);
+    if (closeResetTimerRef.current) {
       clearTimeout(closeResetTimerRef.current);
       closeResetTimerRef.current = null;
     }
+  }, [chatModalVisible, chatClosingRef]);
+
+  useEffect(() => {
     setContractOpen(false);
-  }, [selectedChatEventDjId, isGroupChat, chatModalVisible]);
+  }, [selectedChatEventDjId, isGroupChat]);
 
   const scrollChatToEnd = (animated) => {
-    if (!chatVisibleRef.current) return;
+    if (chatClosingRef?.current || !chatVisibleRef.current) return;
     const node = chatScrollViewRef?.current;
     if (!node?.scrollToEnd) return;
     node.scrollToEnd({ animated });
   };
 
+  const resetChatSession = () => {
+    setContractOpen(false);
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(null);
+    setIsGroupChat(false);
+    setChatMessages([]);
+    setNewMessageText('');
+    setContractEditorVisible(false);
+    setShowPaymentTermsModal(false);
+    setShowCancellationModal(false);
+    setShowEventEndModal(false);
+    refreshUnreadCount?.();
+  };
+
   const closeChat = () => {
+    if (chatClosingRef) chatClosingRef.current = true;
+    inputRef.current?.blur?.();
+    Keyboard.dismiss();
     reopenChatAfterContractRef.current = false;
-    flushPendingContractEditor();
-    setChatModalVisible(false);
+    flushPendingContractEditor?.();
+    setContractOpen(false);
+    setShellOnly(true);
     if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current);
     closeResetTimerRef.current = setTimeout(() => {
-      closeResetTimerRef.current = null;
-      if (chatVisibleRef.current) return;
-      setContractOpen(false);
-      setSelectedChatEventDjId(null);
-      setSelectedChatEventId(null);
-      setIsGroupChat(false);
-      setChatMessages([]);
-      setNewMessageText('');
-      setContractEditorVisible(false);
-      setShowPaymentTermsModal(false);
-      setShowCancellationModal(false);
-      setShowEventEndModal(false);
-      refreshUnreadCount?.();
-    }, 450);
+      setChatModalVisible(false);
+      closeResetTimerRef.current = setTimeout(() => {
+        closeResetTimerRef.current = null;
+        if (chatVisibleRef.current) return;
+        resetChatSession();
+      }, 420);
+    }, 90);
   };
 
   return (
@@ -125,6 +152,8 @@ export default function DjChatModal(props) {
             transparent={true}
             animationType="slide"
             presentationStyle="overFullScreen"
+            statusBarTranslucent
+            navigationBarTranslucent
             onDismiss={() => {
               if (!pendingOpenContractEditorRef.current) return;
               pendingOpenContractEditorRef.current = false;
@@ -137,10 +166,13 @@ export default function DjChatModal(props) {
             onRequestClose={closeChat}
           >
             <View style={styles.chatModalContainer}>
+              {shellOnly ? (
+                <View style={[styles.chatModalContent, { marginTop: topGap }]} />
+              ) : (
               <KeyboardAvoidingView
-                style={styles.chatModalContent}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+                style={[styles.chatModalContent, { marginTop: topGap }]}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? topGap : 0}
               >
                 <ScrollView
                   ref={chatScrollViewRef}
@@ -444,6 +476,7 @@ export default function DjChatModal(props) {
                 {/* Input pour envoyer un message */}
                 <View style={styles.chatInputContainer}>
                   <TextInput
+                    ref={inputRef}
                     style={styles.chatInput}
                     value={newMessageText}
                     onChangeText={setNewMessageText}
@@ -468,6 +501,7 @@ export default function DjChatModal(props) {
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>
+              )}
             </View>
           </Modal>
   );

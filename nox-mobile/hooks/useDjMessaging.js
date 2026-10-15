@@ -33,6 +33,7 @@ export function useDjMessaging({
     const [newMessageText, setNewMessageText] = useState('');
     const chatScrollViewRef = useRef(null);
     const chatModalVisibleRef = useRef(false);
+    const chatClosingRef = useRef(false);
     chatModalVisibleRef.current = chatModalVisible;
   
     // ✅ Contrat (MVP) - intégré au chat privé Booker <-> DJ
@@ -146,6 +147,7 @@ export function useDjMessaging({
   
     // Fonctions de chat
     const openChat = async (eventDjId) => {
+      chatClosingRef.current = false;
       setSelectedChatEventDjId(eventDjId);
       setSelectedChatEventId(null);
       setIsGroupChat(false);
@@ -159,6 +161,7 @@ export function useDjMessaging({
     };
   
     const openGroupChat = async (eventId) => {
+      chatClosingRef.current = false;
       setSelectedChatEventDjId(null);
       setSelectedChatEventId(eventId);
       setIsGroupChat(true);
@@ -356,7 +359,7 @@ export function useDjMessaging({
               const changed = prevLast !== nextLast || incoming.length !== prev.length;
               if (changed) {
                 setTimeout(() => {
-                  if (!chatModalVisibleRef.current) return;
+                  if (chatClosingRef.current || !chatModalVisibleRef.current) return;
                   chatScrollViewRef.current?.scrollToEnd({ animated: true });
                 }, 60);
               }
@@ -365,7 +368,7 @@ export function useDjMessaging({
           } else {
             setChatMessages(incoming);
             setTimeout(() => {
-              if (!chatModalVisibleRef.current || !chatScrollViewRef.current) return;
+              if (chatClosingRef.current || !chatModalVisibleRef.current || !chatScrollViewRef.current) return;
               chatScrollViewRef.current.scrollToEnd({ animated: true });
             }, 100);
           }
@@ -384,7 +387,7 @@ export function useDjMessaging({
   
     const pollDjChatRef = useRef(() => {});
     pollDjChatRef.current = () => {
-      if (!user?.token || !chatModalVisible) return;
+      if (!user?.token || !chatModalVisible || chatClosingRef.current) return;
       const id = isGroupChat ? selectedChatEventId : selectedChatEventDjId;
       if (!id) return;
       loadChatMessages(id, isGroupChat, { silent: true });
@@ -470,6 +473,7 @@ export function useDjMessaging({
     newMessageText,
     setNewMessageText,
     chatScrollViewRef,
+    chatClosingRef,
     contractLoading,
     contractData,
     contractBooking,

@@ -211,6 +211,7 @@ export default function DjDashboardPage() {
     setShowCancellationModal,
     setShowEventEndModal,
     chatScrollViewRef,
+    chatClosingRef,
     contractLoading,
     contractData,
     contractDraft,
@@ -542,6 +543,7 @@ export default function DjDashboardPage() {
         setShowEventEndModal={setShowEventEndModal}
         refreshUnreadCount={refreshUnreadCount}
         chatScrollViewRef={chatScrollViewRef}
+        chatClosingRef={chatClosingRef}
         isGroupChat={isGroupChat}
         selectedChatEventDjId={selectedChatEventDjId}
         contractLoading={contractLoading}

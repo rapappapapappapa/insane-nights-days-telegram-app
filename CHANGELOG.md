@@ -25,7 +25,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Dans le chat privé DJ, les messages s’affichent tout de suite. Le contrat est un bouton avec son état (brouillon, envoyé, signé…) et le détail s’ouvre seulement au toucher.
 
 ### Corrigé (mobile — fermeture du chat DJ)
-- Quitter la discussion ne vide plus les messages pendant l’animation de fermeture. Le défilement automatique ne s’exécute plus sur une vue déjà fermée.
+- Quitter la discussion retire d’abord le clavier et le champ de saisie, puis ferme la fenêtre. L’architecture native ne démonte plus ces vues en même temps que le modal, ce qui fermait l’application.
 
 ---
 

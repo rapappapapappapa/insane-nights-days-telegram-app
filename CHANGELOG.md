@@ -13,6 +13,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Une coupure réseau lève `NetworkUnreachableError`. Ce n’est plus une réponse vide, que les écrans prenaient pour « rien à afficher ».
 - Au démarrage, si le serveur est injoignable, la session déjà enregistrée sur le téléphone est conservée. Un jeton refusé par le serveur déconnecte toujours.
 
+### Corrigé (mobile — photo du fil)
+- L’image choisie dans la galerie envoie le nom et le type fournis par le sélecteur. Une adresse Android `content://` sans extension ne devient plus un nom de fichier invalide.
+
 ---
 
 ## Semaine du 5 au 9 octobre 2026

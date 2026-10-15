@@ -1,6 +1,6 @@
 import logger from '../../utils/logger';
 
-export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API_CONFIG }) {
+export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, describePickedFile, API_CONFIG }) {
   return {
   // ============================================
   // ✅ AJOUT: FEED D'ACTUALITÉ - Posts des DJs et annonces d'événements
@@ -229,22 +229,30 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, API
   },
 
   // ✅ AJOUT: Uploader une image pour un post du feed
-  uploadFeedPostImage: async (token, imageUri) => {
+  uploadFeedPostImage: async (token, file) => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
-    if (!imageUri) {
+    const uri = typeof file === 'string' ? file : file?.uri;
+    if (!uri) {
       throw new Error('L\'URI de l\'image est requise.');
     }
 
-    logger.debug('[uploadFeedPostImage] Début upload:', { imageUri: imageUri.substring(0, 50) + '...' });
+    const described = describePickedFile({
+      uri,
+      filename: typeof file === 'string' ? undefined : file?.filename,
+      mimeType: typeof file === 'string' ? undefined : file?.mimeType,
+      kind: 'image',
+    });
+
+    logger.debug('[uploadFeedPostImage] Début upload:', { imageUri: uri.substring(0, 50) + '...' });
 
     // Créer un FormData pour l'upload (format React Native)
     const formData = new FormData();
     const fileData = {
-      uri: imageUri,
-      type: getMimeType(imageUri, 'photo'),
-      name: getFileName(imageUri),
+      uri: described.uri,
+      type: described.type,
+      name: described.name,
     };
     logger.debug('[uploadFeedPostImage] File data:', { type: fileData.type, name: fileData.name });
 

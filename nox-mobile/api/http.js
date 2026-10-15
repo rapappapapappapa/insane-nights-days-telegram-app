@@ -5,6 +5,41 @@ import { retryApiCall, isRetryableError } from '../utils/retry';
 import { API_CONFIG } from './endpointsConfig';
 import { NetworkUnreachableError } from '../constants/networkErrors';
 
+
+const EXT_BY_MIME = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'm4a',
+};
+function safeExtension(value){
+  const ext = String(value || '').toLowerCase().replace(/^\./, '');
+  return /^[a-z0-9]{1,5}$/.test(ext) ? ext : "";
+}
+
+function extensionFormUri(uri){
+  const last = String(uri || '').split('?')[0].split('#')[0].split('/').pop() || ''
+  const dot = last.lastIndexOf('.');
+  if (dot <= 0) return "";
+  return safeExtension(last.slice(dot+1))
+}
+
+/**Nom et type d'un fichier choisi/ le sélecteur prime sur l'adresse. */
+
+export function describePickedFile({uri, filename, mimeType, kind} =  {}){
+  const fromName = safeExtension(String(filename || '').split('.').pop());
+  const fromMime = EXT_BY_MIME[String(mimeType || '').toLowerCase()] || '';
+  const fromUri = extensionFormUri(uri);
+  const ext = fromName || fromMime || fromUri || (kind === 'video' ? 'mp4' : kind === 'audio' ? 'mp3' : 'jpg');
+  const type = mimeType || (kind === 'video' ? 'video/mp4' : kind === 'audio' ? 'audio/mpeg' : 'image/jpeg');
+  const base = String(filename || '').split('/').pop();
+  const name = base && safeExtension(base.split('.').pop()) ? base : `media.${ext}`;
+  return { uri, name, type };
+}
 export const getMimeType = (uri, type) => {
   const extension = uri.split('.').pop().toLowerCase();
   const mimeTypes = {

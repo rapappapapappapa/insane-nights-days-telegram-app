@@ -31,7 +31,7 @@ export default function CreateFeedPostPage() {
   const { toast, showError, showSuccess, hideToast } = useToast();
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [selectedImageUri, setSelectedImageUri] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fr = language === 'fr';
@@ -76,7 +76,11 @@ export default function CreateFeedPostPage() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        setSelectedImageUri(asset.uri);
+        setSelectedImage({
+          uri: asset.uri,
+          filename: asset.fileName,
+          mimeType: asset.mimeType,
+        });
         setImageUrl('');
       }
     } catch (error) {
@@ -93,16 +97,16 @@ export default function CreateFeedPostPage() {
    * Uploader l'image sélectionnée vers le serveur
    */
   const handleUploadImage = async () => {
-    if (!selectedImageUri || !user?.token) {
+    if (!selectedImage?.uri || !user?.token) {
       return;
     }
 
     setUploadingImage(true);
     try {
-      const response = await api.uploadFeedPostImage(user.token, selectedImageUri);
+      const response = await api.uploadFeedPostImage(user.token, selectedImage);
       if (response && response.success) {
         setImageUrl(response.imageUrl);
-        setSelectedImageUri(null);
+        setSelectedImage(null);
       } else {
         throw new Error(response?.message || 'Erreur upload image');
       }
@@ -151,10 +155,10 @@ export default function CreateFeedPostPage() {
     }
 
     let finalImageUrl = imageUrl;
-    if (selectedImageUri && !imageUrl) {
+    if (selectedImage?.uri && !imageUrl) {
       setLoading(true);
       try {
-        const uploadResponse = await api.uploadFeedPostImage(user.token, selectedImageUri);
+        const uploadResponse = await api.uploadFeedPostImage(user.token, selectedImage);
         if (uploadResponse && uploadResponse.success) {
           finalImageUrl = uploadResponse.imageUrl;
           setImageUrl(uploadResponse.imageUrl);
@@ -298,24 +302,24 @@ export default function CreateFeedPostPage() {
               onChangeText={setImageUrl}
               autoCapitalize="none"
               keyboardType="url"
-              editable={!selectedImageUri}
+              editable={!selectedImage}
               containerStyle={[
                 styles.imageUrlInput,
-                selectedImageUri ? styles.disabledFieldHint : null,
+                selectedImage ? styles.disabledFieldHint : null,
               ]}
             />
 
-            {selectedImageUri && !imageUrl && (
+            {selectedImage?.uri && !imageUrl && (
               <View style={styles.imagePreview}>
                 <Image
-                  source={{ uri: selectedImageUri }}
+                  source={{ uri: selectedImage.uri }}
                   style={styles.previewImage}
                   resizeMode="cover"
                 />
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={() => {
-                    setSelectedImageUri(null);
+                    setSelectedImage(null);
                     setImageUrl('');
                   }}
                   accessibilityRole="button"
@@ -334,7 +338,7 @@ export default function CreateFeedPostPage() {
               </View>
             )}
 
-            {imageUrl && !selectedImageUri && (
+            {imageUrl && !selectedImage && (
               <View style={styles.imagePreview}>
                 <Image
                   source={{ uri: imageUrl }}
@@ -345,7 +349,7 @@ export default function CreateFeedPostPage() {
                   style={styles.removeImageButton}
                   onPress={() => {
                     setImageUrl('');
-                    setSelectedImageUri(null);
+                    setSelectedImage(null);
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={fr ? 'Retirer l\'image' : 'Remove image'}

@@ -24,6 +24,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (mobile — discussion DJ)
 - Dans le chat privé DJ, les messages s’affichent tout de suite. Le contrat est un bouton avec son état (brouillon, envoyé, signé…) et le détail s’ouvre seulement au toucher.
 
+### Modifié (mobile — menus)
+- Le tiroir affiche chaque entrée en carte, avec l’écran en cours surligné. Les libellés de l’arc NX sont plus grands et plus lisibles.
+
 ### Modifié (mobile — saisie du chat DJ)
 - Le champ de message monte avec le clavier. Tant que le clavier est ouvert, la place du bouton NX n’est plus réservée en dessous.
 

@@ -12,9 +12,9 @@ import { useConfirm } from '../contexts/ConfirmContext';
 import { api } from '../api/config';
 import Logo from './Logo';
 import NotificationBadge from './NotificationBadge';
-import Colors from '../constants/colors';
-import { getHomeScreenForProfile, getProDashboardScreen } from '../utils/noxRoleNavigation';
+import { getProDashboardScreen, isProfileScreenForProfile } from '../utils/noxRoleNavigation';
 import { getDiscoverScreen } from '../utils/noxNavigation';
+import Colors, { primaryAlpha } from '../constants/colors';
 import * as Updates from 'expo-updates';
 
 /** Icônes Ionicons + libellés FR/EN (cohérence avec la langue de l’app). */
@@ -175,7 +175,7 @@ const DRAWER_GROUPS = [
 
 export default function DrawerContent({ navigation }) {
   const { language } = useLanguage();
-  const { navigate } = useNavigation();
+  const { navigate, currentPage } = useNavigation();
   const { user, logout } = useAuth();
   const { unreadCount, unreadByProfileType } = useNotifications();
   const { toast, showError, showSuccess, hideToast } = useToast();
@@ -373,6 +373,11 @@ export default function DrawerContent({ navigation }) {
 
   const menuLabel = (item) => (language === 'fr' ? item.titleFr : item.titleEn);
   const menuDesc = (item) => (language === 'fr' ? item.descFr : item.descEn);
+  const isItemActive = (item) => {
+    if (item.resolveDiscover) return currentPage === getDiscoverScreen(activeProfileType);
+    if (item.id === 'profile') return isProfileScreenForProfile(activeProfileType, currentPage);
+    return currentPage === item.id;
+  };
 
   const contentPaddingBottom = useMemo(() => 24 + (insets?.bottom || 0), [insets?.bottom]);
 
@@ -459,23 +464,33 @@ export default function DrawerContent({ navigation }) {
               {groupItems.map((item) => {
                 const title = menuLabel(item);
                 const description = menuDesc(item);
+                const active = isItemActive(item);
+                const iconName = active && item.icon.endsWith('-outline')
+                  ? item.icon.replace(/-outline$/, '')
+                  : item.icon;
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.menuItem}
+                    style={[styles.menuItem, active && styles.menuItemActive]}
                     onPress={() => handleMenuItemPress(item.id, item.params)}
                     activeOpacity={0.7}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                     accessibilityLabel={`${title}. ${description}`}
                   >
-                    <View style={styles.menuEmojiContainer}>
-                      <Ionicons name={item.icon} size={26} color={Colors.primary} />
+                    <View style={[styles.menuEmojiContainer, active && styles.menuEmojiContainerActive]}>
+                      <Ionicons name={iconName} size={22} color={active ? Colors.text : Colors.primaryLight} />
                       {item.showBadge && (item.badgeCount || 0) > 0 && <NotificationBadge count={item.badgeCount} />}
                     </View>
                     <View style={styles.menuItemText}>
-                      <Text style={styles.menuTitle}>{title}</Text>
-                      <Text style={styles.menuDescription}>{description}</Text>
+                      <Text style={[styles.menuTitle, active && styles.menuTitleActive]}>{title}</Text>
+                      <Text style={styles.menuDescription} numberOfLines={1}>{description}</Text>
                     </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={active ? Colors.primaryLight : 'rgba(254,254,253,0.28)'}
+                    />
                   </TouchableOpacity>
                 );
               })}
@@ -659,17 +674,31 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: Colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: 'rgba(254,254,253,0.08)',
+  },
+  menuItemActive: {
+    backgroundColor: primaryAlpha(0.16),
+    borderColor: primaryAlpha(0.55),
   },
   menuEmojiContainer: {
     width: 40,
-    marginRight: 16,
+    height: 40,
+    borderRadius: 12,
+    marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    backgroundColor: primaryAlpha(0.14),
+  },
+  menuEmojiContainerActive: {
+    backgroundColor: Colors.primary,
   },
   menuItemText: {
     flex: 1,
@@ -678,7 +707,10 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  menuTitleActive: {
+    color: Colors.text,
   },
   menuDescription: {
     color: Colors.textTertiary,

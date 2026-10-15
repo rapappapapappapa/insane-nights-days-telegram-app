@@ -24,6 +24,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Modifié (mobile — discussion DJ)
 - Dans le chat privé DJ, les messages s’affichent tout de suite. Le contrat est un bouton avec son état (brouillon, envoyé, signé…) et le détail s’ouvre seulement au toucher.
 
+### Modifié (mobile — saisie du chat DJ)
+- Le champ de message monte avec le clavier. Tant que le clavier est ouvert, la place du bouton NX n’est plus réservée en dessous.
+
 ### Corrigé (mobile — fermeture du chat DJ)
 - La croix remasque la discussion sans retirer ses vues, comme dans la version qui ne plantait pas. Une fois fermée, la liste n’est plus reconstruite et le rafraîchissement des messages s’arrête. Les messages partent en quittant l’écran.
 

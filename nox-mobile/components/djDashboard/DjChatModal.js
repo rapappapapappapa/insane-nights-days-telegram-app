@@ -7,8 +7,10 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   BackHandler,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,6 +84,7 @@ export default function DjChatModal(props) {
   } = props;
 
   const [contractOpen, setContractOpen] = useState(false);
+  const [keyboardPad, setKeyboardPad] = useState(0);
   const fr = language === 'fr';
   const insets = useSafeAreaInsets();
   const topGap = Math.max(insets.top, 0);
@@ -124,6 +127,24 @@ export default function DjChatModal(props) {
     node.scrollToEnd({ animated });
   };
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      if (!chatVisibleRef.current) return;
+      const height = Math.max(0, Math.round(event?.endCoordinates?.height || 0));
+      setKeyboardPad(height);
+      setTimeout(() => scrollChatToEnd(true), 60);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardPad(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const closeChat = () => {
     if (chatClosingRef) chatClosingRef.current = true;
     reopenChatAfterContractRef.current = false;
@@ -142,7 +163,7 @@ export default function DjChatModal(props) {
             <View style={styles.chatModalContainer}>
               <StableTree frozen={!chatModalVisible}>
               <KeyboardAvoidingView
-                style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: insets.bottom + 96 }]}
+                style={[styles.chatModalContent, { marginTop: topGap, paddingBottom: keyboardPad > 0 ? keyboardPad : insets.bottom + 96 }]}
                 behavior={undefined}
                 keyboardVerticalOffset={0}
               >

@@ -81,45 +81,38 @@ export default function DjChatModal(props) {
   const chatVisibleRef = useRef(chatModalVisible);
   chatVisibleRef.current = chatModalVisible;
   const closeChatRef = useRef(() => {});
-  const releaseTimerRef = useRef(null);
+  const wasVisibleRef = useRef(false);
+  const releaseRef = useRef(() => {});
+  releaseRef.current = () => {
+    if (chatVisibleRef.current || reopenChatAfterContractRef?.current) return;
+    setRetained(false);
+    setContractOpen(false);
+    setSelectedChatEventDjId(null);
+    setSelectedChatEventId(null);
+    setIsGroupChat(false);
+    setChatMessages([]);
+    setNewMessageText('');
+    setContractEditorVisible(false);
+    setShowPaymentTermsModal(false);
+    setShowCancellationModal(false);
+    setShowEventEndModal(false);
+    refreshUnreadCount?.();
+  };
+
+  if (chatModalVisible && !retained) {
+    setRetained(true);
+  }
 
   useEffect(() => {
-    if (chatModalVisible) {
-      if (releaseTimerRef.current) {
-        clearTimeout(releaseTimerRef.current);
-        releaseTimerRef.current = null;
-      }
-      setRetained(true);
-      if (chatClosingRef) chatClosingRef.current = false;
+    const wasVisible = wasVisibleRef.current;
+    wasVisibleRef.current = chatModalVisible;
+    if (chatModalVisible && chatClosingRef) chatClosingRef.current = false;
+    if (!wasVisible || chatModalVisible || reopenChatAfterContractRef?.current) {
       return undefined;
     }
-
-    if (reopenChatAfterContractRef?.current) return undefined;
-
-    releaseTimerRef.current = setTimeout(() => {
-      releaseTimerRef.current = null;
-      if (chatVisibleRef.current || reopenChatAfterContractRef?.current) return;
-      setRetained(false);
-      setContractOpen(false);
-      setSelectedChatEventDjId(null);
-      setSelectedChatEventId(null);
-      setIsGroupChat(false);
-      setChatMessages([]);
-      setNewMessageText('');
-      setContractEditorVisible(false);
-      setShowPaymentTermsModal(false);
-      setShowCancellationModal(false);
-      setShowEventEndModal(false);
-      refreshUnreadCount?.();
-    }, 400);
-
-    return () => {
-      if (releaseTimerRef.current) {
-        clearTimeout(releaseTimerRef.current);
-        releaseTimerRef.current = null;
-      }
-    };
-  }, [chatModalVisible, chatClosingRef, reopenChatAfterContractRef, refreshUnreadCount, setChatMessages, setContractEditorVisible, setIsGroupChat, setNewMessageText, setSelectedChatEventDjId, setSelectedChatEventId, setShowCancellationModal, setShowEventEndModal, setShowPaymentTermsModal]);
+    const timer = setTimeout(() => releaseRef.current(), 400);
+    return () => clearTimeout(timer);
+  }, [chatModalVisible, chatClosingRef, reopenChatAfterContractRef]);
 
   useEffect(() => {
     setContractOpen(false);

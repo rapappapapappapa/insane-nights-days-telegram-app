@@ -215,7 +215,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
   const bottom =
     Math.max(insets.bottom, Spacing.md) +
     Spacing.sm +
-    (LIEUX_SCREENS.has(currentPage) ? LIEUX_BOTTOM_NAV_LIFT : 0);
+    (LIEUX_SCREENS.has(currentPage) && currentPage !== 'lieuxDashboard' ? LIEUX_BOTTOM_NAV_LIFT : 0);
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 

@@ -5,7 +5,6 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxLieuxBottomNav } from '../../components/nox';
 import LieuxDashboardHomeSection from '../../components/lieux/LieuxDashboardHomeSection';
 import Colors from '../../constants/colors';
 import { getRealizedEventsCount } from '../../utils/lieuxDashboardUtils';
@@ -206,7 +205,6 @@ export default function LieuxDashboardPage() {
         onRefresh={refresh}
         onSelectTool={openTool}
       />
-      <NoxLieuxBottomNav active="home" navigate={navigate} />
     </View>
   );
 }

@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 23 octobre 2026
 
+### Modifié (lieu — chat et accueil)
+- **Chat lieu** : bulles alignées sur le chat DJ (rayon 16, coin bas, largeur max), plus des pilules plein écran.
+- **Accueil lieu** : barre Accueil / + / Profil retirée. Le bouton NX est au même niveau que les autres profils.
+
 ### Modifié (dashboards pro — destinations réelles)
 - **Organisateur** : tuile Statistiques retirée (les chiffres restent sur le hub). Booking, Lieux, Contrats et Paiements ouvrent **Mes événements** avec un bandeau qui dit quoi faire sur la fiche.
 - **Lieu** : chaque tuile ouvre son écran (dispos, planning, demandes, profil, médias, mur, staff, scanner, avis, réglages). Plus de raccourcis vers le mauvais écran.

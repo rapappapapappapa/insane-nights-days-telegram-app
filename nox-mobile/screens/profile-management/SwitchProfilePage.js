@@ -77,6 +77,7 @@ export default function SwitchProfilePage() {
 
   const [profiles, setProfiles] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
@@ -90,14 +91,25 @@ export default function SwitchProfilePage() {
   const fetchProfiles = async () => {
     if (!user?.token) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await api.getUserProfiles(user.token);
-      if (response && response.success) {
+      if (response && response.success && response.profiles) {
         setProfiles(response);
+        return;
       }
+      const message =
+        response?.message ||
+        (fr ? 'Impossible de charger les profils' : 'Unable to load profiles');
+      setLoadError(message);
+      showError(message);
     } catch (error) {
       console.error('Erreur récupération profils:', error);
-      showError(fr ? 'Impossible de charger les profils' : 'Unable to load profiles');
+      const message =
+        error?.message ||
+        (fr ? 'Impossible de charger les profils' : 'Unable to load profiles');
+      setLoadError(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -106,6 +118,14 @@ export default function SwitchProfilePage() {
   const handleSwitchProfile = async (profileType) => {
     if (!user?.token) {
       showError(fr ? 'Token manquant. Veuillez vous reconnecter.' : 'Missing token. Please log in again.');
+      return;
+    }
+
+    if (loadError || !profiles?.profiles) {
+      showError(
+        loadError ||
+          (fr ? 'La liste des profils n’est pas chargée. Réessaie.' : 'Profile list is not loaded. Try again.')
+      );
       return;
     }
 
@@ -244,6 +264,20 @@ export default function SwitchProfilePage() {
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} size="large" style={styles.loader} />
+        ) : loadError ? (
+          <NoxCard style={styles.profileCard}>
+            <NoxText variant="form" style={styles.profileTitle}>
+              {fr ? 'Liste indisponible' : 'List unavailable'}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.profileDescription}>
+              {loadError}
+            </NoxText>
+            <TouchableOpacity onPress={fetchProfiles} style={styles.actionRow} activeOpacity={0.85}>
+              <NoxText variant="form" style={styles.switchText}>
+                {fr ? 'Réessayer' : 'Retry'}
+              </NoxText>
+            </TouchableOpacity>
+          </NoxCard>
         ) : (
           <View style={styles.profilesContainer}>
             {profileTypes.map((profileType) => {

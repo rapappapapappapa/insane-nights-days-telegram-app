@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 23 octobre 2026
 
+### Corrigé (mobile — changement de profil)
+- Si `GET /api/user/profiles` échoue, l’écran ne propose plus de **créer** des profils déjà existants. Il affiche le message du serveur et **Réessayer**.
+
 ### Modifié (lieu — chat et accueil)
 - **Chat lieu** : le texte des bulles revient à la ligne (largeur bornée), au lieu de dépasser.
 - **Accueil lieu** : barre Accueil / + / Profil retirée. Le bouton NX est au même niveau que les autres profils.

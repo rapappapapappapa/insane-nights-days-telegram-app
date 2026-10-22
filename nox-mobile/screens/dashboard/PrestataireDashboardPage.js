@@ -1,5 +1,5 @@
-import React from 'react';
-import { Text, View, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, ScrollView, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -12,6 +12,7 @@ import { usePrestataireMessaging } from '../../hooks/usePrestataireMessaging';
 import { styles } from './PrestataireDashboardPage.styles';
 import PrestataireProfilSection from '../../components/prestataireDashboard/PrestataireProfilSection';
 import PrestataireBookingsSection from '../../components/prestataireDashboard/PrestataireBookingsSection';
+import PrestataireDashboardHomeSection from '../../components/prestataireDashboard/PrestataireDashboardHomeSection';
 import PrestataireChatModal from '../../components/prestataireDashboard/PrestataireChatModal';
 import PrestataireContractModals from '../../components/prestataireDashboard/PrestataireContractModals';
 import { NoxProDashboardHeader } from '../../components/nox';
@@ -28,6 +29,10 @@ export default function PrestataireDashboardPage() {
   const { height: windowH } = useWindowDimensions();
   const contractEditorModalCardHeight = Math.round(windowH * 0.88);
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const [activeSection, setActiveSection] = useState(
+    routeParams?.openChatEventPrestataireId ? 'bookings' : 'home',
+  );
+  const isHubView = activeSection === 'home';
 
   const profile = usePrestataireProfile({ user, language, showError, showSuccess });
   const bookingsHook = usePrestataireBookings({ user });
@@ -90,15 +95,53 @@ export default function PrestataireDashboardPage() {
     sendingMessage,
   } = messaging;
 
+  const tiles = [
+    {
+      id: 'profil',
+      label: language === 'fr' ? 'Profil' : 'Profile',
+      hint: language === 'fr' ? 'Activité & dispos' : 'Business & availability',
+      icon: 'person',
+      accentColor: '#81B9FF',
+      accentBg: 'rgba(129,185,255,0.15)',
+    },
+    {
+      id: 'bookings',
+      label: language === 'fr' ? 'Prestations' : 'Bookings',
+      hint: language === 'fr' ? 'Chat & contrat' : 'Chat & contract',
+      icon: 'calendar',
+      accentColor: '#34D399',
+      accentBg: 'rgba(52,211,153,0.12)',
+    },
+  ];
+
+  const headerTitle =
+    tiles.find((t) => t.id === activeSection)?.label ||
+    (language === 'fr' ? 'Dashboard Prestataire' : 'Provider dashboard');
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <NoxProDashboardHeader
-        title={language === 'fr' ? 'Dashboard Prestataire' : 'Service provider dashboard'}
-        showBack={!isHome}
-        onBack={goBack}
-      />
-      <ScrollView contentContainerStyle={styles.content}>
+      {!isHubView ? (
+        <NoxProDashboardHeader
+          title={headerTitle}
+          showBack
+          onBack={() => setActiveSection('home')}
+        />
+      ) : !isHome ? (
+        <NoxProDashboardHeader title={headerTitle} showBack onBack={goBack} />
+      ) : null}
+
+      {isHubView ? (
+        <PrestataireDashboardHomeSection
+          language={language}
+          styles={styles}
+          tiles={tiles}
+          displayName={profBusinessName}
+          onSelectSection={setActiveSection}
+        />
+      ) : (
+      <ScrollView style={styles.sectionScroll} contentContainerStyle={styles.sectionScrollContent}>
+        {activeSection === 'profil' ? (
         <PrestataireProfilSection
           language={language}
           styles={styles}
@@ -125,6 +168,7 @@ export default function PrestataireDashboardPage() {
           profSaving={profSaving}
           savePrestataireProfile={savePrestataireProfile}
         />
+        ) : (
         <PrestataireBookingsSection
           language={language}
           styles={styles}
@@ -132,7 +176,9 @@ export default function PrestataireDashboardPage() {
           bookings={bookings}
           openChat={openChat}
         />
+        )}
       </ScrollView>
+      )}
 
       <PrestataireChatModal
         language={language}

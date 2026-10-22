@@ -4,6 +4,16 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 22 au 23 octobre 2026
+
+### Modifié (dashboards pro — destinations réelles)
+- **Organisateur** : tuile Statistiques retirée (les chiffres restent sur le hub). Booking, Lieux, Contrats et Paiements ouvrent **Mes événements** avec un bandeau qui dit quoi faire sur la fiche.
+- **Lieu** : chaque tuile ouvre son écran (dispos, planning, demandes, profil, médias, mur, staff, scanner, avis, réglages). Plus de raccourcis vers le mauvais écran.
+- **Prestataire** : accueil en grille (Profil / Prestations), retour au hub. Un chat push ouvre directement les prestations.
+- **Profil public lieu** : `initialTab` (ex. avis) est pris en compte.
+
+---
+
 ## Semaine du 13 au 15 octobre 2026
 
 ### Corrigé (mobile — cache au changement de profil)

@@ -44,9 +44,9 @@ export default function LieuxDashboardPage() {
   const menuItems = useMemo(
     () => [
       {
-        id: 'create-event',
-        label: fr ? 'Créer un événement' : 'Create event',
-        hint: fr ? 'Programmation & billetterie' : 'Programming & tickets',
+        id: 'disponibilites',
+        label: fr ? 'Disponibilités' : 'Availability',
+        hint: fr ? 'Calendrier & dates bloquées' : 'Calendar & blocked dates',
         icon: 'calendar',
         accentColor: '#A78BFA',
         accentBg: 'rgba(167,139,250,0.12)',
@@ -54,23 +54,23 @@ export default function LieuxDashboardPage() {
       {
         id: 'planning',
         label: 'Planning',
-        hint: fr ? 'Mes événements' : 'My events',
+        hint: fr ? 'Événements confirmés' : 'Confirmed events',
         icon: 'calendar-outline',
         accentColor: '#34D399',
         accentBg: 'rgba(52,211,153,0.12)',
       },
       {
         id: 'artistes',
-        label: fr ? 'Artistes & demandes' : 'Artists & requests',
-        hint: fr ? 'Gérer les propositions' : 'Manage proposals',
+        label: fr ? 'Demandes' : 'Requests',
+        hint: fr ? 'Propositions à traiter' : 'Proposals to review',
         icon: 'people',
         accentColor: '#F472B6',
         accentBg: 'rgba(244,114,182,0.12)',
       },
       {
-        id: 'espaces',
-        label: fr ? 'Espaces & salles' : 'Spaces & rooms',
-        hint: fr ? 'Capacités, plans, équipements' : 'Capacity, plans, gear',
+        id: 'profil',
+        label: fr ? 'Profil du lieu' : 'Venue profile',
+        hint: fr ? 'Capacité, sono, infos' : 'Capacity, sound, info',
         icon: 'business',
         accentColor: Colors.primaryLight,
         accentBg: 'rgba(40,82,232,0.2)',
@@ -78,7 +78,7 @@ export default function LieuxDashboardPage() {
       {
         id: 'medias',
         label: fr ? 'Médias' : 'Media',
-        hint: fr ? 'Photos, vidéos, visite virtuelle' : 'Photos, videos, VR tour',
+        hint: fr ? 'Photos & vidéos' : 'Photos & videos',
         icon: 'images',
         accentColor: '#FB923C',
         accentBg: 'rgba(251,146,60,0.12)',
@@ -92,25 +92,25 @@ export default function LieuxDashboardPage() {
         accentBg: 'rgba(192,132,252,0.12)',
       },
       {
-        id: 'finances',
-        label: 'Finances',
-        hint: fr ? 'Ventes, paiements, rapports' : 'Sales, payouts, reports',
-        icon: 'cash',
+        id: 'staff',
+        label: 'Staff',
+        hint: fr ? 'Équipe & accès scan' : 'Team & scan access',
+        icon: 'id-card',
         accentColor: '#FBBF24',
         accentBg: 'rgba(251,191,36,0.12)',
       },
       {
-        id: 'documents',
-        label: 'Documents',
-        hint: fr ? 'Contrats, assurances, ERP' : 'Contracts, insurance, ERP',
-        icon: 'document-text',
+        id: 'scanner',
+        label: 'Scanner',
+        hint: fr ? 'Contrôle des billets' : 'Ticket check-in',
+        icon: 'qr-code',
         accentColor: '#F87171',
         accentBg: 'rgba(248,113,113,0.12)',
       },
       {
         id: 'avis',
         label: fr ? 'Avis' : 'Reviews',
-        hint: fr ? 'Notes des artistes & public' : 'Artist & public ratings',
+        hint: fr ? 'Profil public' : 'Public profile',
         icon: 'star',
         accentColor: '#34D399',
         accentBg: 'rgba(52,211,153,0.12)',
@@ -118,7 +118,7 @@ export default function LieuxDashboardPage() {
       {
         id: 'parametres',
         label: fr ? 'Paramètres' : 'Settings',
-        hint: fr ? 'Équipe, accès, préférences' : 'Team, access, prefs',
+        hint: fr ? 'Réglages du lieu' : 'Venue settings',
         icon: 'settings',
         accentColor: '#94A3B8',
         accentBg: 'rgba(148,163,184,0.15)',
@@ -129,7 +129,7 @@ export default function LieuxDashboardPage() {
 
   const openTool = (toolId) => {
     switch (toolId) {
-      case 'create-event':
+      case 'disponibilites':
         navigate('lieuxAvailability');
         break;
       case 'planning':
@@ -138,8 +138,7 @@ export default function LieuxDashboardPage() {
       case 'artistes':
         navigate('lieuxDemandes', { filter: 'pending' });
         break;
-      case 'espaces':
-      case 'avis':
+      case 'profil':
         navigate('lieuxProfil');
         break;
       case 'medias':
@@ -148,11 +147,18 @@ export default function LieuxDashboardPage() {
       case 'communication':
         navigate('ownWall');
         break;
-      case 'finances':
-        navigate('lieuxEvents');
+      case 'staff':
+        navigate('lieuxStaff');
         break;
-      case 'documents':
-        navigate('lieuxDemandes');
+      case 'scanner':
+        navigate('lieuxScanner');
+        break;
+      case 'avis':
+        if (venueProfile?.id) {
+          navigate('venueProfile', { venueId: venueProfile.id, initialTab: 'reviews' });
+        } else {
+          navigate('lieuxProfil');
+        }
         break;
       case 'parametres':
         navigate('lieuxSettings');

@@ -63,12 +63,40 @@ function BookingPaymentControls({
   );
 }
 
+const EVENT_FOCUS = {
+  booking: {
+    titleFr: 'Booking artistes',
+    titleEn: 'Artist booking',
+    hintFr: 'Ouvre un événement, puis invite un DJ depuis sa fiche.',
+    hintEn: 'Open an event, then invite a DJ from its sheet.',
+  },
+  lieux: {
+    titleFr: 'Lieux',
+    titleEn: 'Venues',
+    hintFr: 'Ouvre un événement, puis associe ou remplace le lieu.',
+    hintEn: 'Open an event, then attach or replace the venue.',
+  },
+  contrats: {
+    titleFr: 'Contrats',
+    titleEn: 'Contracts',
+    hintFr: 'Le contrat se signe dans le chat de l’événement (DJ, lieu ou prestataire).',
+    hintEn: 'The contract is signed in the event chat (DJ, venue or provider).',
+  },
+  paiements: {
+    titleFr: 'Paiements',
+    titleEn: 'Payments',
+    hintFr: 'Marque un booking comme payé depuis la fiche de l’événement.',
+    hintEn: 'Mark a booking as paid from the event sheet.',
+  },
+};
+
 /** Liste des événements — dashboard organisateur. */
 export default function BookerEventsSection(props) {
   const {
     language,
     styles,
     navigate,
+    eventsFocus,
     myEvents,
     loadingEvents,
     pulseEventId,
@@ -89,11 +117,27 @@ export default function BookerEventsSection(props) {
     deletingEventId,
   } = props;
 
+  const focus = EVENT_FOCUS[eventsFocus];
+  const title = focus
+    ? language === 'fr'
+      ? focus.titleFr
+      : focus.titleEn
+    : language === 'fr'
+      ? 'Mes événements'
+      : 'My events';
+
   return (
               <View style={styles.eventsSection}>
                 <Text style={styles.sectionTitle}>
-                  {language === 'fr' ? 'Mes événements' : 'My Events'} ({myEvents.length})
+                  {title} ({myEvents.length})
                 </Text>
+                {focus ? (
+                  <View style={styles.eventsFocusBanner}>
+                    <Text style={styles.eventsFocusBannerText}>
+                      {language === 'fr' ? focus.hintFr : focus.hintEn}
+                    </Text>
+                  </View>
+                ) : null}
                 {loadingEvents ? (
                   <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
                 ) : myEvents.length === 0 ? (

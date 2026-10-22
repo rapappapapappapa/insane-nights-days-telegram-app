@@ -897,6 +897,20 @@ export const styles = StyleSheet.create({
   eventsSection: {
     padding: 20,
   },
+  eventsFocusBanner: {
+    backgroundColor: 'rgba(40,82,232,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(40,82,232,0.35)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  eventsFocusBannerText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   eventCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,

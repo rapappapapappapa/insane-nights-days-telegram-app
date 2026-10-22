@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import Colors from '../../constants/colors';
+import { Layout, Radius, Spacing } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
@@ -245,4 +246,39 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
   },
+  hubScroll: { flex: 1 },
+  hubScrollContent: {
+    paddingHorizontal: Layout.screenPaddingHorizontal,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  hubHero: { marginBottom: Spacing.xxl },
+  hubGreeting: { fontSize: 26, lineHeight: 32, marginBottom: Spacing.sm },
+  hubSubtitle: { fontSize: 14, lineHeight: 20, color: Colors.textSecondary },
+  hubGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  hubTile: {
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    borderWidth: 0.5,
+    borderColor: Colors.borderCard,
+    marginBottom: Spacing.md,
+    padding: Spacing.lg,
+    justifyContent: 'space-between',
+  },
+  hubTileIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubTileLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: Spacing.md,
+  },
+  hubTileHint: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  sectionScroll: { flex: 1 },
+  sectionScrollContent: { padding: 24, paddingBottom: 48 },
 });

@@ -75,6 +75,7 @@ export default function BookerDashboardPage() {
     !!routeParams?.highlightEventId;
 
   const [activeSection, setActiveSection] = useState(() => resolveBookerDashboardSection(routeParams));
+  const [eventsFocus, setEventsFocus] = useState(null);
 
   useEffect(() => {
     setActiveSection(resolveBookerDashboardSection(routeParams));
@@ -318,14 +319,6 @@ export default function BookerDashboardPage() {
       accentBg: 'rgba(251,191,36,0.12)',
     },
     {
-      id: 'statistiques',
-      label: language === 'fr' ? 'Statistiques' : 'Statistics',
-      hint: language === 'fr' ? 'Voir le bloc stats du hub' : 'See hub stats block',
-      icon: 'bar-chart',
-      accentColor: '#818CF8',
-      accentBg: 'rgba(129,140,248,0.12)',
-    },
-    {
       id: 'paiements',
       label: language === 'fr' ? 'Paiements' : 'Payments',
       hint: language === 'fr' ? 'Marquer payé sur un event' : 'Mark paid on an event',
@@ -353,7 +346,9 @@ export default function BookerDashboardPage() {
 
   const isHubView = activeSection === 'home';
   const activeMenuItem = menuItems.find((item) => item.id === activeSection);
+  const focusMenuItem = eventsFocus ? menuItems.find((item) => item.id === eventsFocus) : null;
   const headerTitle =
+    focusMenuItem?.label ||
     activeMenuItem?.label ||
     (language === 'fr' ? 'Dashboard Organisateur' : 'Organizer Dashboard');
 
@@ -362,6 +357,7 @@ export default function BookerDashboardPage() {
       goBack();
       return;
     }
+    setEventsFocus(null);
     setActiveSection('home');
   };
 
@@ -374,28 +370,24 @@ export default function BookerDashboardPage() {
       navigate('ownWall');
       return;
     }
-    if (sectionId === 'statistiques') {
-      // Stats live on the hub; keep user on home (scroll already shows them).
-      setActiveSection('home');
-      return;
-    }
     if (sectionId === 'avis') {
       const id = bookerProfile?.id || bookerProfile?.bookerId;
       if (id) {
         navigate('bookerProfile', { bookerId: id, initialTab: 'reviews' });
         return;
       }
+      setEventsFocus(null);
       setActiveSection('profil');
       return;
     }
-    // booking / lieux / contrats / paiements → choisir l’event dans Mes événements
-    // (pas d’auto-sélection du 1er event à venir — évite le mauvais booking)
     if (['booking', 'lieux', 'contrats', 'paiements'].includes(sectionId)) {
+      setEventsFocus(sectionId);
       setActiveSection('events');
       fetchMyEvents();
       markAllAsRead();
       return;
     }
+    setEventsFocus(null);
     setActiveSection(sectionId);
     if (sectionId === 'events') {
       fetchMyEvents();
@@ -492,6 +484,7 @@ export default function BookerDashboardPage() {
             language={language}
             styles={styles}
             navigate={navigate}
+            eventsFocus={eventsFocus}
             myEvents={myEvents}
             loadingEvents={loadingEvents}
             pulseEventId={pulseEventId}

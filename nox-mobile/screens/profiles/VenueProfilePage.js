@@ -33,7 +33,7 @@ export default function VenueProfilePage() {
   const { routeParams, goBack, navigate } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const { venueId, selectionMode, selectedVenueId, returnTo, eventId, replaceMode } =
+  const { venueId, selectionMode, selectedVenueId, returnTo, eventId, replaceMode, initialTab } =
     routeParams || {};
   const fr = language === 'fr';
 
@@ -45,13 +45,20 @@ export default function VenueProfilePage() {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [following, setFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
-  const [activeTab, setActiveTab] = useState('about');
+  const allowedTabs = new Set(['about', 'feed', 'events', 'media', 'reviews']);
+  const [activeTab, setActiveTab] = useState(
+    allowedTabs.has(initialTab) ? initialTab : 'about',
+  );
   const [events, setEvents] = useState([]);
   const [ratings, setRatings] = useState([]);
 
   useEffect(() => {
     if (venueId) fetchVenueProfile();
   }, [venueId]);
+
+  useEffect(() => {
+    if (allowedTabs.has(initialTab)) setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     if (!user?.token || !venue?.id || venue.userId === user?.id) return;

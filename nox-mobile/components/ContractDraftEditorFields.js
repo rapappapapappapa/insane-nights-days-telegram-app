@@ -1,17 +1,22 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { NoxText } from './nox';
+import Colors from '../constants/colors';
+import { Radius, Spacing } from '../constants/theme';
 import { dealTypeLabel, cancellationPolicyLabel } from '../constants/contractPayload';
 
 /**
  * Champs étendus du brouillon / contre-proposition (alignés PDF NOX).
  * mode: 'venue' | 'dj'
+ * `styles` reste accepté pour les appelants ; le gabarit est local.
  */
 export default function ContractDraftEditorFields({
   mode,
   draft,
   setDraft,
   language,
-  styles,
+  styles: _parentStyles,
   PAYMENT_TERMS_OPTIONS,
   setShowPaymentTermsModal,
   setShowDealTypeModal,
@@ -20,295 +25,405 @@ export default function ContractDraftEditorFields({
   eventWindowHint = '',
   setShowEventEndModal,
 }) {
+  const fr = language === 'fr';
   const dt = draft.dealType || 'fixed_rent';
   const isVenue = mode === 'venue';
-
   const hasPresetEndTimes = eventEndOptions.length > 0;
 
-  const priceLabel =
-    language === 'fr'
-      ? 'Montant principal (€) — obligatoire, min. 0,50 €'
-      : 'Main amount (€) — required, min. €0.50';
+  const patch = (key) => (value) => setDraft((prev) => ({ ...prev, [key]: value }));
+
+  const paymentLabel = draft.paymentTerms
+    ? PAYMENT_TERMS_OPTIONS.find((o) => o.value === draft.paymentTerms)?.[fr ? 'labelFr' : 'labelEn'] ||
+      draft.paymentTerms
+    : fr
+      ? 'Choisir'
+      : 'Choose';
 
   return (
-    <>
+    <View>
       {isVenue ? (
-        <>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? "Type d'accord avec le lieu" : 'Deal type'}</Text>
-          <TouchableOpacity
-            style={[styles.contractModalInput, styles.contractModalDropdown]}
+        <Card title={fr ? "L'accord" : 'The deal'}>
+          <SelectRow
+            icon="briefcase-outline"
+            label={fr ? "Type d'accord" : 'Deal type'}
+            value={dealTypeLabel(dt, language)}
             onPress={() => setShowDealTypeModal(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.contractModalInputText, { flex: 1 }]}>
-              {dealTypeLabel(dt, language)}
-            </Text>
-            <Text style={styles.contractModalChevron}>▼</Text>
-          </TouchableOpacity>
-        </>
+          />
+        </Card>
       ) : null}
 
-      <Text style={styles.contractModalLabel}>{priceLabel}</Text>
-      <TextInput
-        style={styles.contractModalInput}
-        value={draft.priceEur}
-        onChangeText={(v) => setDraft((p) => ({ ...p, priceEur: v }))}
-        placeholder={isVenue && dt === 'fixed_rent' ? '800' : '500'}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        keyboardType="decimal-pad"
-      />
-
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Acompte (%) (optionnel)' : 'Deposit (%) (optional)'}</Text>
-      <TextInput
-        style={styles.contractModalInput}
-        value={draft.depositPercent}
-        onChangeText={(v) => setDraft((p) => ({ ...p, depositPercent: v }))}
-        placeholder="30"
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        keyboardType="decimal-pad"
-      />
-
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Modalités de paiement' : 'Payment terms'}</Text>
-      <TouchableOpacity
-        style={[styles.contractModalInput, styles.contractModalDropdown]}
-        onPress={() => setShowPaymentTermsModal(true)}
-        activeOpacity={0.7}
-      >
-        <Text
-          style={[
-            styles.contractModalInputText,
-            !draft.paymentTerms && { color: 'rgba(255,255,255,0.4)' },
-          ]}
-        >
-          {draft.paymentTerms
-            ? PAYMENT_TERMS_OPTIONS.find((o) => o.value === draft.paymentTerms)?.[
-                language === 'fr' ? 'labelFr' : 'labelEn'
-              ] || draft.paymentTerms
-            : language === 'fr'
-              ? 'Sélectionner'
-              : 'Select'}
-        </Text>
-        <Text style={styles.contractModalChevron}>▼</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Fin de prestation / fin événement (horaire)' : 'Event end time'}</Text>
-      {eventWindowHint ? (
-        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)', marginBottom: 8, lineHeight: 15 }}>
-          {eventWindowHint}
-        </Text>
-      ) : null}
-      {hasPresetEndTimes ? (
-        <>
-          <TouchableOpacity
-            style={[styles.contractModalInput, styles.contractModalDropdown]}
-            onPress={() => setShowEventEndModal(true)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.contractModalInputText,
-                !draft.eventEnd && { color: 'rgba(255,255,255,0.4)' },
-              ]}
-            >
-              {draft.eventEnd
-                ? language === 'fr'
-                  ? `Fin à ${draft.eventEnd}`
-                  : `End at ${draft.eventEnd}`
-                : language === 'fr'
-                  ? 'Choisir une heure'
-                  : 'Pick a time'}
-            </Text>
-            <Text style={styles.contractModalChevron}>▼</Text>
-          </TouchableOpacity>
-          <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 6, lineHeight: 14 }}>
-            {language === 'fr'
-              ? 'Créneaux basés sur l’heure de début et la durée de l’événement.'
-              : 'Slots are based on the event start time and duration.'}
-          </Text>
-        </>
-      ) : (
-        <TextInput
-          style={styles.contractModalInput}
-          value={draft.eventEnd}
-          onChangeText={(v) => setDraft((p) => ({ ...p, eventEnd: v }))}
-          placeholder={language === 'fr' ? 'ex: 06:00' : 'e.g. 6am'}
-          placeholderTextColor="rgba(255,255,255,0.4)"
-        />
-      )}
-
-      {isVenue ? (
-        <>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Matériel fourni par le lieu' : 'Venue equipment'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, localStyles.tall]}
-            value={draft.equipmentVenue}
-            onChangeText={(v) => setDraft((p) => ({ ...p, equipmentVenue: v }))}
-            placeholder={language === 'fr' ? 'Sonorisation, lumières…' : 'PA, lights…'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Matériel apporté par l’organisateur' : 'Organizer equipment'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, localStyles.tall]}
-            value={draft.equipmentOrganizer}
-            onChangeText={(v) => setDraft((p) => ({ ...p, equipmentOrganizer: v }))}
-            placeholder={language === 'fr' ? 'Décors, extras…' : 'Decor, extras…'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Clause financière (libre, optionnel)' : 'Financial clause (optional)'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, { height: 72 }]}
-            value={draft.financialClause}
-            onChangeText={(v) => setDraft((p) => ({ ...p, financialClause: v }))}
-            placeholder={language === 'fr' ? 'Précisions sur les montants…' : 'Amount details…'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-        </>
-      ) : (
-        <>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Matériel fourni par l’organisateur' : 'Equipment from organizer'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, localStyles.tall]}
-            value={draft.equipment}
-            onChangeText={(v) => setDraft((p) => ({ ...p, equipment: v }))}
-            placeholder={language === 'fr' ? 'Backline, micros…' : 'Backline, mics…'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-        </>
-      )}
-
-      <Text style={[styles.contractModalLabel, { opacity: 0.9 }]}>
-        {language === 'fr'
-          ? 'Commission NOX : 10 % du montant principal (calcul automatique dans le contrat).'
-          : 'NOX commission: 10% of the main amount (automatic in the contract).'}
-      </Text>
-
-      {isVenue && dt === 'bar_only' ? (
-        <Text style={[styles.contractModalLabel, { opacity: 0.85, marginBottom: 8 }]}>
-          {language === 'fr'
-            ? 'Même sans loyer, un montant d’au moins 0,50 € est obligatoire pour valider le contrat (paiement Stripe).'
-            : 'Even without rent, an amount of at least €0.50 is required to validate the contract (Stripe payment).'}
-        </Text>
-      ) : null}
-
-      {isVenue && (dt === 'revenue_split' || dt === 'rent_plus_split') ? (
-        <View style={{ marginBottom: 8 }}>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Partage bar (%)' : 'Bar split (%)'}</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+      <Card title={fr ? 'Le montant' : 'The amount'}>
+        <View style={local.pair}>
+          <View style={local.pairCol}>
+            <FieldLabel>{fr ? 'Montant (€)' : 'Amount (€)'}</FieldLabel>
             <TextInput
-              style={[styles.contractModalInput, { flex: 1, marginRight: 8 }]}
-              value={draft.splitBarOrg}
-              onChangeText={(v) => setDraft((p) => ({ ...p, splitBarOrg: v }))}
-              placeholder="Org %"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              keyboardType="decimal-pad"
-            />
-            <TextInput
-              style={[styles.contractModalInput, { flex: 1 }]}
-              value={draft.splitBarVenue}
-              onChangeText={(v) => setDraft((p) => ({ ...p, splitBarVenue: v }))}
-              placeholder="Lieu %"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              style={local.input}
+              value={draft.priceEur}
+              onChangeText={patch('priceEur')}
+              placeholder={isVenue && dt === 'fixed_rent' ? '800' : '500'}
+              placeholderTextColor={Colors.textMuted}
               keyboardType="decimal-pad"
             />
           </View>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Partage billetterie (%)' : 'Ticket split (%)'}</Text>
-          <View style={{ flexDirection: 'row' }}>
+          <View style={local.pairCol}>
+            <FieldLabel>{fr ? 'Acompte (%)' : 'Deposit (%)'}</FieldLabel>
             <TextInput
-              style={[styles.contractModalInput, { flex: 1, marginRight: 8 }]}
-              value={draft.splitTicketOrg}
-              onChangeText={(v) => setDraft((p) => ({ ...p, splitTicketOrg: v }))}
-              placeholder="Org %"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              keyboardType="decimal-pad"
-            />
-            <TextInput
-              style={[styles.contractModalInput, { flex: 1 }]}
-              value={draft.splitTicketVenue}
-              onChangeText={(v) => setDraft((p) => ({ ...p, splitTicketVenue: v }))}
-              placeholder="Lieu %"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              style={local.input}
+              value={draft.depositPercent}
+              onChangeText={patch('depositPercent')}
+              placeholder="30"
+              placeholderTextColor={Colors.textMuted}
               keyboardType="decimal-pad"
             />
           </View>
         </View>
-      ) : null}
+        <NoxText variant="secondary" style={local.caption}>
+          {fr ? 'Minimum 0,50 €. L’acompte est optionnel.' : 'Minimum €0.50. Deposit is optional.'}
+        </NoxText>
 
-      {isVenue && dt === 'minimum_guarantee' ? (
-        <>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Minimum garanti (€)' : 'Minimum guarantee (€)'}</Text>
-          <TextInput
-            style={styles.contractModalInput}
-            value={draft.minimumGuarantee}
-            onChangeText={(v) => setDraft((p) => ({ ...p, minimumGuarantee: v }))}
-            placeholder="1000"
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            keyboardType="decimal-pad"
-          />
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Suite si dépassement' : 'If revenue exceeds'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, { height: 60 }]}
-            value={draft.splitTerms}
-            onChangeText={(v) => setDraft((p) => ({ ...p, splitTerms: v }))}
-            placeholder={language === 'fr' ? 'ex: répartition 50/50 au-delà' : 'e.g. 50/50 beyond'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-        </>
-      ) : null}
+        <SelectRow
+          icon="card-outline"
+          label={fr ? 'Paiement' : 'Payment'}
+          value={paymentLabel}
+          placeholder={!draft.paymentTerms}
+          onPress={() => setShowPaymentTermsModal(true)}
+        />
 
-      {isVenue && dt === 'custom' ? (
-        <>
-          <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Accord personnalisé' : 'Custom agreement'}</Text>
-          <TextInput
-            style={[styles.contractModalInput, { height: 100 }]}
-            value={draft.customTerms}
-            onChangeText={(v) => setDraft((p) => ({ ...p, customTerms: v }))}
-            placeholder={language === 'fr' ? 'Décrivez l’accord…' : 'Describe the deal…'}
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            multiline
-          />
-        </>
-      ) : null}
+        <NoxText variant="secondary" style={local.caption}>
+          {fr
+            ? 'Commission NOX : 10 % du montant, calculée dans le contrat.'
+            : 'NOX fee: 10% of the amount, calculated in the contract.'}
+        </NoxText>
 
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Conditions d’annulation' : 'Cancellation policy'}</Text>
-      <TouchableOpacity
-        style={[styles.contractModalInput, styles.contractModalDropdown]}
-        onPress={() => setShowCancellationModal(true)}
-        activeOpacity={0.7}
-      >
-        <Text
-          style={[
-            styles.contractModalInputText,
-            !draft.cancellation && { color: 'rgba(255,255,255,0.4)' },
-          ]}
-        >
-          {draft.cancellation
-            ? cancellationPolicyLabel(draft.cancellation, language)
-            : language === 'fr'
-              ? 'Sélectionner'
-              : 'Select'}
-        </Text>
-        <Text style={styles.contractModalChevron}>▼</Text>
-      </TouchableOpacity>
+        {isVenue && dt === 'bar_only' ? (
+          <NoxText variant="secondary" style={local.caption}>
+            {fr
+              ? 'Même sans loyer, un montant d’au moins 0,50 € est obligatoire (paiement Stripe).'
+              : 'Even without rent, at least €0.50 is required (Stripe payment).'}
+          </NoxText>
+        ) : null}
 
-      <Text style={styles.contractModalLabel}>{language === 'fr' ? 'Notes (optionnel)' : 'Notes (optional)'}</Text>
-      <TextInput
-        style={[styles.contractModalInput, { height: 60 }]}
-        value={draft.notes}
-        onChangeText={(v) => setDraft((p) => ({ ...p, notes: v }))}
-        placeholder={language === 'fr' ? 'Ex: horaires, accès…' : 'Ex: times, access…'}
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        multiline
-      />
+        {isVenue && (dt === 'revenue_split' || dt === 'rent_plus_split') ? (
+          <>
+            <FieldLabel>{fr ? 'Partage bar (%)' : 'Bar split (%)'}</FieldLabel>
+            <View style={local.pair}>
+              <View style={local.pairCol}>
+                <TextInput
+                  style={local.input}
+                  value={draft.splitBarOrg}
+                  onChangeText={patch('splitBarOrg')}
+                  placeholder={fr ? 'Organisateur' : 'Organizer'}
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={local.pairCol}>
+                <TextInput
+                  style={local.input}
+                  value={draft.splitBarVenue}
+                  onChangeText={patch('splitBarVenue')}
+                  placeholder={fr ? 'Lieu' : 'Venue'}
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+            <FieldLabel>{fr ? 'Partage billetterie (%)' : 'Ticket split (%)'}</FieldLabel>
+            <View style={local.pair}>
+              <View style={local.pairCol}>
+                <TextInput
+                  style={local.input}
+                  value={draft.splitTicketOrg}
+                  onChangeText={patch('splitTicketOrg')}
+                  placeholder={fr ? 'Organisateur' : 'Organizer'}
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={local.pairCol}>
+                <TextInput
+                  style={local.input}
+                  value={draft.splitTicketVenue}
+                  onChangeText={patch('splitTicketVenue')}
+                  placeholder={fr ? 'Lieu' : 'Venue'}
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+          </>
+        ) : null}
 
-    </>
+        {isVenue && dt === 'minimum_guarantee' ? (
+          <>
+            <FieldLabel>{fr ? 'Minimum garanti (€)' : 'Minimum guarantee (€)'}</FieldLabel>
+            <TextInput
+              style={local.input}
+              value={draft.minimumGuarantee}
+              onChangeText={patch('minimumGuarantee')}
+              placeholder="1000"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="decimal-pad"
+            />
+            <FieldLabel>{fr ? 'Suite si dépassement' : 'If revenue exceeds'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.area]}
+              value={draft.splitTerms}
+              onChangeText={patch('splitTerms')}
+              placeholder={fr ? 'ex : 50/50 au-delà' : 'e.g. 50/50 beyond'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+          </>
+        ) : null}
+
+        {isVenue && dt === 'custom' ? (
+          <>
+            <FieldLabel>{fr ? 'Accord personnalisé' : 'Custom agreement'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.areaTall]}
+              value={draft.customTerms}
+              onChangeText={patch('customTerms')}
+              placeholder={fr ? 'Décris l’accord…' : 'Describe the deal…'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+          </>
+        ) : null}
+
+        {isVenue ? (
+          <>
+            <FieldLabel>{fr ? 'Clause financière' : 'Financial clause'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.area]}
+              value={draft.financialClause}
+              onChangeText={patch('financialClause')}
+              placeholder={fr ? 'Précisions, optionnel' : 'Details, optional'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+          </>
+        ) : null}
+      </Card>
+
+      <Card title={fr ? "L'horaire" : 'The time'}>
+        {eventWindowHint ? <NoxText variant="secondary" style={local.caption}>{eventWindowHint}</NoxText> : null}
+        {hasPresetEndTimes ? (
+          <>
+            <SelectRow
+              icon="time-outline"
+              label={fr ? 'Fin' : 'End'}
+              value={
+                draft.eventEnd
+                  ? fr
+                    ? `Fin à ${draft.eventEnd}`
+                    : `End at ${draft.eventEnd}`
+                  : fr
+                    ? 'Choisir une heure'
+                    : 'Pick a time'
+              }
+              placeholder={!draft.eventEnd}
+              onPress={() => setShowEventEndModal(true)}
+            />
+            <NoxText variant="secondary" style={local.caption}>
+              {fr
+                ? 'Créneaux basés sur le début et la durée de l’événement.'
+                : 'Slots follow the event start time and duration.'}
+            </NoxText>
+          </>
+        ) : (
+          <>
+            <FieldLabel>{fr ? 'Fin de prestation' : 'End time'}</FieldLabel>
+            <TextInput
+              style={local.input}
+              value={draft.eventEnd}
+              onChangeText={patch('eventEnd')}
+              placeholder="06:00"
+              placeholderTextColor={Colors.textMuted}
+            />
+          </>
+        )}
+      </Card>
+
+      <Card title={fr ? 'Le matériel' : 'Equipment'}>
+        {isVenue ? (
+          <>
+            <FieldLabel>{fr ? 'Fourni par le lieu' : 'From the venue'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.area]}
+              value={draft.equipmentVenue}
+              onChangeText={patch('equipmentVenue')}
+              placeholder={fr ? 'Sonorisation, lumières…' : 'PA, lights…'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+            <FieldLabel>{fr ? 'Apporté par l’organisateur' : 'From the organizer'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.area]}
+              value={draft.equipmentOrganizer}
+              onChangeText={patch('equipmentOrganizer')}
+              placeholder={fr ? 'Décors, extras…' : 'Decor, extras…'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+          </>
+        ) : (
+          <>
+            <FieldLabel>{fr ? 'Fourni par l’organisateur' : 'From the organizer'}</FieldLabel>
+            <TextInput
+              style={[local.input, local.area]}
+              value={draft.equipment}
+              onChangeText={patch('equipment')}
+              placeholder={fr ? 'Backline, micros…' : 'Backline, mics…'}
+              placeholderTextColor={Colors.textMuted}
+              multiline
+            />
+          </>
+        )}
+      </Card>
+
+      <Card title={fr ? 'Le cadre' : 'The terms'}>
+        <SelectRow
+          icon="shield-checkmark-outline"
+          label={fr ? 'Annulation' : 'Cancellation'}
+          value={
+            draft.cancellation
+              ? cancellationPolicyLabel(draft.cancellation, language)
+              : fr
+                ? 'Choisir'
+                : 'Choose'
+          }
+          placeholder={!draft.cancellation}
+          onPress={() => setShowCancellationModal(true)}
+        />
+        <FieldLabel>{fr ? 'Notes' : 'Notes'}</FieldLabel>
+        <TextInput
+          style={[local.input, local.area]}
+          value={draft.notes}
+          onChangeText={patch('notes')}
+          placeholder={fr ? 'Horaires, accès…' : 'Times, access…'}
+          placeholderTextColor={Colors.textMuted}
+          multiline
+        />
+      </Card>
+    </View>
   );
 }
 
-const localStyles = StyleSheet.create({
-  tall: { height: 64, textAlignVertical: 'top' },
+function Card({ title, children }) {
+  return (
+    <View style={local.card}>
+      <NoxText style={local.cardTitle}>{title}</NoxText>
+      {children}
+    </View>
+  );
+}
+
+function FieldLabel({ children }) {
+  return <NoxText style={local.fieldLabel}>{children}</NoxText>;
+}
+
+function SelectRow({ icon, label, value, placeholder, onPress }) {
+  return (
+    <TouchableOpacity style={local.select} onPress={onPress} activeOpacity={0.85}>
+      <View style={local.selectIcon}>
+        <Ionicons name={icon} size={18} color={Colors.primaryLight} />
+      </View>
+      <View style={local.selectBody}>
+        <NoxText style={local.fieldLabel}>{label}</NoxText>
+        <NoxText style={[local.selectValue, placeholder && local.placeholder]} numberOfLines={2}>
+          {value}
+        </NoxText>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+    </TouchableOpacity>
+  );
+}
+
+const local = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.backgroundElevated,
+    borderRadius: Radius.card,
+    borderWidth: 0.5,
+    borderColor: Colors.borderCard,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: Radius.md,
+    borderWidth: 0.5,
+    borderColor: Colors.borderSubtle,
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    marginBottom: Spacing.md,
+  },
+  area: {
+    minHeight: 72,
+    textAlignVertical: 'top',
+    fontWeight: '500',
+  },
+  areaTall: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    fontWeight: '500',
+  },
+  pair: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  pairCol: {
+    flex: 1,
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: Colors.textTertiary,
+    marginBottom: Spacing.md,
+  },
+  select: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: Radius.md,
+    borderWidth: 0.5,
+    borderColor: Colors.borderSubtle,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  selectIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(40,82,232,0.18)',
+  },
+  selectBody: {
+    flex: 1,
+  },
+  selectValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  placeholder: {
+    color: Colors.textMuted,
+    fontWeight: '500',
+  },
 });

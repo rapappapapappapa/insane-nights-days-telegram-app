@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 23 octobre 2026
 
+### Modifié (mobile — formulaire de contrat)
+- Le brouillon et la contre-proposition (lieu, DJ, prestataire) sont rangés en cartes : accord, montant, horaire, matériel, cadre. Les champs et les montants restent les mêmes.
+
 ### Modifié (mobile — création d'événement)
 - L'assistant organisateur reprend le gabarit NOX : barre de progression, une carte par question, barre fixe Retour / Continuer. Le brouillon s'efface depuis une puce. L'étape détails est rangée en Affiche, Billets et Matériel. Le récap ressemble à une carte d'événement. La logique (validation, brouillon, création) ne change pas.
 - Continuer indique en une phrase ce qui manque. Les autres tarifs et le matériel sont repliés. La flèche du haut revient à l'étape précédente, et ne quitte l'assistant que depuis la date. Le récap résume les prix fermes en une ligne. La version d'avant est sur la branche `sauvegarde/wizard-creation-avant-intuitif`.

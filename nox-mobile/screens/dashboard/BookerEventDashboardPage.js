@@ -195,20 +195,6 @@ export default function BookerEventDashboardPage() {
       </ScrollView>
 
       <View style={[styles.wizardFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <View style={styles.wizardFooterRow}>
-        {currentStep > 1 ? (
-          <TouchableOpacity
-            style={styles.wizardBack}
-            onPress={() => setCurrentStep(currentStep - 1)}
-            disabled={creating}
-          >
-            <NoxText variant="form" style={styles.wizardBackText}>
-              {language === 'fr' ? 'Retour' : 'Back'}
-            </NoxText>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.wizardBack} />
-        )}
         <NoxButton
           label={
             currentStep === 5
@@ -222,10 +208,8 @@ export default function BookerEventDashboardPage() {
           onPress={onContinue}
           disabled={!canContinue || creating}
           loading={currentStep === 5 && creating}
-          fullWidth={false}
           style={styles.wizardContinue}
         />
-        </View>
         {continueHint ? (
           <NoxText variant="secondary" style={styles.wizardContinueHint}>
             {continueHint}

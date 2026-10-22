@@ -846,11 +846,6 @@ export const styles = StyleSheet.create({
     borderTopColor: Colors.borderSubtle,
     backgroundColor: Colors.background,
   },
-  wizardFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
   wizardContinueHint: {
     textAlign: 'center',
     color: Colors.textSecondary,
@@ -873,18 +868,7 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.primaryLight,
   },
-  wizardBack: {
-    minWidth: 72,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  wizardBackText: {
-    color: Colors.textSecondary,
-    fontSize: 15,
-  },
   wizardContinue: {
-    flex: 1,
     marginTop: 0,
   },
   summaryCover: {

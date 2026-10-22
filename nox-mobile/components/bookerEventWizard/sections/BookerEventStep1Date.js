@@ -1,9 +1,8 @@
 import React from 'react';
-import {
-  View,
-  TouchableOpacity,
-} from 'react-native';
-import { NoxText, NoxButton, NoxInput } from '../../nox';
+import { View, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { NoxText, NoxInput } from '../../nox';
+import Colors from '../../../constants/colors';
 
 export default function BookerEventStep1Date(props) {
   const {
@@ -11,83 +10,65 @@ export default function BookerEventStep1Date(props) {
     styles,
     formData,
     eventDateTime,
-    setCurrentStep,
     handleChange,
     openDatePicker,
     openTimePicker,
   } = props;
 
+  const dateLabel = (() => {
+    const placeholder = language === 'fr' ? 'Choisir une date' : 'Choose a date';
+    if (!formData.date) return placeholder;
+    const candidate =
+      eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
+        ? eventDateTime
+        : new Date(formData.date);
+    if (isNaN(candidate.getTime())) return placeholder;
+    return candidate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'long',
+    });
+  })();
+
   return (
     <>
-      <NoxText variant="form" style={styles.sectionTitle}>
-        {language === 'fr' ? 'Étape 1 : Date et durée' : 'Step 1: Date and duration'}
+      <NoxText variant="title" style={styles.sectionTitle}>
+        {language === 'fr' ? 'Quand ?' : 'When?'}
       </NoxText>
 
-      <View style={styles.inputGroup}>
-        <NoxText variant="label" style={styles.label}>
-          {language === 'fr' ? 'Date' : 'Date'} *
-        </NoxText>
-        <TouchableOpacity style={styles.selectButton} onPress={openDatePicker}>
-          <NoxText style={[styles.selectButtonText, !formData.date && styles.placeholderText]}>
-            {(() => {
-              const placeholder = language === 'fr' ? 'Choisir une date' : 'Choose a date';
-              if (!formData.date) return placeholder;
-              const candidate =
-                eventDateTime instanceof Date && !isNaN(eventDateTime.getTime())
-                  ? eventDateTime
-                  : new Date(formData.date);
-              if (isNaN(candidate.getTime())) return placeholder;
-              return candidate.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              });
-            })()}
+      <TouchableOpacity style={styles.choiceCard} onPress={openDatePicker} activeOpacity={0.85}>
+        <View style={styles.choiceIcon}>
+          <Ionicons name="calendar" size={22} color={Colors.primaryLight} />
+        </View>
+        <View style={styles.choiceBody}>
+          <NoxText style={styles.choiceLabel}>{language === 'fr' ? 'Date' : 'Date'}</NoxText>
+          <NoxText style={[styles.choiceValue, !formData.date && styles.placeholderText]}>{dateLabel}</NoxText>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.choiceCard} onPress={openTimePicker} activeOpacity={0.85}>
+        <View style={styles.choiceIcon}>
+          <Ionicons name="time" size={22} color={Colors.primaryLight} />
+        </View>
+        <View style={styles.choiceBody}>
+          <NoxText style={styles.choiceLabel}>{language === 'fr' ? 'Heure de début' : 'Start time'}</NoxText>
+          <NoxText style={[styles.choiceValue, !formData.time && styles.placeholderText]}>
+            {formData.time || (language === 'fr' ? 'Choisir une heure' : 'Choose a time')}
           </NoxText>
-          <NoxText style={styles.chevron}>📅</NoxText>
-        </TouchableOpacity>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+      </TouchableOpacity>
+
+      <View style={styles.wizardBlock}>
+        <NoxInput
+          label={language === 'fr' ? 'Durée (heures)' : 'Duration (hours)'}
+          placeholder={language === 'fr' ? 'Ex : 6' : 'Ex: 6'}
+          keyboardType="numeric"
+          value={formData.durationHours}
+          onChangeText={(value) => handleChange('durationHours', value)}
+        />
       </View>
-
-      <View style={styles.inputGroup}>
-        <NoxText variant="label" style={styles.label}>
-          {language === 'fr' ? 'Heure de début' : 'Start time'} *
-        </NoxText>
-        <TouchableOpacity style={styles.selectButton} onPress={openTimePicker}>
-          <NoxText style={[styles.selectButtonText, !formData.time && styles.placeholderText]}>
-            {formData.time
-              ? formData.time
-              : language === 'fr'
-                ? 'Choisir une heure'
-                : 'Choose a time'}
-          </NoxText>
-          <NoxText style={styles.chevron}>⏰</NoxText>
-        </TouchableOpacity>
-      </View>
-
-      <NoxInput
-        label={
-          language === 'fr' ? 'Durée de la soirée (heures) *' : 'Event duration (hours) *'
-        }
-        placeholder={language === 'fr' ? 'Ex: 4' : 'Ex: 4'}
-        keyboardType="numeric"
-        value={formData.durationHours}
-        onChangeText={(value) => handleChange('durationHours', value)}
-      />
-
-      <NoxButton
-        label={language === 'fr' ? 'Suivant →' : 'Next →'}
-        onPress={() => {
-          if (formData.date && formData.time && formData.durationHours) {
-            setCurrentStep(2);
-          }
-        }}
-        disabled={!formData.date || !formData.time || !formData.durationHours}
-        style={[
-          styles.nextButton,
-          (!formData.date || !formData.time || !formData.durationHours) && styles.nextButtonDisabled,
-        ]}
-        textStyle={styles.nextButtonText}
-      />
     </>
   );
 }

@@ -6,7 +6,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import { NoxText, NoxButton } from '../../nox';
+import { NoxText } from '../../nox';
 
 export default function BookerEventStep4Details(props) {
     const {
@@ -75,8 +75,13 @@ export default function BookerEventStep4Details(props) {
 
   return (
 <>
-                  <NoxText variant="form" style={styles.sectionTitle}>
-                    {language === 'fr' ? 'Étape 4 : Détails' : 'Step 4: Details'}
+                  <NoxText variant="title" style={styles.sectionTitle}>
+                    {language === 'fr' ? 'Les détails' : 'The details'}
+                  </NoxText>
+
+                  <View style={styles.wizardBlock}>
+                  <NoxText style={styles.wizardBlockTitle}>
+                    {language === 'fr' ? 'Affiche' : 'Poster'}
                   </NoxText>
     
                   <View style={styles.inputGroup}>
@@ -91,10 +96,68 @@ export default function BookerEventStep4Details(props) {
                       onChangeText={(value) => handleChange('title', value)}
                     />
                   </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>
+                      {language === 'fr' ? 'Genre musical' : 'Music genre'}
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={language === 'fr' ? 'Ex: Techno, House, Electro' : 'Ex: Techno, House, Electro'}
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={formData.genre}
+                      onChangeText={(value) => handleChange('genre', value)}
+                    />
+                  </View>
     
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>
-                      {language === 'fr' ? 'prix de la place' : 'price of the place'} (€)
+                      {language === 'fr' ? 'Description' : 'Description'}
+                    </Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder={language === 'fr' ? 'Description de l\'événement...' : 'Event description...'}
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      multiline
+                      numberOfLines={4}
+                      value={formData.description}
+                      onChangeText={(value) => handleChange('description', value)}
+                    />
+                  </View>
+    
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>
+                      {language === 'fr' ? 'Image de couverture (optionnel)' : 'Cover image (optional)'}
+                    </Text>
+                    {coverImageUri ? (
+                      <View style={styles.coverPreviewRow}>
+                        <Image source={{ uri: coverImageUri }} style={styles.coverPreview} />
+                        <TouchableOpacity
+                          style={[styles.coverRemoveBtn, { marginLeft: 12 }]}
+                          onPress={() => setCoverImageUri(null)}
+                        >
+                          <Text style={styles.coverRemoveBtnText}>
+                            {language === 'fr' ? 'Retirer' : 'Remove'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity style={styles.selectButton} onPress={pickCoverImage}>
+                        <Text style={styles.selectButtonText}>
+                          {language === 'fr' ? 'Choisir une image' : 'Choose image'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+    
+                  </View>
+
+                  <View style={styles.wizardBlock}>
+                  <NoxText style={styles.wizardBlockTitle}>
+                    {language === 'fr' ? 'Billets' : 'Tickets'}
+                  </NoxText>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>
+                      {language === 'fr' ? 'Prix de la place' : 'Ticket price'} (€)
                     </Text>
                     <TextInput
                       style={styles.input}
@@ -222,62 +285,12 @@ export default function BookerEventStep4Details(props) {
                       </Text>
                     ) : null}
                   </View>
-    
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>
-                      {language === 'fr' ? 'Genre musical' : 'Music genre'}
-                    </Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder={language === 'fr' ? 'Ex: Techno, House, Electro' : 'Ex: Techno, House, Electro'}
-                      placeholderTextColor="rgba(255,255,255,0.4)"
-                      value={formData.genre}
-                      onChangeText={(value) => handleChange('genre', value)}
-                    />
                   </View>
-    
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>
-                      {language === 'fr' ? 'Description' : 'Description'}
-                    </Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder={language === 'fr' ? 'Description de l\'événement...' : 'Event description...'}
-                      placeholderTextColor="rgba(255,255,255,0.4)"
-                      multiline
-                      numberOfLines={4}
-                      value={formData.description}
-                      onChangeText={(value) => handleChange('description', value)}
-                    />
-                  </View>
-    
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>
-                      {language === 'fr' ? 'Image de couverture (optionnel)' : 'Cover image (optional)'}
-                    </Text>
-                    {coverImageUri ? (
-                      <View style={styles.coverPreviewRow}>
-                        <Image source={{ uri: coverImageUri }} style={styles.coverPreview} />
-                        <TouchableOpacity
-                          style={[styles.coverRemoveBtn, { marginLeft: 12 }]}
-                          onPress={() => setCoverImageUri(null)}
-                        >
-                          <Text style={styles.coverRemoveBtnText}>
-                            {language === 'fr' ? 'Retirer' : 'Remove'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <TouchableOpacity style={styles.selectButton} onPress={pickCoverImage}>
-                        <Text style={styles.selectButtonText}>
-                          {language === 'fr' ? 'Choisir une image' : 'Choose image'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-    
-                  <NoxText variant="form" style={[styles.sectionTitle, { marginTop: 22 }]}>
-                    {language === 'fr' ? 'Location de matériel (optionnel)' : 'Equipment rental (optional)'}
+
+
+                  <View style={styles.wizardBlock}>
+                  <NoxText style={styles.wizardBlockTitle}>
+                    {language === 'fr' ? 'Matériel' : 'Equipment'}
                   </NoxText>
                   <NoxText variant="secondary" style={styles.helperText}>
                     {language === 'fr'
@@ -463,33 +476,8 @@ export default function BookerEventStep4Details(props) {
                     </>
                   ) : null}
     
-                  <View style={styles.stepButtons}>
-                    <TouchableOpacity
-                      style={styles.backButtonStep}
-                      onPress={() => setCurrentStep(3)}
-                    >
-                      <NoxText style={styles.backButtonStepText}>
-                        ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                      </NoxText>
-                    </TouchableOpacity>
-                    <NoxButton
-                      label={language === 'fr' ? 'Suivant →' : 'Next →'}
-                      fullWidth={false}
-                      onPress={() => {
-                        if (hasBookerEventTitle(formData) && hasBookerEventPrice(formData)) {
-                          setCurrentStep(5);
-                        }
-                      }}
-                      disabled={!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)}
-                      style={[
-                        styles.nextButton,
-                        { flex: 1, marginTop: 0 },
-                        (!hasBookerEventTitle(formData) || !hasBookerEventPrice(formData)) &&
-                          styles.nextButtonDisabled,
-                      ]}
-                      textStyle={styles.nextButtonText}
-                    />
                   </View>
+
                 </>
   );
 }

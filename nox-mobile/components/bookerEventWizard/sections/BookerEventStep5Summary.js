@@ -1,10 +1,6 @@
 import React from 'react';
-import {
-  Text,
-  View,
-  TouchableOpacity,
-} from 'react-native';
-import { NoxText, NoxButton } from '../../nox';
+import { Text, View, Image } from 'react-native';
+import { NoxText } from '../../nox';
 import { summarizeEquipmentRentalBlurb, djSlotsToFormDjFields } from '../../../utils/bookerEventWizardUtils';
 import { ticketPricingBreakdown, NOX_COMMISSION_RATE, TVA_RATE } from '../../../utils/ticketPricingUtils';
 
@@ -76,8 +72,8 @@ export default function BookerEventStep5Summary(props) {
 
   return (
 <>
-                  <NoxText variant="form" style={styles.sectionTitle}>
-                    {language === 'fr' ? 'Étape 5 : Récapitulatif' : 'Step 5: Summary'}
+                  <NoxText variant="title" style={styles.sectionTitle}>
+                    {language === 'fr' ? 'Ça donne ça' : 'Here is the event'}
                   </NoxText>
                   <NoxText variant="secondary" style={styles.stepDescription}>
                     {language === 'fr'
@@ -86,9 +82,10 @@ export default function BookerEventStep5Summary(props) {
                   </NoxText>
     
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>
-                      {language === 'fr' ? 'Récapitulatif de l\'événement' : 'Event Summary'}
-                    </Text>
+                    {coverImageUri ? (
+                      <Image source={{ uri: coverImageUri }} style={styles.summaryCover} />
+                    ) : null}
+                    <Text style={styles.summaryTitle}>{formData.title}</Text>
     
                     <View style={styles.summarySection}>
                       <Text style={styles.summaryLabel}>
@@ -273,37 +270,6 @@ export default function BookerEventStep5Summary(props) {
                         </Text>
                       </View>
                     </View>
-                  </View>
-    
-                  <View style={styles.stepButtons}>
-                    <TouchableOpacity
-                      style={styles.backButtonStep}
-                      onPress={() => setCurrentStep(4)}
-                    >
-                      <NoxText style={styles.backButtonStepText}>
-                        ← {language === 'fr' ? 'Précédent' : 'Previous'}
-                      </NoxText>
-                    </TouchableOpacity>
-                    <NoxButton
-                      label={
-                        language === 'fr'
-                          ? "Confirmer et créer l'événement"
-                          : 'Confirm and create event'
-                      }
-                      fullWidth={false}
-                      onPress={handleCreateEvent}
-                      loading={creating}
-                      disabled={
-                        creating ||
-                        !hasBookerEventTitle(formData) ||
-                        !hasBookerEventPrice(formData)
-                      }
-                      style={[
-                        styles.createButton,
-                        creating && styles.createButtonDisabled,
-                      ]}
-                      textStyle={styles.createButtonText}
-                    />
                   </View>
                 </>
   );

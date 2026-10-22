@@ -6,6 +6,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -14,7 +16,7 @@ import { useEventForm } from '../../contexts/EventFormContext';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/Toast';
 import { useBookerEventWizard } from '../../hooks/useBookerEventWizard';
-import { stepRequirementsHint } from '../../utils/bookerEventWizardUtils';
+import { stepRequirementsHint, hasBookerEventTitle, hasBookerEventPrice } from '../../utils/bookerEventWizardUtils';
 import Colors from '../../constants/colors';
 import { styles } from './BookerEventDashboardPage.styles';
 import BookerEventStep1Date from '../../components/bookerEventWizard/sections/BookerEventStep1Date';
@@ -24,9 +26,10 @@ import BookerEventStep4Details from '../../components/bookerEventWizard/sections
 import BookerEventStep5Summary from '../../components/bookerEventWizard/sections/BookerEventStep5Summary';
 import BookerEventPickersModals from '../../components/bookerEventWizard/BookerEventPickersModals';
 import BookerEventPostCreateModal from '../../components/bookerEventWizard/BookerEventPostCreateModal';
-import { NoxProDashboardHeader, NoxText } from '../../components/nox';
+import { NoxProDashboardHeader, NoxText, NoxButton } from '../../components/nox';
 
 export default function BookerEventDashboardPage() {
+  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { navigate, goBack, routeParams } = useNavigation();
   const { user } = useAuth();
@@ -105,6 +108,22 @@ export default function BookerEventDashboardPage() {
     language === 'fr' ? 'Récap' : 'Review',
   ];
 
+  const filledDjCount = (djSlots || []).filter((slot) => slot?.djId).length;
+  const canContinue =
+    currentStep === 1
+      ? !!(formData.date && formData.time && formData.durationHours)
+      : currentStep === 2
+        ? !!stepProps.selectedVenue
+        : currentStep === 3
+          ? filledDjCount > 0
+          : hasBookerEventTitle(formData) && hasBookerEventPrice(formData);
+
+  const onContinue = () => {
+    if (!canContinue || creating) return;
+    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    else handleCreateEvent();
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -119,63 +138,35 @@ export default function BookerEventDashboardPage() {
         onBack={goBack}
       />
 
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${(currentStep / 5) * 100}%` }]} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          Platform.OS === 'android' && { flexGrow: 1, paddingBottom: 140 },
+          { paddingBottom: 120 },
         ]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <View style={styles.stepsIndicator}>
-          {stepLabels.map((label, index) => {
-            const stepNum = index + 1;
-            const active = currentStep >= stepNum;
-            return (
-              <React.Fragment key={label}>
-                {index > 0 ? (
-                  <View style={[styles.stepLine, currentStep >= stepNum && styles.stepLineActive]} />
-                ) : null}
-                <View style={[styles.step, active && styles.stepActive]}>
-                  <View style={[styles.stepNumber, active && styles.stepNumberActive]}>
-                    <NoxText variant="form" style={active ? styles.stepNumberTextActive : styles.stepNumberText}>
-                      {stepNum}
-                    </NoxText>
-                  </View>
-                  <NoxText variant="secondary" style={[styles.stepLabel, active && styles.stepLabelActive]}>
-                    {label}
-                  </NoxText>
-                </View>
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        <NoxText variant="secondary" style={styles.stepRequiredHint}>
-          {stepRequirementsHint(currentStep, language)}
-        </NoxText>
-
-        <TouchableOpacity
-          onPress={clearDraftAndRestartWizard}
-          disabled={creating}
-          style={[styles.startFreshLinkWrap, creating && styles.startFreshLinkWrapDisabled]}
-          accessibilityRole="button"
-          accessibilityLabel={
-            language === 'fr'
-              ? 'Nouvel événement, effacer le brouillon sauvegardé'
-              : 'New event, clear saved draft'
-          }
-        >
-          <NoxText
-            variant="secondary"
-            style={[styles.startFreshLinkText, creating && styles.startFreshLinkTextDisabled]}
-          >
-            {language === 'fr'
-              ? 'Nouvel événement — effacer le brouillon'
-              : 'New event — clear draft'}
+        <View style={styles.draftRow}>
+          <NoxText variant="secondary" style={styles.stepRequiredHint}>
+            {stepRequirementsHint(currentStep, language)}
           </NoxText>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={clearDraftAndRestartWizard}
+            disabled={creating}
+            style={styles.draftChip}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={14} color={Colors.textSecondary} />
+            <NoxText variant="secondary" style={styles.draftChipText}>
+              {language === 'fr' ? 'Effacer' : 'Clear'}
+            </NoxText>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.form}>
           {currentStep === 1 && <BookerEventStep1Date {...shared} />}
@@ -187,6 +178,38 @@ export default function BookerEventDashboardPage() {
           )}
         </View>
       </ScrollView>
+
+      <View style={[styles.wizardFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        {currentStep > 1 ? (
+          <TouchableOpacity
+            style={styles.wizardBack}
+            onPress={() => setCurrentStep(currentStep - 1)}
+            disabled={creating}
+          >
+            <NoxText variant="form" style={styles.wizardBackText}>
+              {language === 'fr' ? 'Retour' : 'Back'}
+            </NoxText>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.wizardBack} />
+        )}
+        <NoxButton
+          label={
+            currentStep === 5
+              ? language === 'fr'
+                ? "Créer l'événement"
+                : 'Create event'
+              : language === 'fr'
+                ? 'Continuer'
+                : 'Continue'
+          }
+          onPress={onContinue}
+          disabled={!canContinue || creating}
+          loading={currentStep === 5 && creating}
+          fullWidth={false}
+          style={styles.wizardContinue}
+        />
+      </View>
 
       <BookerEventPickersModals
         language={language}

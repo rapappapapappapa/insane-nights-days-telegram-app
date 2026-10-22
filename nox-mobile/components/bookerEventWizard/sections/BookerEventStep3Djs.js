@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useEventForm } from '../../../contexts/EventFormContext';
-import { NoxText, NoxButton } from '../../nox';
+import { NoxText } from '../../nox';
 import BookerEventDjPickerModal from '../BookerEventDjPickerModal';
 
 export default function BookerEventStep3Djs(props) {
@@ -16,8 +16,6 @@ export default function BookerEventStep3Djs(props) {
     eventDateTime,
     availableDjs,
     loadingDjs,
-    currentStep,
-    setCurrentStep,
     djSlots,
     openSlotTimeField,
     showError,
@@ -68,8 +66,8 @@ export default function BookerEventStep3Djs(props) {
 
   return (
     <>
-      <NoxText variant="form" style={styles.sectionTitle}>
-        {language === 'fr' ? 'Étape 3 : Choisir des DJs' : 'Step 3: Choose DJs'}
+      <NoxText variant="title" style={styles.sectionTitle}>
+        {language === 'fr' ? 'Qui joue ?' : 'Who is playing?'}
       </NoxText>
 
       {!formData.date && (
@@ -211,28 +209,6 @@ export default function BookerEventStep3Djs(props) {
           </Text>
         </View>
       )}
-
-      <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButtonStep} onPress={() => setCurrentStep(2)}>
-          <NoxText style={styles.backButtonStepText}>
-            ← {language === 'fr' ? 'Précédent' : 'Previous'}
-          </NoxText>
-        </TouchableOpacity>
-        <NoxButton
-          label={language === 'fr' ? 'Suivant →' : 'Next →'}
-          fullWidth={false}
-          onPress={() => {
-            if (filledCount > 0) setCurrentStep(4);
-          }}
-          disabled={filledCount === 0}
-          style={[
-            styles.nextButton,
-            { flex: 1, marginTop: 0 },
-            filledCount === 0 && styles.nextButtonDisabled,
-          ]}
-          textStyle={styles.nextButtonText}
-        />
-      </View>
 
       <BookerEventDjPickerModal
         visible={pickerSlotIndex != null}

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity } from 'react-native';
-import { NoxText, NoxButton } from '../../nox';
+import { Ionicons } from '@expo/vector-icons';
+import { NoxText } from '../../nox';
+import Colors from '../../../constants/colors';
 import BookerEventVenuePickerModal from '../BookerEventVenuePickerModal';
 
 export default function BookerEventStep2Venue(props) {
   const {
     language,
     styles,
-    formData,
     venues,
     loadingVenues,
-    setCurrentStep,
     handleChange,
     selectedVenue,
     navigate,
@@ -34,54 +34,36 @@ export default function BookerEventStep2Venue(props) {
 
   return (
     <>
-      <NoxText variant="form" style={styles.sectionTitle}>
-        {language === 'fr' ? 'Étape 2 : Choisir un lieu' : 'Step 2: Choose a venue'}
+      <NoxText variant="title" style={styles.sectionTitle}>
+        {language === 'fr' ? 'Où ?' : 'Where?'}
       </NoxText>
 
-      <NoxText variant="secondary" style={styles.stepDescription}>
-        {language === 'fr'
-          ? 'Sélectionne un lieu disponible pour cette date et cette durée.'
-          : 'Select a venue available for this date and duration.'}
-      </NoxText>
-
-      <TouchableOpacity style={styles.selectButton} onPress={() => setVenuePickerVisible(true)}>
-        <NoxText style={[styles.selectButtonText, !selectedVenue && styles.placeholderText]}>
-          {selectedVenue
-            ? `${selectedVenue.venueName} - ${selectedVenue.address}`
-            : language === 'fr'
-              ? 'Sélectionner un lieu'
-              : 'Select a venue'}
-        </NoxText>
-        <NoxText style={styles.chevron}>▼</NoxText>
-      </TouchableOpacity>
-
-      {selectedVenue && (
-        <View style={styles.selectedInfo}>
-          <NoxText style={styles.selectedInfoText}>
-            ✓ {language === 'fr' ? 'Lieu sélectionné' : 'Venue selected'}: {selectedVenue.venueName}
-          </NoxText>
+      <TouchableOpacity
+        style={styles.choiceCard}
+        onPress={() => setVenuePickerVisible(true)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.choiceIcon}>
+          <Ionicons name="business" size={22} color={Colors.primaryLight} />
         </View>
-      )}
-
-      <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButtonStep} onPress={() => setCurrentStep(1)}>
-          <NoxText style={styles.backButtonStepText}>
-            ← {language === 'fr' ? 'Précédent' : 'Previous'}
+        <View style={styles.choiceBody}>
+          <NoxText style={styles.choiceLabel}>{language === 'fr' ? 'Lieu' : 'Venue'}</NoxText>
+          <NoxText style={[styles.choiceValue, !selectedVenue && styles.placeholderText]}>
+            {selectedVenue
+              ? selectedVenue.venueName || selectedVenue.name
+              : language === 'fr'
+                ? 'Choisir un lieu'
+                : 'Choose a venue'}
           </NoxText>
-        </TouchableOpacity>
-        <NoxButton
-          label={language === 'fr' ? 'Suivant →' : 'Next →'}
-          fullWidth={false}
-          onPress={() => {
-            if (selectedVenue) {
-              setCurrentStep(3);
-            }
-          }}
-          disabled={!selectedVenue}
-          style={[styles.nextButton, { flex: 1, marginTop: 0 }, !selectedVenue && styles.nextButtonDisabled]}
-          textStyle={styles.nextButtonText}
-        />
-      </View>
+          {selectedVenue?.address ? (
+            <NoxText variant="secondary" style={{ marginTop: 4 }}>
+              {selectedVenue.address}
+              {selectedVenue.city ? `, ${selectedVenue.city}` : ''}
+            </NoxText>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+      </TouchableOpacity>
 
       <BookerEventVenuePickerModal
         visible={venuePickerVisible}

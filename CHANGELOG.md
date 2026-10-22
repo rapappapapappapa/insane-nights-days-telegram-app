@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 23 octobre 2026
 
+### Modifié (mobile — création d'événement)
+- L'assistant organisateur reprend le gabarit NOX : barre de progression, une carte par question, barre fixe Retour / Continuer. Le brouillon s'efface depuis une puce. L'étape détails est rangée en Affiche, Billets et Matériel. Le récap ressemble à une carte d'événement. La logique (validation, brouillon, création) ne change pas.
+
 ### Corrigé (mobile — changement de profil)
 - Si `GET /api/user/profiles` échoue, l’écran ne propose plus de **créer** des profils déjà existants. Il affiche le message du serveur et **Réessayer**.
 

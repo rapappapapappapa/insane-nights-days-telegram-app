@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   View,
@@ -6,7 +6,9 @@ import {
   TextInput,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NoxText } from '../../nox';
+import Colors from '../../../constants/colors';
 
 export default function BookerEventStep4Details(props) {
     const {
@@ -72,6 +74,13 @@ export default function BookerEventStep4Details(props) {
     hasBookerEventTitle,
     hasBookerEventPrice,
   } = props;
+
+  const [tiersOpen, setTiersOpen] = useState(() =>
+    (formData.extraTicketTiers || []).some(
+      (row) => String(row?.label || '').trim() || String(row?.price ?? '').trim()
+    )
+  );
+  const [gearOpen, setGearOpen] = useState(() => !!formData.equipmentRentalEnabled);
 
   return (
 <>
@@ -169,11 +178,33 @@ export default function BookerEventStep4Details(props) {
                     />
                     <Text style={styles.helperText}>
                       {language === 'fr'
-                        ? 'Prix TTC (TVA incluse). Le prix DJ sera fixé via un contrat (chat privé). Tu peux proposer plusieurs tarifs entrée : le montant ci‑dessus est le palier standard (« general ») ; ajoute les autres sous « autres tarifs ».'
-                        : 'Price incl. VAT. DJ fee is set via contract (private chat). You can offer several admission tiers: the amount above is the standard (« general ») tier; add more under « other tiers ».'}
+                        ? 'Prix TTC du billet standard. Le cachet DJ se signe dans le contrat.'
+                        : 'Standard ticket price incl. VAT. The DJ fee is set in the contract.'}
                     </Text>
                   </View>
-    
+
+                  <TouchableOpacity
+                    style={styles.discloseRow}
+                    onPress={() => setTiersOpen((open) => !open)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.discloseAction}>
+                      {tiersOpen
+                        ? language === 'fr'
+                          ? 'Masquer les autres tarifs'
+                          : 'Hide other tiers'
+                        : language === 'fr'
+                          ? 'Ajouter des tarifs'
+                          : 'Add ticket tiers'}
+                    </Text>
+                    <Ionicons
+                      name={tiersOpen ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={Colors.primaryLight}
+                    />
+                  </TouchableOpacity>
+
+                  {tiersOpen ? (
                   <View style={styles.inputGroup}>
                     <Text style={styles.subsectionLabel}>
                       {language === 'fr' ? 'Autres tarifs (optionnel)' : 'Other ticket tiers (optional)'}
@@ -264,6 +295,7 @@ export default function BookerEventStep4Details(props) {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  ) : null}
     
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>
@@ -289,9 +321,33 @@ export default function BookerEventStep4Details(props) {
 
 
                   <View style={styles.wizardBlock}>
-                  <NoxText style={styles.wizardBlockTitle}>
-                    {language === 'fr' ? 'Matériel' : 'Equipment'}
-                  </NoxText>
+                  <TouchableOpacity
+                    style={styles.discloseRow}
+                    onPress={() => setGearOpen((open) => !open)}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.discloseLabel}>
+                      {language === 'fr' ? 'Matériel' : 'Equipment'}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={styles.discloseAction}>
+                        {gearOpen
+                          ? language === 'fr'
+                            ? 'Masquer'
+                            : 'Hide'
+                          : language === 'fr'
+                            ? 'Proposer du matériel'
+                            : 'Offer equipment'}
+                      </Text>
+                      <Ionicons
+                        name={gearOpen ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={Colors.primaryLight}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  {gearOpen ? (
+                  <>
                   <NoxText variant="secondary" style={styles.helperText}>
                     {language === 'fr'
                       ? 'Catalogue NOX + ton matériel enregistré. Rien n’est facturé automatiquement ici — à préciser avec les prestataires / lieu.'
@@ -474,6 +530,8 @@ export default function BookerEventStep4Details(props) {
                         onChangeText={(v) => handleChange('equipmentRentalNotes', v)}
                       />
                     </>
+                  ) : null}
+                  </>
                   ) : null}
     
                   </View>

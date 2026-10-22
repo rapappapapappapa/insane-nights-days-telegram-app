@@ -35,6 +35,45 @@ export function hasBookerEventPrice(formData) {
   return !Number.isNaN(parseFloat(t.replace(',', '.')));
 }
 
+/** True si la date choisie est avant le délai minimum (la création la refuserait). */
+export function isBookerEventDateTooSoon(formData, eventDateTime) {
+  const leadDays = getEventMinLeadDaysFromEnv();
+  if (leadDays <= 0 || !formData?.date) return false;
+  const eventDateObj = eventDateTime || new Date(formData.date);
+  if (!(eventDateObj instanceof Date) || Number.isNaN(eventDateObj.getTime())) return false;
+  const eventDay = new Date(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate());
+  return eventDay < getMinEventCalendarDate(leadDays);
+}
+
+/** Une phrase courte sous Continuer, vide quand l'étape est complète. */
+export function wizardContinueHint({ step, language, formData, selectedVenue, filledDjCount, eventDateTime }) {
+  const fr = language === 'fr';
+  if (step === 1) {
+    if (!formData?.date) return fr ? 'Choisis une date' : 'Pick a date';
+    if (isBookerEventDateTooSoon(formData, eventDateTime)) {
+      const leadDays = getEventMinLeadDaysFromEnv();
+      return fr
+        ? `Choisis une date au moins ${leadDays} jours après aujourd'hui`
+        : `Pick a date at least ${leadDays} days from today`;
+    }
+    if (!formData?.time) return fr ? "Choisis l'heure" : 'Pick a start time';
+    if (!formData?.durationHours) return fr ? 'Indique la durée' : 'Enter the duration';
+    return '';
+  }
+  if (step === 2) {
+    return selectedVenue ? '' : fr ? 'Choisis un lieu' : 'Choose a venue';
+  }
+  if (step === 3) {
+    return filledDjCount > 0 ? '' : fr ? 'Ajoute au moins un DJ' : 'Add at least one DJ';
+  }
+  if (step === 4 || step === 5) {
+    if (!hasBookerEventTitle(formData)) return fr ? 'Donne un titre' : 'Add a title';
+    if (!hasBookerEventPrice(formData)) return fr ? 'Indique le prix du billet' : 'Enter the ticket price';
+    return '';
+  }
+  return '';
+}
+
 export function stepRequirementsHint(step, lang) {
   const fr = lang === 'fr';
   const leadDays = getEventMinLeadDaysFromEnv();

@@ -776,7 +776,7 @@ export const styles = StyleSheet.create({
   draftRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: Spacing.md,
     marginBottom: Spacing.lg,
   },
@@ -840,14 +840,38 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   wizardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
     paddingHorizontal: Layout.screenPaddingHorizontal,
     paddingTop: Spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.borderSubtle,
     backgroundColor: Colors.background,
+  },
+  wizardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  wizardContinueHint: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 13,
+    marginTop: 8,
+  },
+  discloseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    marginBottom: Spacing.md,
+  },
+  discloseLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  discloseAction: {
+    fontSize: 13,
+    color: Colors.primaryLight,
   },
   wizardBack: {
     minWidth: 72,

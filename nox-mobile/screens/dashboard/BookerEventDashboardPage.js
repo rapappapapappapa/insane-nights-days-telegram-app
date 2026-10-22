@@ -16,7 +16,12 @@ import { useEventForm } from '../../contexts/EventFormContext';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/Toast';
 import { useBookerEventWizard } from '../../hooks/useBookerEventWizard';
-import { stepRequirementsHint, hasBookerEventTitle, hasBookerEventPrice } from '../../utils/bookerEventWizardUtils';
+import {
+  wizardContinueHint,
+  isBookerEventDateTooSoon,
+  hasBookerEventTitle,
+  hasBookerEventPrice,
+} from '../../utils/bookerEventWizardUtils';
 import Colors from '../../constants/colors';
 import { styles } from './BookerEventDashboardPage.styles';
 import BookerEventStep1Date from '../../components/bookerEventWizard/sections/BookerEventStep1Date';
@@ -109,9 +114,18 @@ export default function BookerEventDashboardPage() {
   ];
 
   const filledDjCount = (djSlots || []).filter((slot) => slot?.djId).length;
+  const continueHint = wizardContinueHint({
+    step: currentStep,
+    language,
+    formData,
+    selectedVenue: stepProps.selectedVenue,
+    filledDjCount,
+    eventDateTime,
+  });
   const canContinue =
     currentStep === 1
-      ? !!(formData.date && formData.time && formData.durationHours)
+      ? !!(formData.date && formData.time && formData.durationHours) &&
+        !isBookerEventDateTooSoon(formData, eventDateTime)
       : currentStep === 2
         ? !!stepProps.selectedVenue
         : currentStep === 3
@@ -135,7 +149,11 @@ export default function BookerEventDashboardPage() {
         title={language === 'fr' ? 'Créer un événement' : 'Create event'}
         subtitle={`${language === 'fr' ? 'Étape' : 'Step'} ${currentStep}/5 · ${stepLabels[currentStep - 1]}`}
         showBack
-        onBack={goBack}
+        onBack={() => {
+          if (creating) return;
+          if (currentStep > 1) setCurrentStep(currentStep - 1);
+          else goBack();
+        }}
       />
 
       <View style={styles.progressTrack}>
@@ -152,9 +170,6 @@ export default function BookerEventDashboardPage() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.draftRow}>
-          <NoxText variant="secondary" style={styles.stepRequiredHint}>
-            {stepRequirementsHint(currentStep, language)}
-          </NoxText>
           <TouchableOpacity
             onPress={clearDraftAndRestartWizard}
             disabled={creating}
@@ -180,6 +195,7 @@ export default function BookerEventDashboardPage() {
       </ScrollView>
 
       <View style={[styles.wizardFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={styles.wizardFooterRow}>
         {currentStep > 1 ? (
           <TouchableOpacity
             style={styles.wizardBack}
@@ -209,6 +225,12 @@ export default function BookerEventDashboardPage() {
           fullWidth={false}
           style={styles.wizardContinue}
         />
+        </View>
+        {continueHint ? (
+          <NoxText variant="secondary" style={styles.wizardContinueHint}>
+            {continueHint}
+          </NoxText>
+        ) : null}
       </View>
 
       <BookerEventPickersModals

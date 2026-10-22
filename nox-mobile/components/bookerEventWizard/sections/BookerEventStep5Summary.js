@@ -2,7 +2,6 @@ import React from 'react';
 import { Text, View, Image } from 'react-native';
 import { NoxText } from '../../nox';
 import { summarizeEquipmentRentalBlurb, djSlotsToFormDjFields } from '../../../utils/bookerEventWizardUtils';
-import { ticketPricingBreakdown, NOX_COMMISSION_RATE, TVA_RATE } from '../../../utils/ticketPricingUtils';
 
 export default function BookerEventStep5Summary(props) {
     const {
@@ -145,42 +144,6 @@ export default function BookerEventStep5Summary(props) {
                       </View>
                     ) : null}
 
-                    {(() => {
-                      const b = ticketPricingBreakdown(formData.price);
-                      if (!b) return null;
-                      const tvaPct = Math.round(TVA_RATE * 100);
-                      const comPct = Math.round(NOX_COMMISSION_RATE * 100);
-                      return (
-                        <View style={styles.summarySection}>
-                          <Text style={styles.summaryLabel}>
-                            {language === 'fr'
-                              ? `TVA & commission Nox (indicatif, billet standard)`
-                              : `VAT & Nox fee (indicative, standard ticket)`}
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {language === 'fr'
-                              ? `Prix public TTC : ${b.ttc} € (HT ${b.ht} € + TVA ${tvaPct} % ${b.tva} €)`
-                              : `Public price incl. VAT: ${b.ttc} € (excl. ${b.ht} € + VAT ${tvaPct}% ${b.tva} €)`}
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {language === 'fr'
-                              ? `Commission Nox ${comPct} % : −${b.commission} € / billet`
-                              : `Nox fee ${comPct}%: −${b.commission} € / ticket`}
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {language === 'fr'
-                              ? `Reversement estimé : ${b.netOrganizer} € / billet`
-                              : `Estimated payout: ${b.netOrganizer} € / ticket`}
-                          </Text>
-                          <Text style={styles.summarySubValue}>
-                            {language === 'fr'
-                              ? 'La commission est déduite du reversement organisateur — le prix payé par l\'acheteur ne change pas.'
-                              : 'The fee is deducted from the organizer payout — the buyer price does not change.'}
-                          </Text>
-                        </View>
-                      );
-                    })()}
-    
                     {selectedVenue && (
                       <View style={styles.summarySection}>
                         <Text style={styles.summaryLabel}>
@@ -219,57 +182,13 @@ export default function BookerEventStep5Summary(props) {
                         {summarizeEquipmentRentalBlurb(formData, rentalPresets, language) ||
                           (language === 'fr' ? 'Non proposée sur cette fête.' : 'Not offered for this event.')}
                       </Text>
-                      <Text style={styles.summarySubValue}>
-                        {language === 'fr'
-                          ? 'Indicatif uniquement — pas de paiement en ligne pour la location ici.'
-                          : 'Indicative only — no online rental payment here.'}
-                      </Text>
                     </View>
-    
-                    <View style={styles.costBreakdown}>
-                      <Text style={styles.costTitle}>
-                        {language === 'fr' ? 'Détail des coûts (indicatif)' : 'Cost breakdown (indicative)'}
-                      </Text>
-                      <Text style={styles.costDisclaimer}>
-                        {language === 'fr'
-                          ? 'Les montants affichés pour le lieu sont une estimation (notamment à partir de la note) — ce n’est pas un devis contractuel. Le cachet DJ et les conditions réelles sont fixés dans les contrats NOX.'
-                          : 'Venue amounts shown are an estimate (including from ratings)—not a binding quote. DJ fees and final terms are set in NOX contracts.'}
-                      </Text>
-    
-                      {selectedVenue && (
-                        <View style={styles.costRow}>
-                          <Text style={styles.costLabel}>
-                            {language === 'fr' ? 'Lieu' : 'Venue'} ({selectedVenue.venueName})
-                          </Text>
-                          <Text style={styles.costValue}>
-                            {(() => {
-                              const venueBase = typeof selectedVenue.averageRatingGlobal === 'number'
-                                ? 50 + selectedVenue.averageRatingGlobal * 10
-                                : 50;
-                              return `${Math.round(venueBase)} €`;
-                            })()}
-                          </Text>
-                        </View>
-                      )}
-    
-                      <View style={styles.costRow}>
-                        <Text style={styles.costLabel}>
-                          {language === 'fr' ? 'DJs' : 'DJs'}
-                        </Text>
-                        <Text style={styles.costValue}>
-                          {language === 'fr' ? 'Prix à convenir (contrat)' : 'Price to agree (contract)'}
-                        </Text>
-                      </View>
-    
-                      <View style={styles.costTotal}>
-                        <Text style={styles.costTotalLabel}>
-                          {language === 'fr' ? 'Total' : 'Total'}
-                        </Text>
-                        <Text style={styles.costTotalValue}>
-                          {formData.price ? `${formData.price} €` : (language === 'fr' ? 'À définir' : 'To define')}
-                        </Text>
-                      </View>
-                    </View>
+
+                    <Text style={styles.summarySubValue}>
+                      {language === 'fr'
+                        ? 'Les prix fermes (lieu, DJ, commission) se signent dans le contrat.'
+                        : 'Firm prices (venue, DJ, fee) are set in the contract.'}
+                    </Text>
                   </View>
                 </>
   );

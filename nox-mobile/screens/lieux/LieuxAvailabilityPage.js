@@ -16,7 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
 import { useLieuxBlockedDates } from '../../hooks/useLieuxBlockedDates';
-import { NoxText, NoxCard, NoxButton, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard, NoxButton } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { AVAILABILITY_STATUS } from './mockData';
@@ -301,7 +301,6 @@ export default function LieuxAvailabilityPage() {
         </View>
       </Modal>
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }

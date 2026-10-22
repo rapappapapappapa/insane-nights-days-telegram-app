@@ -20,7 +20,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxTabs, NoxButton, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText, NoxTabs, NoxButton } from '../../components/nox';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import Colors, { primaryAlpha } from '../../constants/colors';
@@ -269,7 +269,6 @@ export default function LieuxMediaPage() {
         )}
       </ScrollView>
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
 
       <Modal
         visible={urlModalVisible}

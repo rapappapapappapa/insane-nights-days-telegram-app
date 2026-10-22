@@ -23,7 +23,7 @@ import { useLieuxData } from '../../hooks/useLieuxData';
 import { api } from '../../api/config';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { NoxText, NoxCard, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
@@ -296,7 +296,6 @@ export default function LieuxScannerPage() {
       )}
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }

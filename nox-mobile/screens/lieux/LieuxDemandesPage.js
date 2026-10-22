@@ -18,7 +18,6 @@ import {
   NoxText,
   NoxCard,
   NoxScreenHeader,
-  NoxLieuxBottomNav,
 } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -220,7 +219,6 @@ export default function LieuxDemandesPage() {
         </ScrollView>
       )}
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </SafeAreaView>
   );
 }

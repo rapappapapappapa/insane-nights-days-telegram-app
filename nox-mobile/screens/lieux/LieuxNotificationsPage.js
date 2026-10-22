@@ -14,7 +14,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
 import Colors from '../../constants/colors';
-import { NoxText, NoxCard, NoxScreenHeader, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard, NoxScreenHeader } from '../../components/nox';
 import {
   buildVenueNotifications,
   groupVenueNotifications,
@@ -156,7 +156,6 @@ export default function LieuxNotificationsPage() {
         </ScrollView>
       )}
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </SafeAreaView>
   );
 }

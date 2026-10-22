@@ -20,7 +20,6 @@ import {
   getProfileScreenForProfile,
   isHomeScreenForProfile,
   isProfileScreenForProfile,
-  LIEUX_SCREENS,
   RADIAL_NAV_HIDDEN_PAGES,
 } from '../../utils/noxRoleNavigation';
 import { getDiscoverScreen } from '../../utils/noxNavigation';
@@ -30,8 +29,6 @@ import { Spacing } from '../../constants/theme';
 
 const NAV_SIZE = 48;
 const NX_SIZE = 64;
-/** Décalage NX au-dessus de la barre basse Lieux (Accueil / + / Profil). */
-const LIEUX_BOTTOM_NAV_LIFT = 76;
 /** Distance centre NX → icônes (plus grand = arc plus aéré). */
 const ORBIT_RADIUS = 118;
 /** Arc au-dessus du bouton NX (de gauche à droite). */
@@ -212,10 +209,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     [navItems, menuAnim],
   );
 
-  const bottom =
-    Math.max(insets.bottom, Spacing.md) +
-    Spacing.sm +
-    (LIEUX_SCREENS.has(currentPage) && currentPage !== 'lieuxDashboard' ? LIEUX_BOTTOM_NAV_LIFT : 0);
+  const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { NoxText, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 
@@ -142,7 +142,6 @@ export default function LieuxSettingsPage() {
         </Section>
       </ScrollView>
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }

@@ -7,7 +7,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ## Semaine du 22 au 23 octobre 2026
 
 ### Modifié (lieu — chat et accueil)
-- **Chat lieu** : bulles alignées sur le chat DJ (rayon 16, coin bas, largeur max), plus des pilules plein écran.
+- **Chat lieu** : le texte des bulles revient à la ligne (largeur bornée), au lieu de dépasser.
 - **Accueil lieu** : barre Accueil / + / Profil retirée. Le bouton NX est au même niveau que les autres profils.
 
 ### Modifié (dashboards pro — destinations réelles)

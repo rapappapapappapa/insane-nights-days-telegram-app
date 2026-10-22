@@ -31,6 +31,7 @@ import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
 import { findBookingByEventVenueId } from '../../utils/lieuxEventUtils';
 
 const CHAT_BG = '#0a0a0c';
+const BUBBLE_MAX_WIDTH = Math.round(Dimensions.get('window').width * 0.78);
 
 function MessageBubble({ message, fr }) {
   const own = message.isOwn;
@@ -48,7 +49,10 @@ function MessageBubble({ message, fr }) {
         </View>
       ) : null}
       <View style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleOther]}>
-        <NoxText variant="form" style={own ? styles.bubbleTextOwn : styles.bubbleTextOther}>
+        <NoxText
+          variant="form"
+          style={[styles.bubbleText, own ? styles.bubbleTextOwn : styles.bubbleTextOther]}
+        >
           {content}
         </NoxText>
         {!message.deleted && message.createdAt ? (
@@ -276,6 +280,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   messagesContent: {
+    width: '100%',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
     paddingBottom: Spacing.xxl,
@@ -287,7 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     alignSelf: 'flex-start',
     gap: Spacing.sm,
-    maxWidth: '85%',
+    maxWidth: BUBBLE_MAX_WIDTH,
   },
   bubbleRowOwn: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   avatar: {
@@ -300,10 +305,12 @@ const styles = StyleSheet.create({
   },
   bubble: {
     flexShrink: 1,
+    flexGrow: 0,
+    minWidth: 0,
+    maxWidth: BUBBLE_MAX_WIDTH - 36,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 16,
-    maxWidth: '100%',
   },
   bubbleOwn: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   bubbleOther: {
@@ -312,6 +319,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderBottomLeftRadius: 4,
   },
+  bubbleText: { flexShrink: 1 },
   bubbleTextOwn: { color: Colors.text, fontSize: 14, lineHeight: 20 },
   bubbleTextOther: { color: Colors.text, fontSize: 14, lineHeight: 20 },
   bubbleTime: { fontSize: 10, marginTop: 4, opacity: 0.65 },

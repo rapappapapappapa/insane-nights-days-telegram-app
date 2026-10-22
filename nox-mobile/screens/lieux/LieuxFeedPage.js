@@ -14,7 +14,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useLieuxData } from '../../hooks/useLieuxData';
-import { NoxText, NoxCard, NoxLieuxBottomNav } from '../../components/nox';
+import { NoxText, NoxCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { formatEventDateLabel } from '../../utils/noxDiscoverUtils';
@@ -144,7 +144,6 @@ export default function LieuxFeedPage() {
         )}
       </ScrollView>
 
-      <NoxLieuxBottomNav active={null} navigate={navigate} />
     </View>
   );
 }

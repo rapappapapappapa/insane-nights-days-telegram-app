@@ -14,6 +14,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Un billet vaut pour toute la soirée : il est scanné une fois par lieu (`Ticket.scannedVenueIds`) et reste actif jusqu'à la dernière étape.
 - Migration `20261023100000_event_multi_venue_slots` (appliquée au déploiement Railway). Avec un seul lieu, rien ne change.
 
+### Corrigé (notes — participants)
+- Noter un DJ ou un lieu exige maintenant un billet **scanné** à l'entrée (avant, c'était l'inverse : un billet scanné ne pouvait plus noter). En parcours multi-lieux, on ne note que les lieux où le billet a été scanné. Les billets passés non scannés l'indiquent au lieu de proposer « Noter ».
+
 ### Corrigé (contrats — lieu)
 - Le contrat d'un lieu affichait le lieu principal de l'événement au lieu du sien.
 

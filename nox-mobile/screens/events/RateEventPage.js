@@ -24,13 +24,18 @@ export default function RateEventPage() {
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
   const { eventId, eventTitle, eventDate, venueId, venueName, djIds = [] } = routeParams || {};
+  const venuesToRate = Array.isArray(routeParams?.venues) && routeParams.venues.length > 0
+    ? routeParams.venues.map((v) => ({ venueId: v.venueId, name: v.name }))
+    : venueId
+      ? [{ venueId, name: venueName }]
+      : [];
 
   const [loading, setLoading] = useState(false);
   const [djNames, setDjNames] = useState({}); // Map des IDs vers les noms
   const [ratingDjModal, setRatingDjModal] = useState({ visible: false, djUserId: null, djName: null });
-  const [ratingVenueModal, setRatingVenueModal] = useState({ visible: false });
+  const [ratingVenueModal, setRatingVenueModal] = useState({ visible: false, venueId: null, name: null });
   const [ratedDjIds, setRatedDjIds] = useState([]); // IDs des DJs déjà notés
-  const [ratedVenueId, setRatedVenueId] = useState(null); // ID du lieu déjà noté
+  const [ratedVenueIds, setRatedVenueIds] = useState([]);
   const [checkingRatings, setCheckingRatings] = useState(true);
 
   // Debug: afficher les djIds reçus
@@ -73,7 +78,9 @@ export default function RateEventPage() {
         const response = await api.checkRatings(user.token, eventId);
         if (response && response.success) {
           setRatedDjIds(response.ratedDjIds || []);
-          setRatedVenueId(response.ratedVenueId || null);
+          setRatedVenueIds(
+            response.ratedVenueIds || (response.ratedVenueId ? [response.ratedVenueId] : [])
+          );
         }
       } catch (error) {
         console.error('Erreur vérification notes:', error);
@@ -136,13 +143,14 @@ export default function RateEventPage() {
   };
 
   const handleRateVenue = async ({ rating, comment }) => {
-    if (!user?.token || !venueId) return;
+    const targetVenueId = ratingVenueModal.venueId;
+    if (!user?.token || !targetVenueId) return;
 
     setLoading(true);
     try {
       const response = await api.rateVenue({
         token: user.token,
-        venueId: venueId,
+        venueId: targetVenueId,
         eventId: eventId,
         rating: rating,
         comment: comment,
@@ -150,9 +158,9 @@ export default function RateEventPage() {
 
       if (response && response.success) {
         // Mettre à jour le lieu noté
-        setRatedVenueId(venueId);
+        setRatedVenueIds((prev) => (prev.includes(targetVenueId) ? prev : [...prev, targetVenueId]));
         showSuccess(language === 'fr' ? 'Merci pour votre avis !' : 'Thank you for your review!');
-        setTimeout(() => setRatingVenueModal({ visible: false }), 1500);
+        setTimeout(() => setRatingVenueModal({ visible: false, venueId: null, name: null }), 1500);
       } else {
         showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'enregistrement.' : 'Error saving rating.'));
       }
@@ -243,36 +251,43 @@ export default function RateEventPage() {
           </View>
         )}
 
-        {/* Section Noter le lieu */}
-        {venueId && (
+        {/* Section Noter le(s) lieu(x) */}
+        {venuesToRate.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {language === 'fr' ? 'Noter le lieu' : 'Rate Venue'}
+              {language === 'fr'
+                ? venuesToRate.length > 1 ? 'Noter les lieux' : 'Noter le lieu'
+                : venuesToRate.length > 1 ? 'Rate venues' : 'Rate Venue'}
             </Text>
             <Text style={styles.sectionSubtitle}>
               {language === 'fr'
                 ? 'Donnez votre avis sur le lieu de l\'événement'
                 : 'Share your opinion on the event venue'}
             </Text>
-            <View
-              style={[styles.rateButton, ratedVenueId && styles.rateButtonRated]}
-            >
-              <Text style={[styles.rateButtonText, ratedVenueId && styles.rateButtonTextRated]}>
-                {ratedVenueId ? '✓ ' : ''}{ratedVenueId ? (language === 'fr' ? 'Noté' : 'Rated') : (language === 'fr' ? 'Noter' : 'Rate')} {venueName || language === 'fr' ? 'le lieu' : 'venue'}
-              </Text>
-              {!ratedVenueId && (
-                <TouchableOpacity
-                  onPress={() => setRatingVenueModal({ visible: true })}
-                >
-                  <Text style={styles.rateButtonArrow}>→</Text>
-                </TouchableOpacity>
-              )}
-              {ratedVenueId && <Text style={styles.rateButtonCheck}>✓</Text>}
-            </View>
+            {venuesToRate.map((v) => {
+              const isRated = ratedVenueIds.includes(v.venueId);
+              const label = v.name || (language === 'fr' ? 'le lieu' : 'venue');
+              return (
+                <View key={v.venueId} style={[styles.rateButton, isRated && styles.rateButtonRated]}>
+                  <Text style={[styles.rateButtonText, isRated && styles.rateButtonTextRated]}>
+                    {isRated ? '✓ ' : ''}
+                    {isRated ? (language === 'fr' ? 'Noté' : 'Rated') : (language === 'fr' ? 'Noter' : 'Rate')} {label}
+                  </Text>
+                  {!isRated && (
+                    <TouchableOpacity
+                      onPress={() => setRatingVenueModal({ visible: true, venueId: v.venueId, name: v.name })}
+                    >
+                      <Text style={styles.rateButtonArrow}>→</Text>
+                    </TouchableOpacity>
+                  )}
+                  {isRated && <Text style={styles.rateButtonCheck}>✓</Text>}
+                </View>
+              );
+            })}
           </View>
         )}
 
-        {(!djIds || djIds.length === 0) && !venueId && (
+        {(!djIds || djIds.length === 0) && venuesToRate.length === 0 && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {language === 'fr'
@@ -303,9 +318,13 @@ export default function RateEventPage() {
       {/* Modal pour noter un lieu */}
       <RatingModal
         visible={ratingVenueModal.visible}
-        onClose={() => setRatingVenueModal({ visible: false })}
+        onClose={() => setRatingVenueModal({ visible: false, venueId: null, name: null })}
         onSubmit={handleRateVenue}
-        title={language === 'fr' ? `Noter ${venueName || 'le lieu'}` : `Rate ${venueName || 'venue'}`}
+        title={
+          language === 'fr'
+            ? `Noter ${ratingVenueModal.name || 'le lieu'}`
+            : `Rate ${ratingVenueModal.name || 'venue'}`
+        }
         loading={loading}
       />
     </View>

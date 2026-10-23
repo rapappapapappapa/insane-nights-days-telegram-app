@@ -153,6 +153,7 @@ export default function EventCheckoutSection({
               eventStatus: event.status,
               venueId: event.venueId,
               venueName: event.venueName,
+              venues: event.venues || [],
               djIds: event.djIds || [],
             })
           }

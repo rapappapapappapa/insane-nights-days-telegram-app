@@ -103,19 +103,15 @@ app.post('/api/ratings/dj', authenticateToken, async (req, res) => {
     // Validation selon le type de compte
     if (rater.accountType === 'COMMUNITY' && rater.community) {
       raterType = 'COMMUNITY';
-      // Vérifier qu'il a un ticket valide pour cet événement
+      // Seuls les participants entrés (billet scanné) peuvent noter.
       const ticket = await prisma.ticket.findFirst({
-        where: {
-          userId: raterId,
-          eventId: eventId,
-          status: 'valid',
-        },
+        where: { userId: raterId, eventId: eventId, status: 'used' },
       });
 
       if (!ticket) {
         return res.status(403).json({
           success: false,
-          message: 'Vous devez avoir un ticket valide pour cet événement pour noter.',
+          message: 'Ton billet doit avoir été scanné à l’entrée pour noter.',
         });
       }
 
@@ -276,19 +272,20 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
     // Validation selon le type de compte
     if (rater.accountType === 'COMMUNITY' && rater.community) {
       raterType = 'COMMUNITY';
-      // Vérifier qu'il a un ticket valide pour cet événement
+      // Seuls les participants entrés (billet scanné) peuvent noter ; en parcours multi-lieux, scanné dans ce lieu.
       const ticket = await prisma.ticket.findFirst({
         where: {
           userId: raterId,
           eventId: eventId,
-          status: 'valid',
+          status: 'used',
+          OR: [{ scannedVenueIds: { isEmpty: true } }, { scannedVenueIds: { has: venueId } }],
         },
       });
 
       if (!ticket) {
         return res.status(403).json({
           success: false,
-          message: 'Vous devez avoir un ticket valide pour cet événement pour noter.',
+          message: 'Ton billet doit avoir été scanné dans ce lieu pour le noter.',
         });
       }
 
@@ -397,7 +394,7 @@ app.get('/api/ratings/check/:eventId', authenticateToken, async (req, res) => {
     });
 
     // Récupérer la note du lieu pour cet événement et cet utilisateur
-    const venueRating = await prisma.venueRating.findFirst({
+    const venueRatings = await prisma.venueRating.findMany({
       where: {
         eventId: eventId,
         raterId: userId,
@@ -406,6 +403,7 @@ app.get('/api/ratings/check/:eventId', authenticateToken, async (req, res) => {
         venue: true,
       },
     });
+    const venueRating = venueRatings[0] || null;
 
     // Formater les réponses
     const ratedDjIds = djRatings.map((rating) => rating.dj.user.id); // User.id des DJs notés
@@ -415,6 +413,7 @@ app.get('/api/ratings/check/:eventId', authenticateToken, async (req, res) => {
       success: true,
       ratedDjIds, // Array de User.id des DJs déjà notés
       ratedVenueId, // ID du lieu déjà noté (ou null)
+      ratedVenueIds: venueRatings.map((r) => r.venueId),
       djRatings: djRatings.map((r) => ({
         djUserId: r.dj.user.id,
         rating: r.rating,

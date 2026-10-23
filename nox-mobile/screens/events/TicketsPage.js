@@ -225,6 +225,9 @@ export default function TicketsPage() {
     );
   };
 
+  const hasEntered = (ticket) =>
+    ticket.status === 'used' || (ticket.scannedVenueIds || []).length > 0;
+
   const renderTicketCard = (ticket) => {
     const past = isEventPast(ticket);
 
@@ -317,6 +320,12 @@ export default function TicketsPage() {
               />
             ) : null}
           </View>
+        ) : !hasEntered(ticket) ? (
+          <NoxText variant="secondary" style={{ marginTop: 10 }}>
+            {fr
+              ? 'Billet non scanné à l’entrée : la note est réservée aux participants.'
+              : 'Ticket not scanned at the door: rating is for attendees only.'}
+          </NoxText>
         ) : (
           <View style={styles.ticketActions}>
             <NoxButton
@@ -331,6 +340,9 @@ export default function TicketsPage() {
                   djIds: ticket.djIds || [],
                   venueId: ticket.venueId,
                   venueName: ticket.venueName,
+                  venues: (ticket.venues || []).filter((s) =>
+                    (ticket.scannedVenueIds || []).includes(s.venueId)
+                  ),
                 })
               }
               style={styles.actionButton}

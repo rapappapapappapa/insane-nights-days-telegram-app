@@ -127,7 +127,7 @@ export default function BookerEventDashboardPage() {
       ? !!(formData.date && formData.time && formData.durationHours) &&
         !isBookerEventDateTooSoon(formData, eventDateTime)
       : currentStep === 2
-        ? !!stepProps.selectedVenue
+        ? !!stepProps.selectedVenue && !continueHint
         : currentStep === 3
           ? filledDjCount > 0
           : hasBookerEventTitle(formData) && hasBookerEventPrice(formData);

@@ -159,43 +159,49 @@ export default function BookerEventsSection(props) {
                         })}
                       </Text>
                       <Text style={styles.eventInfo}>⏰ {event.time}</Text>
-                      {(event.venue || event.venueNeedsReplacement) && (
-                        <View style={styles.venueRow}>
-                          {event.venue ? (
-                            <>
-                              <Text style={styles.eventInfo}>📍 {event.venue.venueName}</Text>
-                              {event.venue.eventVenueId && (
+                      {event.venue
+                        ? (event.venues?.length ? event.venues : [event.venue]).map((stop, stopIdx, all) => (
+                            <View key={stop.eventVenueId || stop.id || stopIdx} style={styles.venueRow}>
+                              <Text style={styles.eventInfo}>
+                                📍 {all.length > 1 ? `${stopIdx + 1}. ` : ''}
+                                {stop.venueName}
+                                {all.length > 1 && stop.slotStart && stop.slotEnd
+                                  ? ` (${stop.slotStart}–${stop.slotEnd})`
+                                  : ''}
+                              </Text>
+                              {stop.eventVenueId && (
                                 <>
                                   <TouchableOpacity
                                     style={styles.chatButtonSmall}
-                                    onPress={() => openVenueChat(event.venue.eventVenueId)}
+                                    onPress={() => openVenueChat(stop.eventVenueId)}
                                   >
                                     <Text style={styles.chatButtonSmallText}>💬</Text>
                                   </TouchableOpacity>
                                   <BookingPaymentControls
                                     language={language}
                                     styles={styles}
-                                    status={event.venue.payment?.paymentStatus}
-                                    invitationStatus={event.venue.venueInvitationStatus}
-                                    bookingId={event.venue.eventVenueId}
+                                    status={stop.payment?.paymentStatus}
+                                    invitationStatus={stop.venueInvitationStatus}
+                                    bookingId={stop.eventVenueId}
                                     onMarkPaid={markVenueBookingAsPaid}
                                     pendingId={markingPaymentEventVenueId}
                                   />
                                 </>
                               )}
-                            </>
-                          ) : event.venueNeedsReplacement ? (
-                            <TouchableOpacity
-                              style={styles.replaceVenueButton}
-                              onPress={() => navigate('selectVenue', { eventId: event.id, replaceMode: true, returnTo: 'bookerDashboard' })}
-                            >
-                              <Text style={styles.replaceVenueButtonText}>
-                                {language === 'fr' ? '🔄 Remplacer le lieu' : '🔄 Replace venue'}
-                              </Text>
-                            </TouchableOpacity>
+                            </View>
+                          ))
+                        : event.venueNeedsReplacement ? (
+                            <View style={styles.venueRow}>
+                              <TouchableOpacity
+                                style={styles.replaceVenueButton}
+                                onPress={() => navigate('selectVenue', { eventId: event.id, replaceMode: true, returnTo: 'bookerDashboard' })}
+                              >
+                                <Text style={styles.replaceVenueButtonText}>
+                                  {language === 'fr' ? '🔄 Remplacer le lieu' : '🔄 Replace venue'}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
                           ) : null}
-                        </View>
-                      )}
                       <View style={[styles.venueRow, { marginTop: 6 }]}>
                         <Text style={styles.eventInfo}>
                           🛠️ {language === 'fr' ? 'Prestataire' : 'Provider'}

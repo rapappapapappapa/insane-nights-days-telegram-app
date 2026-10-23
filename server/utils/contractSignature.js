@@ -22,6 +22,7 @@ const {
   createContractNotificationMessageVenue,
   createContractNotificationMessagePrestataire,
 } = require('./contractHelpers');
+const { venueForEventDj } = require('./eventItinerary');
 
 const userEmail = async (userId) =>
   userId ? prisma.user.findUnique({ where: { id: userId }, select: { email: true } }) : null;
@@ -55,7 +56,7 @@ async function startDjContractSignature(eventDjId) {
     booker: ed.event?.booker,
     dj: djProfile,
     eventDj: ed,
-    venue: ed.event?.venue,
+    venue: await venueForEventDj(ed),
     organizerEmail: bookerUser.email,
     djEmail: djUser.email,
     signatureAnchors: true,

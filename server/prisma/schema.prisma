@@ -268,6 +268,7 @@ model UserVenue {
   updatedAt              DateTime      @updatedAt
   events                 Event[]
   eventVenues            EventVenue[]
+  eventDjs               EventDj[]     @relation("EventDjVenue")
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   media                  VenueMedia[]
   ratings                VenueRating[]
@@ -430,9 +431,12 @@ model EventDj {
   /// Créneau de passage du DJ (heure locale « HH:mm »), dans la fenêtre date + durée événement
   slotStart        String?
   slotEnd          String?
+  /// Lieu où joue le DJ quand l'événement a plusieurs lieux (UserVenue.id)
+  venueId          String?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   event            Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venue            UserVenue?            @relation("EventDjVenue", fields: [venueId], references: [id], onDelete: SetNull)
   messages         Message[]
 
   @@unique([eventId, djId])
@@ -465,6 +469,11 @@ model EventVenue {
   /// ID de la demande de signature Yousign (statut PENDING_SIGNATURE)
   yousignSignatureRequestId String?
   rejectionReason   String?
+  /// Ordre dans le parcours de la soirée (0 = premier lieu)
+  position          Int                   @default(0)
+  /// Créneau du lieu (heure locale « HH:mm »), dans la fenêtre date + durée événement
+  slotStart         String?
+  slotEnd           String?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
   event             Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -585,6 +594,8 @@ model Ticket {
   qrCode          String        @unique
   purchaseDate    DateTime      @default(now())
   scannedAt       DateTime?
+  /// Lieux du parcours où le billet est déjà entré (événement multi-lieux : une entrée par lieu)
+  scannedVenueIds String[]      @default([])
   djRatings       DjRating[]    @relation("DjRatingTickets")
   event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   payment         Payment?      @relation(fields: [paymentIntentId], references: [paymentIntentId])

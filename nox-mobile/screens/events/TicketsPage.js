@@ -259,7 +259,15 @@ export default function TicketsPage() {
                 {formatEventDate(ticket.eventDate, language)}
                 {ticket.eventTime ? ` · ${ticket.eventTime}` : ''}
               </NoxText>
-              {ticket.eventLocation ? (
+              {ticket.venues?.length > 1 ? (
+                ticket.venues.map((stop, i) => (
+                  <NoxText key={`${stop.venueId}-${i}`} variant="secondary" numberOfLines={1}>
+                    {(ticket.scannedVenueIds || []).includes(stop.venueId) ? '✓ ' : `${i + 1}. `}
+                    {stop.name}
+                    {stop.slotStart && stop.slotEnd ? ` · ${stop.slotStart} – ${stop.slotEnd}` : ''}
+                  </NoxText>
+                ))
+              ) : ticket.eventLocation ? (
                 <NoxText variant="secondary" numberOfLines={1}>
                   {ticket.eventLocation}
                 </NoxText>

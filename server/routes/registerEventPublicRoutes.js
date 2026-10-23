@@ -5,6 +5,7 @@ const prisma = require('../lib/prisma');
 const { parseTicketTiersFromDb, enrichTiersWithSold, minTierPriceEUR } = require('../utils/ticketTiers');
 const { publishedOnFeedEventWhere, canViewEvent } = require('../utils/publicEventDiscovery');
 const { attachUserIfAuthenticated } = require('../middleware/auth');
+const { itineraryInclude, serializeItinerary } = require('../utils/eventItinerary');
 
 module.exports = function registerEventPublicRoutes(app, deps) {
   const { authenticateToken, userController } = deps;
@@ -68,6 +69,7 @@ app.get('/api/events', async (req, res) => {
             // et on récupérera le UserDj séparément
           },
         },
+        eventVenues: itineraryInclude,
       },
       orderBy: {
         date: 'asc',
@@ -120,6 +122,7 @@ app.get('/api/events', async (req, res) => {
         djIds: event.eventDjs.map((ed) => ed.djId),
         venueId: event.venueId,
         venueName: event.venue?.venueName,
+        venues: serializeItinerary(event.eventVenues),
       };
     });
 
@@ -144,7 +147,7 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
         venue: true,
         booker: { select: { id: true, userId: true, pseudo: true, nom: true, prenom: true } },
         eventDjs: true,
-        eventVenues: true,
+        eventVenues: itineraryInclude,
       },
     });
 
@@ -159,10 +162,7 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
 
     const activeEventDjs = (event.eventDjs || []).filter((ed) => ed.status === 'ACCEPTED' || ed.status === 'PENDING');
     const activeEventVenues = (event.eventVenues || []).filter((ev) => ev.status === 'ACCEPTED' || ev.status === 'PENDING');
-    const activeVenue = activeEventVenues[0] ? (await prisma.eventVenue.findUnique({
-      where: { id: activeEventVenues[0].id },
-      include: { venue: { select: { id: true, venueName: true, address: true } } },
-    })) : null;
+    const activeVenue = activeEventVenues[0] || null;
 
     const djIds = activeEventDjs.map((ed) => ed.djId);
     const userDjs = djIds.length > 0 ? await prisma.userDj.findMany({
@@ -198,7 +198,14 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
       djs: activeEventDjs.map((ed) => {
         const userDj = djMap.get(ed.djId);
         const artistName = userDj?.artistName || `DJ ${ed.djId.slice(0, 8)}`;
-        return { userId: ed.djId, djId: userDj?.id, artistName };
+        return {
+          userId: ed.djId,
+          djId: userDj?.id,
+          artistName,
+          slotStart: ed.slotStart ?? null,
+          slotEnd: ed.slotEnd ?? null,
+          venueId: ed.venueId ?? null,
+        };
       }),
       djIds: activeEventDjs.map((ed) => ed.djId),
       booker: event.booker ? {
@@ -211,6 +218,7 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
       } : (event.venue ? { id: event.venue.id, venueName: event.venue.venueName } : null),
       venueId: activeVenue?.venueId ?? event.venueId,
       venueName: activeVenue?.venue?.venueName ?? event.venue?.venueName,
+      venues: serializeItinerary(event.eventVenues),
     };
 
     res.json({ success: true, event: formattedEvent });

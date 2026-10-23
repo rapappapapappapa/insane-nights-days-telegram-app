@@ -61,6 +61,7 @@ export default function BookerEventStep5Summary(props) {
     pickCoverImage,
     handleCreateEvent,
     selectedVenue,
+    venueStops,
     coverImageUri,
     navigate,
     hasBookerEventTitle,
@@ -144,7 +145,25 @@ export default function BookerEventStep5Summary(props) {
                       </View>
                     ) : null}
 
-                    {selectedVenue && (
+                    {venueStops?.length > 1 ? (
+                      <View style={styles.summarySection}>
+                        <Text style={styles.summaryLabel}>
+                          {language === 'fr' ? 'Parcours' : 'Itinerary'}
+                        </Text>
+                        {venueStops.map((stop, i) => {
+                          const v = venues.find((x) => x.id === stop.venueId);
+                          return (
+                            <View key={`${stop.venueId}-${i}`} style={{ marginBottom: 6 }}>
+                              <Text style={styles.summaryValue}>
+                                {i + 1}. {v?.venueName || '—'}
+                                {stop.slotStart && stop.slotEnd ? `  (${stop.slotStart} – ${stop.slotEnd})` : ''}
+                              </Text>
+                              {v?.address ? <Text style={styles.summarySubValue}>{v.address}</Text> : null}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    ) : selectedVenue ? (
                       <View style={styles.summarySection}>
                         <Text style={styles.summaryLabel}>
                           {language === 'fr' ? 'Lieu' : 'Venue'}
@@ -152,7 +171,7 @@ export default function BookerEventStep5Summary(props) {
                         <Text style={styles.summaryValue}>{selectedVenue.venueName}</Text>
                         <Text style={styles.summarySubValue}>{selectedVenue.address}</Text>
                       </View>
-                    )}
+                    ) : null}
     
                     {djSummary.djIds.length > 0 && (
                       <View style={styles.summarySection}>

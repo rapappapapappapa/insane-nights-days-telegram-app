@@ -352,6 +352,7 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
         },
         eventDjs: true,
         eventVenues: {
+          orderBy: { position: 'asc' },
           include: {
             venue: { select: { id: true, venueName: true, address: true } },
           },
@@ -470,6 +471,23 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           if (event.status === 'FINISHED' || event.status === 'ONGOING') return 'PENDING';
           return 'UPCOMING';
         };
+        const formatBookerVenueStop = (ev) => ({
+          id: ev.venue?.id ?? ev.venueId,
+          venueName: ev.venue?.venueName ?? (ev.venueId === event.venueId ? event.venue?.venueName : null) ?? null,
+          address: ev.venue?.address ?? (ev.venueId === event.venueId ? event.venue?.address : null) ?? null,
+          eventVenueId: ev.id ?? null,
+          venueInvitationStatus: ev.status ?? 'PENDING',
+          contractStatus: ev.contractStatus ?? null,
+          slotStart: ev.slotStart ?? null,
+          slotEnd: ev.slotEnd ?? null,
+          payment: {
+            paymentStatus: resolveVenuePaymentStatus(ev),
+            paymentAmount: ev.paymentAmount ?? null,
+            paymentCurrency: ev.paymentCurrency ?? 'eur',
+            paidAt: ev.paidAt ?? null,
+            invoiceNumber: ev.invoiceNumber ?? null,
+          },
+        });
         const allDjContractsSigned = activeEventDjs.length > 0 && activeEventDjs.every((ed) => ed.contractStatus === 'SIGNED');
         const allVenueContractsSigned =
           (event.eventVenues?.length === 0) ||
@@ -497,20 +515,8 @@ app.get('/api/booker/events', authenticateToken, async (req, res) => {
           image: event.image,
           equipmentRental: event.equipmentRental ?? null,
           status: event.status,
-          venue: eventVenue ? {
-            id: eventVenue.venue?.id ?? eventVenue.venueId,
-            venueName: eventVenue.venue?.venueName ?? event.venue?.venueName ?? null,
-            address: eventVenue.venue?.address ?? event.venue?.address ?? null,
-            eventVenueId: eventVenue?.id ?? null,
-            venueInvitationStatus: eventVenue?.status ?? 'PENDING',
-            payment: {
-              paymentStatus: resolveVenuePaymentStatus(eventVenue),
-              paymentAmount: eventVenue?.paymentAmount ?? null,
-              paymentCurrency: eventVenue?.paymentCurrency ?? 'eur',
-              paidAt: eventVenue?.paidAt ?? null,
-              invoiceNumber: eventVenue?.invoiceNumber ?? null,
-            },
-          } : null,
+          venue: eventVenue ? formatBookerVenueStop(eventVenue) : null,
+          venues: activeEventVenues.map(formatBookerVenueStop),
           prestataire: eventPrestataireRow
             ? {
                 id: eventPrestataireRow.prestataire?.id ?? eventPrestataireRow.prestataireId,

@@ -15,6 +15,7 @@ const {
   createContractNotificationMessagePrestataire,
 } = require('../../utils/contractHelpers');
 const { assertPayloadHasMinAmount } = require('../../utils/contractPayment');
+const { venueForEventDj } = require('../../utils/eventItinerary');
 
 module.exports = function registerBookerContractRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -29,8 +30,9 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
 
     const sentBy = ed.contractSentBy ?? (ed.contractStatus === 'SENT' ? 'BOOKER' : null);
 
-    const venueId = ed.event?.venueId ?? null;
+    const venueId = ed.venueId ?? ed.event?.venueId ?? null;
     const venueContractGate = await getVenueContractGateForDjEvent(ed.eventId, venueId);
+    const djVenue = await venueForEventDj(ed);
 
     return res.json({
       success: true,
@@ -53,8 +55,10 @@ app.get('/api/contracts/event-djs/:eventDjId', authenticateToken, async (req, re
         eventDate: ed.event?.date,
         eventTime: ed.event?.time,
         durationHours: ed.event?.durationHours ?? null,
-        venueName: ed.event?.venue?.venueName ?? null,
-        venueAddress: ed.event?.venue?.address ?? null,
+        venueName: djVenue?.venueName ?? null,
+        venueAddress: djVenue?.address ?? null,
+        slotStart: ed.slotStart ?? null,
+        slotEnd: ed.slotEnd ?? null,
         paymentStatus: ed.paymentStatus,
         paymentAmount: ed.paymentAmount,
       },
@@ -285,7 +289,7 @@ app.post('/api/contracts/event-djs/:eventDjId/accept', authenticateToken, async 
     const nextDjAt = role === 'DJ' ? now : ed.djAcceptedAt;
     const willSign = !!nextBookerAt && !!nextDjAt;
     if (willSign) {
-      const assert = await assertVenueContractBeforeDjSign(ed.eventId, ed.event?.venueId ?? null);
+      const assert = await assertVenueContractBeforeDjSign(ed.eventId, ed.venueId ?? ed.event?.venueId ?? null);
       if (!assert.ok) {
         return res.status(400).json({ success: false, message: assert.message });
       }

@@ -3,6 +3,7 @@
  */
 const prisma = require('../lib/prisma');
 const { calculateDjRatings, calculateVenueRatings } = require('../utils/ratingCalculations');
+const { isVenueOnEvent } = require('../utils/eventItinerary');
 
 module.exports = function registerRatingRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -131,8 +132,8 @@ app.post('/api/ratings/dj', authenticateToken, async (req, res) => {
       }
     } else if (rater.accountType === 'VENUE' && rater.venue) {
       raterType = 'VENUE';
-      // Vérifier qu'il a hébergé cet événement
-      if (event.venueId !== rater.venue.id) {
+      // Vérifier qu'il a hébergé cet événement (lieu principal ou étape du parcours)
+      if (!(await isVenueOnEvent(event, rater.venue.id))) {
         return res.status(403).json({
           success: false,
           message: 'Vous devez avoir hébergé cet événement pour noter.',
@@ -240,7 +241,7 @@ app.post('/api/ratings/venue', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
     }
 
-    if (event.venueId !== venueId) {
+    if (!(await isVenueOnEvent(event, venueId))) {
       return res.status(400).json({
         success: false,
         message: 'Cet événement n\'a pas eu lieu dans ce lieu.',

@@ -7,6 +7,7 @@ import {
 import { useEventForm } from '../../../contexts/EventFormContext';
 import { NoxText } from '../../nox';
 import BookerEventDjPickerModal from '../BookerEventDjPickerModal';
+import { venueIdForDjSlot } from '../../../utils/bookerEventWizardUtils';
 
 export default function BookerEventStep3Djs(props) {
   const {
@@ -17,6 +18,8 @@ export default function BookerEventStep3Djs(props) {
     availableDjs,
     loadingDjs,
     djSlots,
+    venues,
+    venueStops,
     openSlotTimeField,
     showError,
     navigate,
@@ -108,6 +111,11 @@ export default function BookerEventStep3Djs(props) {
         const selectedDj = slotRow.djId
           ? availableDjs.find((dj) => dj.userId === slotRow.djId)
           : null;
+        const playsAtVenueId =
+          slotRow.djId && slotRow.slotStart
+            ? venueIdForDjSlot(venueStops, slotRow.slotStart, formData.time)
+            : null;
+        const playsAtVenue = playsAtVenueId ? (venues || []).find((v) => v.id === playsAtVenueId) : null;
         const djDisplayName =
           selectedDj?.artistName ||
           (slotRow.djId
@@ -182,6 +190,12 @@ export default function BookerEventStep3Djs(props) {
                     <Text style={styles.djSlotTimeValue}>{slotRow.slotEnd || '—'}</Text>
                   </TouchableOpacity>
                 </View>
+                {playsAtVenue ? (
+                  <Text style={[styles.djSlotTimeLabel, { marginTop: 8, textTransform: 'none' }]}>
+                    {language === 'fr' ? 'Joue à ' : 'Plays at '}
+                    {playsAtVenue.venueName}
+                  </Text>
+                ) : null}
                 <TouchableOpacity
                   style={styles.djSlotClearBtn}
                   onPress={() => clearWizardDjSlotAt(index, formData.time, formData.durationHours)}

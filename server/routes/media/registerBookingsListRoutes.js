@@ -24,6 +24,7 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
     const eventDjs = await prisma.eventDj.findMany({
       where: { djId: userId },
       include: {
+        venue: { select: { id: true, venueName: true, address: true } },
         event: {
           include: {
             venue: {
@@ -75,11 +76,13 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
       paymentCurrency: ed.paymentCurrency ?? 'eur',
       paidAt: ed.paidAt ?? null,
       invoiceNumber: ed.invoiceNumber ?? null,
-      venue: ed.event.venue ? {
-        id: ed.event.venue.id,
-        name: ed.event.venue.venueName,
-        address: ed.event.venue.address,
+      venue: (ed.venue || ed.event.venue) ? {
+        id: (ed.venue || ed.event.venue).id,
+        name: (ed.venue || ed.event.venue).venueName,
+        address: (ed.venue || ed.event.venue).address,
       } : null,
+      slotStart: ed.slotStart ?? null,
+      slotEnd: ed.slotEnd ?? null,
       booker: ed.event.booker ? {
         id: ed.event.booker.id,
         name: `${ed.event.booker.prenom} ${ed.event.booker.nom}`,
@@ -169,11 +172,9 @@ app.get('/api/venue/bookings', authenticateToken, async (req, res) => {
       paymentCurrency: ev.paymentCurrency ?? 'eur',
       paidAt: ev.paidAt ?? null,
       invoiceNumber: ev.invoiceNumber ?? null,
-      venue: ev.event.venue ? {
-        id: ev.event.venue.id,
-        name: ev.event.venue.venueName,
-        address: ev.event.venue.address,
-      } : null,
+      venue: { id: venue.id, name: venue.venueName, address: venue.address },
+      slotStart: ev.slotStart ?? null,
+      slotEnd: ev.slotEnd ?? null,
       booker: ev.event.booker ? {
         id: ev.event.booker.id,
         name: `${ev.event.booker.prenom} ${ev.event.booker.nom}`,

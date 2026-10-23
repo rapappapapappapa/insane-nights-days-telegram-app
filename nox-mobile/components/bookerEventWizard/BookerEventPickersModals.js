@@ -207,13 +207,21 @@ export default function BookerEventPickersModals(props) {
                   >
                     <View style={styles.datePickerHeader}>
                       <Text style={styles.datePickerTitle}>
-                        {slotTimePicker.field === 'start'
-                          ? language === 'fr'
-                            ? 'Heure de début du créneau'
-                            : 'Slot start time'
-                          : language === 'fr'
-                            ? 'Heure de fin du créneau'
-                            : 'Slot end time'}
+                        {slotTimePicker.kind === 'venue'
+                          ? slotTimePicker.field === 'start'
+                            ? language === 'fr'
+                              ? 'Arrivée dans ce lieu'
+                              : 'Arrival at this venue'
+                            : language === 'fr'
+                              ? 'Départ de ce lieu'
+                              : 'Leaving this venue'
+                          : slotTimePicker.field === 'start'
+                            ? language === 'fr'
+                              ? 'Heure de début du créneau'
+                              : 'Slot start time'
+                            : language === 'fr'
+                              ? 'Heure de fin du créneau'
+                              : 'Slot end time'}
                       </Text>
                       <TouchableOpacity
                         style={styles.datePickerCloseButton}
@@ -247,7 +255,12 @@ export default function BookerEventPickersModals(props) {
                       <TouchableOpacity
                         style={styles.datePickerConfirmButton}
                         onPress={() => {
-                          updateSlotTimeFromPicker(slotTimePicker.index, slotTimePicker.field, tempSlotTime);
+                          updateSlotTimeFromPicker(
+                            slotTimePicker.index,
+                            slotTimePicker.field,
+                            tempSlotTime,
+                            slotTimePicker.kind
+                          );
                           setSlotTimePicker(null);
                         }}
                       >

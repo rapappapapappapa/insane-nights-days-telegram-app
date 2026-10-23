@@ -12,6 +12,7 @@ const {
   fetchUserRepostedRootIds,
 } = require('./utils/feedPostHelpers');
 const { upcomingPublishedFeedEventWhere } = require('../../utils/publicEventDiscovery');
+const { itineraryInclude, serializeItinerary } = require('../../utils/eventItinerary');
 
 function resolveOptionalUserId(req) {
   const authHeader = req.headers.authorization;
@@ -102,6 +103,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
           include: {
             venue: { select: { venueName: true, address: true } },
             booker: { select: { pseudo: true, nom: true, prenom: true } },
+            eventVenues: itineraryInclude,
           },
         })
       : [];
@@ -159,6 +161,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
         genre: event.genre,
         image: normalizeImageUrl(event.image),
         venue: event.venue ? { name: event.venue.venueName, address: event.venue.address } : null,
+        venues: serializeItinerary(event.eventVenues),
         booker: event.booker ? { name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}` } : null,
         createdAt: event.createdAt,
       };
@@ -231,6 +234,7 @@ app.get('/api/feed', async (req, res) => {
             event: false, // Éviter la récursion
           },
         },
+        eventVenues: itineraryInclude,
       },
     });
 
@@ -337,6 +341,7 @@ app.get('/api/feed', async (req, res) => {
               address: event.venue.address,
             }
           : null,
+        venues: serializeItinerary(event.eventVenues),
         booker: event.booker
           ? {
               name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}`,

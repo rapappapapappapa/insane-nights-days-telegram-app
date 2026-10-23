@@ -26,6 +26,7 @@ app.get('/api/chat/conversations', authenticateToken, async (req, res) => {
       const invitations = await prisma.eventDj.findMany({
         where: { djId: userId },
         include: {
+          venue: { select: { id: true, venueName: true } },
           event: {
             include: {
               booker: {
@@ -71,10 +72,10 @@ app.get('/api/chat/conversations', authenticateToken, async (req, res) => {
               ? `${inv.event.booker.prenom} ${inv.event.booker.nom}`
               : 'Booker',
           },
-          venue: inv.event.venue
+          venue: (inv.venue || inv.event.venue)
             ? {
-                id: inv.event.venue.id,
-                name: inv.event.venue.venueName,
+                id: (inv.venue || inv.event.venue).id,
+                name: (inv.venue || inv.event.venue).venueName,
               }
             : null,
           lastMessage: lastMessage
@@ -178,6 +179,7 @@ app.get('/api/chat/conversations', authenticateToken, async (req, res) => {
         include: {
           eventDjs: {
             include: {
+              venue: { select: { id: true, venueName: true } },
               messages: {
                 where: { type: 'PRIVATE' },
                 orderBy: { createdAt: 'desc' },
@@ -213,10 +215,10 @@ app.get('/api/chat/conversations', authenticateToken, async (req, res) => {
               id: inv.djId,
               name: 'DJ', // Sera enrichi plus tard si nécessaire
             },
-            venue: event.venue
+            venue: (inv.venue || event.venue)
               ? {
-                  id: event.venue.id,
-                  name: event.venue.venueName,
+                  id: (inv.venue || event.venue).id,
+                  name: (inv.venue || event.venue).venueName,
                 }
               : null,
             lastMessage: lastMessage

@@ -222,7 +222,25 @@ export default function CommunityEventDetailPage() {
           </>
         ) : null}
 
-        {event.venueId || event.venueName ? (
+        {event.venues?.length > 1 ? (
+          <>
+            <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+              {fr ? 'Parcours de la soirée' : 'Itinerary'}
+            </NoxText>
+            {event.venues.map((stop, i) => (
+              <NoxEntityCard
+                key={`${stop.venueId}-${i}`}
+                title={`${i + 1}. ${stop.name || (fr ? 'Lieu' : 'Venue')}`}
+                subtitle={[stop.slotStart && stop.slotEnd ? `${stop.slotStart} – ${stop.slotEnd}` : null, stop.city]
+                  .filter(Boolean)
+                  .join(' · ')}
+                actionLabel={fr ? 'Voir le profil' : 'View profile'}
+                onPress={() => navigate('venueProfile', { venueId: stop.venueId })}
+                icon="business-outline"
+              />
+            ))}
+          </>
+        ) : event.venueId || event.venueName ? (
           <>
             <NoxText variant="titleSecondary" style={styles.sectionTitle}>
               {fr ? 'Lieu' : 'Venue'}

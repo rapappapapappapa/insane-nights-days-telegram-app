@@ -12,6 +12,7 @@ const {
   generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 } = require('./contractPdf');
+const { venueForEventDj } = require('./eventItinerary');
 
 const PAYMENT_TERMS_LABELS = {
   jour_booking: { fr: 'Jour booking', en: 'Booking day' },
@@ -103,7 +104,7 @@ async function sendContractSignedEmailDj(eventDjId) {
         booker: ed.event?.booker,
         dj: djProfile,
         eventDj: ed,
-        venue: ed.event?.venue,
+        venue: await venueForEventDj(ed),
         organizerEmail: bookerUser?.email || null,
         djEmail: djUser?.email || null,
       });

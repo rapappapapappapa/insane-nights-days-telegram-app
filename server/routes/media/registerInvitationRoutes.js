@@ -269,6 +269,7 @@ app.put('/api/venue/invitations/:eventVenueId/accept', authenticateToken, async 
       where: { id: eventVenueId },
       data: { status: 'ACCEPTED' },
       include: {
+        venue: { select: { id: true, venueName: true, address: true } },
         event: {
           include: {
             venue: { select: { id: true, venueName: true, address: true } },
@@ -288,7 +289,9 @@ app.put('/api/venue/invitations/:eventVenueId/accept', authenticateToken, async 
         eventDate: updated.event.date,
         eventTime: updated.event.time,
         invitationStatus: updated.status,
-        venue: updated.event.venue ? { id: updated.event.venue.id, name: updated.event.venue.venueName, address: updated.event.venue.address } : null,
+        venue: updated.venue ? { id: updated.venue.id, name: updated.venue.venueName, address: updated.venue.address } : null,
+        slotStart: updated.slotStart,
+        slotEnd: updated.slotEnd,
         booker: updated.event.booker ? { id: updated.event.booker.id, name: `${updated.event.booker.prenom} ${updated.event.booker.nom}`, type: updated.event.booker.bookerType } : null,
       },
     });

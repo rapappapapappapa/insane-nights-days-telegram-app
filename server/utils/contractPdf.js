@@ -477,11 +477,15 @@ function venueDealType(payload) {
 }
 
 /**
- * Partie « Lieu » du contrat : lorsque l’invitation est acceptée, on aligne sur le lieu
- * rattaché à l’événement (création) — `event.venue`. Sinon profil issu du lien EventVenue.
+ * Partie « Lieu » du contrat : le profil du lieu de ce lien EventVenue. Le lieu principal de l’événement
+ * (`event.venue`) ne sert que s’il s’agit du même lieu (parcours multi-lieux : chaque contrat garde son lieu).
  */
 function resolveVenueProfileForVenueContract(event, venueFromEventVenue, eventVenue) {
-  if (eventVenue?.status === 'ACCEPTED' && event?.venue) {
+  if (
+    eventVenue?.status === 'ACCEPTED' &&
+    event?.venue &&
+    (!eventVenue?.venueId || event.venue.id === eventVenue.venueId)
+  ) {
     return event.venue;
   }
   return venueFromEventVenue;
@@ -587,7 +591,11 @@ async function generateVenueContractPdf({
     doc.moveDown(0.35);
     p(doc, `Nom : ${event?.title || '—'}`);
     p(doc, `Date : ${formatDate(event?.date)}`);
-    p(doc, `Horaires : ${event?.time || '—'} – ${eventEnd || 'fin selon programmation'}`);
+    if (eventVenue?.slotStart && eventVenue?.slotEnd) {
+      p(doc, `Horaires du Lieu (étape du parcours) : ${eventVenue.slotStart} – ${eventVenue.slotEnd}`);
+    } else {
+      p(doc, `Horaires : ${event?.time || '—'} – ${eventEnd || 'fin selon programmation'}`);
+    }
     p(doc, `Adresse : ${venueAddr}`);
     p(doc, 'Notes :');
     p(doc, notes || '—');

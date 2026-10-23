@@ -8,6 +8,7 @@ const {
   generatePrestataireContractPdf,
   resolveVenueProfileForVenueContract,
 } = require('./contractPdf');
+const { venueForEventDj } = require('./eventItinerary');
 
 /** Payload JSON sain pour PDF (pas de tableau racine / types exotiques / références circulaires). */
 function normalizeContractPayload(raw) {
@@ -57,7 +58,7 @@ async function buildDjContractPreviewPdf(prisma, ed, payloadForPdf) {
     booker: ed.event?.booker,
     dj: djProfile,
     eventDj: eventDjPreview,
-    venue: ed.event?.venue,
+    venue: await venueForEventDj(ed),
     organizerEmail: bookerUser?.email || null,
     djEmail: djUser?.email || null,
   });
@@ -84,6 +85,8 @@ async function buildVenueContractPreviewPdf(prisma, ev, payloadForPdf) {
     paymentAmount: ev.paymentAmount,
     paymentCurrency: ev.paymentCurrency,
     contractPayload: payload,
+    slotStart: ev.slotStart ?? null,
+    slotEnd: ev.slotEnd ?? null,
     bookerAcceptedAt: null,
     venueAcceptedAt: null,
   };

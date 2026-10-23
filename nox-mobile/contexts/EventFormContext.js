@@ -22,6 +22,8 @@ export function EventFormProvider({ children }) {
     date: '',
     time: '',
     venueId: '',
+    venueStops: [],
+    venuePickingIndex: 0,
     djIds: [],
     djSlotAssignments: [],
     djSlotsLayout: null,
@@ -117,8 +119,16 @@ export function EventFormProvider({ children }) {
     });
   }, []);
 
+  /** Choix d'un lieu pour l'étape en cours d'édition (`venuePickingIndex`), 0 = lieu principal. */
   const setVenue = useCallback((venueId) => {
-    setFormData((prev) => ({ ...prev, venueId }));
+    setFormData((prev) => {
+      const stops = Array.isArray(prev.venueStops) ? prev.venueStops.map((s) => ({ ...s })) : [];
+      const idx = stops.length > 1 ? Math.min(prev.venuePickingIndex || 0, stops.length - 1) : 0;
+      if (stops.length === 0) stops.push({ venueId: '', slotStart: '', slotEnd: '' });
+      if (!venueId && stops.length > 1) stops.splice(idx, 1);
+      else stops[idx] = { ...stops[idx], venueId };
+      return { ...prev, venueStops: stops, venueId: stops[0]?.venueId || '' };
+    });
   }, []);
 
   const resetForm = useCallback(() => {
@@ -129,6 +139,8 @@ export function EventFormProvider({ children }) {
       date: '',
       time: '',
       venueId: '',
+      venueStops: [],
+      venuePickingIndex: 0,
       djIds: [],
       djSlotAssignments: [],
       djSlotsLayout: null,

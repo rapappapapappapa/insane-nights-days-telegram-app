@@ -280,7 +280,11 @@ export default function CommunityFeedStream({
                 month: 'short',
               })
             : ''}
-          {item.location ? ` • ${item.location}` : ''}
+          {item.venues?.length > 1
+            ? ` • ${item.venues.map((s) => s.name).filter(Boolean).join(' → ')}`
+            : item.location
+              ? ` • ${item.location}`
+              : ''}
         </NoxText>
         {formatEventPriceBadge(item, language) ? (
           <NoxText variant="secondary" style={styles.eventPrice}>

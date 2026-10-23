@@ -18,6 +18,10 @@ import {
   applyEqualDjSlotTimes,
   slotFitsEventWindow,
   djSlotsToFormDjFields,
+  venueStopsFromForm,
+  applyEqualVenueStopTimes,
+  validateVenueStops,
+  venueIdForDjSlot,
 } from '../utils/bookerEventWizardUtils';
 import { useBookerEventWizardDraft } from './useBookerEventWizardDraft';
 import { useBookerEventWizardRental } from './useBookerEventWizardRental';
@@ -294,7 +298,57 @@ export function useBookerEventWizard({
       }
     };
   
-    const updateSlotTimeFromPicker = React.useCallback(
+    const setVenueStops = useCallback(
+      (updater) => {
+        setFormData((prev) => {
+          const cur = venueStopsFromForm(prev);
+          const next = typeof updater === 'function' ? updater(cur) : updater;
+          return { ...prev, venueStops: next, venueId: next[0]?.venueId || '' };
+        });
+      },
+      [setFormData]
+    );
+
+    const selectVenueForStop = useCallback(
+      (stopIndex, venueId) => {
+        setVenueStops((stops) => stops.map((s, i) => (i === stopIndex ? { ...s, venueId } : s)));
+      },
+      [setVenueStops]
+    );
+
+    const addVenueStop = useCallback(() => {
+      const dur = parseFloat(formData.durationHours);
+      setVenueStops((stops) =>
+        applyEqualVenueStopTimes([...stops, { venueId: '', slotStart: '', slotEnd: '' }], formData.time, dur)
+      );
+    }, [formData.time, formData.durationHours, setVenueStops]);
+
+    const removeVenueStop = useCallback(
+      (stopIndex) => {
+        const dur = parseFloat(formData.durationHours);
+        setVenueStops((stops) => {
+          let next = stops.filter((_, i) => i !== stopIndex);
+          if (next.length === 0) next = [{ venueId: '', slotStart: '', slotEnd: '' }];
+          return applyEqualVenueStopTimes(next, formData.time, dur);
+        });
+      },
+      [formData.time, formData.durationHours, setVenueStops]
+    );
+
+    const updateVenueStopTime = useCallback(
+      (stopIndex, field, date) => {
+        const hhmm = `${date.getHours().toString().padStart(2, '0')}:${date
+          .getMinutes()
+          .toString()
+          .padStart(2, '0')}`;
+        setVenueStops((stops) =>
+          stops.map((s, i) => (i !== stopIndex ? s : field === 'start' ? { ...s, slotStart: hhmm } : { ...s, slotEnd: hhmm }))
+        );
+      },
+      [setVenueStops]
+    );
+
+    const updateDjSlotTimeFromPicker = React.useCallback(
       (slotIndex, field, date) => {
         const h = date.getHours().toString().padStart(2, '0');
         const mi = date.getMinutes().toString().padStart(2, '0');
@@ -329,11 +383,23 @@ export function useBookerEventWizard({
       },
       [formData.time, formData.durationHours, showError, language, setDjSlots]
     );
+
+    const updateSlotTimeFromPicker = (index, field, date, kind) => {
+      if (kind === 'venue') updateVenueStopTime(index, field, date);
+      else updateDjSlotTimeFromPicker(index, field, date);
+    };
   
-    const openSlotTimeField = (slotIndex, field) => {
-      const slot = djSlots[slotIndex];
-      if (!slot?.djId) return;
-      const str = field === 'start' ? slot.slotStart : slot.slotEnd;
+    const openSlotTimeField = (slotIndex, field, kind = 'dj') => {
+      let str;
+      if (kind === 'venue') {
+        const stop = venueStopsFromForm(formData)[slotIndex];
+        if (!stop) return;
+        str = field === 'start' ? stop.slotStart : stop.slotEnd;
+      } else {
+        const slot = djSlots[slotIndex];
+        if (!slot?.djId) return;
+        str = field === 'start' ? slot.slotStart : slot.slotEnd;
+      }
       const base = eventDateTime || new Date();
       const d = new Date(base);
       if (str && parseHM(str) != null) {
@@ -350,14 +416,14 @@ export function useBookerEventWizard({
           is24Hour: true,
           onChange: (_, selectedTime) => {
             if (selectedTime) {
-              updateSlotTimeFromPicker(slotIndex, field, selectedTime);
+              updateSlotTimeFromPicker(slotIndex, field, selectedTime, kind);
             }
           },
         });
         return;
       }
       setTempSlotTime(d);
-      setSlotTimePicker({ index: slotIndex, field });
+      setSlotTimePicker({ index: slotIndex, field, kind });
     };
   
     const handleCreateEvent = async () => {
@@ -407,7 +473,17 @@ export function useBookerEventWizard({
         }
       }
   
-      const selectedVenForCap = venues.find((v) => v.id === formData.venueId);
+      const stops = venueStopsFromForm(formData);
+      const stopsError = validateVenueStops(stops, formData.time.trim(), durCheck, language);
+      if (stopsError) {
+        showError(stopsError);
+        return;
+      }
+
+      const selectedVenForCap = stops
+        .map((s) => venues.find((v) => v.id === s.venueId))
+        .filter((v) => v?.maxCapacity != null)
+        .sort((a, b) => a.maxCapacity - b.maxCapacity)[0];
       const capRaw = formData.capacity
         ? parseInt(String(formData.capacity).replace(/\s/g, ''), 10)
         : NaN;
@@ -568,8 +644,23 @@ export function useBookerEventWizard({
           date: formattedDate,
           time: formData.time.trim(),
           venueId: formData.venueId,
+          ...(stops.length > 1
+            ? {
+                venues: stops.map((s) => ({
+                  venueId: s.venueId,
+                  slotStart: s.slotStart,
+                  slotEnd: s.slotEnd,
+                })),
+              }
+            : {}),
           djIds: djPayload.djIds,
-          djSlotAssignments: djPayload.djSlotAssignments,
+          djSlotAssignments:
+            stops.length > 1
+              ? (djPayload.djSlotAssignments || []).map((a) => {
+                  const venueId = venueIdForDjSlot(stops, a.slotStart, formData.time.trim());
+                  return venueId ? { ...a, venueId } : a;
+                })
+              : djPayload.djSlotAssignments,
           price: formData.price ? parseFloat(formData.price) : 0,
           durationHours: formData.durationHours ? parseFloat(formData.durationHours) : null,
           capacity: formData.capacity ? parseInt(formData.capacity) : 100,
@@ -645,6 +736,7 @@ export function useBookerEventWizard({
     };
   
     const selectedVenue = venues.find((v) => v.id === formData.venueId);
+    const venueStops = venueStopsFromForm(formData);
 
   return {
     availableDjs,
@@ -684,6 +776,10 @@ export function useBookerEventWizard({
     flushDraftNow,
     handleCreateEvent,
     selectedVenue,
+    venueStops,
+    selectVenueForStop,
+    addVenueStop,
+    removeVenueStop,
     fetchAvailableDjs,
     fetchVenues,
     hasBookerEventTitle,

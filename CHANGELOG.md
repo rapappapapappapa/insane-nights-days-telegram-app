@@ -6,6 +6,17 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 22 au 23 octobre 2026
 
+### Ajouté (événements — parcours sur plusieurs lieux)
+- À l'étape « Où ? », **Ajouter un lieu** crée un parcours : la soirée commence dans un lieu puis continue dans un autre. Chaque lieu a ses horaires d'arrivée et de départ (répartis automatiquement, modifiables), sans chevauchement.
+- Chaque lieu reçoit sa demande, son chat et son contrat. Le PDF affiche son adresse et son créneau. Un lieu secondaire peut accepter, signer, gérer son staff et être noté.
+- Un DJ est rattaché au lieu où tombe son créneau. Son contrat, ses réservations et son chat affichent ce lieu, et la signature attend le contrat de ce lieu.
+- La fiche événement, le fil, les billets et le dashboard organisateur montrent le parcours, avec un chat et un paiement par lieu.
+- Un billet vaut pour toute la soirée : il est scanné une fois par lieu (`Ticket.scannedVenueIds`) et reste actif jusqu'à la dernière étape.
+- Migration `20261023100000_event_multi_venue_slots` (appliquée au déploiement Railway). Avec un seul lieu, rien ne change.
+
+### Corrigé (contrats — lieu)
+- Le contrat d'un lieu affichait le lieu principal de l'événement au lieu du sien.
+
 ### Modifié (mobile — formulaire de contrat)
 - Le brouillon et la contre-proposition (lieu, DJ, prestataire) sont rangés en cartes : accord, montant, horaire, matériel, cadre. Les champs et les montants restent les mêmes.
 

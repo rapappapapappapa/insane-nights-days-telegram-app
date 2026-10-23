@@ -7,6 +7,12 @@ const prisma = require('../../lib/prisma');
 const SERVER_ROOT = path.join(__dirname, '../..');
 const { normalizeEquipmentRentalForStorage } = require('../../utils/rentalEquipment');
 const { normalizeTicketTiersInput, minTierPriceEUR } = require('../../utils/ticketTiers');
+const { validateVenueItinerary } = require('../../utils/djSlotWindow');
+const {
+  INACTIVE_VENUE_STATUSES,
+  itineraryInclude,
+  serializeItinerary,
+} = require('../../utils/eventItinerary');
 
 module.exports = function registerBookerEventCrudRoutes(app, deps) {
   const {
@@ -252,7 +258,8 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       title,
       date,
       time,
-      venueId,
+      venueId: legacyVenueId,
+      venues: venuesBody,
       djIds,
       djSlotAssignments,
       price,
@@ -265,11 +272,33 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       ticketTiers: ticketTiersBody,
     } = req.body;
 
+    const itinerary = (Array.isArray(venuesBody) && venuesBody.length > 0
+      ? venuesBody
+      : legacyVenueId
+        ? [{ venueId: legacyVenueId }]
+        : []
+    )
+      .filter((v) => v && typeof v === 'object' && v.venueId)
+      .map((v) => ({
+        venueId: String(v.venueId),
+        slotStart: v.slotStart != null ? String(v.slotStart).trim() : '',
+        slotEnd: v.slotEnd != null ? String(v.slotEnd).trim() : '',
+      }));
+    const venueIds = itinerary.map((v) => v.venueId);
+    const venueId = venueIds[0];
+
     // Validation des champs requis
     if (!title || !date || !time || !venueId || !djIds || !Array.isArray(djIds) || djIds.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Les champs title, date, time, venueId et djIds (tableau non vide) sont requis.',
+        message: 'Les champs title, date, time, au moins un lieu et djIds (tableau non vide) sont requis.',
+      });
+    }
+
+    if (new Set(venueIds).size !== venueIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un même lieu ne peut apparaître qu’une fois dans le parcours.',
       });
     }
 
@@ -285,9 +314,8 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Vérifier que le lieu existe et récupérer sa note moyenne
-    const venue = await prisma.userVenue.findUnique({
-      where: { id: venueId },
+    const itineraryVenues = await prisma.userVenue.findMany({
+      where: { id: { in: venueIds } },
       select: {
         id: true,
         venueName: true,
@@ -297,12 +325,13 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       },
     });
 
-    if (!venue) {
+    if (itineraryVenues.length !== venueIds.length) {
       return res.status(404).json({
         success: false,
-        message: 'Lieu non trouvé.',
+        message: venueIds.length > 1 ? 'Un des lieux est introuvable.' : 'Lieu non trouvé.',
       });
     }
+    const venue = itineraryVenues.find((v) => v.id === venueId);
 
     // Vérifier que les DJs existent et sont disponibles
     const djs = await prisma.userDj.findMany({
@@ -330,6 +359,17 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     const durationForSlots =
       Number.isFinite(durationParsed) && durationParsed > 0 ? durationParsed : null;
 
+    if (itinerary.length > 1 && durationForSlots == null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Indique la durée de l’événement pour un parcours sur plusieurs lieux.',
+      });
+    }
+    const itineraryCheck = validateVenueItinerary(itinerary, String(time).trim(), durationForSlots);
+    if (!itineraryCheck.ok) {
+      return res.status(400).json({ success: false, message: itineraryCheck.message });
+    }
+
     if (djSlotAssignments != null) {
       if (!Array.isArray(djSlotAssignments)) {
         return res.status(400).json({
@@ -346,6 +386,12 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       for (let i = 0; i < djSlotAssignments.length; i++) {
         const a = djSlotAssignments[i];
         if (a == null || typeof a !== 'object') continue;
+        if (a.venueId != null && a.venueId !== '' && !venueIds.includes(String(a.venueId))) {
+          return res.status(400).json({
+            success: false,
+            message: 'Un DJ est rattaché à un lieu qui n’est pas dans le parcours.',
+          });
+        }
         const ss = a.slotStart != null ? String(a.slotStart).trim() : '';
         const se = a.slotEnd != null ? String(a.slotEnd).trim() : '';
         if (!ss && !se) continue;
@@ -431,10 +477,9 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     const endOfDay = new Date(eventDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Vérifier s'il y a déjà un événement à ce lieu à cette date
+    // Vérifier s'il y a déjà un événement dans un de ces lieux à cette date
     const conflictingEvent = await prisma.event.findFirst({
       where: {
-        venueId: venueId,
         date: {
           gte: startOfDay,
           lte: endOfDay,
@@ -442,17 +487,28 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         status: {
           in: ['UPCOMING', 'ONGOING'],
         },
-        // Exclure l'événement actuel si on est en mode édition (pas le cas ici, mais pour sécurité)
-        id: {
-          not: undefined, // Pas de filtre, on cherche tous les événements
-        },
+        OR: [
+          { venueId: { in: venueIds } },
+          {
+            eventVenues: {
+              some: {
+                venueId: { in: venueIds },
+                status: { notIn: ['CANCELLED', 'REJECTED'] },
+              },
+            },
+          },
+        ],
       },
+      include: { venue: { select: { venueName: true } } },
     });
 
     if (conflictingEvent) {
       return res.status(409).json({
         success: false,
-        message: 'Un événement existe déjà à ce lieu à cette date.',
+        message:
+          venueIds.length > 1
+            ? 'Un des lieux du parcours accueille déjà un événement à cette date.'
+            : 'Un événement existe déjà à ce lieu à cette date.',
         conflictingEvent: {
           id: conflictingEvent.id,
           title: conflictingEvent.title,
@@ -522,10 +578,16 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     const eventCapacityFinal =
       Number.isFinite(eventCapacityParsed) && eventCapacityParsed > 0 ? eventCapacityParsed : 100;
 
-    if (venue.maxCapacity != null && eventCapacityFinal > venue.maxCapacity) {
+    const tooSmallVenue = itineraryVenues.find(
+      (v) => v.maxCapacity != null && eventCapacityFinal > v.maxCapacity
+    );
+    if (tooSmallVenue) {
       return res.status(400).json({
         success: false,
-        message: `La capacité de l'événement (${eventCapacityFinal}) dépasse le maximum déclaré pour ce lieu (${venue.maxCapacity}).`,
+        message:
+          itineraryVenues.length > 1
+            ? `La capacité de l'événement (${eventCapacityFinal}) dépasse le maximum de ${tooSmallVenue.venueName} (${tooSmallVenue.maxCapacity}).`
+            : `La capacité de l'événement (${eventCapacityFinal}) dépasse le maximum déclaré pour ce lieu (${tooSmallVenue.maxCapacity}).`,
         code: 'EVENT_CAPACITY_EXCEEDS_VENUE',
       });
     }
@@ -560,19 +622,25 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
             const ss = a?.slotStart != null ? String(a.slotStart).trim() : '';
             const se = a?.slotEnd != null ? String(a.slotEnd).trim() : '';
             const hasSlot = ss && se;
+            const djVenueId =
+              a?.venueId != null && a.venueId !== '' ? String(a.venueId) : itinerary.length === 1 ? venueId : null;
             return {
               djId,
               status: 'PENDING', // Les invitations commencent en PENDING
               slotStart: hasSlot ? ss : null,
               slotEnd: hasSlot ? se : null,
+              venueId: djVenueId,
             };
           }),
         },
         eventVenues: {
-          create: {
-            venueId: venueId,
-            status: 'PENDING', // Invitation lieu en attente
-          },
+          create: itinerary.map((stop, position) => ({
+            venueId: stop.venueId,
+            status: 'PENDING',
+            position,
+            slotStart: stop.slotStart || null,
+            slotEnd: stop.slotEnd || null,
+          })),
         },
       },
       include: {
@@ -586,9 +654,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
         eventDjs: {
           include: {},
         },
-        eventVenues: {
-          include: {},
-        },
+        eventVenues: itineraryInclude,
       },
     });
 
@@ -631,13 +697,17 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     // Créer message de bienvenue dans le chat privé Organisateur ↔ Lieu
     const eventVenues = event.eventVenues || [];
     for (const ev of eventVenues) {
+      const slotText =
+        eventVenues.length > 1 && ev.slotStart && ev.slotEnd
+          ? ` (étape ${ev.position + 1}/${eventVenues.length}, de ${ev.slotStart} à ${ev.slotEnd})`
+          : '';
       try {
         await prisma.message.create({
           data: {
             type: 'PRIVATE',
             eventVenueId: ev.id,
             senderId: userId,
-            content: `👋 Bonjour ! Votre lieu a été sélectionné pour l'événement "${event.title}". N'hésitez pas à me contacter pour discuter des modalités.`,
+            content: `👋 Bonjour ! Votre lieu a été sélectionné pour l'événement "${event.title}"${slotText}. N'hésitez pas à me contacter pour discuter des modalités.`,
             read: false,
             deleted: false,
           },
@@ -678,6 +748,7 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
           name: event.venue.venueName,
           address: event.venue.address,
         },
+        venues: serializeItinerary(event.eventVenues),
         djs: eventDjsInfo.map((dj) => ({
           userId: dj.userId,
           artistName: dj.artistName,
@@ -798,7 +869,7 @@ app.post('/api/booker/events/:eventId/venues', authenticateToken, async (req, re
   try {
     const userId = req.user.id;
     const { eventId } = req.params;
-    const { venueId } = req.body;
+    const { venueId, slotStart, slotEnd } = req.body;
 
     if (!venueId) {
       return res.status(400).json({ success: false, message: 'Le champ venueId est requis.' });
@@ -842,15 +913,42 @@ app.post('/api/booker/events/:eventId/venues', authenticateToken, async (req, re
         data: { status: 'PENDING', rejectionReason: null },
       });
     } else {
+      const lastStop = await prisma.eventVenue.findFirst({
+        where: { eventId },
+        orderBy: { position: 'desc' },
+        select: { position: true },
+      });
+      const ss = slotStart != null ? String(slotStart).trim() : '';
+      const se = slotEnd != null ? String(slotEnd).trim() : '';
       newEventVenue = await prisma.eventVenue.create({
-        data: { eventId, venueId, status: 'PENDING' },
+        data: {
+          eventId,
+          venueId,
+          status: 'PENDING',
+          position: lastStop ? lastStop.position + 1 : 0,
+          slotStart: ss && se ? ss : null,
+          slotEnd: ss && se ? se : null,
+        },
       });
     }
 
-    await prisma.event.update({
-      where: { id: eventId },
-      data: { venueId },
-    });
+    const principalStillActive =
+      event.venueId &&
+      event.venueId !== venueId &&
+      (await prisma.eventVenue.findFirst({
+        where: {
+          eventId,
+          venueId: event.venueId,
+          status: { notIn: INACTIVE_VENUE_STATUSES },
+        },
+        select: { id: true },
+      }));
+    if (!principalStillActive) {
+      await prisma.event.update({
+        where: { id: eventId },
+        data: { venueId, location: venue.address },
+      });
+    }
 
     res.status(201).json({
       success: true,

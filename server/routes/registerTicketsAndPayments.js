@@ -8,6 +8,16 @@ const {
   resolvePurchaseTier,
 } = require('../utils/ticketTiers');
 
+const { itineraryInclude, serializeItinerary } = require('../utils/eventItinerary');
+
+/** Parcours multi-lieux : le billet reste valable tant que toutes les étapes ne l'ont pas scanné. */
+function ticketDisplayStatus(ticket) {
+  const stops = ticket.event?.eventVenues || [];
+  if (ticket.status !== 'used' || stops.length < 2) return ticket.status;
+  const scanned = new Set(ticket.scannedVenueIds || []);
+  return stops.every((s) => scanned.has(s.venueId)) ? 'used' : 'valid';
+}
+
 /** QR billet : 24 hex (entropie correcte), unique via contrainte DB. */
 function makeTicketQrCode(uuidv4) {
   return `TICKET_${uuidv4().replace(/-/g, '').slice(0, 24).toUpperCase()}`;
@@ -780,6 +790,7 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
                 venueName: true,
               },
             },
+            eventVenues: itineraryInclude,
           },
         },
       },
@@ -802,8 +813,10 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       djIds: ticket.event.eventDjs.map((ed) => ed.djId),
       venueId: ticket.event.venueId,
       venueName: ticket.event.venue?.venueName,
+      venues: serializeItinerary(ticket.event.eventVenues),
+      scannedVenueIds: ticket.scannedVenueIds || [],
       price: ticket.price,
-      status: ticket.status,
+      status: ticketDisplayStatus(ticket),
       qrCode: ticket.qrCode,
       purchaseDate: ticket.purchaseDate.toISOString(),
       tierId: ticket.tierId ?? null,
@@ -836,6 +849,7 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
                 venueName: true,
               },
             },
+            eventVenues: itineraryInclude,
           },
         },
       },
@@ -858,8 +872,10 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
       djIds: ticket.event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
       venueId: ticket.event.venueId,
       venueName: ticket.event.venue?.venueName,
+      venues: serializeItinerary(ticket.event.eventVenues),
+      scannedVenueIds: ticket.scannedVenueIds || [],
       price: ticket.price,
-      status: ticket.status,
+      status: ticketDisplayStatus(ticket),
       qrCode: ticket.qrCode,
       purchaseDate: ticket.purchaseDate.toISOString(),
       tierId: ticket.tierId ?? null,

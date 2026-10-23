@@ -236,6 +236,7 @@ app.get('/api/dj/:identifier/events', async (req, res) => {
     const eventDjs = await prisma.eventDj.findMany({
       where: { djId: dj.userId },
       include: {
+        venue: { select: { id: true, venueName: true, address: true } },
         event: {
           include: {
             venue: {
@@ -268,10 +269,10 @@ app.get('/api/dj/:identifier/events', async (req, res) => {
         time: ed.event.time,
         location: ed.event.location,
         status: ed.event.status,
-        venue: ed.event.venue ? {
-          id: ed.event.venue.id,
-          name: ed.event.venue.venueName,
-          address: ed.event.venue.address,
+        venue: (ed.venue || ed.event.venue) ? {
+          id: (ed.venue || ed.event.venue).id,
+          name: (ed.venue || ed.event.venue).venueName,
+          address: (ed.venue || ed.event.venue).address,
         } : null,
       };
 

@@ -576,7 +576,41 @@ export default function EventDetailPage() {
             </>
           ) : null}
 
-          {event.venue ? (
+          {event.venues?.length > 1 ? (
+            <>
+              <NoxText variant="titleSecondary" style={styles.sectionTitle}>
+                {fr ? 'Parcours de la soirée' : 'Itinerary'}
+              </NoxText>
+              {event.venues.map((stop, i) => (
+                <View key={`${stop.venueId}-${i}`} style={[styles.orgCard, i > 0 && { marginTop: 10 }]}>
+                  <View style={styles.orgRow}>
+                    <View style={styles.orgAvatar}>
+                      <NoxText variant="form" style={{ color: Colors.primary, fontWeight: '700' }}>
+                        {i + 1}
+                      </NoxText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <NoxText variant="form" style={styles.orgName}>
+                        {stop.name || (fr ? 'Lieu' : 'Venue')}
+                      </NoxText>
+                      <NoxText variant="secondary">
+                        {[stop.slotStart && stop.slotEnd ? `${stop.slotStart} – ${stop.slotEnd}` : null, stop.city]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </NoxText>
+                    </View>
+                  </View>
+                  <NoxButton
+                    label={fr ? 'Voir le profil' : 'View profile'}
+                    variant="ghost"
+                    onPress={() => navigate('venueProfile', { venueId: stop.venueId })}
+                    style={styles.profileBtn}
+                    fullWidth={false}
+                  />
+                </View>
+              ))}
+            </>
+          ) : event.venue ? (
             <>
               <NoxText variant="titleSecondary" style={styles.sectionTitle}>
                 {fr ? 'Lieu' : 'Venue'}

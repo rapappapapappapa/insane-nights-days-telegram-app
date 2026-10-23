@@ -61,7 +61,9 @@ export function wizardContinueHint({ step, language, formData, selectedVenue, fi
     return '';
   }
   if (step === 2) {
-    return selectedVenue ? '' : fr ? 'Choisis un lieu' : 'Choose a venue';
+    if (!selectedVenue) return fr ? 'Choisis un lieu' : 'Choose a venue';
+    const dur = parseFloat(formData?.durationHours);
+    return validateVenueStops(venueStopsFromForm(formData), formData?.time, dur, language);
   }
   if (step === 3) {
     return filledDjCount > 0 ? '' : fr ? 'Ajoute au moins un DJ' : 'Add at least one DJ';
@@ -222,6 +224,13 @@ export function mergeFormDataPreservingDjGrid(prev, incoming) {
       if (incEmpty && pvSet) merged[key] = pv;
     }
   );
+  if (
+    Array.isArray(prev?.venueStops) &&
+    prev.venueStops.length > 0 &&
+    !(Array.isArray(merged.venueStops) && merged.venueStops.length > 0)
+  ) {
+    merged.venueStops = prev.venueStops;
+  }
   const prevLayout = prev?.djSlotsLayout;
   const incLayout = merged?.djSlotsLayout;
   if (Array.isArray(prevLayout) && prevLayout.length > 0) {
@@ -377,6 +386,91 @@ export function slotFitsEventWindow(slotStart, slotEnd, eventTimeStr, durationH)
   if (s < evS) s += 24 * 60;
   if (e < s) e += 24 * 60;
   return s >= evS && e <= evE && e > s;
+}
+
+/** Étapes du parcours (lieux successifs). Le 1er lieu reste `formData.venueId` (compat). */
+export function venueStopsFromForm(formData) {
+  const stops = Array.isArray(formData?.venueStops) ? formData.venueStops : [];
+  if (stops.length > 0) {
+    return stops.map((s) => ({
+      venueId: s?.venueId || '',
+      slotStart: s?.slotStart || '',
+      slotEnd: s?.slotEnd || '',
+    }));
+  }
+  return [{ venueId: formData?.venueId || '', slotStart: '', slotEnd: '' }];
+}
+
+/** Répartit la soirée à parts égales entre les lieux (comme les créneaux DJ). */
+export function applyEqualVenueStopTimes(stops, timeStr, durationH) {
+  if (!Array.isArray(stops) || stops.length < 2) {
+    return (stops || []).map((s) => ({ ...s, slotStart: '', slotEnd: '' }));
+  }
+  const evS = parseHM(timeStr);
+  if (evS == null || durationH == null || Number.isNaN(durationH) || durationH <= 0) return stops;
+  const chunk = (durationH * 60) / stops.length;
+  return stops.map((s, i) => ({
+    ...s,
+    slotStart: formatHM(evS + chunk * i),
+    slotEnd: formatHM(evS + chunk * (i + 1)),
+  }));
+}
+
+/** Minutes depuis le début de l'événement (gère le passage de minuit). */
+function offsetFromEventStart(hm, evS) {
+  const m = parseHM(hm);
+  if (m == null) return null;
+  return m >= evS ? m - evS : m + 24 * 60 - evS;
+}
+
+/** Même règle que le serveur : chaque lieu a un créneau, dans la soirée, sans chevauchement, dans l'ordre. */
+export function validateVenueStops(stops, timeStr, durationH, language = 'fr') {
+  const fr = language === 'fr';
+  const list = Array.isArray(stops) ? stops : [];
+  if (list.some((s) => !s.venueId)) {
+    return fr ? 'Choisis un lieu pour chaque étape' : 'Pick a venue for each stop';
+  }
+  const ids = list.map((s) => s.venueId);
+  if (new Set(ids).size !== ids.length) {
+    return fr ? 'Un même lieu apparaît deux fois' : 'The same venue appears twice';
+  }
+  if (list.length < 2) return '';
+  const evS = parseHM(timeStr);
+  if (evS == null) return fr ? "Choisis d'abord l'heure de début (étape 1)" : 'Set the start time first (step 1)';
+  let prevEnd = -1;
+  for (const s of list) {
+    if (!s.slotStart || !s.slotEnd) {
+      return fr ? 'Indique les horaires de chaque lieu' : 'Set the times for each venue';
+    }
+    if (!slotFitsEventWindow(s.slotStart, s.slotEnd, timeStr, durationH)) {
+      return fr ? 'Un horaire de lieu sort de la soirée' : 'A venue time is outside the event';
+    }
+    const start = offsetFromEventStart(s.slotStart, evS);
+    let end = offsetFromEventStart(s.slotEnd, evS);
+    if (end <= start) end += 24 * 60;
+    if (start < prevEnd) {
+      return fr ? 'Les horaires des lieux se chevauchent' : 'Venue times overlap';
+    }
+    prevEnd = end;
+  }
+  return '';
+}
+
+/** Lieu où joue un DJ : l'étape dont le créneau contient le début de son set. */
+export function venueIdForDjSlot(stops, djSlotStart, timeStr) {
+  const list = (Array.isArray(stops) ? stops : []).filter((s) => s.venueId);
+  if (list.length < 2) return null;
+  const evS = parseHM(timeStr);
+  const djS = evS == null ? null : offsetFromEventStart(djSlotStart, evS);
+  if (djS == null) return null;
+  const hit = list.find((s) => {
+    const a = offsetFromEventStart(s.slotStart, evS);
+    let b = offsetFromEventStart(s.slotEnd, evS);
+    if (a == null || b == null) return false;
+    if (b <= a) b += 24 * 60;
+    return djS >= a && djS < b;
+  });
+  return hit ? hit.venueId : null;
 }
 
 /** Résumé texte location matériel (récap wizard). */

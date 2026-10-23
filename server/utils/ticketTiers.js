@@ -1,6 +1,7 @@
 /**
  * Multi-tarifs billetterie (JSON sur Event.ticketTiers).
- * Une entrée : { id, label, price, maxSold?, saleStart?, saleEnd? }.
+ * Une entrée : { id, label, price, maxSold?, saleStart?, saleEnd?, venueIds? }.
+ * - venueIds (parcours multi-lieux) : lieux donnés par ce tarif ; absent = pass toute la soirée.
  * - maxSold limite les ventes pour ce tarif (en plus du cap global event.capacity).
  * - saleStart / saleEnd (ISO) : fenêtre de vente (phases early bird → regular → last minute).
  */
@@ -71,6 +72,10 @@ function normalizeTicketTiersInput(input) {
       throw new Error(`Fenêtre de vente invalide pour "${label}" : la fin doit être après le début.`);
     }
 
+    const venueIds = Array.isArray(row.venueIds)
+      ? [...new Set(row.venueIds.map((v) => String(v || '').trim()).filter(Boolean))].slice(0, 10)
+      : [];
+
     out.push({
       id,
       label: label.slice(0, 96),
@@ -78,6 +83,7 @@ function normalizeTicketTiersInput(input) {
       ...(maxSold != null ? { maxSold } : {}),
       ...(saleStart ? { saleStart } : {}),
       ...(saleEnd ? { saleEnd } : {}),
+      ...(venueIds.length ? { venueIds } : {}),
     });
   });
 
@@ -170,10 +176,23 @@ function enrichTiersWithSold(eventId, prismaOrTx, tiers) {
         ...(maxSold != null ? { maxSold, remaining: Math.max(0, maxSold - sold) } : {}),
         ...(t.saleStart ? { saleStart: t.saleStart } : {}),
         ...(t.saleEnd ? { saleEnd: t.saleEnd } : {}),
+        ...(Array.isArray(t.venueIds) && t.venueIds.length ? { venueIds: t.venueIds } : {}),
         onSale: isTierOnSale(t),
       };
     }),
   );
+}
+
+/**
+ * Lieux où un billet de ce tarif donne accès, parmi les étapes actives.
+ * null = tous (pass soirée, ou plus aucun des lieux du tarif n'est actif après un remplacement).
+ */
+function tierVenueAccess(tiersJson, tierId, activeVenueIds) {
+  if (!tierId) return null;
+  const tier = (parseTicketTiersFromDb(tiersJson) || []).find((t) => t.id === tierId);
+  if (!tier || !Array.isArray(tier.venueIds) || tier.venueIds.length === 0) return null;
+  const allowed = tier.venueIds.filter((v) => activeVenueIds.includes(v));
+  return allowed.length ? allowed : null;
 }
 
 function minTierPriceEUR(tiers, opts = {}) {
@@ -191,4 +210,5 @@ module.exports = {
   enrichTiersWithSold,
   minTierPriceEUR,
   isTierOnSale,
+  tierVenueAccess,
 };

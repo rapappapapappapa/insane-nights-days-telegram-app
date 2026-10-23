@@ -63,6 +63,7 @@ export default function BookerEventStep4Details(props) {
     removeCatalogRow,
     updateExtraTicketTier,
     addExtraTicketTier,
+    venueStops,
     removeExtraTicketTier,
     saveRentalCatalogToProfile,
     pickCoverImage,
@@ -74,6 +75,37 @@ export default function BookerEventStep4Details(props) {
     hasBookerEventTitle,
     hasBookerEventPrice,
   } = props;
+
+  const itineraryStops = (venueStops || []).filter((s) => s.venueId);
+  const isItinerary = itineraryStops.length > 1;
+  const venueLabel = (id) => (venues || []).find((v) => v.id === id)?.venueName || '—';
+  const tierCoversAll = (row) =>
+    !Array.isArray(row.venueIds) ||
+    row.venueIds.length === 0 ||
+    itineraryStops.every((s) => row.venueIds.includes(s.venueId));
+  const toggleTierVenue = (idx, row, venueId) => {
+    const current = tierCoversAll(row) ? [] : row.venueIds.filter((v) => itineraryStops.some((s) => s.venueId === v));
+    const next = current.includes(venueId) ? current.filter((v) => v !== venueId) : [...current, venueId];
+    updateExtraTicketTier(idx, 'venueIds', next.length === itineraryStops.length ? [] : next);
+  };
+  const renderTierChip = (key, label, active, onPress) => (
+    <TouchableOpacity
+      key={key}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={{
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: active ? Colors.primary : Colors.borderSubtle,
+        backgroundColor: active ? 'rgba(40,82,232,0.25)' : 'transparent',
+      }}
+    >
+      <Text style={{ color: active ? Colors.text : Colors.textSecondary, fontSize: 13 }}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   const [tiersOpen, setTiersOpen] = useState(() =>
     (formData.extraTicketTiers || []).some(
@@ -177,9 +209,13 @@ export default function BookerEventStep4Details(props) {
                       onChangeText={(value) => handleChange('price', value)}
                     />
                     <Text style={styles.helperText}>
-                      {language === 'fr'
-                        ? 'Prix TTC du billet standard. Le cachet DJ se signe dans le contrat.'
-                        : 'Standard ticket price incl. VAT. The DJ fee is set in the contract.'}
+                      {isItinerary
+                        ? language === 'fr'
+                          ? 'Prix TTC du pass toute la soirée (tous les lieux). Ajoute un tarif pour vendre une seule partie.'
+                          : 'Price incl. VAT of the full-night pass (all venues). Add a tier to sell a single part.'
+                        : language === 'fr'
+                          ? 'Prix TTC du billet standard. Le cachet DJ se signe dans le contrat.'
+                          : 'Standard ticket price incl. VAT. The DJ fee is set in the contract.'}
                     </Text>
                   </View>
 
@@ -287,6 +323,29 @@ export default function BookerEventStep4Details(props) {
                             }
                           />
                         </View>
+                        {isItinerary ? (
+                          <View style={{ marginTop: 10 }}>
+                            <Text style={styles.helperText}>
+                              {language === 'fr' ? 'Valable pour' : 'Valid for'}
+                            </Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                              {renderTierChip(
+                                `all-${idx}`,
+                                language === 'fr' ? 'Toute la soirée' : 'Whole night',
+                                tierCoversAll(row),
+                                () => updateExtraTicketTier(idx, 'venueIds', [])
+                              )}
+                              {itineraryStops.map((stop, stopIdx) =>
+                                renderTierChip(
+                                  `${idx}-${stop.venueId}`,
+                                  `${stopIdx + 1}. ${venueLabel(stop.venueId)}`,
+                                  !tierCoversAll(row) && row.venueIds.includes(stop.venueId),
+                                  () => toggleTierVenue(idx, row, stop.venueId)
+                                )
+                              )}
+                            </View>
+                          </View>
+                        ) : null}
                       </View>
                     ))}
                     <TouchableOpacity style={styles.saveCatalogBtn} onPress={addExtraTicketTier}>

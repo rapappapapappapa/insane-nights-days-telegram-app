@@ -550,7 +550,10 @@ export function useBookerEventWizard({
         ticketTiersPayload = [
           {
             id: 'general',
-            label: language === 'fr' ? 'Tarif standard' : 'General admission',
+            label:
+              stops.length > 1
+                ? language === 'fr' ? 'Pass soirée' : 'Full night pass'
+                : language === 'fr' ? 'Tarif standard' : 'General admission',
             price: basePriceNum,
           },
         ];
@@ -617,6 +620,13 @@ export function useBookerEventWizard({
           }
           if (saleStartIso) entry.saleStart = saleStartIso;
           if (saleEndIso) entry.saleEnd = saleEndIso;
+          const stopIds = stops.map((s) => s.venueId);
+          const tierVenueIds = (Array.isArray(row.venueIds) ? row.venueIds : []).filter((v) =>
+            stopIds.includes(v)
+          );
+          if (stopIds.length > 1 && tierVenueIds.length > 0 && tierVenueIds.length < stopIds.length) {
+            entry.venueIds = tierVenueIds;
+          }
           ticketTiersPayload.push(entry);
         }
       }

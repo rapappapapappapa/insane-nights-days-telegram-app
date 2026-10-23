@@ -4,6 +4,7 @@
 const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
 const { INACTIVE_VENUE_STATUSES, currentItineraryStop } = require('../../utils/eventItinerary');
+const { tierVenueAccess } = require('../../utils/ticketTiers');
 
 /** Lieu confirmé sur l'event (venue principale ou invitation ACCEPTED) : renvoie son id, sinon null. */
 async function acceptedVenueIdForEvent(userId, event) {
@@ -336,6 +337,16 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
         select: { venueName: true },
       });
       stopName = stopVenue?.venueName || null;
+      const access = tierVenueAccess(event.ticketTiers, ticket.tierId, stops.map((s) => s.venueId));
+      if (access && !access.includes(stop.venueId)) {
+        return res.json({
+          success: false,
+          valid: false,
+          message: stopName
+            ? `Ce billet n’est pas valable pour ${stopName}.`
+            : 'Ce billet n’est pas valable pour ce lieu.',
+        });
+      }
       const claimedStop = await prisma.ticket.updateMany({
         where: { id: ticket.id, NOT: { scannedVenueIds: { has: stop.venueId } } },
         data: { status: 'used', scannedAt: new Date(), scannedVenueIds: { push: stop.venueId } },

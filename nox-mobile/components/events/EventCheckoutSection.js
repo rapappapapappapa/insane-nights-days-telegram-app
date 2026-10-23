@@ -70,6 +70,17 @@ export default function EventCheckoutSection({
                     : ` (${t.remaining} left)`
                   : '';
               const windowHint = tierSaleWindowHint(t, fr ? 'fr' : 'en');
+              const accessHint =
+                event?.venues?.length > 1
+                  ? Array.isArray(t.venueIds) && t.venueIds.length > 0
+                    ? `${event.venues
+                        .filter((s) => t.venueIds.includes(s.venueId))
+                        .map((s) => s.name)
+                        .join(' + ')} ${fr ? 'uniquement' : 'only'}`
+                    : fr
+                      ? 'Tous les lieux'
+                      : 'All venues'
+                  : '';
               return (
                 <TouchableOpacity
                   key={t.id}
@@ -89,6 +100,7 @@ export default function EventCheckoutSection({
                   >
                     {t.label} · {t.price}€{soldHint}
                     {windowHint ? ` · ${windowHint}` : ''}
+                    {accessHint ? `\n${accessHint}` : ''}
                   </NoxText>
                 </TouchableOpacity>
               );

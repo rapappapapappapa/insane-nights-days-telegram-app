@@ -418,6 +418,13 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     if (ticketTiersBody != null && ticketTiersBody !== '') {
       try {
         ticketTiersStored = normalizeTicketTiersInput(ticketTiersBody);
+        for (const tier of ticketTiersStored || []) {
+          if (!tier.venueIds) continue;
+          if (tier.venueIds.some((v) => !venueIds.includes(v))) {
+            throw new Error(`Le tarif "${tier.label}" vise un lieu qui n’est pas dans le parcours.`);
+          }
+          if (venueIds.length < 2 || tier.venueIds.length === venueIds.length) delete tier.venueIds;
+        }
         const minP = minTierPriceEUR(ticketTiersStored);
         if (minP != null) priceForEvent = minP;
       } catch (e) {

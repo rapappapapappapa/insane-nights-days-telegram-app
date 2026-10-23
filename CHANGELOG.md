@@ -14,6 +14,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Un billet vaut pour toute la soirée : il est scanné une fois par lieu (`Ticket.scannedVenueIds`) et reste actif jusqu'à la dernière étape.
 - Migration `20261023100000_event_multi_venue_slots` (appliquée au déploiement Railway). Avec un seul lieu, rien ne change.
 
+### Ajouté (billetterie — tarifs par lieu du parcours)
+- En parcours multi-lieux, le prix de la place devient le **pass soirée** (tous les lieux). Chaque autre tarif a une ligne **Valable pour** : toute la soirée, ou seulement certains lieux (ex. « Première partie », « After »).
+- À l'achat, chaque tarif indique ses lieux. Le billet ne liste que ses lieux, et le scan le refuse ailleurs (« Ce billet n'est pas valable pour … »). Si un lieu du tarif est remplacé, le billet redevient valable partout.
+
 ### Corrigé (notes — participants)
 - Noter un DJ ou un lieu exige maintenant un billet **scanné** à l'entrée (avant, c'était l'inverse : un billet scanné ne pouvait plus noter). En parcours multi-lieux, on ne note que les lieux où le billet a été scanné. Les billets passés non scannés l'indiquent au lieu de proposer « Noter ».
 

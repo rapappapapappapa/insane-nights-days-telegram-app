@@ -6,14 +6,22 @@ const prisma = require('../lib/prisma');
 const {
   parseTicketTiersFromDb,
   resolvePurchaseTier,
+  tierVenueAccess,
 } = require('../utils/ticketTiers');
 
 const { itineraryInclude, serializeItinerary } = require('../utils/eventItinerary');
 
-/** Parcours multi-lieux : le billet reste valable tant que toutes les étapes ne l'ont pas scanné. */
-function ticketDisplayStatus(ticket) {
+/** Étapes auxquelles le billet donne accès (toutes pour un pass, sinon celles de son tarif). */
+function ticketStops(ticket) {
   const stops = ticket.event?.eventVenues || [];
-  if (ticket.status !== 'used' || stops.length < 2) return ticket.status;
+  const access = tierVenueAccess(ticket.event?.ticketTiers, ticket.tierId, stops.map((s) => s.venueId));
+  return access ? stops.filter((s) => access.includes(s.venueId)) : stops;
+}
+
+/** Parcours multi-lieux : le billet reste valable tant que toutes ses étapes ne l'ont pas scanné. */
+function ticketDisplayStatus(ticket) {
+  const stops = ticketStops(ticket);
+  if (ticket.status !== 'used' || (ticket.event?.eventVenues || []).length < 2) return ticket.status;
   const scanned = new Set(ticket.scannedVenueIds || []);
   return stops.every((s) => scanned.has(s.venueId)) ? 'used' : 'valid';
 }
@@ -813,7 +821,7 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       djIds: ticket.event.eventDjs.map((ed) => ed.djId),
       venueId: ticket.event.venueId,
       venueName: ticket.event.venue?.venueName,
-      venues: serializeItinerary(ticket.event.eventVenues),
+      venues: serializeItinerary(ticketStops(ticket)),
       scannedVenueIds: ticket.scannedVenueIds || [],
       price: ticket.price,
       status: ticketDisplayStatus(ticket),
@@ -872,7 +880,7 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
       djIds: ticket.event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
       venueId: ticket.event.venueId,
       venueName: ticket.event.venue?.venueName,
-      venues: serializeItinerary(ticket.event.eventVenues),
+      venues: serializeItinerary(ticketStops(ticket)),
       scannedVenueIds: ticket.scannedVenueIds || [],
       price: ticket.price,
       status: ticketDisplayStatus(ticket),

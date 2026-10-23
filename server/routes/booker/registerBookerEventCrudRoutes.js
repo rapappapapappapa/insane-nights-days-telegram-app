@@ -473,6 +473,13 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     if (ticketTiersBody != null && ticketTiersBody !== '') {
       try {
         ticketTiersStored = normalizeTicketTiersInput(ticketTiersBody);
+        const eventDayMs = new Date(date).getTime();
+        for (const tier of ticketTiersStored || []) {
+          // Marge de 36 h : la date arrive en ISO UTC, le jour local de l'événement peut finir plus tard.
+          if (Number.isFinite(eventDayMs) && tier.saleEnd && new Date(tier.saleEnd).getTime() > eventDayMs + 36 * 3600 * 1000) {
+            throw new Error(`La vente du tarif "${tier.label}" ne peut pas finir après le jour de l’événement.`);
+          }
+        }
         for (const tier of ticketTiersStored || []) {
           if (!tier.venueIds) continue;
           if (tier.venueIds.some((v) => !venueIds.includes(v))) {

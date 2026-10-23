@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NoxText } from '../../nox';
 import Colors from '../../../constants/colors';
+import TierSaleDateField, { parseFrDate } from '../TierSaleDateField';
 
 export default function BookerEventStep4Details(props) {
     const {
@@ -76,6 +77,15 @@ export default function BookerEventStep4Details(props) {
     hasBookerEventPrice,
   } = props;
 
+  const saleMinDate = (() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  })();
+  const eventDay = (() => {
+    const src = eventDateTime || (formData.date ? new Date(formData.date) : null);
+    if (!src || Number.isNaN(src.getTime())) return null;
+    return new Date(src.getFullYear(), src.getMonth(), src.getDate());
+  })();
   const itineraryStops = (venueStops || []).filter((s) => s.venueId);
   const isItinerary = itineraryStops.length > 1;
   const venueLabel = (id) => (venues || []).find((v) => v.id === id)?.venueName || '—';
@@ -294,33 +304,26 @@ export default function BookerEventStep4Details(props) {
                           onChangeText={(v) => updateExtraTicketTier(idx, 'maxSold', v)}
                         />
                         <View style={[styles.equipRow, { marginTop: 8, marginBottom: 0 }]}>
-                          <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            placeholder={
-                              language === 'fr' ? 'Début vente (JJ/MM/AAAA)' : 'Sale start (DD/MM/YYYY)'
-                            }
-                            placeholderTextColor="rgba(255,255,255,0.4)"
-                            value={String(row.saleStart ?? '')}
-                            onChangeText={(v) => updateExtraTicketTier(idx, 'saleStart', v)}
-                            accessibilityLabel={
-                              language === 'fr'
-                                ? `Début de vente du tarif ${idx + 1}`
-                                : `Sale start for tier ${idx + 1}`
-                            }
+                          <TierSaleDateField
+                            styles={styles}
+                            language={language}
+                            label={language === 'fr' ? 'Début de vente' : 'Sale start'}
+                            placeholder={language === 'fr' ? 'Dès maintenant' : 'Right away'}
+                            value={row.saleStart}
+                            onChange={(v) => updateExtraTicketTier(idx, 'saleStart', v)}
+                            minimumDate={saleMinDate}
+                            maximumDate={parseFrDate(row.saleEnd) || eventDay || undefined}
                           />
-                          <TextInput
-                            style={[styles.input, { flex: 1, marginLeft: 8 }]}
-                            placeholder={
-                              language === 'fr' ? 'Fin vente (JJ/MM/AAAA)' : 'Sale end (DD/MM/YYYY)'
-                            }
-                            placeholderTextColor="rgba(255,255,255,0.4)"
-                            value={String(row.saleEnd ?? '')}
-                            onChangeText={(v) => updateExtraTicketTier(idx, 'saleEnd', v)}
-                            accessibilityLabel={
-                              language === 'fr'
-                                ? `Fin de vente du tarif ${idx + 1}`
-                                : `Sale end for tier ${idx + 1}`
-                            }
+                          <TierSaleDateField
+                            styles={styles}
+                            language={language}
+                            label={language === 'fr' ? 'Fin de vente' : 'Sale end'}
+                            placeholder={language === 'fr' ? "Jusqu'à l'événement" : 'Until the event'}
+                            value={row.saleEnd}
+                            onChange={(v) => updateExtraTicketTier(idx, 'saleEnd', v)}
+                            minimumDate={parseFrDate(row.saleStart) || saleMinDate}
+                            maximumDate={eventDay || undefined}
+                            containerStyle={{ marginLeft: 8 }}
                           />
                         </View>
                         {isItinerary ? (

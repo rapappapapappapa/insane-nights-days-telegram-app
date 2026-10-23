@@ -14,6 +14,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Un billet vaut pour toute la soirée : il est scanné une fois par lieu (`Ticket.scannedVenueIds`) et reste actif jusqu'à la dernière étape.
 - Migration `20261023100000_event_multi_venue_slots` (appliquée au déploiement Railway). Avec un seul lieu, rien ne change.
 
+### Modifié (création d'événement — dates de vente des tarifs)
+- Début et fin de vente se choisissent avec un sélecteur de date (effaçable) au lieu d'une saisie JJ/MM/AAAA. Pas de date passée, et la vente ne peut pas dépasser le jour de l'événement (bloqué aussi à la création et côté serveur).
+
 ### Modifié (création d'événement — DJs par lieu)
 - En parcours, l'étape DJ est rangée par lieu : « + Ajouter un DJ à … » sous chaque lieu, et les horaires des DJs sont répartis dans le créneau de leur lieu. Continuer reste bloqué tant qu'un lieu n'a aucun DJ (le serveur le refuse aussi).
 - Un même DJ peut jouer dans plusieurs lieux. Il garde une seule invitation et un seul contrat, qui liste ses passages (`EventDj.sets`, migration `20261023120000_event_dj_sets`).

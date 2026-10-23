@@ -622,6 +622,20 @@ export function useBookerEventWizard({
             );
             return;
           }
+          const eventDayRef = eventDateTime || (formData.date ? new Date(formData.date) : null);
+          if (eventDayRef && !Number.isNaN(eventDayRef.getTime())) {
+            const lastSaleDay = new Date(eventDayRef);
+            lastSaleDay.setHours(23, 59, 59, 999);
+            const lastIso = lastSaleDay.toISOString();
+            if ((saleEndIso && saleEndIso > lastIso) || (saleStartIso && saleStartIso > lastIso)) {
+              showError(
+                language === 'fr'
+                  ? `Tarif ${i + 1} : la vente ne peut pas aller au-delà du jour de l'événement.`
+                  : `Tier ${i + 1}: sales cannot go past the event day.`
+              );
+              return;
+            }
+          }
           if (saleStartIso && saleEndIso && saleStartIso >= saleEndIso) {
             showError(
               language === 'fr'

@@ -437,6 +437,8 @@ model EventDj {
   updatedAt        DateTime              @updatedAt
   event            Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
   venue            UserVenue?            @relation("EventDjVenue", fields: [venueId], references: [id], onDelete: SetNull)
+  /// Parcours multi-lieux : passages du DJ [{ venueId, venueName, slotStart, slotEnd }] quand il joue dans plusieurs lieux.
+  sets             Json?
   messages         Message[]
 
   @@unique([eventId, djId])

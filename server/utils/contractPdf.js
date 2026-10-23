@@ -224,6 +224,15 @@ async function generateDjContractPdf({
     p(doc, `Adresse : ${eventAddress}`);
     p(doc, `Date : ${formatDate(event?.date)}`);
     p(doc, `Horaires : ${event?.time || '—'} – ${eventEnd || 'fin selon programmation'}`);
+    const djSets = Array.isArray(eventDj?.sets) ? eventDj.sets : [];
+    if (djSets.length > 1) {
+      p(doc, "Passages de l'Artiste (parcours sur plusieurs lieux) :");
+      djSets.forEach((s) => {
+        p(doc, `  • ${s.venueName || 'Lieu'} : ${s.slotStart || '—'} – ${s.slotEnd || '—'}`);
+      });
+    } else if (eventDj?.slotStart && eventDj?.slotEnd) {
+      p(doc, `Créneau de l'Artiste : ${eventDj.slotStart} – ${eventDj.slotEnd}`);
+    }
     p(doc, `Notes : ${notes || '—'}`);
 
     titleLine(doc, "Article 2 — Cachet de l'Artiste", 11);

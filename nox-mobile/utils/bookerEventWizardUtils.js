@@ -66,7 +66,12 @@ export function wizardContinueHint({ step, language, formData, selectedVenue, fi
     return validateVenueStops(venueStopsFromForm(formData), formData?.time, dur, language);
   }
   if (step === 3) {
-    return filledDjCount > 0 ? '' : fr ? 'Ajoute au moins un DJ' : 'Add at least one DJ';
+    if (!(filledDjCount > 0)) return fr ? 'Ajoute au moins un DJ' : 'Add at least one DJ';
+    const missing = firstVenueStopWithoutDj(formData);
+    if (missing >= 0) {
+      return fr ? `Ajoute un DJ au lieu ${missing + 1}` : `Add a DJ to venue ${missing + 1}`;
+    }
+    return '';
   }
   if (step === 4 || step === 5) {
     if (!hasBookerEventTitle(formData)) return fr ? 'Donne un titre' : 'Add a title';
@@ -106,7 +111,7 @@ export function stepRequirementsHint(step, lang) {
   }
 }
 
-export const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '' });
+export const emptyDjSlot = () => ({ djId: null, slotStart: '', slotEnd: '', venueId: null });
 
 /** Reconstruit les créneaux depuis le contexte (survit au démontage navigation selectDj → profil DJ). */
 export function buildDjSlotsFromFormData(fd) {
@@ -116,6 +121,7 @@ export function buildDjSlotsFromFormData(fd) {
       djId: s.djId ?? null,
       slotStart: s.slotStart || '',
       slotEnd: s.slotEnd || '',
+      venueId: s.venueId ?? null,
     }));
   }
   const ids = fd?.djIds || [];
@@ -179,14 +185,14 @@ export function mergeDjSlotsWithForm(prev, fd) {
  * Assigne un DJ à un créneau sans écraser les autres DJs déjà choisis.
  * @param {'fill'|'replace'} intent — fill : créneau vide ciblé uniquement ; replace : remplace le DJ du créneau
  */
-export function assignDjToSlotAtIndex(slots, slotIndex, djId, intent = 'fill') {
+export function assignDjToSlotAtIndex(slots, slotIndex, djId, intent = 'fill', allowDuplicate = false) {
   if (!djId) return Array.isArray(slots) ? slots.map((s) => ({ ...s })) : [emptyDjSlot()];
 
   const rows = (Array.isArray(slots) && slots.length > 0 ? slots : [emptyDjSlot()]).map((s) => ({
     ...s,
   }));
 
-  if (rows.some((s) => s.djId === djId)) return rows;
+  if (!allowDuplicate && rows.some((s) => s.djId === djId)) return rows;
 
   const idx =
     slotIndex !== undefined && slotIndex !== null && Number.isFinite(Number(slotIndex)) && Number(slotIndex) >= 0
@@ -261,11 +267,26 @@ export function djSlotsToFormDjFields(slots) {
     djId: s?.djId ?? null,
     slotStart: s?.slotStart || '',
     slotEnd: s?.slotEnd || '',
+    venueId: s?.venueId ?? null,
   }));
   const filled = rows.filter((s) => s.djId);
+  // Un même DJ peut jouer dans plusieurs lieux : djIds dédoublonnés, passages dans djSets.
+  const firstByDj = [];
+  const seen = new Set();
+  filled.forEach((s) => {
+    if (seen.has(s.djId)) return;
+    seen.add(s.djId);
+    firstByDj.push(s);
+  });
   return {
-    djIds: filled.map((s) => s.djId),
-    djSlotAssignments: filled.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+    djIds: firstByDj.map((s) => s.djId),
+    djSlotAssignments: firstByDj.map((s) => ({ slotStart: s.slotStart, slotEnd: s.slotEnd })),
+    djSets: filled.map((s) => ({
+      djId: s.djId,
+      venueId: s.venueId,
+      slotStart: s.slotStart,
+      slotEnd: s.slotEnd,
+    })),
     djSlotsLayout: rows,
   };
 }
@@ -454,6 +475,49 @@ export function validateVenueStops(stops, timeStr, durationH, language = 'fr') {
     prevEnd = end;
   }
   return '';
+}
+
+/** Index du premier lieu du parcours sans DJ (-1 si tous en ont, ou un seul lieu). */
+export function firstVenueStopWithoutDj(formData) {
+  const stops = venueStopsFromForm(formData).filter((s) => s.venueId);
+  if (stops.length < 2) return -1;
+  const rows = Array.isArray(formData?.djSlotsLayout) ? formData.djSlotsLayout : [];
+  return stops.findIndex((stop) => !rows.some((r) => r?.djId && r.venueId === stop.venueId));
+}
+
+function stopDurationHours(stop) {
+  const a = parseHM(stop?.slotStart);
+  let b = parseHM(stop?.slotEnd);
+  if (a == null || b == null) return null;
+  if (b <= a) b += 24 * 60;
+  return (b - a) / 60;
+}
+
+/**
+ * Parcours : répartit le créneau de chaque lieu entre ses DJs.
+ * onlyInvalid : ne touche qu'aux lieux dont un DJ n'a pas d'horaire ou sort du créneau du lieu.
+ */
+export function applyVenueDjSlotTimes(slots, stops, { onlyInvalid = false } = {}) {
+  const next = (Array.isArray(slots) ? slots : []).map((s) => ({ ...s }));
+  (Array.isArray(stops) ? stops : []).forEach((stop) => {
+    const dur = stopDurationHours(stop);
+    if (!stop?.venueId || dur == null) return;
+    const idxs = next.map((s, i) => (s.djId && s.venueId === stop.venueId ? i : null)).filter((i) => i !== null);
+    if (!idxs.length) return;
+    if (onlyInvalid) {
+      const allOk = idxs.every((i) =>
+        next[i].slotStart && next[i].slotEnd && slotFitsEventWindow(next[i].slotStart, next[i].slotEnd, stop.slotStart, dur)
+      );
+      if (allOk) return;
+    }
+    const start = parseHM(stop.slotStart);
+    const chunk = (dur * 60) / idxs.length;
+    idxs.forEach((slotIdx, j) => {
+      next[slotIdx].slotStart = formatHM(start + chunk * j);
+      next[slotIdx].slotEnd = formatHM(start + chunk * (j + 1));
+    });
+  });
+  return next;
 }
 
 /** Lieu où joue un DJ : l'étape dont le créneau contient le début de son set. */

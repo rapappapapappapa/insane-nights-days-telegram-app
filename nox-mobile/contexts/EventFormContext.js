@@ -65,11 +65,11 @@ export function EventFormProvider({ children }) {
   }, [formData.time, formData.durationHours]);
 
   /** Assignation directe depuis le modal étape 3 — source de vérité unique. */
-  const assignDjToWizardSlot = useCallback((slotIndex, djUserId, intent, timeStr, durationHours) => {
+  const assignDjToWizardSlot = useCallback((slotIndex, djUserId, intent, timeStr, durationHours, allowDuplicate = false) => {
     if (!djUserId || slotIndex == null || slotIndex < 0) return;
     const durOk = parseDurationHours(durationHours);
     setDjSlotsRaw((prev) => {
-      const assigned = assignDjToSlotAtIndex(prev, slotIndex, djUserId, intent);
+      const assigned = assignDjToSlotAtIndex(prev, slotIndex, djUserId, intent, allowDuplicate);
       return applyEqualDjSlotTimes(assigned, timeStr, durOk);
     });
   }, []);

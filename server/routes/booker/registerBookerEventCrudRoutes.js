@@ -260,8 +260,9 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       time,
       venueId: legacyVenueId,
       venues: venuesBody,
-      djIds,
-      djSlotAssignments,
+      djIds: djIdsBody,
+      djSlotAssignments: djSlotAssignmentsBody,
+      djSets: djSetsBody,
       price,
       capacity,
       genre,
@@ -286,6 +287,33 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
       }));
     const venueIds = itinerary.map((v) => v.venueId);
     const venueId = venueIds[0];
+
+    // djSets (parcours) : un DJ peut jouer dans plusieurs lieux → un seul EventDj, plusieurs passages.
+    let djIds = djIdsBody;
+    let djSlotAssignments = djSlotAssignmentsBody;
+    const setsByDj = new Map();
+    if (Array.isArray(djSetsBody) && djSetsBody.length > 0) {
+      const seenPairs = new Set();
+      for (const raw of djSetsBody) {
+        if (!raw || typeof raw !== 'object' || !raw.djId) continue;
+        const set = {
+          djId: String(raw.djId),
+          venueId: raw.venueId ? String(raw.venueId) : venueId,
+          slotStart: raw.slotStart != null ? String(raw.slotStart).trim() : '',
+          slotEnd: raw.slotEnd != null ? String(raw.slotEnd).trim() : '',
+        };
+        const pair = `${set.djId}|${set.venueId}`;
+        if (seenPairs.has(pair)) continue;
+        seenPairs.add(pair);
+        if (!setsByDj.has(set.djId)) setsByDj.set(set.djId, []);
+        setsByDj.get(set.djId).push(set);
+      }
+      djIds = [...setsByDj.keys()];
+      djSlotAssignments = djIds.map((id) => {
+        const first = setsByDj.get(id)[0];
+        return { slotStart: first.slotStart, slotEnd: first.slotEnd, venueId: first.venueId };
+      });
+    }
 
     // Validation des champs requis
     if (!title || !date || !time || !venueId || !djIds || !Array.isArray(djIds) || djIds.length === 0) {
@@ -368,6 +396,33 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     const itineraryCheck = validateVenueItinerary(itinerary, String(time).trim(), durationForSlots);
     if (!itineraryCheck.ok) {
       return res.status(400).json({ success: false, message: itineraryCheck.message });
+    }
+
+    if (setsByDj.size > 0) {
+      for (const sets of setsByDj.values()) {
+        for (const s of sets) {
+          if (!venueIds.includes(s.venueId)) {
+            return res.status(400).json({
+              success: false,
+              message: 'Un DJ est rattaché à un lieu qui n’est pas dans le parcours.',
+            });
+          }
+          if (s.slotStart && s.slotEnd && durationForSlots != null) {
+            const fit = djSlotFitsEventWindow(s.slotStart, s.slotEnd, String(time).trim(), durationForSlots);
+            if (!fit.ok) return res.status(400).json({ success: false, message: fit.message });
+          }
+        }
+      }
+      if (venueIds.length > 1) {
+        const covered = new Set([...setsByDj.values()].flat().map((s) => s.venueId));
+        const missing = itineraryVenues.find((v) => !covered.has(v.id));
+        if (missing) {
+          return res.status(400).json({
+            success: false,
+            message: `Ajoute au moins un DJ pour ${missing.venueName || 'chaque lieu'}.`,
+          });
+        }
+      }
     }
 
     if (djSlotAssignments != null) {
@@ -637,6 +692,16 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
               slotStart: hasSlot ? ss : null,
               slotEnd: hasSlot ? se : null,
               venueId: djVenueId,
+              ...((setsByDj.get(djId) || []).length > 1
+                ? {
+                    sets: setsByDj.get(djId).map((s) => ({
+                      venueId: s.venueId,
+                      venueName: itineraryVenues.find((v) => v.id === s.venueId)?.venueName || null,
+                      slotStart: s.slotStart || null,
+                      slotEnd: s.slotEnd || null,
+                    })),
+                  }
+                : {}),
             };
           }),
         },

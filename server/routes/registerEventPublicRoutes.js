@@ -205,6 +205,7 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
           slotStart: ed.slotStart ?? null,
           slotEnd: ed.slotEnd ?? null,
           venueId: ed.venueId ?? null,
+          sets: Array.isArray(ed.sets) ? ed.sets : null,
         };
       }),
       djIds: activeEventDjs.map((ed) => ed.djId),

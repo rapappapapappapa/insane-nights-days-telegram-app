@@ -21,7 +21,6 @@ import {
   venueStopsFromForm,
   applyEqualVenueStopTimes,
   validateVenueStops,
-  venueIdForDjSlot,
 } from '../utils/bookerEventWizardUtils';
 import { useBookerEventWizardDraft } from './useBookerEventWizardDraft';
 import { useBookerEventWizardRental } from './useBookerEventWizardRental';
@@ -452,8 +451,10 @@ export function useBookerEventWizard({
       }
 
       const durCheck = parseFloat(formData.durationHours);
-      const assign = djPayload.djSlotAssignments || [];
-      for (let i = 0; i < djPayload.djIds.length; i++) {
+      const stops = venueStopsFromForm(formData);
+      const isItinerary = stops.length > 1;
+      const assign = isItinerary ? djPayload.djSets || [] : djPayload.djSlotAssignments || [];
+      for (let i = 0; i < assign.length; i++) {
         const a = assign[i] || {};
         if (!a.slotStart || !a.slotEnd) {
           showError(
@@ -473,11 +474,22 @@ export function useBookerEventWizard({
         }
       }
   
-      const stops = venueStopsFromForm(formData);
       const stopsError = validateVenueStops(stops, formData.time.trim(), durCheck, language);
       if (stopsError) {
         showError(stopsError);
         return;
+      }
+      if (isItinerary) {
+        const missing = stops.find((s) => !(djPayload.djSets || []).some((d) => d.venueId === s.venueId));
+        if (missing) {
+          const name = venues.find((v) => v.id === missing.venueId)?.venueName;
+          showError(
+            language === 'fr'
+              ? `Ajoute au moins un DJ pour ${name || 'chaque lieu'}.`
+              : `Add at least one DJ for ${name || 'each venue'}.`
+          );
+          return;
+        }
       }
 
       const selectedVenForCap = stops
@@ -664,13 +676,8 @@ export function useBookerEventWizard({
               }
             : {}),
           djIds: djPayload.djIds,
-          djSlotAssignments:
-            stops.length > 1
-              ? (djPayload.djSlotAssignments || []).map((a) => {
-                  const venueId = venueIdForDjSlot(stops, a.slotStart, formData.time.trim());
-                  return venueId ? { ...a, venueId } : a;
-                })
-              : djPayload.djSlotAssignments,
+          djSlotAssignments: djPayload.djSlotAssignments,
+          ...(isItinerary ? { djSets: djPayload.djSets } : {}),
           price: formData.price ? parseFloat(formData.price) : 0,
           durationHours: formData.durationHours ? parseFloat(formData.durationHours) : null,
           capacity: formData.capacity ? parseInt(formData.capacity) : 100,

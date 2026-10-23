@@ -83,6 +83,7 @@ app.get('/api/dj/bookings', authenticateToken, async (req, res) => {
       } : null,
       slotStart: ed.slotStart ?? null,
       slotEnd: ed.slotEnd ?? null,
+      sets: Array.isArray(ed.sets) ? ed.sets : null,
       booker: ed.event.booker ? {
         id: ed.event.booker.id,
         name: `${ed.event.booker.prenom} ${ed.event.booker.nom}`,

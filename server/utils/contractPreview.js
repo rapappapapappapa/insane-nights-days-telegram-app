@@ -50,6 +50,9 @@ async function buildDjContractPreviewPdf(prisma, ed, payloadForPdf) {
     paymentAmount: ed.paymentAmount,
     paymentCurrency: ed.paymentCurrency,
     contractPayload: payload,
+    slotStart: ed.slotStart ?? null,
+    slotEnd: ed.slotEnd ?? null,
+    sets: ed.sets ?? null,
     bookerAcceptedAt: null,
     djAcceptedAt: null,
   };

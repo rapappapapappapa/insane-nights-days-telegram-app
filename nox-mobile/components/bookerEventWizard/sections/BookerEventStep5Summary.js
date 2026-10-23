@@ -178,15 +178,15 @@ export default function BookerEventStep5Summary(props) {
                         <Text style={styles.summaryLabel}>
                           {language === 'fr' ? 'DJs et créneaux' : 'DJs and time slots'}
                         </Text>
-                        {djSummary.djIds.map((id, i) => {
-                          const dj = availableDjs.find((d) => d.userId === id);
-                          const a = djSummary.djSlotAssignments?.[i];
+                        {(djSummary.djSets || []).map((set, i) => {
+                          const dj = availableDjs.find((d) => d.userId === set.djId);
+                          const venue =
+                            venueStops?.length > 1 ? venues.find((v) => v.id === set.venueId) : null;
                           return (
-                            <Text key={id} style={styles.summaryValue}>
-                              • {dj?.artistName || id}
-                              {a?.slotStart && a?.slotEnd
-                                ? `  (${a.slotStart} – ${a.slotEnd})`
-                                : ''}
+                            <Text key={`${set.djId}-${set.venueId}-${i}`} style={styles.summaryValue}>
+                              • {dj?.artistName || set.djId}
+                              {set.slotStart && set.slotEnd ? `  (${set.slotStart} – ${set.slotEnd})` : ''}
+                              {venue ? ` · ${venue.venueName}` : ''}
                             </Text>
                           );
                         })}

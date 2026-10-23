@@ -1,0 +1,1 @@
+ALTER TABLE "EventDj" ADD COLUMN "sets" JSONB;

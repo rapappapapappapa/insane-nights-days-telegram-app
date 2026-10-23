@@ -129,7 +129,7 @@ export default function BookerEventDashboardPage() {
       : currentStep === 2
         ? !!stepProps.selectedVenue && !continueHint
         : currentStep === 3
-          ? filledDjCount > 0
+          ? filledDjCount > 0 && !continueHint
           : hasBookerEventTitle(formData) && hasBookerEventPrice(formData);
 
   const onContinue = () => {

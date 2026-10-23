@@ -3,18 +3,26 @@
  */
 
 /**
- * Normalise un email en minuscules et supprime les espaces
+ * Supprime les caractères invisibles (zero-width, RTL, etc.) pouvant venir du clavier mobile
+ * @param {string} str - Chaîne à nettoyer
+ * @returns {string}
+ */
+const sanitizeInvisibleChars = (str = '') =>
+  String(str).replace(/[\u200B-\u200D\uFEFF\u202A-\u202E\u2060]/g, '');
+
+/**
+ * Normalise un email en minuscules, supprime espaces et caractères invisibles
  * @param {string} email - L'email à normaliser
  * @returns {string} L'email normalisé
  */
-const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const normalizeEmail = (email = '') => sanitizeInvisibleChars(email).trim().toLowerCase();
 
 /**
  * Vérifie si une chaîne est un email valide
  * @param {string} email - L'email à valider
  * @returns {boolean} True si l'email est valide
  */
-const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+const isValidEmail = (email = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizeInvisibleChars(email).trim());
 
 /**
  * Valide un mot de passe
@@ -47,8 +55,8 @@ const validateRegistration = (data) => {
     return { valid: false, message: 'Email, pseudo et mot de passe sont requis.' };
   }
 
-  let finalEmail = email.trim();
-  const finalUsername = username.trim();
+  let finalEmail = sanitizeInvisibleChars(email).trim();
+  const finalUsername = sanitizeInvisibleChars(username).trim();
 
   // Si c'est un email (contient @), valider le format
   if (finalEmail.includes('@')) {
@@ -90,11 +98,79 @@ const validateLogin = (data) => {
   return { valid: true };
 };
 
+/** Quantité max de tickets par achat (sécurité / anti-abus) */
+const MAX_TICKET_QUANTITY = 50;
+
+/**
+ * Parse et valide la quantité de tickets (entier, 1 à MAX_TICKET_QUANTITY)
+ * @param {*} value - Valeur brute (string, number)
+ * @returns {{ valid: boolean, quantity?: number, message?: string }}
+ */
+const parseTicketQuantity = (value) => {
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 1) {
+    return { valid: false, message: 'La quantité doit être un entier supérieur ou égal à 1.' };
+  }
+  const quantity = Math.min(n, MAX_TICKET_QUANTITY);
+  return { valid: true, quantity };
+};
+
+/** Âge minimum requis (majeur) */
+const MIN_AGE = 18;
+
+/**
+ * Parse une date de naissance au format jj/mm/aaaa
+ * @param {string} dateStr - Date au format jj/mm/aaaa
+ * @returns {{valid: boolean, date?: Date, message?: string}}
+ */
+const parseBirthDate = (dateStr = '') => {
+  const cleaned = String(dateStr).replace(/[^0-9/]/g, '');
+  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) {
+    return { valid: false, message: 'Date invalide. Format attendu : jj/mm/aaaa' };
+  }
+  const [, day, month, year] = match;
+  const d = parseInt(day, 10);
+  const m = parseInt(month, 10) - 1;
+  const y = parseInt(year, 10);
+  if (y < 1900 || y > new Date().getFullYear()) {
+    return { valid: false, message: 'Année invalide.' };
+  }
+  if (m < 0 || m > 11) return { valid: false, message: 'Mois invalide.' };
+  if (d < 1 || d > 31) return { valid: false, message: 'Jour invalide.' };
+  const date = new Date(y, m, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m || date.getDate() !== d) {
+    return { valid: false, message: 'Date invalide.' };
+  }
+  return { valid: true, date };
+};
+
+/**
+ * Vérifie qu'une personne a au moins MIN_AGE ans
+ * @param {Date} birthDate - Date de naissance
+ * @returns {{valid: boolean, age?: number, message?: string}}
+ */
+const validateAge = (birthDate) => {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  if (age < MIN_AGE) {
+    return { valid: false, age, message: `Vous devez avoir au moins ${MIN_AGE} ans pour vous inscrire.` };
+  }
+  return { valid: true, age };
+};
+
 module.exports = {
+  sanitizeInvisibleChars,
   normalizeEmail,
   isValidEmail,
   validatePassword,
   validateRegistration,
   validateLogin,
+  parseBirthDate,
+  validateAge,
+  parseTicketQuantity,
+  MIN_AGE,
+  MAX_TICKET_QUANTITY,
 };
-

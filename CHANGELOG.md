@@ -4,6 +4,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 27 au 30 octobre 2026
+
+### Ajouté (design — communauté)
+- Sept maquettes communauté sont dans `docs/mobile/design-figma/` (15 à 21) : accueil et fil, agenda, billets, publication, notifications, historique d’achat, détail de billet. Le catalogue est dans `docs/mobile/DESIGN_FIGMA_REFERENCE.md`. L’accueil envoyé en double n’est gardé qu’une fois.
+
+---
+
 ## Semaine du 22 au 23 octobre 2026
 
 ### Ajouté (événements — parcours sur plusieurs lieux)

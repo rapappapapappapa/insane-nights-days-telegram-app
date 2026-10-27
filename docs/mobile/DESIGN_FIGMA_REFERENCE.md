@@ -177,6 +177,70 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ---
 
+## Communauté — maquettes du 27 octobre 2026
+
+Écrans à reprendre. Les fichiers sont dans `docs/mobile/design-figma/`. L’accueil a été envoyé deux fois : une seule copie est gardée.
+
+### Accueil et fil
+
+![Accueil communauté — fil, événement, repost](./design-figma/15-communaute-accueil-fil.jpg)
+
+| Zone | Détail |
+|------|--------|
+| En-tête | Avatar, « Hello … », « Découvre ton prochain événement », cloche |
+| Recherche | Champ « Ouvrir Découvrir... » |
+| Onglets | Recommandations · Fil |
+| Fil | Puces Découverte (active) · Abonnements |
+| Carte événement | Badge ÉVÉNEMENT, titre, date, adresse, prix, cœur, partage |
+| Publication | Repost, auteur, date, texte, like |
+
+### Agenda
+
+![Agenda communauté — calendrier et statuts](./design-figma/16-communaute-agenda.jpg)
+
+| Zone | Détail |
+|------|--------|
+| Titre | Agenda · Communauté NOX |
+| Légende | Participant (plein) · Intéressé (anneau) |
+| Calendrier | Mois, jours marqués, jour sélectionné |
+| Liste | Onglets Participant · Intéressé, carte avec affiche, date, lieu, statut |
+
+### Billets
+
+![Billets — wallet](./design-figma/17-communaute-billets-wallet.jpg)
+
+| Zone | Détail |
+|------|--------|
+| En-tête | Billets · Wallet & historique d’achat |
+| Onglets | Mes billets · Historique d’achat |
+| Carte | Date en pastille, affiche, titre, ACTIF, lieu, genres, tarif, prix, QR, chevron |
+
+### Publication
+
+![Publication plein écran](./design-figma/18-communaute-publication.jpg)
+
+Photo plein écran, auteur vérifié + badge DJ, ville, date, texte, barre like / commentaire / partage.
+
+### Notifications
+
+![Notifications filtrées](./design-figma/19-communaute-notifications.jpg)
+
+Onglets Toutes · Interactions · Événements · Système. Chaque ligne a un visuel, l’action (repost, like, commentaire, suivi, mention) et une pastille d’icône.
+
+### Historique d’achat
+
+![Historique d’achat](./design-figma/20-communaute-historique-achat.jpg)
+
+Billets PASSÉ, prix, et la mention « Billet non scanné à l’entrée : la note est réservée aux participants. »
+
+### Détail d’un billet
+
+![Détail billet et QR](./design-figma/21-communaute-detail-billet.jpg)
+
+Affiche, date, lieu, genres, tarif, QR, « Voir le QR code en plein écran », ajouter à l’agenda, transférer, revendre.
+
+---
+
 ## Index rapide des fichiers image
 
 | Fichier | Section |
@@ -195,6 +259,13 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 | `12-lieux-detail-event-valide.png` | Lieux |
 | `13-lieux-notifications-settings-events.png` | Lieux |
 | `14-lieux-booking-messagerie.png` | Lieux |
+| `15-communaute-accueil-fil.jpg` | Communauté (27 oct. 2026) |
+| `16-communaute-agenda.jpg` | Communauté (27 oct. 2026) |
+| `17-communaute-billets-wallet.jpg` | Communauté (27 oct. 2026) |
+| `18-communaute-publication.jpg` | Communauté (27 oct. 2026) |
+| `19-communaute-notifications.jpg` | Communauté (27 oct. 2026) |
+| `20-communaute-historique-achat.jpg` | Communauté (27 oct. 2026) |
+| `21-communaute-detail-billet.jpg` | Communauté (27 oct. 2026) |
 
 ---
 
@@ -207,7 +278,7 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 | Besoin | Statut code (juil. 2026) |
 |--------|--------------------------|
-| `COMMUNAUTÉ / 04_Tickets` + QR plein écran | Skin wallet inspiré wireframe 05 |
+| `COMMUNAUTÉ / 04_Tickets` + QR plein écran | Maquettes 17, 20 et 21 (27 oct. 2026), pas encore reprises dans l’app |
 | `COMMUNAUTÉ / 05_Profile` (social) | `CommunityProfileShell` |
 | Hub compte / réglages communauté | `ProfilePage` calqué sur réglages Lieux |
 | Home / dashboard **Artiste (DJ)** | `proHome` + `djDashboard` |
@@ -218,4 +289,4 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ---
 
-*Dernière mise à jour : 11 août 2026 — voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l'inventaire complet.*
+*Dernière mise à jour : 27 octobre 2026 — maquettes communauté 15 à 21. Voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l’inventaire précédent.*

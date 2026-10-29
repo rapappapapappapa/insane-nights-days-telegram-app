@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -78,6 +78,7 @@ export default function CommunityHomePage() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const insets = useSafeAreaInsets();
+  const feedStreamRef = useRef(null);
   const { unreadCount: feedNotificationsCount } = useFeedNotifications();
 
   const fr = language === 'fr';
@@ -383,13 +384,24 @@ export default function CommunityHomePage() {
 
       <NoxTabs tabs={mainTabs} activeId={mainTab} onChange={setMainTab} style={styles.tabs} />
       {mainTab === 'feed' ? (
-        <NoxTabs
-          tabs={feedScopeTabs}
-          activeId={feedScope}
-          onChange={setFeedScope}
-          variant="subtle"
-          style={styles.feedSubTabs}
-        />
+        <View style={styles.feedSubRow}>
+          <NoxTabs
+            tabs={feedScopeTabs}
+            activeId={feedScope}
+            onChange={setFeedScope}
+            variant="subtle"
+            style={[styles.feedSubTabs, { flex: 1 }]}
+          />
+          <TouchableOpacity
+            style={styles.scrollModeBtn}
+            onPress={() => feedStreamRef.current?.openScrollMode(0)}
+            hitSlop={8}
+            accessibilityLabel={fr ? 'Mode scroll' : 'Scroll mode'}
+          >
+            <Ionicons name="phone-portrait-outline" size={15} color={Colors.primaryLight} />
+            <NoxText style={styles.scrollModeText}>Scroll</NoxText>
+          </TouchableOpacity>
+        </View>
       ) : null}
 
       {mainTab === 'reco' ? (
@@ -664,6 +676,7 @@ export default function CommunityHomePage() {
         </ScrollView>
       ) : (
         <CommunityFeedStream
+          ref={feedStreamRef}
           key={`${feedScope}-${eventsRefreshKey}`}
           feedTab={feedScope === 'following' ? 'following' : 'all'}
           highlightPostId={routeParams?.highlightPostId}
@@ -723,6 +736,20 @@ const styles = StyleSheet.create({
   feedSubTabs: {
     marginBottom: Spacing.xs,
   },
+  feedSubRow: { flexDirection: 'row', alignItems: 'center', paddingRight: Spacing.xl },
+  scrollModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: primaryAlpha(0.6),
+    backgroundColor: primaryAlpha(0.12),
+    marginBottom: Spacing.xs,
+  },
+  scrollModeText: { fontSize: 12, color: Colors.primaryLight },
   featured: {
     marginHorizontal: Spacing.xl,
     height: 180,

@@ -13,8 +13,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Un membre peut marquer un événement « Intéressé » avec le cœur de la fiche événement. Nouvelle table `EventInterest` (migration `20261029100000_event_interest`), routes `POST`/`DELETE /api/events/:eventId/interest`, et indicateur `interested` sur la fiche et le fil.
 - Nouvel écran Agenda (maquette 16), ouvert depuis l’entrée Agenda de la navigation radiale communauté : calendrier mensuel (point plein = billet, anneau = intéressé), onglets Participant / Intéressé, cartes vers la fiche. Données via `GET /api/user/me/agenda`.
 
-### Ajouté (communauté — publication plein écran)
-- Toucher la photo d’une publication du fil l’ouvre en plein écran (maquette 18) : auteur avec badge de rôle, ville et date, texte, et barre J’aime / commentaires / reposts avec compteurs. « Commenter » referme la vue et ouvre les commentaires sous la publication. Le fil renvoie désormais `repostsCount`.
+### Ajouté (communauté — fil visuel et mode scroll)
+- Les publications du fil prennent le format plein cadre de la maquette 15 : photo en fond, auteur et badge de rôle en haut (avec « Repost • ville • date » pour un repost), encadré bas avec l’auteur d’origine du repost, le texte et les actions J’aime / commentaires / repost. Un post sans photo s’affiche sur un fond NOX avec le texte mis en avant.
+- Nouveau mode scroll (maquette 18), ouvert par le bouton « Scroll » à côté de Découverte / Abonnements ou en touchant une publication : une publication ou un événement par écran, défilement vertical page par page, barre J’aime / commentaires / reposts en bas.
+- Les commentaires s’ouvrent dans une feuille en bas de l’écran, dans les deux modes. Le fil renvoie désormais `repostsCount`.
 
 ### Modifié (billets — wallet et détail du billet)
 - La page Billets suit les maquettes 17 et 20 : cartes avec affiche, pastille de date, badge ACTIF ou PASSÉ, date et adresse, puces de genre, encadré de tarif et aperçu du QR. L’historique indique si le billet n’a pas été scanné ou invite à noter la soirée.

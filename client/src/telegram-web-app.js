@@ -6,7 +6,7 @@ export const initTelegramApp = () => {
   WebApp.ready();
   
   // Configurer le thème
-  WebApp.setHeaderColor('#000000'); // Couleur Insane
+  WebApp.setHeaderColor('#000000'); // Couleur Nox
   WebApp.setBackgroundColor('#000000');
   
   // Activer le bouton principal
@@ -15,7 +15,7 @@ export const initTelegramApp = () => {
   
   // Configurer les couleurs du bouton
   WebApp.MainButton.setParams({
-    color: '#FF6B35', // Couleur Insane orange
+    color: '#FF6B35', // Couleur Nox orange
     text_color: '#000000'
   });
   

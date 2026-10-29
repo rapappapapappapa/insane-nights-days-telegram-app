@@ -31,8 +31,8 @@ export const styles = StyleSheet.create({
     borderRadius: 22,
     marginRight: Spacing.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.35),
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   avatarImage: {
     width: '100%',
@@ -82,7 +82,7 @@ export const styles = StyleSheet.create({
   badgeDj: {
     backgroundColor: primaryAlpha(0.18),
     borderWidth: 1,
-    borderColor: primaryAlpha(0.35),
+    borderColor: primaryAlpha(0.8),
   },
   badgeBooker: {
     backgroundColor: 'rgba(61, 214, 168, 0.15)',
@@ -182,7 +182,8 @@ export const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 220,
+    aspectRatio: 4 / 5,
+    maxHeight: 460,
   },
   imageFallback: {
     height: 160,

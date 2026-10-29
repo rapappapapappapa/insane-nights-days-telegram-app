@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,6 +30,7 @@ import EmptyState from '../EmptyState';
 import Toast from '../Toast';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
+import { FontFamily } from '../../constants/typography';
 
 function matchesHighlightPost(item, highlightPostId) {
   if (!highlightPostId || item.type !== 'post') return false;
@@ -250,52 +252,103 @@ export default function CommunityFeedStream({
     );
   };
 
-  const renderEventCard = (item) => (
-    <TouchableOpacity
-      key={`event-${item.id}`}
-      style={styles.eventCard}
-      activeOpacity={0.85}
-      onPress={() => openEventPreview(navigate, user?.activeProfileType, item.id)}
-    >
-      <View style={styles.eventHeader}>
-        <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-        <NoxText variant="secondary" style={styles.eventBadge}>
-          {fr ? 'Événement' : 'Event'}
-        </NoxText>
-      </View>
-      {item.image ? (
-        <Image source={{ uri: normalizeMediaUrl(item.image) }} style={styles.eventImage} />
-      ) : null}
-      <NoxText variant="form" style={styles.eventTitle}>
-        {item.title}
-      </NoxText>
-      {item.description ? (
-        <NoxText variant="secondary" numberOfLines={2} style={styles.eventDescription}>
-          {item.description}
-        </NoxText>
-      ) : null}
-      <View style={styles.eventMeta}>
-        <NoxText variant="secondary" style={styles.eventMetaText}>
-          {item.date
-            ? new Date(item.date).toLocaleDateString(fr ? 'fr-FR' : 'en-US', {
-                day: 'numeric',
-                month: 'short',
-              })
-            : ''}
-          {item.venues?.length > 1
-            ? ` • ${item.venues.map((s) => s.name).filter(Boolean).join(' → ')}`
-            : item.location
-              ? ` • ${item.location}`
-              : ''}
-        </NoxText>
-        {formatEventPriceBadge(item, language) ? (
-          <NoxText variant="secondary" style={styles.eventPrice}>
-            {formatEventPriceBadge(item, language)}
-          </NoxText>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
+  const toggleEventInterest = async (item) => {
+    if (!user?.token) {
+      showError(fr ? 'Connecte-toi pour garder cet événement.' : 'Log in to save this event.');
+      return;
+    }
+    const next = !item.interested;
+    const setFlag = (value) =>
+      setFeed((prev) =>
+        prev.map((entry) =>
+          entry.type === 'event' && entry.id === item.id ? { ...entry, interested: value } : entry,
+        ),
+      );
+    setFlag(next);
+    try {
+      await api.setEventInterest(user.token, item.id, next);
+    } catch (e) {
+      setFlag(!next);
+      if (handleTokenError(e)) return;
+      showError(fr ? 'Action impossible pour le moment.' : 'Could not update.');
+    }
+  };
+
+  const shareEvent = async (item, dateLabel, placeLabel) => {
+    try {
+      await Share.share({
+        message: [item.title, [dateLabel, placeLabel].filter(Boolean).join(' • '), fr ? 'Sur NOX' : 'On NOX']
+          .filter(Boolean)
+          .join('\n'),
+      });
+    } catch {
+      // annulé
+    }
+  };
+
+  const renderEventCard = (item) => {
+    const dateLabel = item.date
+      ? new Date(item.date).toLocaleDateString(fr ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' })
+      : '';
+    const placeLabel =
+      item.venues?.length > 1
+        ? item.venues.map((s) => s.name).filter(Boolean).join(' → ')
+        : item.venue?.address || item.location || item.venue?.name || '';
+    const price = formatEventPriceBadge(item, language);
+    const image = item.image ? normalizeMediaUrl(item.image) : null;
+    return (
+      <TouchableOpacity
+        key={`event-${item.id}`}
+        style={styles.eventCard}
+        activeOpacity={0.9}
+        onPress={() => openEventPreview(navigate, user?.activeProfileType, item.id)}
+      >
+        {image ? (
+          <Image source={{ uri: image }} style={StyleSheet.absoluteFillObject} />
+        ) : (
+          <View style={styles.eventImageFallback}>
+            <Ionicons name="musical-notes" size={44} color={primaryAlpha(0.6)} />
+          </View>
+        )}
+        <View style={styles.eventShade} pointerEvents="none" />
+        <View style={styles.eventInfo}>
+          <View style={styles.eventInfoMain}>
+            <View style={styles.eventHeader}>
+              <Ionicons name="calendar-outline" size={14} color={Colors.primaryLight} />
+              <NoxText style={styles.eventBadge}>{fr ? 'ÉVÉNEMENT' : 'EVENT'}</NoxText>
+            </View>
+            <NoxText style={styles.eventTitle} numberOfLines={2}>
+              {item.title}
+            </NoxText>
+            <NoxText style={styles.eventMetaText} numberOfLines={1}>
+              {[dateLabel, placeLabel].filter(Boolean).join(' • ')}
+            </NoxText>
+            {price ? <NoxText style={styles.eventPrice}>{price}</NoxText> : null}
+          </View>
+          <View style={styles.eventActions}>
+            <TouchableOpacity
+              onPress={() => toggleEventInterest(item)}
+              hitSlop={10}
+              accessibilityLabel={fr ? 'Intéressé' : 'Interested'}
+            >
+              <Ionicons
+                name={item.interested ? 'heart' : 'heart-outline'}
+                size={22}
+                color={item.interested ? Colors.primaryLight : Colors.text}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => shareEvent(item, dateLabel, placeLabel)}
+              hitSlop={10}
+              accessibilityLabel={fr ? 'Partager' : 'Share'}
+            >
+              <Ionicons name="arrow-redo-outline" size={22} color={Colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const describePost = (item) => {
     const profileType = item.profileType || 'BOOKER';
@@ -575,26 +628,41 @@ const styles = StyleSheet.create({
   },
   retryText: { color: Colors.background, fontWeight: '700' },
   eventCard: {
-    marginHorizontal: Spacing.xl,
-    marginBottom: Spacing.lg,
-    padding: Spacing.lg,
-    borderRadius: Radius.card,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.borderSubtle,
+    height: 380,
+    marginTop: Spacing.md,
+    justifyContent: 'flex-end',
+    backgroundColor: Colors.backgroundElevated,
+    overflow: 'hidden',
   },
-  eventHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
-  eventBadge: { color: Colors.primary, fontSize: 12, fontWeight: '600' },
-  eventImage: {
-    width: '100%',
-    height: 160,
-    borderRadius: Radius.md,
-    marginBottom: Spacing.sm,
-    backgroundColor: primaryAlpha(0.1),
+  eventImageFallback: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  eventTitle: { fontWeight: '700', marginBottom: 4 },
-  eventDescription: { marginBottom: Spacing.sm },
-  eventMeta: { gap: 4 },
-  eventMetaText: { fontSize: 13 },
-  eventPrice: { color: Colors.primary, fontWeight: '600' },
+  eventShade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 150,
+    backgroundColor: 'rgba(10,10,9,0.45)',
+  },
+  eventInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    margin: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderLeftWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: primaryAlpha(0.8),
+    backgroundColor: 'rgba(10,10,9,0.35)',
+  },
+  eventInfoMain: { flex: 1, gap: 2 },
+  eventHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  eventBadge: { color: Colors.primaryLight, fontSize: 10, letterSpacing: 2 },
+  eventTitle: { fontFamily: FontFamily.bold, fontSize: 24, lineHeight: 30, color: Colors.text },
+  eventMetaText: { fontSize: 12, color: Colors.textSecondary },
+  eventPrice: { fontFamily: FontFamily.bold, fontSize: 16, color: Colors.primaryLight, marginTop: 2 },
+  eventActions: { flexDirection: 'row', gap: Spacing.lg, paddingBottom: 2 },
 });

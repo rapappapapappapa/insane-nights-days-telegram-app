@@ -25,6 +25,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Barre de filtres Toutes / Interactions / Événements / Système, et nouvelles lignes : avatar de l’auteur, nom en gras, extrait du post, date « 5 août à 17:05 », photo du post en fond à droite et pastille ronde du type (repost, cœur, commentaire, suivi, mention) avec point non lu. Les points restent visibles pendant la consultation.
 - Les notifications renvoient le nom d’affichage et l’avatar du profil actif de l’auteur (`actor.displayName`, `actor.avatar`).
 
+### Modifié (accueil communauté — maquette 15)
+- Les événements du fil s’affichent en plein cadre : affiche en fond, badge ÉVÉNEMENT, titre, date et adresse, prix, cœur « Intéressé » (relié à l’agenda) et bouton de partage.
+- Puces Découverte / Abonnements au style de la maquette, anneau bleu autour des avatars, photos des publications plus grandes (format 4:5).
+
 ---
 
 ## Semaine du 22 au 23 octobre 2026

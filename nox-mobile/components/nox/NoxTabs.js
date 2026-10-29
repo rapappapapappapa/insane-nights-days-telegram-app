@@ -72,12 +72,13 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xs,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
     backgroundColor: Colors.backgroundElevated,
   },
   tabSubtleActive: {
     backgroundColor: primaryAlpha(0.18),
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.35),
+    borderColor: Colors.primary,
   },
   label: {
     fontSize: 15,
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   labelSubtleActive: {
-    color: Colors.primary,
+    color: Colors.primaryLight,
     fontFamily: FontFamily.bold,
   },
   indicator: {

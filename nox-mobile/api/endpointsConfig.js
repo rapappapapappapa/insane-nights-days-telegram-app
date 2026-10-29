@@ -34,6 +34,7 @@ export const API_CONFIG = {
     PAYMENTS_ME: '/api/payments/me',
     TICKETS_USER: '/api/user',
     TICKETS_ME: '/api/user/me/tickets',
+    AGENDA_ME: '/api/user/me/agenda',
     TICKET_QR: '/api/tickets',
     TICKET_DELETE: '/api/tickets',
     STATS: '/api/stats',

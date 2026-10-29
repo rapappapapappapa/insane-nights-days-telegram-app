@@ -56,6 +56,7 @@ export default function CommunityEventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState(null);
   const [imageBroken, setImageBroken] = useState(false);
+  const [interested, setInterested] = useState(false);
 
   useEffect(() => {
     if (!eventId) {
@@ -69,6 +70,7 @@ export default function CommunityEventDetailPage() {
         const data = await api.getEventById(eventId, user?.token);
         if (!cancelled && data?.success && data.event) {
           setEvent(data.event);
+          setInterested(Boolean(data.event.interested));
         } else if (!cancelled) {
           setEvent(null);
         }
@@ -126,6 +128,17 @@ export default function CommunityEventDetailPage() {
 
   const heroImage = event.image ? normalizeMediaUrl(event.image) : null;
 
+  const toggleInterest = async () => {
+    if (!user?.token) return;
+    const next = !interested;
+    setInterested(next);
+    try {
+      await api.setEventInterest(user.token, event.id, next);
+    } catch {
+      setInterested(!next);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -144,7 +157,22 @@ export default function CommunityEventDetailPage() {
           <TouchableOpacity onPress={goBack} hitSlop={12} style={styles.heroBtn}>
             <Ionicons name="chevron-back" size={24} color={Colors.text} />
           </TouchableOpacity>
-          <View style={styles.heroBtn} />
+          {user?.token ? (
+            <TouchableOpacity
+              onPress={toggleInterest}
+              hitSlop={12}
+              style={styles.heroBtn}
+              accessibilityLabel={fr ? 'Intéressé' : 'Interested'}
+            >
+              <Ionicons
+                name={interested ? 'heart' : 'heart-outline'}
+                size={24}
+                color={interested ? Colors.primaryLight : Colors.text}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.heroBtn} />
+          )}
         </View>
         <View style={styles.heroInfo}>
           <NoxText variant="title" style={styles.heroTitle}>

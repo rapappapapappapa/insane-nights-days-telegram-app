@@ -314,6 +314,25 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(API_CONFIG.ENDPOINTS.TICKETS_ME, {}, token);
   },
 
+  // Agenda communauté : soirées avec billet + soirées « Intéressé »
+  getMyAgenda: async (token) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(API_CONFIG.ENDPOINTS.AGENDA_ME, {}, token);
+  },
+
+  setEventInterest: async (token, eventId, interested) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.EVENTS}/${eventId}/interest`,
+      { method: interested ? 'POST' : 'DELETE' },
+      token
+    );
+  },
+
   // Récupérer les paiements de l'utilisateur connecté (Mes achats)
   getMyPayments: async (token) => {
     if (!token) {

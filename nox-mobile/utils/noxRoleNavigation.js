@@ -107,6 +107,7 @@ export const NOX_THEMED_SCREENS = new Set([
   'communityHome',
   'communityDiscover',
   'communityEventDetail',
+  'communityAgenda',
   'communityOnboarding',
   'communityMyProfile',
   'communityPushOptIn',

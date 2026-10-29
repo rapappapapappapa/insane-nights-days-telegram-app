@@ -9,6 +9,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté (design — communauté)
 - Sept maquettes communauté sont dans `docs/mobile/design-figma/` (15 à 21) : accueil et fil, agenda, billets, publication, notifications, historique d’achat, détail de billet. Le catalogue est dans `docs/mobile/DESIGN_FIGMA_REFERENCE.md`. L’accueil envoyé en double n’est gardé qu’une fois.
 
+### Ajouté (communauté — agenda et « Intéressé »)
+- Un membre peut marquer un événement « Intéressé » avec le cœur de la fiche événement. Nouvelle table `EventInterest` (migration `20261029100000_event_interest`), routes `POST`/`DELETE /api/events/:eventId/interest`, et indicateur `interested` sur la fiche et le fil.
+- Nouvel écran Agenda (maquette 16), ouvert depuis l’entrée Agenda de la navigation radiale communauté : calendrier mensuel (point plein = billet, anneau = intéressé), onglets Participant / Intéressé, cartes vers la fiche. Données via `GET /api/user/me/agenda`.
+
 ---
 
 ## Semaine du 22 au 23 octobre 2026

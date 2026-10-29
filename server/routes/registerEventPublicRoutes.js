@@ -139,6 +139,92 @@ app.get('/api/events/:eventId/groups', authenticateToken, userController.getEven
 app.post('/api/events/:eventId/groups/:groupId/invite', authenticateToken, userController.inviteToEventGroup);
 app.put('/api/event-groups/:groupId/respond', authenticateToken, userController.respondToEventGroupInvitation);
 
+// « Intéressé » (cœur) : alimente l'agenda communauté.
+app.post('/api/events/:eventId/interest', authenticateToken, async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({ where: { id: req.params.eventId }, select: { id: true } });
+    if (!event) return res.status(404).json({ success: false, message: 'Événement non trouvé' });
+    await prisma.eventInterest.upsert({
+      where: { userId_eventId: { userId: req.user.id, eventId: event.id } },
+      create: { userId: req.user.id, eventId: event.id },
+      update: {},
+    });
+    res.json({ success: true, interested: true });
+  } catch (error) {
+    console.error('Erreur intérêt événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+app.delete('/api/events/:eventId/interest', authenticateToken, async (req, res) => {
+  try {
+    await prisma.eventInterest.deleteMany({ where: { userId: req.user.id, eventId: req.params.eventId } });
+    res.json({ success: true, interested: false });
+  } catch (error) {
+    console.error('Erreur retrait intérêt événement:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/** Agenda communauté : événements avec billet (participant) et marqués intéressé. */
+app.get('/api/user/me/agenda', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const eventSelect = {
+      id: true,
+      title: true,
+      date: true,
+      time: true,
+      location: true,
+      image: true,
+      status: true,
+      genre: true,
+      venue: { select: { venueName: true, address: true, city: true } },
+      eventVenues: itineraryInclude,
+    };
+    const [tickets, interests] = await Promise.all([
+      prisma.ticket.findMany({
+        where: { userId, status: { in: ['valid', 'used'] } },
+        select: { eventId: true, event: { select: eventSelect } },
+      }),
+      prisma.eventInterest.findMany({
+        where: { userId },
+        select: { eventId: true, event: { select: eventSelect } },
+      }),
+    ]);
+    const format = (event) => ({
+      id: event.id,
+      title: event.title,
+      date: event.date.toISOString().split('T')[0],
+      time: event.time,
+      location: event.location,
+      image: event.image,
+      status: event.status || 'UPCOMING',
+      genre: event.genre,
+      venueName: event.venue?.venueName ?? null,
+      address: event.venue?.address ?? null,
+      city: event.venue?.city ?? null,
+      venues: serializeItinerary(event.eventVenues),
+    });
+    const participating = new Map();
+    tickets.forEach((t) => {
+      if (t.event && !participating.has(t.eventId)) participating.set(t.eventId, format(t.event));
+    });
+    const interested = interests
+      .filter((i) => i.event && !participating.has(i.eventId))
+      .map((i) => format(i.event));
+    const byDate = (a, b) => String(a.date).localeCompare(String(b.date));
+    res.json({
+      success: true,
+      participating: [...participating.values()].sort(byDate),
+      interested: interested.sort(byDate),
+    });
+  } catch (error) {
+    console.error('Erreur agenda:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
@@ -220,6 +306,14 @@ app.get('/api/events/:eventId', attachUserIfAuthenticated, async (req, res) => {
       venueId: activeVenue?.venueId ?? event.venueId,
       venueName: activeVenue?.venue?.venueName ?? event.venue?.venueName,
       venues: serializeItinerary(event.eventVenues),
+      interested: req.user?.id
+        ? Boolean(
+            await prisma.eventInterest.findUnique({
+              where: { userId_eventId: { userId: req.user.id, eventId: event.id } },
+              select: { id: true },
+            })
+          )
+        : false,
     };
 
     res.json({ success: true, event: formattedEvent });

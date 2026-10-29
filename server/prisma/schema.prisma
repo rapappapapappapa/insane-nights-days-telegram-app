@@ -44,6 +44,7 @@ model User {
   reportsAssigned           Report[]           @relation("ReportsAssigned")
   reportsMade               Report[]           @relation("ReportsMade")
   tickets                   Ticket[]
+  eventInterests            EventInterest[]
   bookers                   UserBooker[]
   communities               UserCommunity[]
   djs                       UserDj[]
@@ -372,6 +373,7 @@ model Event {
   venueRatings  VenueRating[]
   eventGroups   EventGroup[]
   eventStaff    EventStaff[]
+  interests     EventInterest[]
 }
 
 model EventGroup {
@@ -868,4 +870,17 @@ enum ContractPartyPrestataire {
 enum MessageType {
   PRIVATE
   GROUP
+}
+
+/// Événements marqués « Intéressé » (cœur) par un utilisateur — agenda communauté.
+model EventInterest {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }

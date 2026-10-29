@@ -50,7 +50,7 @@ const AGENDA_ITEM = {
 const COMMUNITY_ITEMS = [
   { id: 'home', screenKey: 'home', icon: 'home-outline', labelFr: 'Accueil', labelEn: 'Home' },
   { id: 'tickets', screen: 'tickets', icon: 'ticket-outline', labelFr: 'Billets', labelEn: 'Tickets' },
-  AGENDA_ITEM,
+  { ...AGENDA_ITEM, screen: 'communityAgenda' },
   { id: 'notifs', screen: 'notifications', icon: 'notifications-outline', labelFr: 'Notifs', labelEn: 'Alerts' },
   { id: 'profile', screenKey: 'profile', icon: 'person-outline', labelFr: 'Profil', labelEn: 'Profile' },
 ];

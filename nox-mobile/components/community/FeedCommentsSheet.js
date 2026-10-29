@@ -31,6 +31,7 @@ export default function FeedCommentsSheet({
 }) {
   const insets = useSafeAreaInsets();
   const loading = visible && !comments;
+  const list = comments || [];
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -52,12 +53,12 @@ export default function FeedCommentsSheet({
             <ScrollView style={styles.list} contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
               {loading ? (
                 <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} />
-              ) : comments.length === 0 ? (
+              ) : list.length === 0 ? (
                 <NoxText style={styles.empty}>
                   {fr ? 'Aucun commentaire. Lance la discussion !' : 'No comments yet.'}
                 </NoxText>
               ) : (
-                comments.map((c) => (
+                list.map((c) => (
                   <View key={c.id} style={styles.comment}>
                     <View style={styles.commentAvatar}>
                       <NoxText style={styles.commentLetter}>

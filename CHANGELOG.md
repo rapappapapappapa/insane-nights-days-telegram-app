@@ -17,6 +17,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Les publications du fil prennent le format plein cadre de la maquette 15 : photo en fond, auteur et badge de rôle en haut (avec « Repost • ville • date » pour un repost), encadré bas avec l’auteur d’origine du repost, le texte et les actions J’aime / commentaires / repost. Un post sans photo s’affiche sur un fond NOX avec le texte mis en avant.
 - Nouveau mode scroll (maquette 18), ouvert par le bouton « Scroll » à côté de Découverte / Abonnements ou en touchant une publication : une publication ou un événement par écran, défilement vertical page par page, barre J’aime / commentaires / reposts en bas.
 - Les commentaires s’ouvrent dans une feuille en bas de l’écran, dans les deux modes. Le fil renvoie désormais `repostsCount`.
+- Correctif : l’ouverture du fil plantait (« Cannot read property 'length' of null ») car la feuille de commentaires, fermée, lisait une liste encore vide.
 
 ### Modifié (billets — wallet et détail du billet)
 - La page Billets suit les maquettes 17 et 20 : cartes avec affiche, pastille de date, badge ACTIF ou PASSÉ, date et adresse, puces de genre, encadré de tarif et aperçu du QR. L’historique indique si le billet n’a pas été scanné ou invite à noter la soirée.

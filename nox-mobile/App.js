@@ -49,6 +49,7 @@ import EventsRoutePage from './screens/events/EventsRoutePage';
 import EventDetailPage from './screens/events/EventDetailPage';
 import RateEventPage from './screens/events/RateEventPage';
 import TicketsPage from './screens/events/TicketsPage';
+import TicketDetailPage from './screens/events/TicketDetailPage';
 import EventStaffPage from './screens/events/EventStaffPage';
 import ScanTicketPage from './screens/events/ScanTicketPage';
 import StaffEventsPage from './screens/events/StaffEventsPage';
@@ -126,6 +127,7 @@ const SCREENS = {
   eventDetail: EventDetailPage,
   purchaseSuccess: PurchaseSuccessPage,
   tickets: TicketsPage,
+  ticketDetail: TicketDetailPage,
   purchases: PurchasesPage,
   djRatings: DjRatingsPage,
   ranking: RankingPage,

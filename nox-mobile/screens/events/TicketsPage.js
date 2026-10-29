@@ -5,7 +5,8 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
+  Image,
+  RefreshControl,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,72 +16,39 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
+import { normalizeMediaUrl } from '../../api/normalizeMediaUrl';
 import Colors, { primaryAlpha } from '../../constants/colors';
-import { Layout, Radius, Spacing } from '../../constants/theme';
-import { NoxText, NoxTabs, NoxButton, NoxCard, NoxScreenHeader } from '../../components/nox';
+import { FontFamily } from '../../constants/typography';
+import { Radius, Spacing } from '../../constants/theme';
+import { NoxText, NoxTabs, NoxButton, NoxScreenHeader } from '../../components/nox';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
-import { useConfirm } from '../../contexts/ConfirmContext';
-import { openDiscover, openEventPreview } from '../../utils/noxNavigation';
+import { openDiscover } from '../../utils/noxNavigation';
 import {
-  addNoxEventToDeviceCalendar,
-  isDeviceCalendarExportSupported,
-} from '../../utils/addNoxEventToCalendar';
-
-const API_TICKET_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-const formatPurchaseDate = (dateString) => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-const formatEventDate = (dateString, language) => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(`${dateString}T12:00:00`);
-    return date.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-const buildQrPayload = (ticket) =>
-  JSON.stringify({
-    ticketId: ticket.id,
-    qrCode: ticket.qrCode,
-    eventId: ticket.eventId,
-    userId: ticket.userId,
-    status: ticket.status,
-  });
+  TicketDatePill,
+  TicketGenreChips,
+  TicketStatusBadge,
+  TicketTierBox,
+  buildQrPayload,
+  formatTicketDate,
+  hasEnteredWithTicket,
+  isTicketPast,
+  ticketAddress,
+  ticketGenres,
+} from '../../components/tickets/ticketDisplay';
 
 export default function TicketsPage() {
   const { language } = useLanguage();
   const fr = language === 'fr';
-  const { navigate, goBack } = useNavigation();
+  const { navigate, goBack, currentPage } = useNavigation();
   const { user } = useAuth();
-  const { toast, showError, showSuccess, hideToast } = useToast();
-  const { showConfirm } = useConfirm();
+  const { toast, showError, hideToast } = useToast();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('active');
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [calendarBusyTicketId, setCalendarBusyTicketId] = useState(null);
+  const [brokenImages, setBrokenImages] = useState({});
 
   const fetchTickets = useCallback(async () => {
     if (!user?.id) return;
@@ -89,7 +57,6 @@ export default function TicketsPage() {
       showError(fr ? 'Token manquant. Veuillez vous reconnecter.' : 'Missing token. Please log in again.');
       return;
     }
-    setLoading(true);
     try {
       const response = await api.getMyTickets(user.token);
       if (response?.success && Array.isArray(response.tickets)) {
@@ -99,35 +66,18 @@ export default function TicketsPage() {
       console.error('Erreur récupération tickets:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [user?.id, user?.token, fr, showError]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && currentPage === 'tickets') {
       fetchTickets();
     }
-  }, [user?.id, fetchTickets]);
+  }, [user?.id, fetchTickets, currentPage]);
 
-  const isEventPast = useCallback((ticket) => {
-    if (ticket.eventStatus) {
-      return ticket.eventStatus === 'FINISHED';
-    }
-    if (ticket.eventDate) {
-      return new Date(ticket.eventDate) < new Date();
-    }
-    return false;
-  }, []);
-
-  const activeTickets = useMemo(
-    () => tickets.filter((ticket) => !isEventPast(ticket)),
-    [tickets, isEventPast],
-  );
-
-  const historyTickets = useMemo(
-    () => tickets.filter((ticket) => isEventPast(ticket)),
-    [tickets, isEventPast],
-  );
-
+  const activeTickets = useMemo(() => tickets.filter((t) => !isTicketPast(t)), [tickets]);
+  const historyTickets = useMemo(() => tickets.filter((t) => isTicketPast(t)), [tickets]);
   const displayedTickets = activeTab === 'active' ? activeTickets : historyTickets;
 
   const tabs = useMemo(
@@ -146,225 +96,137 @@ export default function TicketsPage() {
     [fr, activeTickets.length, historyTickets.length],
   );
 
-  const handleDeleteTicket = async (ticketId) => {
-    if (!user?.token) {
-      showError(fr ? 'Vous devez être connecté.' : 'You must be logged in.');
-      return;
-    }
-
-    showConfirm(
-      fr ? 'Supprimer le ticket' : 'Delete ticket',
-      fr ? 'Êtes-vous sûr de vouloir supprimer ce ticket ?' : 'Are you sure you want to delete this ticket?',
-      [
-        { text: fr ? 'Annuler' : 'Cancel', style: 'cancel' },
-        {
-          text: fr ? 'Supprimer' : 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await api.deleteTicket(user.token, ticketId);
-              if (response?.success) {
-                showSuccess(fr ? 'Le ticket a été supprimé avec succès.' : 'Ticket deleted successfully.');
-                if (selectedTicket?.id === ticketId) {
-                  setSelectedTicket(null);
-                }
-                fetchTickets();
-              } else {
-                showError(response?.message || (fr ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'));
-              }
-            } catch (error) {
-              console.error('Erreur suppression ticket:', error);
-              showError(error.message || (fr ? 'Erreur lors de la suppression.' : 'Error deleting ticket.'));
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleAddTicketToCalendar = async (ticket) => {
-    if (calendarBusyTicketId || !API_TICKET_DATE_RE.test(String(ticket?.eventDate || ''))) {
-      return;
-    }
-    try {
-      setCalendarBusyTicketId(ticket.id);
-      await addNoxEventToDeviceCalendar({
-        title: ticket.eventTitle,
-        date: ticket.eventDate,
-        time: ticket.eventTime,
-        durationHours: ticket.eventDurationHours,
-        location: ticket.eventLocation,
-        notes: `${ticket.eventGenre ? `${ticket.eventGenre} · ` : ''}${fr ? 'Billet Nox' : 'Nox ticket'}`,
-      });
-      showSuccess(fr ? 'Événement ajouté à ton agenda.' : 'Event added to your calendar.');
-    } catch (e) {
-      const code = e?.message;
-      if (code === 'PERMISSION_DENIED') {
-        showError(fr ? 'Accès au calendrier refusé.' : 'Calendar access denied.');
-      } else if (code === 'NO_CALENDAR') {
-        showError(fr ? 'Aucun calendrier modifiable trouvé.' : 'No writable calendar found.');
-      } else {
-        showError(fr ? 'Impossible d’ajouter au calendrier.' : 'Could not add to calendar.');
-      }
-    } finally {
-      setCalendarBusyTicketId(null);
-    }
-  };
-
-  const renderStatusBadge = (ticket) => {
-    const past = isEventPast(ticket);
-    const label = past
-      ? fr ? 'Passé' : 'Past'
-      : fr ? 'Actif' : 'Active';
+  const renderPoster = (ticket, withPill) => {
+    const image = normalizeMediaUrl(ticket.eventImage);
     return (
-      <View style={[styles.statusBadge, past ? styles.statusPast : styles.statusActive]}>
-        <NoxText variant="label" style={[styles.statusText, past ? styles.statusTextPast : styles.statusTextActive]}>
-          {label}
-        </NoxText>
+      <View style={styles.posterCol}>
+        <View style={styles.poster}>
+          {image && !brokenImages[ticket.id] ? (
+            <Image
+              source={{ uri: image }}
+              style={StyleSheet.absoluteFillObject}
+              onError={() => setBrokenImages((prev) => ({ ...prev, [ticket.id]: true }))}
+            />
+          ) : (
+            <Ionicons name="musical-notes" size={24} color={primaryAlpha(0.7)} />
+          )}
+        </View>
+        {withPill ? (
+          <TicketDatePill dateString={ticket.eventDate} language={language} style={styles.posterPill} />
+        ) : null}
       </View>
     );
   };
 
-  const hasEntered = (ticket) =>
-    ticket.status === 'used' || (ticket.scannedVenueIds || []).length > 0;
-
-  const renderTicketCard = (ticket) => {
-    const past = isEventPast(ticket);
-
+  const renderMeta = (ticket, month) => {
+    const address = ticketAddress(ticket);
     return (
-      <NoxCard key={ticket.id} style={styles.ticketCard}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() =>
-            past
-              ? openEventPreview(navigate, user?.activeProfileType, ticket.eventId)
-              : setSelectedTicket(ticket)
-          }
-          accessibilityRole="button"
-          accessibilityLabel={
-            past
-              ? `${ticket.eventTitle}. ${fr ? 'Voir le détail' : 'View details'}`
-              : `${ticket.eventTitle}. ${fr ? 'Afficher le QR code' : 'Show QR code'}`
-          }
-        >
-          <View style={styles.ticketRow}>
-            <View style={styles.ticketThumb}>
-              <Ionicons name="musical-notes" size={22} color={Colors.primary} />
-            </View>
-            <View style={styles.ticketBody}>
-              <View style={styles.ticketTitleRow}>
-                <NoxText variant="titleSecondary" style={styles.ticketTitle} numberOfLines={2}>
-                  {ticket.eventTitle}
-                </NoxText>
-                {renderStatusBadge(ticket)}
-              </View>
-              <NoxText variant="secondary" style={styles.ticketMeta}>
-                {formatEventDate(ticket.eventDate, language)}
-                {ticket.eventTime ? ` · ${ticket.eventTime}` : ''}
-              </NoxText>
-              {ticket.venues?.length > 1 ? (
-                ticket.venues.map((stop, i) => (
-                  <NoxText key={`${stop.venueId}-${i}`} variant="secondary" numberOfLines={1}>
-                    {(ticket.scannedVenueIds || []).includes(stop.venueId) ? '✓ ' : `${i + 1}. `}
-                    {stop.name}
-                    {stop.slotStart && stop.slotEnd ? ` · ${stop.slotStart} – ${stop.slotEnd}` : ''}
-                  </NoxText>
-                ))
-              ) : ticket.eventLocation ? (
-                <NoxText variant="secondary" numberOfLines={1}>
-                  {ticket.eventLocation}
-                </NoxText>
-              ) : null}
-              <View style={styles.ticketFooterRow}>
-                <NoxText variant="label" style={styles.ticketTier}>
-                  {ticket.tierLabel || (fr ? 'Entrée générale' : 'General admission')}
-                </NoxText>
-                {ticket.price != null ? (
-                  <NoxText variant="label" style={styles.ticketPrice}>
-                    {ticket.price}€
-                  </NoxText>
-                ) : null}
-              </View>
-            </View>
-            {!past ? (
-              <View style={styles.qrPreview}>
-                <QRCode
-                  value={buildQrPayload(ticket)}
-                  size={52}
-                  color="#000000"
-                  backgroundColor="#FFFFFF"
-                />
-              </View>
-            ) : (
-              <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-            )}
+      <>
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar-outline" size={13} color={Colors.textSecondary} />
+          <NoxText style={styles.metaText} numberOfLines={1}>
+            {formatTicketDate(ticket.eventDate, language, month)}
+            {ticket.eventTime ? ` • ${ticket.eventTime}` : ''}
+          </NoxText>
+        </View>
+        {ticket.venues?.length > 1 ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
+            <NoxText style={styles.metaText} numberOfLines={1}>
+              {ticket.venues.map((s) => s.name).filter(Boolean).join(' → ')}
+            </NoxText>
           </View>
-        </TouchableOpacity>
+        ) : address ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
+            <NoxText style={styles.metaText} numberOfLines={1}>
+              {address}
+            </NoxText>
+          </View>
+        ) : null}
+      </>
+    );
+  };
 
-        {!past ? (
-          <View style={styles.ticketActions}>
-            <NoxButton
-              label={fr ? 'Voir le QR code' : 'View QR code'}
-              variant="ghost"
-              onPress={() => setSelectedTicket(ticket)}
-              style={styles.actionButton}
-            />
-            {isDeviceCalendarExportSupported() &&
-            API_TICKET_DATE_RE.test(String(ticket.eventDate || '')) ? (
-              <NoxButton
-                label={fr ? 'Ajouter à mon agenda' : 'Add to calendar'}
-                variant="secondary"
-                loading={calendarBusyTicketId === ticket.id}
-                onPress={() => handleAddTicketToCalendar(ticket)}
-                style={styles.actionButton}
-              />
-            ) : null}
+  const openTicket = (ticket) => navigate('ticketDetail', { ticket });
+
+  const renderActiveCard = (ticket) => (
+    <TouchableOpacity
+      key={ticket.id}
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() => openTicket(ticket)}
+      accessibilityRole="button"
+      accessibilityLabel={`${ticket.eventTitle}. ${fr ? 'Voir le billet' : 'View ticket'}`}
+    >
+      {renderPoster(ticket, true)}
+      <View style={styles.cardBody}>
+        <View style={styles.titleRow}>
+          <NoxText style={styles.title} numberOfLines={2}>
+            {ticket.eventTitle}
+          </NoxText>
+          <TicketStatusBadge past={false} fr={fr} />
+        </View>
+        {renderMeta(ticket, 'long')}
+        <TicketGenreChips genres={ticketGenres(ticket)} />
+        <TicketTierBox ticket={ticket} fr={fr} />
+      </View>
+      <View style={styles.qrCol}>
+        <View style={styles.qrPreview}>
+          <QRCode value={buildQrPayload(ticket)} size={56} color="#000000" backgroundColor="#FFFFFF" />
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={Colors.text} style={styles.chevron} />
+    </TouchableOpacity>
+  );
+
+  const renderHistoryCard = (ticket) => (
+    <TouchableOpacity
+      key={ticket.id}
+      style={[styles.card, styles.cardHistory]}
+      activeOpacity={0.85}
+      onPress={() => openTicket(ticket)}
+      accessibilityRole="button"
+      accessibilityLabel={`${ticket.eventTitle}. ${fr ? 'Voir le billet' : 'View ticket'}`}
+    >
+      <View style={styles.historyRow}>
+        {renderPoster(ticket, false)}
+        <View style={styles.cardBody}>
+          <View style={styles.titleRow}>
+            <NoxText style={styles.title} numberOfLines={2}>
+              {ticket.eventTitle}
+            </NoxText>
+            <TicketStatusBadge past fr={fr} />
           </View>
-        ) : !hasEntered(ticket) ? (
-          <NoxText variant="secondary" style={{ marginTop: 10 }}>
+          {renderMeta(ticket, 'short')}
+          <View style={styles.historyTierRow}>
+            <NoxText style={styles.historyTier} numberOfLines={1}>
+              {ticket.tierLabel || (fr ? 'Entrée générale' : 'General admission')}
+            </NoxText>
+            {ticket.price != null ? <NoxText style={styles.historyPrice}>{ticket.price}€</NoxText> : null}
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.text} style={styles.chevron} />
+      </View>
+      {!hasEnteredWithTicket(ticket) ? (
+        <View style={styles.historyNotice}>
+          <Ionicons name="information-circle-outline" size={14} color={Colors.textTertiary} />
+          <NoxText style={styles.historyNoticeText}>
             {fr
               ? 'Billet non scanné à l’entrée : la note est réservée aux participants.'
               : 'Ticket not scanned at the door: rating is for attendees only.'}
           </NoxText>
-        ) : (
-          <View style={styles.ticketActions}>
-            <NoxButton
-              label={fr ? 'Noter cet événement' : 'Rate this event'}
-              variant="ghost"
-              onPress={() =>
-                navigate('rateEvent', {
-                  eventId: ticket.eventId,
-                  eventTitle: ticket.eventTitle,
-                  eventDate: ticket.eventDate,
-                  eventStatus: ticket.eventStatus,
-                  djIds: ticket.djIds || [],
-                  venueId: ticket.venueId,
-                  venueName: ticket.venueName,
-                  venues: (ticket.venues || []).filter((s) =>
-                    (ticket.scannedVenueIds || []).includes(s.venueId)
-                  ),
-                })
-              }
-              style={styles.actionButton}
-            />
-          </View>
-        )}
-
-        {user?.isAuthenticated && !past ? (
-          <TouchableOpacity
-            style={styles.deleteLink}
-            onPress={() => handleDeleteTicket(ticket.id)}
-            accessibilityRole="button"
-            accessibilityLabel={fr ? 'Retirer le billet' : 'Remove ticket'}
-          >
-            <NoxText variant="secondary" style={styles.deleteLinkText}>
-              {fr ? 'Retirer' : 'Remove'}
-            </NoxText>
-          </TouchableOpacity>
-        ) : null}
-      </NoxCard>
-    );
-  };
+        </View>
+      ) : (
+        <View style={styles.historyNotice}>
+          <Ionicons name="star-outline" size={14} color={Colors.primaryLight} />
+          <NoxText style={[styles.historyNoticeText, { color: Colors.primaryLight }]}>
+            {fr ? 'Tu y étais : ouvre le billet pour noter la soirée.' : 'You were there: open the ticket to rate it.'}
+          </NoxText>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   const renderEmptyState = () => {
     const isActiveTab = activeTab === 'active';
@@ -399,12 +261,6 @@ export default function TicketsPage() {
     );
   };
 
-  const holderName =
-    user?.pseudo ||
-    [user?.prenom, user?.nom].filter(Boolean).join(' ') ||
-    user?.email ||
-    '';
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar style="light" />
@@ -429,109 +285,22 @@ export default function TicketsPage() {
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                fetchTickets();
+              }}
+              tintColor={Colors.primary}
+            />
+          }
         >
-          {displayedTickets.length === 0 ? renderEmptyState() : displayedTickets.map(renderTicketCard)}
+          {displayedTickets.length === 0
+            ? renderEmptyState()
+            : displayedTickets.map(activeTab === 'active' ? renderActiveCard : renderHistoryCard)}
         </ScrollView>
       )}
-
-      <Modal
-        visible={!!selectedTicket}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setSelectedTicket(null)}
-      >
-        {selectedTicket ? (
-          <SafeAreaView style={styles.qrModal} edges={['top', 'bottom']}>
-            <StatusBar style="light" />
-            <View style={styles.qrModalHeader}>
-              <TouchableOpacity
-                onPress={() => setSelectedTicket(null)}
-                style={styles.qrBackBtn}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel={fr ? 'Fermer' : 'Close'}
-              >
-                <Ionicons name="chevron-back" size={24} color={Colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.qrModalContent} showsVerticalScrollIndicator={false}>
-              <NoxCard style={styles.walletCard}>
-                <NoxText variant="titleSecondary" style={styles.qrEventTitle}>
-                  {selectedTicket.eventTitle}
-                </NoxText>
-                <NoxText variant="secondary" style={styles.qrEventMeta}>
-                  {formatEventDate(selectedTicket.eventDate, language)}
-                  {selectedTicket.eventTime ? ` · ${selectedTicket.eventTime}` : ''}
-                </NoxText>
-                {selectedTicket.eventLocation ? (
-                  <NoxText variant="secondary" style={styles.qrEventLocation}>
-                    {selectedTicket.eventLocation}
-                  </NoxText>
-                ) : null}
-                <NoxText variant="label" style={styles.walletTier}>
-                  {selectedTicket.tierLabel || (fr ? 'Entrée générale' : 'General admission')}
-                  {selectedTicket.price != null ? ` · ${selectedTicket.price}€` : ''}
-                </NoxText>
-
-                <View style={styles.qrLargeWrap}>
-                  <QRCode
-                    value={buildQrPayload(selectedTicket)}
-                    size={240}
-                    color="#000000"
-                    backgroundColor="#FFFFFF"
-                  />
-                </View>
-
-                <NoxText variant="label" style={styles.qrCodeLabel}>
-                  {selectedTicket.qrCode}
-                </NoxText>
-                {holderName ? (
-                  <NoxText variant="description" style={styles.qrHolder}>
-                    {holderName}
-                  </NoxText>
-                ) : null}
-                {selectedTicket.purchaseDate ? (
-                  <NoxText variant="secondary" style={styles.qrPurchaseDate}>
-                    {fr ? 'Acheté le ' : 'Purchased on '}
-                    {formatPurchaseDate(selectedTicket.purchaseDate)}
-                  </NoxText>
-                ) : null}
-              </NoxCard>
-
-              <NoxText variant="secondary" style={styles.qrHint}>
-                {fr
-                  ? 'Présente ce QR à l’entrée. Ajoute-le à ton agenda pour ne pas le manquer.'
-                  : 'Show this QR at the entrance. Add it to your calendar so you don’t miss it.'}
-              </NoxText>
-
-              <View style={styles.qrModalActions}>
-                {isDeviceCalendarExportSupported() &&
-                API_TICKET_DATE_RE.test(String(selectedTicket.eventDate || '')) ? (
-                  <NoxButton
-                    label={fr ? 'Ajouter à mon agenda' : 'Add to calendar'}
-                    loading={calendarBusyTicketId === selectedTicket.id}
-                    onPress={() => handleAddTicketToCalendar(selectedTicket)}
-                  />
-                ) : null}
-                <NoxButton
-                  label={fr ? 'Voir l’événement' : 'View event'}
-                  variant="secondary"
-                  onPress={() => {
-                    setSelectedTicket(null);
-                    openEventPreview(navigate, user?.activeProfileType, selectedTicket.eventId);
-                  }}
-                />
-                <NoxButton
-                  label={fr ? 'Fermer' : 'Close'}
-                  variant="ghost"
-                  onPress={() => setSelectedTicket(null)}
-                />
-              </View>
-            </ScrollView>
-          </SafeAreaView>
-        ) : null}
-      </Modal>
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
     </SafeAreaView>
@@ -539,142 +308,67 @@ export default function TicketsPage() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  tabs: {
-    marginBottom: Spacing.sm,
-  },
-  scroll: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  tabs: { marginBottom: Spacing.sm },
+  scroll: { flex: 1 },
   content: {
-    paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingTop: Spacing.lg,
-    paddingBottom: 120,
-    gap: Spacing.lg,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: Spacing.xxxl,
-  },
-  loadingText: {
-    marginTop: Spacing.md,
-  },
-  ticketCard: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: 140,
     gap: Spacing.md,
   },
-  ticketRow: {
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: Spacing.xxxl },
+  loadingText: { marginTop: Spacing.md },
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.lg,
+    borderWidth: 0.5,
+    borderColor: primaryAlpha(0.5),
+    backgroundColor: Colors.backgroundCard,
   },
-  ticketThumb: {
-    width: 52,
-    height: 52,
+  cardHistory: { flexDirection: 'column', alignItems: 'stretch', borderColor: Colors.borderSubtle },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  posterCol: { width: 92, alignItems: 'center' },
+  poster: {
+    width: 92,
+    height: 92,
     borderRadius: Radius.md,
-    backgroundColor: primaryAlpha(0.12),
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.25),
+    overflow: 'hidden',
+    backgroundColor: Colors.backgroundElevated,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ticketBody: {
-    flex: 1,
-    gap: 4,
-  },
-  ticketTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  ticketTitle: {
-    flex: 1,
-    fontSize: 17,
-    lineHeight: 22,
-  },
-  statusBadge: {
-    borderRadius: Radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusActive: {
-    backgroundColor: primaryAlpha(0.15),
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.35),
-  },
-  statusPast: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: Colors.borderSubtle,
-  },
-  statusText: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  statusTextActive: {
-    color: Colors.primary,
-  },
-  statusTextPast: {
-    color: Colors.textTertiary,
-  },
-  ticketMeta: {
-    marginTop: 2,
-  },
-  ticketFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginTop: 4,
-  },
-  ticketPrice: {
-    color: Colors.primary,
-    fontSize: 14,
-  },
-  ticketTier: {
-    flex: 1,
-    color: Colors.textSecondary,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
-  walletCard: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  walletTier: {
-    marginTop: Spacing.sm,
-    color: Colors.primary,
-    textTransform: 'none',
-    letterSpacing: 0,
-  },
+  posterPill: { marginTop: -14 },
+  cardBody: { flex: 1, gap: 4 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  title: { flex: 1, fontFamily: FontFamily.bold, fontSize: 15, lineHeight: 19, color: Colors.text },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { flex: 1, fontSize: 11, color: Colors.textSecondary },
+  qrCol: { alignItems: 'center' },
   qrPreview: {
-    padding: 6,
+    padding: 4,
     backgroundColor: '#FFFFFF',
     borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: primaryAlpha(0.2),
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
-  ticketActions: {
-    gap: Spacing.sm,
+  chevron: { marginLeft: 2 },
+  historyTierRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  historyTier: { flex: 1, fontSize: 12, color: Colors.text },
+  historyPrice: { fontFamily: FontFamily.bold, fontSize: 15, color: Colors.primaryLight },
+  historyNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.borderSubtle,
   },
-  actionButton: {
-    minHeight: 44,
-  },
-  deleteLink: {
-    alignSelf: 'flex-end',
-    paddingVertical: Spacing.xs,
-  },
-  deleteLinkText: {
-    color: Colors.error,
-    fontSize: 12,
-  },
+  historyNoticeText: { flex: 1, fontSize: 11, color: Colors.textTertiary },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.xxxl,
@@ -690,73 +384,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
-  emptyTitle: {
-    textAlign: 'center',
-  },
-  emptyText: {
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyCta: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.xxl,
-  },
-  qrModal: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  qrModalHeader: {
-    paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingVertical: Spacing.sm,
-  },
-  qrBackBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qrModalContent: {
-    paddingHorizontal: Layout.screenPaddingHorizontal,
-    paddingBottom: Spacing.xxxl,
-    alignItems: 'center',
-  },
-  qrEventTitle: {
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  qrEventMeta: {
-    textAlign: 'center',
-    color: Colors.primary,
-  },
-  qrEventLocation: {
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  qrLargeWrap: {
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.md,
-    padding: Spacing.lg,
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.card,
-  },
-  qrCodeLabel: {
-    fontFamily: 'monospace',
-    letterSpacing: 1,
-    marginBottom: Spacing.xs,
-  },
-  qrHolder: {
-    textAlign: 'center',
-  },
-  qrPurchaseDate: {
-    textAlign: 'center',
-  },
-  qrHint: {
-    textAlign: 'center',
-    marginBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.lg,
-  },
-  qrModalActions: {
-    alignSelf: 'stretch',
-    gap: Spacing.md,
-  },
+  emptyTitle: { textAlign: 'center' },
+  emptyText: { textAlign: 'center', lineHeight: 20 },
+  emptyCta: { marginTop: Spacing.md, paddingHorizontal: Spacing.xxl },
 });

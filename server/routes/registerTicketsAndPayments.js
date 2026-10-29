@@ -796,6 +796,8 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
               select: {
                 id: true,
                 venueName: true,
+                address: true,
+                city: true,
               },
             },
             eventVenues: itineraryInclude,
@@ -817,6 +819,8 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       eventDurationHours: ticket.event.durationHours ?? null,
       eventLocation: ticket.event.location,
       eventGenre: ticket.event.genre,
+      eventImage: ticket.event.image || null,
+      eventAddress: [ticket.event.venue?.address, ticket.event.venue?.city].filter(Boolean).join(', ') || null,
       eventStatus: ticket.event.status || 'UPCOMING',
       djIds: ticket.event.eventDjs.map((ed) => ed.djId),
       venueId: ticket.event.venueId,
@@ -855,6 +859,8 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
               select: {
                 id: true,
                 venueName: true,
+                address: true,
+                city: true,
               },
             },
             eventVenues: itineraryInclude,
@@ -876,6 +882,8 @@ app.get('/api/user/:userId/tickets', authenticateToken, async (req, res) => {
       eventDurationHours: ticket.event.durationHours ?? null,
       eventLocation: ticket.event.location,
       eventGenre: ticket.event.genre,
+      eventImage: ticket.event.image || null,
+      eventAddress: [ticket.event.venue?.address, ticket.event.venue?.city].filter(Boolean).join(', ') || null,
       eventStatus: ticket.event.status || 'UPCOMING', // Statut de l'événement
       djIds: ticket.event.eventDjs.map((ed) => ed.djId), // IDs des DJs (User.id) pour la notation
       venueId: ticket.event.venueId,

@@ -16,6 +16,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 ### Ajouté (communauté — publication plein écran)
 - Toucher la photo d’une publication du fil l’ouvre en plein écran (maquette 18) : auteur avec badge de rôle, ville et date, texte, et barre J’aime / commentaires / reposts avec compteurs. « Commenter » referme la vue et ouvre les commentaires sous la publication. Le fil renvoie désormais `repostsCount`.
 
+### Modifié (billets — wallet et détail du billet)
+- La page Billets suit les maquettes 17 et 20 : cartes avec affiche, pastille de date, badge ACTIF ou PASSÉ, date et adresse, puces de genre, encadré de tarif et aperçu du QR. L’historique indique si le billet n’a pas été scanné ou invite à noter la soirée.
+- Nouvel écran de détail du billet (maquette 21) : bannière, informations, tarif, QR avec « Voir le QR code en plein écran », lignes Ajouter à mon agenda / Voir l’événement / Noter, et menu « … » pour retirer le billet. Remplace l’ancienne modale QR.
+- `GET /api/user/me/tickets` renvoie aussi `eventImage` et `eventAddress`.
+
 ---
 
 ## Semaine du 22 au 23 octobre 2026

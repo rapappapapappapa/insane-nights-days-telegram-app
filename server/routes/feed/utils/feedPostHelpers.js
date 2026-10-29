@@ -4,7 +4,7 @@
 const prisma = require('../../../lib/prisma');
 
 const FEED_POST_INCLUDE = {
-  _count: { select: { comments: true } },
+  _count: { select: { comments: true, reposts: true } },
   dj: {
     include: {
       media: {
@@ -40,6 +40,7 @@ const FEED_POST_INCLUDE = {
 };
 
 const ORIGINAL_POST_INCLUDE = {
+  _count: { select: { reposts: true } },
   dj: {
     include: {
       media: {
@@ -260,6 +261,7 @@ function formatFeedPost(post, { normalizeImageUrl, userLikedPostIds, userReposte
     likes: post.likes,
     liked: userLikedPostIds ? userLikedPostIds.has(post.id) : undefined,
     commentsCount: post._count?.comments ?? 0,
+    repostsCount: (post.originalPost ? post.originalPost._count?.reposts : post._count?.reposts) ?? 0,
     createdAt: post.createdAt,
     profileType,
     isRepost: !!post.originalPostId,

@@ -23,6 +23,7 @@ import { postStateReducer, initialPostState, formatFeedRelativeDate } from '../.
 import { formatEventPriceBadge } from '../../utils/eventPriceUtils';
 import { openEventPreview } from '../../utils/noxNavigation';
 import { NoxText, NoxFeedPostCard } from '../nox';
+import FeedPostViewer from './FeedPostViewer';
 import FeedReportModal from '../feed/FeedReportModal';
 import EmptyState from '../EmptyState';
 import Toast from '../Toast';
@@ -60,6 +61,7 @@ export default function CommunityFeedStream({
   const postLayoutsRef = useRef({});
   const highlightHandledRef = useRef(null);
   const [activeHighlightId, setActiveHighlightId] = useState(null);
+  const [viewerPostId, setViewerPostId] = useState(null);
 
   const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
 
@@ -295,7 +297,7 @@ export default function CommunityFeedStream({
     </TouchableOpacity>
   );
 
-  const renderPostCard = (item) => {
+  const describePost = (item) => {
     const profileType = item.profileType || 'BOOKER';
     const isDj = profileType === 'DJ';
     const isVenue = profileType === 'VENUE';
@@ -327,6 +329,32 @@ export default function CommunityFeedStream({
     const displayImageUri = item.isRepost && item.originalPost
       ? normalizeMediaUrl(item.originalPost.imageUrl)
       : imageUri;
+
+    return {
+      profileType,
+      isDj,
+      profileName,
+      profileLocation,
+      isAuthor,
+      profileImage,
+      isBrokenImage,
+      canRepost,
+      displayImageUri,
+    };
+  };
+
+  const renderPostCard = (item) => {
+    const {
+      profileType,
+      isDj,
+      profileName,
+      profileLocation,
+      isAuthor,
+      profileImage,
+      isBrokenImage,
+      canRepost,
+      displayImageUri,
+    } = describePost(item);
 
     return (
       <View
@@ -377,8 +405,57 @@ export default function CommunityFeedStream({
             dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: item.id, text });
           }}
           onSendComment={() => handleCreateComment(item.id)}
+          onPressImage={() => setViewerPostId(item.id)}
         />
       </View>
+    );
+  };
+
+  const renderPostViewer = () => {
+    const item = viewerPostId ? feed.find((entry) => entry.id === viewerPostId) : null;
+    if (!item) return null;
+    const { profileType, profileName, profileLocation, profileImage, canRepost, displayImageUri, isAuthor } =
+      describePost(item);
+    const source = item.isRepost && item.originalPost ? item.originalPost : item;
+    return (
+      <FeedPostViewer
+        visible
+        onClose={() => setViewerPostId(null)}
+        imageUri={displayImageUri}
+        content={source.content}
+        profileName={profileName}
+        profileImage={profileImage}
+        profileType={profileType}
+        metaLine={[profileLocation, formatDate(item.createdAt)].filter(Boolean).join(' • ')}
+        liked={!!likedPosts[item.id]}
+        likesCount={postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes || 0}
+        commentsCount={postComments[item.id] ? postComments[item.id].length : item.commentsCount ?? 0}
+        repostsCount={item.repostsCount ?? 0}
+        repostedByMe={!!item.repostedByMe}
+        canRepost={canRepost}
+        onToggleLike={() => handleToggleLike(item.id)}
+        onComment={() => {
+          setViewerPostId(null);
+          expandComments(item.id);
+          const y = postLayoutsRef.current[item.id];
+          if (y != null && scrollRef.current?.scrollTo) {
+            scrollRef.current.scrollTo({ y: Math.max(0, y - 16), animated: true });
+          }
+        }}
+        onRepost={() => handleRepost(item)}
+        onPressProfile={() => {
+          setViewerPostId(null);
+          navigateToPostProfile(item);
+        }}
+        onMore={
+          isAuthor
+            ? undefined
+            : () => {
+                setViewerPostId(null);
+                reportPost(item.id);
+              }
+        }
+      />
     );
   };
 
@@ -458,6 +535,7 @@ export default function CommunityFeedStream({
         )}
       </ScrollView>
 
+      {renderPostViewer()}
       <FeedReportModal
         visible={reportModalVisible}
         language={language}

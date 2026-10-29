@@ -31,19 +31,24 @@ function getProfileMeta(block) {
   };
 }
 
-function PostBody({ content, imageUri, isBrokenImage, language, onImageError }) {
+function PostBody({ content, imageUri, isBrokenImage, language, onImageError, onPressImage }) {
   return (
     <>
       {!!content?.trim() ? <Text style={styles.content}>{content}</Text> : null}
       {!!imageUri && !isBrokenImage ? (
-        <View style={styles.imageWrap}>
+        <TouchableOpacity
+          style={styles.imageWrap}
+          activeOpacity={0.9}
+          onPress={onPressImage}
+          disabled={!onPressImage}
+        >
           <Image
             source={{ uri: imageUri }}
             style={styles.image}
             resizeMode="cover"
             onError={onImageError}
           />
-        </View>
+        </TouchableOpacity>
       ) : null}
       {!!imageUri && isBrokenImage ? (
         <View style={[styles.imageWrap, styles.imageFallback]}>
@@ -85,6 +90,7 @@ export default function NoxFeedPostCard({
   onReport,
   onDelete,
   onImageError,
+  onPressImage,
   onCommentInputChange,
   onSendComment,
   formatDate,
@@ -211,6 +217,7 @@ export default function NoxFeedPostCard({
               isBrokenImage={isBrokenImage}
               language={language}
               onImageError={onImageError}
+              onPressImage={onPressImage}
             />
           </View>
         ) : (
@@ -220,6 +227,7 @@ export default function NoxFeedPostCard({
             isBrokenImage={isBrokenImage}
             language={language}
             onImageError={onImageError}
+            onPressImage={onPressImage}
           />
         )}
       </View>

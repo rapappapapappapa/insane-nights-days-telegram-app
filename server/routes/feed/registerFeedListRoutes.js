@@ -146,6 +146,17 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
       }),
     );
 
+    const followingInterestIds = new Set(
+      upcomingEvents.length
+        ? (
+            await prisma.eventInterest.findMany({
+              where: { userId, eventId: { in: upcomingEvents.map((e) => e.id) } },
+              select: { eventId: true },
+            })
+          ).map((i) => i.eventId)
+        : []
+    );
+
     const formattedEvents = upcomingEvents.map((event) => {
       const rawTiers = parseTicketTiersFromDb(event.ticketTiers);
       return {
@@ -162,6 +173,7 @@ app.get('/api/feed/following', authenticateToken, async (req, res) => {
         image: normalizeImageUrl(event.image),
         venue: event.venue ? { name: event.venue.venueName, address: event.venue.address } : null,
         venues: serializeItinerary(event.eventVenues),
+        interested: followingInterestIds.has(event.id),
         booker: event.booker ? { name: event.booker.pseudo?.trim() || `${event.booker.nom} ${event.booker.prenom}` } : null,
         createdAt: event.createdAt,
       };

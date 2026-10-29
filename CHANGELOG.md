@@ -13,6 +13,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Un membre peut marquer un événement « Intéressé » avec le cœur de la fiche événement. Nouvelle table `EventInterest` (migration `20261029100000_event_interest`), routes `POST`/`DELETE /api/events/:eventId/interest`, et indicateur `interested` sur la fiche et le fil.
 - Nouvel écran Agenda (maquette 16), ouvert depuis l’entrée Agenda de la navigation radiale communauté : calendrier mensuel (point plein = billet, anneau = intéressé), onglets Participant / Intéressé, cartes vers la fiche. Données via `GET /api/user/me/agenda`.
 
+### Ajouté (communauté — publication plein écran)
+- Toucher la photo d’une publication du fil l’ouvre en plein écran (maquette 18) : auteur avec badge de rôle, ville et date, texte, et barre J’aime / commentaires / reposts avec compteurs. « Commenter » referme la vue et ouvre les commentaires sous la publication. Le fil renvoie désormais `repostsCount`.
+
 ---
 
 ## Semaine du 22 au 23 octobre 2026

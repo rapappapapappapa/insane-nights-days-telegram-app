@@ -288,10 +288,28 @@ app.get('/api/feed/notifications', authenticateToken, async (req, res) => {
             id: true,
             username: true,
             activeProfileType: true,
+            djs: { select: { artistName: true, profileImage: true }, take: 1 },
+            bookers: { select: { pseudo: true, profileImage: true }, take: 1 },
+            venues: { select: { venueName: true, profileImage: true }, take: 1 },
+            communities: { select: { pseudo: true, profileImage: true }, take: 1 },
           },
         },
       },
     });
+
+    const actorIdentity = (actor) => {
+      const byType = {
+        DJ: actor.djs?.[0] && { name: actor.djs[0].artistName, image: actor.djs[0].profileImage },
+        BOOKER: actor.bookers?.[0] && { name: actor.bookers[0].pseudo, image: actor.bookers[0].profileImage },
+        VENUE: actor.venues?.[0] && { name: actor.venues[0].venueName, image: actor.venues[0].profileImage },
+        COMMUNITY: actor.communities?.[0] && {
+          name: actor.communities[0].pseudo,
+          image: actor.communities[0].profileImage,
+        },
+      };
+      const identity = byType[actor.activeProfileType] || {};
+      return { displayName: identity.name || actor.username, avatar: identity.image || null };
+    };
 
     res.json({
       success: true,
@@ -309,6 +327,7 @@ app.get('/api/feed/notifications', authenticateToken, async (req, res) => {
           id: notif.actor.id,
           username: notif.actor.username,
           profileType: notif.actor.activeProfileType,
+          ...actorIdentity(notif.actor),
         },
       })),
     });

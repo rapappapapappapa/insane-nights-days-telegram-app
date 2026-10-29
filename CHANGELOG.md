@@ -21,6 +21,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Nouvel écran de détail du billet (maquette 21) : bannière, informations, tarif, QR avec « Voir le QR code en plein écran », lignes Ajouter à mon agenda / Voir l’événement / Noter, et menu « … » pour retirer le billet. Remplace l’ancienne modale QR.
 - `GET /api/user/me/tickets` renvoie aussi `eventImage` et `eventAddress`.
 
+### Modifié (notifications — maquette 19)
+- Barre de filtres Toutes / Interactions / Événements / Système, et nouvelles lignes : avatar de l’auteur, nom en gras, extrait du post, date « 5 août à 17:05 », photo du post en fond à droite et pastille ronde du type (repost, cœur, commentaire, suivi, mention) avec point non lu. Les points restent visibles pendant la consultation.
+- Les notifications renvoient le nom d’affichage et l’avatar du profil actif de l’auteur (`actor.displayName`, `actor.avatar`).
+
 ---
 
 ## Semaine du 22 au 23 octobre 2026

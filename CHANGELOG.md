@@ -11,6 +11,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Toucher une publication du mur ouvre le mode scroll sur les posts de ce profil. Les commentaires s’ouvrent dans la même feuille basse que sur le fil.
 - Le mode scroll est désormais un composant partagé (`FeedScrollMode`) entre le fil et les profils.
 
+### Modifié (lieux — Feed)
+- La page Feed d’un lieu affiche ses vraies publications au format du fil, avec le bouton « Nouvelle publication », à la place des cartes tirées des réservations.
+
 ---
 
 ## Semaine du 27 au 30 octobre 2026

@@ -5,8 +5,8 @@ CREATE TABLE "Message" (
     "senderId" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "read" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     CONSTRAINT "Message_eventDjId_fkey" FOREIGN KEY ("eventDjId") REFERENCES "EventDj" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 

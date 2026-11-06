@@ -4,6 +4,7 @@
 # Usage: ./start_backend_and_tunnel.sh
 
 cd "$(dirname "$0")"
+ROOT_DIR="$(pwd)"
 
 echo "🛑 Arrêt des processus existants..."
 pkill -f "node.*index.js" 2>/dev/null
@@ -62,9 +63,15 @@ if ps -p $TUNNEL_PID > /dev/null 2>&1; then
   echo ""
   echo "⏳ Attente de l'URL du tunnel..."
   
-  for i in {1..30}; do
-    if grep -q "https://.*trycloudflare.com" cloudflare_tunnel.log 2>/dev/null; then
-      TUNNEL_URL=$(grep -oP 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' cloudflare_tunnel.log | tail -1)
+  for i in {1..45}; do
+    # ⚠️ Le log peut contenir l'URL de l'API Cloudflare (https://api.trycloudflare.com/tunnel).
+    # On ignore explicitement "api.trycloudflare.com" et on ne garde que l'URL publique du tunnel.
+    if grep -q "trycloudflare.com" cloudflare_tunnel.log 2>/dev/null; then
+      TUNNEL_URL=$(
+        grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' cloudflare_tunnel.log \
+          | grep -v '^https://api\.trycloudflare\.com$' \
+          | tail -1
+      )
       if [ ! -z "$TUNNEL_URL" ]; then
         echo "✅ URL du tunnel: $TUNNEL_URL"
         echo "$TUNNEL_URL" > cloudflare_url.txt
@@ -77,15 +84,23 @@ if ps -p $TUNNEL_PID > /dev/null 2>&1; then
         # Mettre à jour config.js
         echo ""
         echo "📝 Mise à jour de api/config.js..."
-        cd insane-nights-days-mobile/api
+        cd "$ROOT_DIR/nox-mobile/api"
         # Utiliser un délimiteur différent (#) pour éviter les problèmes avec les URLs
         sed -i "s#BASE_URL: process\.env\.EXPO_PUBLIC_API_BASE || '.*'#BASE_URL: process.env.EXPO_PUBLIC_API_BASE || '${TUNNEL_URL}'#" config.js
         echo "✅ Config mis à jour avec: $TUNNEL_URL"
+        cd "$ROOT_DIR"
         break
       fi
     fi
     sleep 1
   done
+
+  if [ ! -f "$ROOT_DIR/cloudflare_url.txt" ] || grep -q '^https://api\.trycloudflare\.com$' "$ROOT_DIR/cloudflare_url.txt" 2>/dev/null; then
+    echo "❌ Impossible d'obtenir une URL trycloudflare valide."
+    echo "   Dernières lignes du log tunnel:"
+    tail -20 "$ROOT_DIR/cloudflare_tunnel.log"
+    exit 1
+  fi
 else
   echo "❌ Erreur démarrage tunnel"
   tail -15 cloudflare_tunnel.log

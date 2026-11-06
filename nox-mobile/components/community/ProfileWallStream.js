@@ -1,5 +1,6 @@
-import React, { useReducer } from 'react';
+import React, { useReducer, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -11,7 +12,10 @@ import { useProfileWall } from '../../hooks/useProfileWall';
 import { useFeedPostEngagement } from '../../hooks/useFeedPostEngagement';
 import { useFeedReport } from '../../hooks/useFeedReport';
 import { postStateReducer, initialPostState, formatFeedRelativeDate } from '../../utils/feedPageUtils';
-import { NoxFeedPostCard, NoxButton } from '../nox';
+import { NoxButton } from '../nox';
+import FeedImmersivePost from './FeedImmersivePost';
+import FeedCommentsSheet from './FeedCommentsSheet';
+import FeedScrollMode from './FeedScrollMode';
 import FeedReportModal from '../feed/FeedReportModal';
 import EmptyState from '../EmptyState';
 import Toast from '../Toast';
@@ -37,6 +41,7 @@ export default function ProfileWallStream({
   openCommentsOnHighlight = false,
 }) {
   const { user, handleTokenExpired } = useAuth();
+  const insets = useSafeAreaInsets();
   const { language } = useLanguage();
   const { navigate } = useNavigation();
   const { showConfirm } = useConfirm();
@@ -72,12 +77,10 @@ export default function ProfileWallStream({
     likedPosts,
     postLikesCount,
     postComments,
-    expandedComments,
     commentInputs,
     brokenPostImages,
     dispatchPostState: dispatchEngagement,
     handleToggleLike,
-    toggleComments,
     expandComments,
     handleCreateComment,
   } = useFeedPostEngagement({
@@ -90,6 +93,14 @@ export default function ProfileWallStream({
     refreshFeedNotifications,
     onAuthError: handleTokenError,
   });
+
+  const [commentsPostId, setCommentsPostId] = useState(null);
+  const [scrollStartId, setScrollStartId] = useState(null);
+
+  const openComments = (postId) => {
+    expandComments(postId);
+    setCommentsPostId(postId);
+  };
 
   const highlightHandledRef = React.useRef(null);
   const [activeHighlightId, setActiveHighlightId] = React.useState(null);
@@ -105,7 +116,7 @@ export default function ProfileWallStream({
     highlightHandledRef.current = highlightPostId;
     setActiveHighlightId(item.id);
     if (openCommentsOnHighlight) {
-      expandComments(item.id);
+      openComments(item.id);
     }
     const clearTimer = setTimeout(() => setActiveHighlightId(null), 4000);
     return () => clearTimeout(clearTimer);
@@ -205,7 +216,13 @@ export default function ProfileWallStream({
     );
   };
 
-  const renderPostCard = (item) => {
+  /** Sort du mode scroll avant une action qui ouvre une autre modale ou change d’écran. */
+  const leavingScroll = (action) => () => {
+    setScrollStartId(null);
+    action();
+  };
+
+  const renderPost = (item, page = null) => {
     const profileType = item.profileType || 'BOOKER';
     const isDj = profileType === 'DJ';
     const isVenue = profileType === 'VENUE';
@@ -229,63 +246,71 @@ export default function ProfileWallStream({
       isAuthor && baseProfileImg
         ? `${String(baseProfileImg).split('?')[0]}?cb=${feedAvatarBust}`
         : baseProfileImg;
-    const imageUri = normalizeMediaUrl(item.imageUrl || item.image);
-    const isBrokenImage = !!brokenPostImages[item.id];
     const rootAuthorId = item.isRepost ? item.originalPost?.author?.id : item.author?.id;
     const canRepost =
       canUserRepost && !item.repostedByMe && rootAuthorId && rootAuthorId !== user?.id;
     const displayImageUri =
       item.isRepost && item.originalPost
         ? normalizeMediaUrl(item.originalPost.imageUrl)
-        : imageUri;
+        : normalizeMediaUrl(item.imageUrl || item.image);
 
     return (
-      <NoxFeedPostCard
+      <FeedImmersivePost
         key={`wall-post-${item.id}`}
+        variant={page ? 'page' : 'card'}
+        height={page?.height}
+        topInset={page ? insets.top : 0}
+        bottomInset={page ? page.bottomInset : 0}
+        rounded={!page}
         item={item}
-        language={language}
+        fr={fr}
         profileName={profileName}
-        profileLocation={profileLocation}
         profileImage={profileImage}
-        imageUri={displayImageUri}
-        isBrokenImage={isBrokenImage}
-        isDj={isDj}
         profileType={profileType}
-        isAuthor={isAuthor}
+        profileLocation={profileLocation}
+        imageUri={displayImageUri}
+        isBrokenImage={!!brokenPostImages[item.id]}
+        dateLabel={formatDate(item.createdAt)}
+        originalDateLabel={item.originalPost ? formatDate(item.originalPost.createdAt) : null}
         liked={!!likedPosts[item.id]}
-        likesCount={
-          postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes || 0
-        }
-        commentsExpanded={!!expandedComments[item.id]}
-        comments={postComments[item.id]}
-        commentsCount={
-          postComments[item.id] ? postComments[item.id].length : item.commentsCount ?? 0
-        }
-        commentInput={commentInputs[item.id]}
-        canComment={!!user?.token}
+        likesCount={postLikesCount[item.id] !== undefined ? postLikesCount[item.id] : item.likes || 0}
+        commentsCount={postComments[item.id] ? postComments[item.id].length : item.commentsCount ?? 0}
+        repostsCount={item.repostsCount ?? 0}
         canRepost={canRepost}
         repostedByMe={!!item.repostedByMe}
-        formatDate={formatDate}
-        onPressProfile={() => navigateToPostProfile(item)}
+        highlighted={!page && activeHighlightId === item.id}
+        onPress={page ? undefined : () => setScrollStartId(item.id)}
+        onPressProfile={leavingScroll(() => navigateToPostProfile(item))}
         onPressOriginalProfile={
-          item.isRepost ? () => navigateToPostProfile(item, { original: true }) : undefined
+          item.isRepost ? leavingScroll(() => navigateToPostProfile(item, { original: true })) : undefined
         }
+        onMore={
+          user?.token
+            ? leavingScroll(() => (isAuthor ? handleDeletePost(item.id) : reportPost(item.id)))
+            : undefined
+        }
+        moreIcon={isAuthor ? 'trash-outline' : 'ellipsis-horizontal'}
         onToggleLike={() => handleToggleLike(item.id)}
-        onToggleComments={() => toggleComments(item.id)}
+        onOpenComments={() => openComments(item.id)}
         onRepost={() => handleRepost(item)}
-        onReport={() => reportPost(item.id)}
-        onDelete={() => handleDeletePost(item.id)}
-        onImageError={() => {
-          dispatchEngagement({ type: 'SET_BROKEN_IMAGE', postId: item.id });
-        }}
-        onCommentInputChange={(text) => {
-          dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: item.id, text });
-        }}
-        onSendComment={() => handleCreateComment(item.id)}
-        highlighted={activeHighlightId === item.id}
+        onImageError={() => dispatchEngagement({ type: 'SET_BROKEN_IMAGE', postId: item.id })}
       />
     );
   };
+
+  const commentsSheet = (
+    <FeedCommentsSheet
+      visible={!!commentsPostId}
+      onClose={() => setCommentsPostId(null)}
+      fr={fr}
+      comments={commentsPostId ? postComments[commentsPostId] : null}
+      canComment={!!user?.token}
+      input={commentsPostId ? commentInputs[commentsPostId] : ''}
+      onChangeInput={(text) => dispatchEngagement({ type: 'SET_COMMENT_INPUT', postId: commentsPostId, text })}
+      onSend={() => handleCreateComment(commentsPostId)}
+      formatDate={formatDate}
+    />
+  );
 
   if (!wallFilter?.userId && !wallFilter?.djId && !wallFilter?.bookerId && !wallFilter?.venueId) {
     return (
@@ -350,7 +375,19 @@ export default function ProfileWallStream({
           style={styles.createBtnTop}
         />
       ) : null}
-      {posts.map((item) => renderPostCard(item))}
+      {posts.map((item) => renderPost(item))}
+
+      <FeedScrollMode
+        visible={!!scrollStartId}
+        items={posts}
+        startId={scrollStartId}
+        renderPage={(item, page) => renderPost(item, page)}
+        onClose={() => setScrollStartId(null)}
+        fr={fr}
+      >
+        {commentsSheet}
+      </FeedScrollMode>
+      {!scrollStartId ? commentsSheet : null}
 
       <FeedReportModal
         visible={reportModalVisible}

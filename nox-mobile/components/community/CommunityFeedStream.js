@@ -8,11 +8,8 @@ import {
   Image,
   StyleSheet,
   Share,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -30,6 +27,7 @@ import { openEventPreview } from '../../utils/noxNavigation';
 import { NoxText } from '../nox';
 import FeedImmersivePost from './FeedImmersivePost';
 import FeedCommentsSheet from './FeedCommentsSheet';
+import FeedScrollMode from './FeedScrollMode';
 import FeedReportModal from '../feed/FeedReportModal';
 import EmptyState from '../EmptyState';
 import Toast from '../Toast';
@@ -71,7 +69,6 @@ function CommunityFeedStream(
   const [commentsPostId, setCommentsPostId] = useState(null);
   /** Mode scroll (maquette 18) : index de départ, `null` = fermé. */
   const [scrollStartIndex, setScrollStartIndex] = useState(null);
-  const [pageHeight, setPageHeight] = useState(0);
 
   const [postState, dispatchPostState] = useReducer(postStateReducer, initialPostState);
 
@@ -495,49 +492,20 @@ function CommunityFeedStream(
     />
   );
 
-  const renderScrollMode = () => {
-    if (scrollStartIndex == null) return null;
-    const scrollItems = feed.filter((entry) => entry.type === 'post' || entry.type === 'event');
-    const startIndex = Math.min(
-      scrollItems.findIndex((entry) => entry.id === feed[scrollStartIndex]?.id),
-      scrollItems.length - 1,
-    );
-    const page = { height: pageHeight, bottomInset: insets.bottom };
-    return (
-      <Modal visible animationType="fade" onRequestClose={closeScrollMode} statusBarTranslucent>
-        <StatusBar style="light" />
-        <View style={styles.scrollMode} onLayout={(e) => setPageHeight(e.nativeEvent.layout.height)}>
-          {pageHeight > 0 ? (
-            <FlatList
-              data={scrollItems}
-              keyExtractor={(entry) => `${entry.type}-${entry.id}`}
-              renderItem={({ item }) =>
-                item.type === 'event' ? renderEventCard(item, page) : renderPost(item, { page })
-              }
-              pagingEnabled
-              decelerationRate="fast"
-              snapToInterval={pageHeight}
-              showsVerticalScrollIndicator={false}
-              initialScrollIndex={Math.max(0, startIndex)}
-              getItemLayout={(_, index) => ({ length: pageHeight, offset: pageHeight * index, index })}
-              windowSize={3}
-              initialNumToRender={2}
-              maxToRenderPerBatch={2}
-            />
-          ) : null}
-          <TouchableOpacity
-            style={[styles.scrollClose, { top: insets.top + Spacing.md }]}
-            onPress={closeScrollMode}
-            hitSlop={12}
-            accessibilityLabel={fr ? 'Quitter le mode scroll' : 'Exit scroll mode'}
-          >
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-        {commentsSheet}
-      </Modal>
-    );
-  };
+  const renderScrollMode = () => (
+    <FeedScrollMode
+      visible={scrollStartIndex != null}
+      items={feed.filter((entry) => entry.type === 'post' || entry.type === 'event')}
+      startId={scrollStartIndex != null ? feed[scrollStartIndex]?.id : null}
+      renderPage={(item, page) =>
+        item.type === 'event' ? renderEventCard(item, page) : renderPost(item, { page })
+      }
+      onClose={closeScrollMode}
+      fr={fr}
+    >
+      {commentsSheet}
+    </FeedScrollMode>
+  );
 
   if (loading && feed.length === 0 && !feedError) {
     return (
@@ -638,17 +606,6 @@ export default forwardRef(CommunityFeedStream);
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  scrollMode: { flex: 1, backgroundColor: Colors.background },
-  scrollClose: {
-    position: 'absolute',
-    left: Spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(10,10,9,0.5)',
-  },
   scrollContent: { paddingBottom: 160, paddingTop: Spacing.sm },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 200 },
   errorWrap: {

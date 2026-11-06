@@ -4,6 +4,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 3 au 6 novembre 2026
+
+### Modifié (profils — publications au format du fil)
+- Les murs de profil (DJ, organisateur, lieu, mon mur) affichent les publications avec les mêmes cartes que le fil : photo en plein fond ou fond NOX pour un texte seul, repost avec l’auteur d’origine, encadré J’aime / commentaires / repost. Les cartes ont des coins arrondis pour suivre les marges du profil.
+- Toucher une publication du mur ouvre le mode scroll sur les posts de ce profil. Les commentaires s’ouvrent dans la même feuille basse que sur le fil.
+- Le mode scroll est désormais un composant partagé (`FeedScrollMode`) entre le fil et les profils.
+
+---
+
 ## Semaine du 27 au 30 octobre 2026
 
 ### Ajouté (design — communauté)
@@ -21,7 +30,7 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ### Modifié (billets — wallet et détail du billet)
 - La page Billets suit les maquettes 17 et 20 : cartes avec affiche, pastille de date, badge ACTIF ou PASSÉ, date et adresse, puces de genre, encadré de tarif et aperçu du QR. L’historique indique si le billet n’a pas été scanné ou invite à noter la soirée.
-- Nouvel écran de détail du billet (maquette 21) : bannière, informations, tarif, QR avec « Voir le QR code en plein écran », lignes Ajouter à mon agenda / Voir l’événement / Noter, et menu « … » pour retirer le billet. Remplace l’ancienne modale QR.
+- Nouvel écran de détail du billet (maquette 21) : bannière, informations, tarif, QR avec « Voir le QR code en plein écran », lignes Ajouter à mon agenda / Voir l’événement / Noter, et menu « … » pour retirer le billet. Remplace l’ancienne modale QR.  
 - `GET /api/user/me/tickets` renvoie aussi `eventImage` et `eventAddress`.
 
 ### Modifié (notifications — maquette 19)

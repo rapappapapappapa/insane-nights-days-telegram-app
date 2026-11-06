@@ -56,6 +56,7 @@ function RoleBadge({ type }) {
  * Publication du fil au format visuel NOX.
  * - `variant="card"` : carte plein cadre du fil (maquette 15).
  * - `variant="page"` : page plein écran du mode scroll (maquette 18), `height` obligatoire.
+ * `rounded` : coins arrondis quand la carte est dans un conteneur avec marges (murs de profil).
  * Photo en fond si le post (ou le post d’origine d’un repost) en a une ; sinon fond NOX et texte mis en avant.
  */
 export default function FeedImmersivePost({
@@ -78,6 +79,7 @@ export default function FeedImmersivePost({
   canRepost,
   repostedByMe,
   highlighted,
+  rounded = false,
   topInset = 0,
   bottomInset = 0,
   onPress,
@@ -224,7 +226,12 @@ export default function FeedImmersivePost({
     <TouchableOpacity
       activeOpacity={0.95}
       onPress={onPress}
-      style={[styles.card, hasImage ? styles.cardImage : styles.cardText, highlighted && styles.cardHighlighted]}
+      style={[
+        styles.card,
+        hasImage ? styles.cardImage : styles.cardText,
+        rounded && styles.cardRounded,
+        highlighted && (rounded ? styles.cardRoundedHighlighted : styles.cardHighlighted),
+      ]}
     >
       {background}
       <View style={styles.cardShadeTop} pointerEvents="none" />
@@ -323,6 +330,8 @@ const styles = StyleSheet.create({
   cardImage: { height: 460 },
   cardText: { minHeight: 300 },
   cardHighlighted: { borderTopWidth: 2, borderBottomWidth: 2, borderColor: Colors.primary },
+  cardRounded: { borderRadius: Radius.card, borderWidth: 0.5, borderColor: primaryAlpha(0.5) },
+  cardRoundedHighlighted: { borderWidth: 2, borderColor: Colors.primary },
   cardShadeTop: {
     position: 'absolute',
     top: 0,

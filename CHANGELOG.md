@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 3 au 6 novembre 2026
 
+### Ajouté (billets — transfert à un ami)
+- Route `POST /api/tickets/:ticketId/transfer` : un billet valide, jamais scanné, d’un événement non terminé passe gratuitement sur le compte d’un profil Communauté. Il reçoit un nouveau QR code, l’ancien ne passe plus à l’entrée. Le destinataire reçoit une notification « Billet reçu » (avec push), l’expéditeur une confirmation dans l’onglet Événements.
+- Mobile : action « Transférer à un ami » sur le détail du billet, avec une feuille de recherche par pseudo et une confirmation avant l’envoi. Pas de revente pour l’instant.
+
 ### Ajouté (notifications — Événements et Système)
 - Nouvelle table `AppNotification` (migration `20261106100000_app_notification`) et route `GET /api/notifications/app`. Le compteur de non-lues, « marquer lu » et « tout marquer lu » couvrent aussi ces notifications.
 - Déclencheurs : billet confirmé (gratuit, webhook Stripe, confirmation), rappel la veille à partir de 10 h pour les détenteurs et les « Intéressé », invitation à noter le lendemain pour les billets scannés, horaire ou adresse modifiés par l’organisateur, événement supprimé, bienvenue pour les comptes de moins de 30 jours. Chaque envoi est dédoublonné et part aussi en push.

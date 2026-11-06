@@ -15,6 +15,7 @@ import { FontFamily } from '../../constants/typography';
 import { Layout, Radius, Spacing } from '../../constants/theme';
 import { NoxText, NoxButton, NoxScreenHeader } from '../../components/nox';
 import Toast from '../../components/Toast';
+import TicketTransferSheet from '../../components/tickets/TicketTransferSheet';
 import { useToast } from '../../hooks/useToast';
 import { openEventPreview } from '../../utils/noxNavigation';
 import {
@@ -49,6 +50,8 @@ export default function TicketDetailPage() {
   const [qrFullscreen, setQrFullscreen] = useState(false);
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
 
   if (!ticket) {
     return (
@@ -120,6 +123,40 @@ export default function TicketDetailPage() {
     );
   };
 
+  const canTransfer =
+    !past && ticket.status === 'valid' && !ticket.scannedAt && !(ticket.scannedVenueIds || []).length;
+
+  const confirmTransfer = (recipient) => {
+    showConfirm(
+      fr ? 'Transférer le billet' : 'Transfer ticket',
+      fr
+        ? `Envoyer ce billet à ${recipient.pseudo} ? Cette action est définitive.`
+        : `Send this ticket to ${recipient.pseudo}? This cannot be undone.`,
+      [
+        { text: fr ? 'Annuler' : 'Cancel', style: 'cancel' },
+        {
+          text: fr ? 'Transférer' : 'Transfer',
+          onPress: async () => {
+            setTransferBusy(true);
+            try {
+              const response = await api.transferTicket(user.token, ticket.id, recipient.id);
+              if (response?.success) {
+                setTransferOpen(false);
+                goBack();
+              } else {
+                showError(response?.message || (fr ? 'Transfert impossible.' : 'Transfer failed.'));
+              }
+            } catch (error) {
+              showError(error.message || (fr ? 'Transfert impossible.' : 'Transfer failed.'));
+            } finally {
+              setTransferBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const openRate = () =>
     navigate('rateEvent', {
       eventId: ticket.eventId,
@@ -138,6 +175,12 @@ export default function TicketDetailPage() {
       icon: 'calendar-outline',
       label: fr ? 'Ajouter à mon agenda' : 'Add to my calendar',
       onPress: addToCalendar,
+    },
+    canTransfer && {
+      id: 'transfer',
+      icon: 'paper-plane-outline',
+      label: fr ? 'Transférer à un ami' : 'Transfer to a friend',
+      onPress: () => setTransferOpen(true),
     },
     {
       id: 'event',
@@ -298,6 +341,15 @@ export default function TicketDetailPage() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      <TicketTransferSheet
+        visible={transferOpen}
+        onClose={() => setTransferOpen(false)}
+        onPick={confirmTransfer}
+        token={user?.token}
+        fr={fr}
+        busy={transferBusy}
+      />
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible} onHide={hideToast} />
     </SafeAreaView>

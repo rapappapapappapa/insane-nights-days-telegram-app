@@ -349,6 +349,18 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     return apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_QR}/${ticketId}/qr`, {}, token);
   },
 
+  // Transférer gratuitement un billet à un profil Communauté
+  transferTicket: async (token, ticketId, recipientCommunityId) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(
+      `${API_CONFIG.ENDPOINTS.TICKET_DELETE}/${ticketId}/transfer`,
+      { method: 'POST', body: JSON.stringify({ recipientCommunityId }) },
+      token
+    );
+  },
+
   // Supprimer un ticket (TEMPORAIRE - à supprimer en production)
   deleteTicket: async (token, ticketId) => {
     if (!token) {

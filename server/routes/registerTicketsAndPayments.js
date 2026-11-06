@@ -3,7 +3,7 @@ const { tierLabelForTicket } = require('../utils/ticketTierDisplay');
  * Billets (achat classique), Stripe (webhook, intents, confirmation), liste paiements / tickets.
  */
 const prisma = require('../lib/prisma');
-const { notifyTicketsIssued } = require('../utils/appNotifications');
+const { notifyTicketsIssued, notifyUsers } = require('../utils/appNotifications');
 const {
   parseTicketTiersFromDb,
   resolvePurchaseTier,
@@ -42,6 +42,80 @@ module.exports = function registerTicketsAndPaymentsRoutes(app, deps) {
     stripeWebhookSecret,
     eurosToCents,
   } = deps;
+
+/**
+ * Transfert gratuit d’un billet à un autre compte NOX (profil Communauté).
+ * Le billet change de propriétaire et reçoit un nouveau QR : l’ancien devient inutilisable.
+ * @route POST /api/tickets/:ticketId/transfer  body: { recipientCommunityId }
+ */
+app.post('/api/tickets/:ticketId/transfer', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { ticketId } = req.params;
+    const recipientCommunityId = req.body?.recipientCommunityId;
+    if (!recipientCommunityId) {
+      return res.status(400).json({ success: false, message: 'Destinataire requis.' });
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { event: { select: { id: true, title: true, image: true, status: true } } },
+    });
+    if (!ticket || ticket.userId !== userId) {
+      return res.status(404).json({ success: false, message: 'Billet introuvable.' });
+    }
+    if (ticket.status !== 'valid' || ticket.scannedAt || (ticket.scannedVenueIds || []).length > 0) {
+      return res.status(400).json({ success: false, message: 'Ce billet a déjà servi : il ne peut plus être transféré.' });
+    }
+    if (!ticket.event || ticket.event.status === 'FINISHED') {
+      return res.status(400).json({ success: false, message: 'L’événement est terminé.' });
+    }
+
+    const recipient = await prisma.userCommunity.findUnique({
+      where: { id: String(recipientCommunityId) },
+      select: { userId: true, pseudo: true },
+    });
+    if (!recipient) {
+      return res.status(404).json({ success: false, message: 'Destinataire introuvable.' });
+    }
+    if (recipient.userId === userId) {
+      return res.status(400).json({ success: false, message: 'Tu possèdes déjà ce billet.' });
+    }
+
+    const moved = await prisma.ticket.updateMany({
+      where: { id: ticketId, userId, status: 'valid', scannedAt: null },
+      data: { userId: recipient.userId, qrCode: makeTicketQrCode(uuidv4) },
+    });
+    if (moved.count === 0) {
+      return res.status(409).json({ success: false, message: 'Le billet a changé entre-temps, réessaie.' });
+    }
+
+    const sender = await prisma.userCommunity.findFirst({ where: { userId }, select: { pseudo: true } });
+    const senderName = sender?.pseudo || 'Un membre NOX';
+    notifyUsers([recipient.userId], {
+      category: 'events',
+      type: 'ticket_received',
+      title: 'Billet reçu',
+      body: `${senderName} t’a transféré un billet pour ${ticket.event.title}.`,
+      eventId: ticket.event.id,
+      imageUrl: ticket.event.image,
+    });
+    notifyUsers([userId], {
+      category: 'events',
+      type: 'ticket_transferred',
+      title: 'Billet transféré',
+      body: `Ton billet pour ${ticket.event.title} appartient maintenant à ${recipient.pseudo || 'ton ami'}.`,
+      eventId: ticket.event.id,
+      imageUrl: ticket.event.image,
+      push: false,
+    });
+
+    return res.json({ success: true, message: `Billet transféré à ${recipient.pseudo || 'ton ami'}.` });
+  } catch (error) {
+    console.error('Erreur transfert billet:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
   try {

@@ -8,6 +8,7 @@ const SERVER_ROOT = path.join(__dirname, '../..');
 const { normalizeEquipmentRentalForStorage } = require('../../utils/rentalEquipment');
 const { normalizeTicketTiersInput, minTierPriceEUR } = require('../../utils/ticketTiers');
 const { validateVenueItinerary } = require('../../utils/djSlotWindow');
+const { notifyEventUpdated, notifyEventCancelled, eventAudienceIds } = require('../../utils/appNotifications');
 const {
   INACTIVE_VENUE_STATUSES,
   itineraryInclude,
@@ -86,10 +87,14 @@ app.delete('/api/booker/events/:eventId', authenticateToken, async (req, res) =>
       where: { eventId: eventId },
     });
 
+    const audience = event.status === 'FINISHED' ? [] : await eventAudienceIds(eventId);
+
     // Supprimer l'événement
     await prisma.event.delete({
       where: { id: eventId },
     });
+
+    notifyEventCancelled(event, audience);
 
     res.json({
       success: true,
@@ -167,6 +172,11 @@ app.put('/api/booker/events/:eventId', authenticateToken, async (req, res) => {
       where: { id: eventId },
       data,
     });
+
+    const changes = [];
+    if (data.time && data.time !== event.time) changes.push('L’horaire');
+    if (data.location && data.location !== event.location) changes.push('L’adresse');
+    if (changes.length && updated.status === 'UPCOMING') notifyEventUpdated(updated, changes);
 
     return res.json({ success: true, message: 'Événement modifié.', event: updated });
   } catch (error) {

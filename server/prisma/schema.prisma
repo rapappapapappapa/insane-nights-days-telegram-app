@@ -45,6 +45,7 @@ model User {
   reportsMade               Report[]           @relation("ReportsMade")
   tickets                   Ticket[]
   eventInterests            EventInterest[]
+  appNotifications          AppNotification[]
   bookers                   UserBooker[]
   communities               UserCommunity[]
   djs                       UserDj[]
@@ -883,4 +884,23 @@ model EventInterest {
 
   @@unique([userId, eventId])
   @@index([eventId])
+}
+
+/// Notifications applicatives (onglets Événements / Système), distinctes des interactions du fil.
+model AppNotification {
+  id        String   @id @default(uuid())
+  userId    String
+  category  String
+  type      String
+  title     String
+  body      String?
+  eventId   String?
+  imageUrl  String?
+  dedupeKey String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
 }

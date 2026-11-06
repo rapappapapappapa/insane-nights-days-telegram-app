@@ -3,6 +3,7 @@ const { tierLabelForTicket } = require('../utils/ticketTierDisplay');
  * Billets (achat classique), Stripe (webhook, intents, confirmation), liste paiements / tickets.
  */
 const prisma = require('../lib/prisma');
+const { notifyTicketsIssued } = require('../utils/appNotifications');
 const {
   parseTicketTiersFromDb,
   resolvePurchaseTier,
@@ -204,6 +205,8 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       return { newTickets, newScore, newLevel };
     });
 
+    notifyTicketsIssued({ userId, eventId, quantity, dedupeKey: `ticket:${result.newTickets[0]?.id}` });
+
     res.json({
       success: true,
       message: `🎟️ ${quantity} ticket(s) gratuit(s) délivré(s)`,
@@ -305,7 +308,7 @@ app.post('/api/webhooks/stripe', async (req, res) => {
       }
 
       // Délivrance idempotente côté serveur
-      await prisma.$transaction(async (tx) => {
+      const delivered = await prisma.$transaction(async (tx) => {
         const freshPayment = await tx.payment.findUnique({
           where: { paymentIntentId },
           include: { tickets: true },
@@ -381,7 +384,16 @@ app.post('/api/webhooks/stripe', async (req, res) => {
         });
 
         await tx.payment.update({ where: { paymentIntentId }, data: { status: 'fulfilled' } });
+        return freshPayment;
       });
+      if (delivered) {
+        notifyTicketsIssued({
+          userId: delivered.userId,
+          eventId: delivered.eventId,
+          quantity: delivered.quantity,
+          dedupeKey: `ticket:${paymentIntentId}`,
+        });
+      }
     } else if (stripeEvent.type === 'payment_intent.payment_failed' || stripeEvent.type === 'payment_intent.canceled') {
       const intent = stripeEvent.data.object;
       const paymentIntentId = intent.id;
@@ -713,6 +725,15 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
 
       return { alreadyFulfilled: false, payment, tickets: newTickets, updatedUser: { score: newScore, level: newLevel } };
     });
+
+    if (!result.alreadyFulfilled) {
+      notifyTicketsIssued({
+        userId,
+        eventId: result.payment.eventId,
+        quantity: result.payment.quantity,
+        dedupeKey: `ticket:${paymentIntentId}`,
+      });
+    }
 
     return res.json({
       success: true,

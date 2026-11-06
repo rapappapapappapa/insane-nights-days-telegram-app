@@ -334,12 +334,18 @@ require('./routes/registerMediaBookingsRoutes')(app, profileDeps);
 require('./routes/registerMiscRoutes')(app, { authenticateToken });
 require('./routes/registerYousignWebhook')(app);
 
+const { runEventReminders } = require('./utils/appNotifications');
+
 // Mettre à jour les statuts au démarrage (désactivable en prod)
 const ENABLE_EVENT_STATUS_CRON = (process.env.ENABLE_EVENT_STATUS_CRON ?? 'true').toLowerCase() === 'true';
 if (ENABLE_EVENT_STATUS_CRON) {
-  updateEventStatuses();
-  // Mettre à jour les statuts toutes les 5 minutes
-  setInterval(updateEventStatuses, 5 * 60 * 1000);
+  const runEventCron = async () => {
+    await updateEventStatuses();
+    await runEventReminders();
+  };
+  runEventCron();
+  // Statuts + rappels (veille de soirée, note après coup) toutes les 5 minutes
+  setInterval(runEventCron, 5 * 60 * 1000);
 } else {
   console.log('⏸️  Cron status événements désactivé (ENABLE_EVENT_STATUS_CRON=false)');
 }

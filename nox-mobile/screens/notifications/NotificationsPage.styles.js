@@ -119,6 +119,9 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  avatarSquare: {
+    borderRadius: Radius.md,
+  },
   avatarImage: {
     width: '100%',
     height: '100%',

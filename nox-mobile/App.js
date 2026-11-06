@@ -21,6 +21,7 @@ import NoxRadialNav from './components/nox/NoxRadialNav';
 import { getHomeScreenForProfile, getAuthenticatedLandingScreen, shouldShowDrawerMenuButton, needsEmailVerification, peekPostAuthScreen } from './utils/noxRoleNavigation';
 import { shouldShowTutorial } from './utils/tutorialStorage';
 import { resolveVenuePushNavigation } from './utils/lieuxDemandesUtils';
+import { openEventPreview } from './utils/noxNavigation';
 // ✅ RÉORGANISATION: Imports organisés par fonctionnalité
 import OnboardingPage from './screens/onboarding/OnboardingPage';
 import ProHomePage from './screens/pro/ProHomePage';
@@ -370,6 +371,11 @@ function AppContent() {
 
   const navigateToChatFromPushData = useCallback(
     async (data) => {
+      if (data?.type === 'app_notification' && user?.isAuthenticated) {
+        if (data.eventId) openEventPreview(navigate, user.activeProfileType, data.eventId);
+        else navigate('notifications');
+        return;
+      }
       if (!data || data.type !== 'CHAT_MESSAGE') return;
       if (!user?.isAuthenticated || !user?.token) return;
       const targetProfile = data.profileType;

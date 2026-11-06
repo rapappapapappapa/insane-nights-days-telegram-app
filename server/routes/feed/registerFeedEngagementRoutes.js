@@ -2,6 +2,7 @@
  * Likes, commentaires et notifications feed.
  */
 const prisma = require('../../lib/prisma');
+const { ensureWelcomeNotification } = require('../../utils/appNotifications');
 
 module.exports = function registerFeedEngagementRoutes(app, deps) {
   const { authenticateToken } = deps;
@@ -338,6 +339,41 @@ app.get('/api/feed/notifications', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Notifications Événements / Système (rappels, billets, annulations, bienvenue).
+ * @route GET /api/notifications/app
+ */
+app.get('/api/notifications/app', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 40, 100);
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, createdAt: true } });
+    await ensureWelcomeNotification(user);
+    const notifications = await prisma.appNotification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+    res.json({
+      success: true,
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        category: n.category,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        eventId: n.eventId,
+        imageUrl: n.imageUrl,
+        read: n.read,
+        createdAt: n.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Erreur notifications app:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * ✅ AJOUT: Récupérer le nombre de notifications non lues
  * @route GET /api/feed/notifications/unread-count
  */
@@ -345,12 +381,11 @@ app.get('/api/feed/notifications/unread-count', authenticateToken, async (req, r
   try {
     const userId = req.user.id;
 
-    const count = await prisma.feedNotification.count({
-      where: {
-        userId: userId,
-        read: false,
-      },
-    });
+    const [feedCount, appCount] = await Promise.all([
+      prisma.feedNotification.count({ where: { userId, read: false } }),
+      prisma.appNotification.count({ where: { userId, read: false } }),
+    ]);
+    const count = feedCount + appCount;
 
     res.json({
       success: true,
@@ -376,6 +411,11 @@ app.put('/api/feed/notifications/:notificationId/read', authenticateToken, async
     });
 
     if (!notification) {
+      const updated = await prisma.appNotification.updateMany({
+        where: { id: notificationId, userId },
+        data: { read: true },
+      });
+      if (updated.count > 0) return res.json({ success: true });
       return res.status(404).json({
         success: false,
         message: 'Notification introuvable.',
@@ -411,15 +451,10 @@ app.put('/api/feed/notifications/mark-all-read', authenticateToken, async (req, 
   try {
     const userId = req.user.id;
 
-    await prisma.feedNotification.updateMany({
-      where: {
-        userId: userId,
-        read: false,
-      },
-      data: {
-        read: true,
-      },
-    });
+    await Promise.all([
+      prisma.feedNotification.updateMany({ where: { userId, read: false }, data: { read: true } }),
+      prisma.appNotification.updateMany({ where: { userId, read: false }, data: { read: true } }),
+    ]);
 
     res.json({
       success: true,

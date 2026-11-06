@@ -375,6 +375,14 @@ export function createFeedApiMethods({ apiRequest, getMimeType, getFileName, des
     return apiRequest('/api/feed/notifications/unread-count', { noCache: true }, token);
   },
 
+  // Notifications Événements / Système (rappels, billets, annulations)
+  getAppNotifications: async (token, limit = 40) => {
+    if (!token) {
+      throw new Error('Token d\'authentification requis.');
+    }
+    return apiRequest(`/api/notifications/app?limit=${limit}`, { noCache: true }, token);
+  },
+
   // Marquer une notification comme lue
   markFeedNotificationRead: async (token, notificationId) => {
     if (!token) {

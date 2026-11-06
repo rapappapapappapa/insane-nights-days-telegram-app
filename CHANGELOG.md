@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 3 au 6 novembre 2026
 
+### Ajouté (notifications — Événements et Système)
+- Nouvelle table `AppNotification` (migration `20261106100000_app_notification`) et route `GET /api/notifications/app`. Le compteur de non-lues, « marquer lu » et « tout marquer lu » couvrent aussi ces notifications.
+- Déclencheurs : billet confirmé (gratuit, webhook Stripe, confirmation), rappel la veille à partir de 10 h pour les détenteurs et les « Intéressé », invitation à noter le lendemain pour les billets scannés, horaire ou adresse modifiés par l’organisateur, événement supprimé, bienvenue pour les comptes de moins de 30 jours. Chaque envoi est dédoublonné et part aussi en push.
+- Mobile : les onglets Événements et Système de l’écran Notifications affichent ces messages (image de l’événement, titre, texte). Le toucher ouvre l’événement ou les billets ; le toucher d’un push ouvre l’événement concerné.
+
 ### Modifié (profils — publications au format du fil)
 - Les murs de profil (DJ, organisateur, lieu, mon mur) affichent les publications avec les mêmes cartes que le fil : photo en plein fond ou fond NOX pour un texte seul, repost avec l’auteur d’origine, encadré J’aime / commentaires / repost. Les cartes ont des coins arrondis pour suivre les marges du profil.
 - Toucher une publication du mur ouvre le mode scroll sur les posts de ce profil. Les commentaires s’ouvrent dans la même feuille basse que sur le fil.

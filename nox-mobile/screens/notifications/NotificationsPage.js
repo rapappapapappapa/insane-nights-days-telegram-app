@@ -14,6 +14,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { resolveFeedNotificationNavigation } from '../../utils/communityNotificationRouting';
+import { openEventPreview } from '../../utils/noxNavigation';
 import { api, normalizeMediaUrl } from '../../api/config';
 import Colors from '../../constants/colors';
 import { NoxText, NoxScreenHeader } from '../../components/nox';
@@ -45,8 +46,9 @@ function formatRelativeDate(dateString, language) {
 
 const INTERACTION_TYPES = new Set(['like', 'repost', 'comment', 'reply', 'mention', 'follow', 'follow_post', 'new_post']);
 
-function notifCategory(type) {
-  const t = (type || '').toLowerCase();
+function notifCategory(n) {
+  if (n?.category) return n.category;
+  const t = (n?.type || '').toLowerCase();
   if (INTERACTION_TYPES.has(t)) return 'interactions';
   if (t.startsWith('event') || t.startsWith('ticket')) return 'events';
   return 'system';
@@ -59,6 +61,12 @@ function notifIcon(type) {
   if (t === 'comment' || t === 'reply') return 'chatbubble-ellipses';
   if (t === 'follow' || t === 'follow_post' || t === 'new_post') return 'person-add';
   if (t === 'mention') return 'at';
+  if (t === 'ticket_purchased') return 'ticket';
+  if (t.startsWith('event_reminder')) return 'alarm';
+  if (t === 'rate_reminder') return 'star';
+  if (t === 'event_updated') return 'create';
+  if (t === 'event_cancelled') return 'close-circle';
+  if (t === 'welcome') return 'sparkles';
   return 'notifications';
 }
 
@@ -119,9 +127,19 @@ export default function NotificationsPage() {
       }
 
       try {
-        const res = await api.getFeedNotifications(user.token, 40, 0);
-        const notifications = Array.isArray(res?.notifications) ? res.notifications : [];
-        setItems(notifications);
+        const [feedRes, appRes] = await Promise.allSettled([
+          api.getFeedNotifications(user.token, 40, 0),
+          api.getAppNotifications(user.token, 40),
+        ]);
+        const feed = feedRes.status === 'fulfilled' && Array.isArray(feedRes.value?.notifications)
+          ? feedRes.value.notifications
+          : [];
+        const app = appRes.status === 'fulfilled' && Array.isArray(appRes.value?.notifications)
+          ? appRes.value.notifications.map((n) => ({ ...n, source: 'app' }))
+          : [];
+        setItems(
+          [...feed, ...app].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        );
 
         if (opts?.markRead) {
           await api.markAllFeedNotificationsRead(user.token);
@@ -147,7 +165,7 @@ export default function NotificationsPage() {
   }, [fetchNotifications]);
 
   const filteredItems = useMemo(
-    () => (filter === 'all' ? items : items.filter((n) => notifCategory(n?.type) === filter)),
+    () => (filter === 'all' ? items : items.filter((n) => notifCategory(n) === filter)),
     [items, filter],
   );
 
@@ -179,11 +197,55 @@ export default function NotificationsPage() {
     } catch {
       // ignore
     }
+    if (notif?.source === 'app') {
+      if (notif.type === 'rate_reminder') navigate('tickets');
+      else if (notif.eventId) openEventPreview(navigate, user?.activeProfileType, notif.eventId);
+      return;
+    }
     const { screen, params } = resolveFeedNotificationNavigation(notif, user?.activeProfileType);
     navigate(screen, params);
   };
 
+  const renderAppNotif = (n) => {
+    const icon = notifIcon(n.type);
+    const image = normalizeMediaUrl(n.imageUrl);
+    const unread = n.read === false;
+    const iconColor = n.type === 'event_cancelled' ? Colors.error : Colors.primary;
+    return (
+      <TouchableOpacity
+        key={n.id}
+        activeOpacity={0.85}
+        onPress={() => handlePress(n)}
+        style={[styles.row, unread && styles.rowUnread]}
+      >
+        <View style={[styles.avatar, styles.avatarSquare]}>
+          {image ? (
+            <Image source={{ uri: image }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name={n.category === 'system' ? 'sparkles' : 'calendar'} size={20} color={Colors.primaryLight} />
+          )}
+        </View>
+        <View style={styles.notifBody}>
+          <NoxText style={[styles.notifTitle, styles.notifActor]} numberOfLines={2}>
+            {cleanText(n.title)}
+          </NoxText>
+          {n.body ? (
+            <NoxText style={styles.notifExcerpt} numberOfLines={2}>
+              {cleanText(n.body)}
+            </NoxText>
+          ) : null}
+          <NoxText style={styles.notifTime}>{formatRelativeDate(n.createdAt, language)}</NoxText>
+        </View>
+        <View style={styles.typeBubble}>
+          <Ionicons name={icon} size={20} color={iconColor} />
+          {unread ? <View style={styles.unreadDot} /> : null}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const renderNotif = (n) => {
+    if (n?.source === 'app') return renderAppNotif(n);
     const type = (n?.type || '').toLowerCase();
     const icon = notifIcon(type);
     const iconColor = type === 'like' ? '#ff4d6d' : Colors.primary;

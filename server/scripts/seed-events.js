@@ -8,7 +8,7 @@ async function seedEvents() {
     // Créer des lieux fictifs
     const venues = [
       {
-        venueName: 'Club Insane',
+        venueName: 'Club Nox',
         address: '123 Rue de la Nuit, 75001 Paris',
       },
       {
@@ -50,10 +50,10 @@ async function seedEvents() {
     // Créer les événements avec les lieux associés
     const eventsData = [
       {
-        title: 'Insane Night - Soirée Electro',
+        title: 'Nox Night - Soirée Electro',
         date: new Date('2024-01-15T22:00:00Z'),
         time: '22:00',
-        location: 'Club Insane, Paris',
+        location: 'Club Nox, Paris',
         price: 25,
         capacity: 200,
         sold: 45,

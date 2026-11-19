@@ -4,6 +4,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 17 au 20 novembre 2026
+
+### Ajouté (profil communauté — onglet « Prévus »)
+- Sur son propre profil, l’onglet Events › Prévus liste les soirées à venir marquées « Intéressé » (sans billet), triées par date, avec accès à l’événement et un bouton vers l’agenda. Il remplace le message « disponible prochainement ».
+
+---
+
 ## Semaine du 3 au 6 novembre 2026
 
 ### Ajouté (billets — transfert à un ami)

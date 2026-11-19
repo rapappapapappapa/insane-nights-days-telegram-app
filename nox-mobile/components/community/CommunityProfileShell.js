@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -10,7 +10,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { normalizeMediaUrl } from '../../api/config';
+import { api, normalizeMediaUrl } from '../../api/config';
+import { useAuth } from '../../contexts/AuthContext';
 import { NoxText, NoxCard, NoxTabs, NoxButton } from '../nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
@@ -75,6 +76,32 @@ export default function CommunityProfileShell({
   const [bannerBroken, setBannerBroken] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [wallPostCount, setWallPostCount] = useState(null);
+  const { user } = useAuth();
+  const [willEvents, setWillEvents] = useState(null);
+
+  const showWill = isOwnProfile && activeTab === 'events' && eventsSubTab === 'will';
+  useEffect(() => {
+    if (!showWill || willEvents !== null || !user?.token) return undefined;
+    let cancelled = false;
+    api
+      .getMyAgenda(user.token)
+      .then((res) => {
+        if (cancelled) return;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const list = (Array.isArray(res?.interested) ? res.interested : []).filter((ev) => {
+          const d = ev.date ? new Date(`${ev.date}T12:00:00`) : null;
+          return ev.status !== 'FINISHED' && d && !Number.isNaN(d.getTime()) && d >= today;
+        });
+        setWillEvents(list);
+      })
+      .catch(() => {
+        if (!cancelled) setWillEvents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showWill, willEvents, user?.token]);
 
   const wallFilter = useMemo(() => {
     if (wallUserId) return { userId: wallUserId };
@@ -156,13 +183,12 @@ export default function CommunityProfileShell({
       { id: 'attended', label: fr ? 'Passés' : 'Attended' },
       { id: 'will', label: fr ? 'Prévus' : 'Will attend' },
     ];
-    const willTickets = [];
-    const list =
-      eventsSubTab === 'attended'
+    const isWill = eventsSubTab === 'will';
+    const list = isWill
+      ? (willEvents || []).map((ev) => ({ id: ev.id, eventId: ev.id, eventTitle: ev.title, eventDate: ev.date }))
+      : eventsSubTab === 'attended'
         ? pastTickets
-        : eventsSubTab === 'will'
-          ? willTickets
-          : upcomingTickets;
+        : upcomingTickets;
 
     return (
       <View style={styles.tabContent}>
@@ -175,12 +201,14 @@ export default function CommunityProfileShell({
         ) : (
           <>
             <NoxTabs tabs={eventTabs} activeId={eventsSubTab} onChange={setEventsSubTab} style={styles.subTabs} />
-            {list.length === 0 ? (
+            {isWill && willEvents === null ? (
+              <ActivityIndicator color={Colors.primary} style={styles.empty} />
+            ) : list.length === 0 ? (
               <NoxText variant="secondary" style={styles.empty}>
-                {eventsSubTab === 'will'
+                {isWill
                   ? fr
-                    ? 'La liste « Prévus » sera disponible prochainement.'
-                    : 'The “Will attend” list will be available soon.'
+                    ? 'Touche le cœur d’une soirée pour la marquer « Intéressé » : elle apparaîtra ici.'
+                    : 'Tap the heart on an event to save it here.'
                   : fr
                     ? 'Aucun événement dans cette catégorie.'
                     : 'No events in this category.'}
@@ -196,7 +224,7 @@ export default function CommunityProfileShell({
                   }}
                 >
                   <NoxCard style={styles.listCard} padded={false}>
-                    <Ionicons name="ticket-outline" size={22} color={Colors.primary} />
+                    <Ionicons name={isWill ? 'heart' : 'ticket-outline'} size={22} color={Colors.primary} />
                     <View style={{ flex: 1 }}>
                       <NoxText variant="form">{t.eventTitle || 'Event'}</NoxText>
                       <NoxText variant="secondary">
@@ -209,9 +237,9 @@ export default function CommunityProfileShell({
               ))
             )}
             <NoxButton
-              label={fr ? 'Mes billets (QR)' : 'My tickets (QR)'}
+              label={isWill ? (fr ? 'Ouvrir mon agenda' : 'Open my agenda') : fr ? 'Mes billets (QR)' : 'My tickets (QR)'}
               variant="secondary"
-              onPress={() => navigate('tickets')}
+              onPress={() => navigate(isWill ? 'communityAgenda' : 'tickets')}
               style={{ marginTop: Spacing.lg }}
             />
           </>

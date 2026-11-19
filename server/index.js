@@ -288,6 +288,7 @@ require('./routes/registerTicketResaleRoutes')(app, {
 });
 
 require('./routes/registerCollectifRoutes')(app, { authenticateToken });
+require('./routes/registerWalletRoutes')(app, { authenticateToken });
 
 require('./routes/registerFeedRoutes')(app, {
   authenticateToken,

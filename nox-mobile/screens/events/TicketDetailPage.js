@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Linking, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,6 +53,28 @@ export default function TicketDetailPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
   const [resaleBusy, setResaleBusy] = useState(false);
+  const [walletUrl, setWalletUrl] = useState(null);
+
+  const walletEligible = !!ticket && !isTicketPast(ticket) && ticket.status === 'valid' && !!user?.token;
+  useEffect(() => {
+    if (!walletEligible) {
+      setWalletUrl(null);
+      return undefined;
+    }
+    let cancelled = false;
+    api
+      .getTicketWalletLinks(user.token, ticket.id)
+      .then((res) => {
+        const link = Platform.OS === 'ios' ? res?.apple : res?.google;
+        if (!cancelled) setWalletUrl(link?.available ? link.url : null);
+      })
+      .catch(() => {
+        if (!cancelled) setWalletUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [walletEligible, user?.token, ticket?.id, ticket?.qrCode]);
 
   if (!ticket) {
     return (
@@ -224,7 +246,27 @@ export default function TicketDetailPage() {
       venues: (ticket.venues || []).filter((s) => (ticket.scannedVenueIds || []).includes(s.venueId)),
     });
 
+  const openWallet = async () => {
+    try {
+      // Le lien Apple est signé pour 10 min : on en redemande un frais au moment du clic.
+      const res = await api.getTicketWalletLinks(user.token, ticket.id);
+      const link = Platform.OS === 'ios' ? res?.apple : res?.google;
+      if (link?.url) await Linking.openURL(link.url);
+      else showError(fr ? 'Wallet indisponible pour le moment.' : 'Wallet unavailable right now.');
+    } catch (error) {
+      showError(error.message || (fr ? 'Wallet indisponible pour le moment.' : 'Wallet unavailable right now.'));
+    }
+  };
+
   const actionRows = [
+    walletUrl && !onResale && {
+      id: 'wallet',
+      icon: 'wallet-outline',
+      label: Platform.OS === 'ios'
+        ? fr ? 'Ajouter à Apple Wallet' : 'Add to Apple Wallet'
+        : fr ? 'Ajouter à Google Wallet' : 'Add to Google Wallet',
+      onPress: openWallet,
+    },
     canAddToCalendar && {
       id: 'calendar',
       icon: 'calendar-outline',

@@ -220,6 +220,10 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     );
   },
 
+  // Liens Apple Wallet / Google Wallet d’un billet ({ apple: { available, url }, google: {...} })
+  getTicketWalletLinks: async (token, ticketId) =>
+    apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_DELETE}/${ticketId}/wallet`, { noCache: true }, token),
+
   // Revente : mettre en vente / retirer son billet
   listTicketForResale: async (token, ticketId) =>
     apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_DELETE}/${ticketId}/resale`, { method: 'POST' }, token),

@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 20 novembre 2026
 
+### Ajouté (billets — Apple Wallet / Google Wallet, préparation)
+- Serveur : `GET /api/tickets/:ticketId/wallet` renvoie les liens disponibles. Apple : `.pkpass` signé (`passkit-generator`) servi par `GET /api/wallet/apple/:ticketId.pkpass` avec un lien signé valable 10 min, ouvert dans Safari. Google : lien « Enregistrer dans Google Wallet » (JWT RS256, événement et billet créés à l’enregistrement). Images du pass dans `server/assets/wallet`.
+- Inactif tant que les certificats Apple (`APPLE_PASS_*`, `APPLE_WWDR_CERT`) ou le compte émetteur Google (`GOOGLE_WALLET_*`) ne sont pas fournis (voir `env.example.txt`). L’identifiant du pass inclut la fin du QR : après un transfert ou une revente, le nouveau détenteur ajoute un nouveau pass, l’ancien n’est plus accepté au scan.
+- Mobile : action « Ajouter à Apple Wallet » / « Ajouter à Google Wallet » sur le détail d’un billet valide, affichée seulement si le serveur est configuré. Pas de module natif : livrable par OTA.
+
 ### Ajouté (collectifs — adhésions HelloAsso, préparation)
 - Réglages d’adhésion sur `UserBooker` (slug HelloAsso, nom, prix, ouverture) et table `CollectifMembership` (migration `20261119110000_collectif_membership`). Routes : réglages et adhérents du collectif (`/api/booker/me/collectif-settings`, `/collectif-members`), offre et adhésion (`/api/collectifs/:bookerId/membership`, `/join`), vérification au retour (`/memberships/:id/sync`, `/helloasso/return`), webhook `/api/webhooks/helloasso` et `/api/user/me/collectif-memberships`.
 - Client HelloAsso v5 (`utils/helloAsso.js` : jeton client, checkout, lecture du checkout) inactif tant que `HELLOASSO_ENABLED` et les identifiants ne sont pas fournis (voir `env.example.txt`). Les adhésions gratuites marchent déjà ; les payantes affichent « Adhésions bientôt disponibles ». Le paiement est revérifié auprès de HelloAsso avant activation (webhooks non signés). Adhésion valable un an, notification « Tu es membre de … ».

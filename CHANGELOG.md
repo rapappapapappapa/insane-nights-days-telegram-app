@@ -6,6 +6,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 20 novembre 2026
 
+### Ajouté (billets — revente via NOX)
+- Nouvelle table `TicketResale` et colonne `Payment.resaleId` (migration `20261119100000_ticket_resale`). Un billet payant, jamais scanné, d’un événement à venir, peut être remis en vente au prix payé par son acheteur d’origine (pas les billets reçus par transfert). Pendant la vente, il passe au statut `on_resale` avec un nouveau QR, refusé au scan.
+- Achat : `GET /api/events/:eventId/resale`, `POST /api/resale/:resaleId/intent` (annonce réservée 15 min), `POST /api/resale/confirm` et branche dédiée du webhook Stripe. Le billet passe à l’acheteur avec un nouveau QR, et le vendeur est remboursé du même montant sur son paiement d’origine (remboursement Stripe partiel, sans Stripe Connect). Si l’annonce a été vendue entre-temps, l’acheteur est remboursé en entier. Notifications « Billet revendu », « Billet confirmé » et « Billet déjà revendu ».
+- Mobile : « Revendre mon billet » et « Retirer de la revente » sur le détail du billet, badge « En revente » à la place du QR, et bloc « Billets en revente » sous le paiement de la page événement.
+
+### Corrigé (billets — quotas par tarif)
+- Les quotas d’un tarif comptent aussi les billets scannés et ceux en revente. Avant, un billet scanné libérait une place du quota.
+
+
 ### Ajouté (profil communauté — onglet « Prévus »)
 - Sur son propre profil, l’onglet Events › Prévus liste les soirées à venir marquées « Intéressé » (sans billet), triées par date, avec accès à l’événement et un bouton vers l’agenda. Il remplace le message « disponible prochainement ».
 

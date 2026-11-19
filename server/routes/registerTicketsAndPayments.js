@@ -4,6 +4,7 @@ const { tierLabelForTicket } = require('../utils/ticketTierDisplay');
  */
 const prisma = require('../lib/prisma');
 const { notifyTicketsIssued, notifyUsers } = require('../utils/appNotifications');
+const { fulfilResalePayment, resaleEligibility } = require('../utils/ticketResale');
 const {
   parseTicketTiersFromDb,
   resolvePurchaseTier,
@@ -26,6 +27,9 @@ function ticketDisplayStatus(ticket) {
   const scanned = new Set(ticket.scannedVenueIds || []);
   return stops.every((s) => scanned.has(s.venueId)) ? 'used' : 'valid';
 }
+
+/** Billets qui occupent une place du quota d’un tarif (y compris scannés ou en revente). */
+const SOLD_TICKET_STATUSES = ['valid', 'used', 'on_resale'];
 
 /** QR billet : 24 hex (entropie correcte), unique via contrainte DB. */
 function makeTicketQrCode(uuidv4) {
@@ -218,7 +222,7 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       const def = tiers.find((t) => t.id === tierRes.tierId);
       if (def?.maxSold != null) {
         const soldTier = await prisma.ticket.count({
-          where: { eventId, tierId: tierRes.tierId, status: 'valid' },
+          where: { eventId, tierId: tierRes.tierId, status: { in: SOLD_TICKET_STATUSES } },
         });
         if (soldTier + quantity > def.maxSold) {
           return res.status(400).json({
@@ -369,6 +373,20 @@ app.post('/api/webhooks/stripe', async (req, res) => {
         return res.json({ received: true });
       }
 
+      if (payment.resaleId) {
+        if (typeof intent.amount === 'number' && intent.amount !== payment.amount) {
+          console.warn('[STRIPE WEBHOOK] resale amount mismatch', { paymentIntentId, intentAmount: intent.amount });
+          return res.json({ received: true });
+        }
+        const result = await fulfilResalePayment({
+          stripe,
+          paymentIntentId,
+          makeQrCode: () => makeTicketQrCode(uuidv4),
+        });
+        console.log('[STRIPE WEBHOOK] resale payment:', paymentIntentId, result.status);
+        return res.json({ received: true });
+      }
+
       // Revalidation de base
       if (typeof intent.amount === 'number' && intent.amount !== payment.amount) {
         console.warn('[STRIPE WEBHOOK] amount mismatch', { paymentIntentId, intentAmount: intent.amount, paymentAmount: payment.amount });
@@ -418,7 +436,7 @@ app.post('/api/webhooks/stripe', async (req, res) => {
               where: {
                 eventId: freshPayment.eventId,
                 tierId: tierResolved.tierId,
-                status: 'valid',
+                status: { in: SOLD_TICKET_STATUSES },
               },
             });
             if (soldTier + freshPayment.quantity > def.maxSold) {
@@ -568,7 +586,7 @@ app.post('/api/payments/create-ticket-intent', authenticateToken, async (req, re
       const def = tiers.find((t) => t.id === tierRes.tierId);
       if (def?.maxSold != null) {
         const soldTier = await prisma.ticket.count({
-          where: { eventId, tierId: tierRes.tierId, status: 'valid' },
+          where: { eventId, tierId: tierRes.tierId, status: { in: SOLD_TICKET_STATUSES } },
         });
         if (soldTier + quantity > def.maxSold) {
           return res.status(400).json({
@@ -669,6 +687,7 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
 
       if (!payment) throw httpError(404, 'Paiement introuvable.');
       if (payment.userId !== userId) throw httpError(403, 'Paiement non autorisé.');
+      if (payment.resaleId) throw httpError(400, 'Achat en revente : utilise POST /api/resale/confirm.');
 
       // ✅ Idempotence: si déjà délivré, renvoyer les tickets associés à ce paiement
       if (payment.status === 'fulfilled') {
@@ -745,7 +764,7 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
             where: {
               eventId: payment.eventId,
               tierId: tierResolved.tierId,
-              status: 'valid',
+              status: { in: SOLD_TICKET_STATUSES },
             },
           });
           if (soldTier + payment.quantity > def.maxSold) {
@@ -898,6 +917,12 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
             eventVenues: itineraryInclude,
           },
         },
+        payment: { select: { userId: true } },
+        resales: {
+          where: { status: { in: ['ACTIVE', 'RESERVED'] } },
+          select: { id: true, status: true, priceCents: true },
+          take: 1,
+        },
       },
       orderBy: {
         purchaseDate: 'desc',
@@ -928,6 +953,8 @@ app.get('/api/user/me/tickets', authenticateToken, async (req, res) => {
       purchaseDate: ticket.purchaseDate.toISOString(),
       tierId: ticket.tierId ?? null,
       tierLabel: tierLabelForTicket(ticket.event.ticketTiers, ticket.tierId),
+      resellable: !resaleEligibility(ticket, userId),
+      resale: ticket.resales[0] || null,
     }));
 
     res.json({ success: true, tickets: formattedTickets });

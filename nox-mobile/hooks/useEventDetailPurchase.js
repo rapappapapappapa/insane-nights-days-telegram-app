@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { api } from '../api/config';
 import * as Stripe from '../utils/stripe';
@@ -24,6 +24,25 @@ export function useEventDetailPurchase({
   const [buyingTicket, setBuyingTicket] = useState(false);
   const [acceptedCgv, setAcceptedCgv] = useState(false);
   const [selectedTierId, setSelectedTierId] = useState(null);
+  const [resaleListings, setResaleListings] = useState([]);
+  const [buyingResaleId, setBuyingResaleId] = useState(null);
+
+  const loadResaleListings = useCallback(async () => {
+    if (!eventId || !user?.token || event?.status !== 'UPCOMING') {
+      setResaleListings([]);
+      return;
+    }
+    try {
+      const res = await api.getEventResaleListings(user.token, eventId);
+      setResaleListings(res?.success && Array.isArray(res.listings) ? res.listings : []);
+    } catch {
+      setResaleListings([]);
+    }
+  }, [eventId, user?.token, event?.status]);
+
+  useEffect(() => {
+    loadResaleListings();
+  }, [loadResaleListings]);
 
   const ticketTiersForPurchase = useMemo(() => {
     const t = event?.ticketTiers;
@@ -193,7 +212,66 @@ export function useEventDetailPurchase({
     }
   };
 
+  /** Achat d’un billet en revente : même PaymentSheet, le billet du vendeur est transféré. */
+  const handleBuyResale = async (listing) => {
+    const fr = language === 'fr';
+    if (!user?.isAuthenticated || !user?.token) {
+      showError(fr ? 'Vous devez être connecté pour acheter un ticket.' : 'You must be logged in to buy a ticket.');
+      return;
+    }
+    if (!acceptedCgv) {
+      showError(fr ? "Vous devez accepter les CGV avant d'acheter." : 'You must accept the Terms of Sale before purchasing.');
+      return;
+    }
+    if (!Stripe?.isStripeSupported || Platform.OS === 'web') {
+      showError(fr ? 'Le paiement est disponible sur l’app iOS / Android.' : 'Payment works on the iOS / Android app.');
+      return;
+    }
+    setBuyingResaleId(listing.id);
+    try {
+      const intentRes = await api.createResaleIntent(user.token, listing.id);
+      if (!intentRes?.success || !intentRes?.paymentIntentClientSecret) {
+        showError(intentRes?.message || (fr ? 'Impossible de démarrer le paiement.' : 'Unable to start payment.'));
+        loadResaleListings();
+        return;
+      }
+      await Stripe.initStripe({ publishableKey: intentRes.publishableKey, urlScheme: APP_URL_SCHEME });
+      const init = await Stripe.initPaymentSheet({
+        merchantDisplayName: 'Nox',
+        paymentIntentClientSecret: intentRes.paymentIntentClientSecret,
+        allowsDelayedPaymentMethods: true,
+        returnURL: STRIPE_RETURN_URL,
+      });
+      if (init?.error) {
+        showError(init.error.message || (fr ? 'Erreur initialisation paiement.' : 'Payment init error.'));
+        return;
+      }
+      const presented = await Stripe.presentPaymentSheet();
+      if (presented?.error) {
+        showError(presented.error.message || (fr ? 'Paiement annulé.' : 'Payment cancelled.'));
+        return;
+      }
+      const confirmRes = await api.confirmResalePurchase(user.token, intentRes.paymentIntentId);
+      if (confirmRes?.success) {
+        showSuccess(confirmRes.message || (fr ? 'Billet acheté !' : 'Ticket purchased!'));
+        fetchEvent();
+        loadResaleListings();
+        goPurchaseSuccess(listing.priceCents / 100);
+      } else {
+        showError(confirmRes?.message || (fr ? 'Erreur lors de la délivrance du billet.' : 'Ticket delivery failed.'));
+      }
+    } catch (error) {
+      showError(error.message || (fr ? 'Erreur lors du paiement.' : 'Payment error.'));
+      loadResaleListings();
+    } finally {
+      setBuyingResaleId(null);
+    }
+  };
+
   return {
+    resaleListings,
+    buyingResaleId,
+    handleBuyResale,
     buyingTicket,
     acceptedCgv,
     setAcceptedCgv,

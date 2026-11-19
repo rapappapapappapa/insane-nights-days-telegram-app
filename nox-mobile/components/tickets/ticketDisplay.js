@@ -85,7 +85,14 @@ export function TicketDatePill({ dateString, language, style }) {
   );
 }
 
-export function TicketStatusBadge({ past, fr }) {
+export function TicketStatusBadge({ past, fr, onResale = false }) {
+  if (onResale && !past) {
+    return (
+      <View style={[styles.badge, styles.badgeResale]}>
+        <NoxText style={[styles.badgeText, styles.badgeTextResale]}>{fr ? 'EN REVENTE' : 'ON RESALE'}</NoxText>
+      </View>
+    );
+  }
   return (
     <View style={[styles.badge, past ? styles.badgePast : styles.badgeActive]}>
       <NoxText style={[styles.badgeText, past ? styles.badgeTextPast : styles.badgeTextActive]}>
@@ -154,6 +161,8 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontFamily: FontFamily.bold, letterSpacing: 0.4 },
   badgeTextActive: { color: Colors.primaryLight },
   badgeTextPast: { color: Colors.textTertiary },
+  badgeResale: { borderColor: 'rgba(245,158,11,0.6)', backgroundColor: 'rgba(245,158,11,0.12)' },
+  badgeTextResale: { color: Colors.warning },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     paddingHorizontal: 10,

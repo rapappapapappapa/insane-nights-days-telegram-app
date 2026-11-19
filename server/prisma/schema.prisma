@@ -46,6 +46,7 @@ model User {
   tickets                   Ticket[]
   eventInterests            EventInterest[]
   appNotifications          AppNotification[]
+  ticketResales             TicketResale[]
   bookers                   UserBooker[]
   communities               UserCommunity[]
   djs                       UserDj[]
@@ -375,6 +376,7 @@ model Event {
   eventGroups   EventGroup[]
   eventStaff    EventStaff[]
   interests     EventInterest[]
+  resales       TicketResale[]
 }
 
 model EventGroup {
@@ -606,6 +608,7 @@ model Ticket {
   payment         Payment?      @relation(fields: [paymentIntentId], references: [paymentIntentId])
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   venueRatings    VenueRating[] @relation("VenueRatingTickets")
+  resales         TicketResale[]
 
   @@index([userId])
   @@index([eventId])
@@ -620,6 +623,8 @@ model Payment {
   paymentIntentId String   @unique
   /// Tarif Stripe / tickets : tous les tickets d’un même paiement ont le même palier
   tierId          String?
+  /// Achat d’un billet en revente (TicketResale.id) : ne crée pas de billet, transfère celui du vendeur
+  resaleId        String?
   amount          Int
   currency        String   @default("eur")
   quantity        Int      @default(1)
@@ -903,4 +908,33 @@ model AppNotification {
 
   @@unique([userId, dedupeKey])
   @@index([userId, createdAt])
+}
+
+/// Billet remis en vente via NOX au prix payé. À la vente, le billet passe à l’acheteur
+/// et le vendeur est remboursé (remboursement partiel de son paiement Stripe d’origine).
+model TicketResale {
+  id                    String    @id @default(uuid())
+  ticketId              String
+  sellerId              String
+  eventId               String
+  priceCents            Int
+  /// ACTIVE | RESERVED | SOLD | CANCELLED
+  status                String    @default("ACTIVE")
+  buyerId               String?
+  buyerPaymentIntentId  String?   @unique
+  reservedUntil         DateTime?
+  sellerPaymentIntentId String
+  sellerRefundId        String?
+  /// pending | succeeded | failed
+  refundStatus          String?
+  soldAt                DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  ticket                Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  seller                User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  event                 Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
+  @@index([ticketId])
+  @@index([sellerId])
 }

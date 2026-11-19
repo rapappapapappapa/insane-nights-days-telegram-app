@@ -165,16 +165,20 @@ export default function TicketsPage() {
           <NoxText style={styles.title} numberOfLines={2}>
             {ticket.eventTitle}
           </NoxText>
-          <TicketStatusBadge past={false} fr={fr} />
+          <TicketStatusBadge past={false} fr={fr} onResale={ticket.status === 'on_resale'} />
         </View>
         {renderMeta(ticket, 'long')}
         <TicketGenreChips genres={ticketGenres(ticket)} />
         <TicketTierBox ticket={ticket} fr={fr} />
       </View>
       <View style={styles.qrCol}>
-        <View style={styles.qrPreview}>
-          <QRCode value={buildQrPayload(ticket)} size={56} color="#000000" backgroundColor="#FFFFFF" />
-        </View>
+        {ticket.status === 'on_resale' ? (
+          <Ionicons name="pricetag-outline" size={28} color={Colors.warning} />
+        ) : (
+          <View style={styles.qrPreview}>
+            <QRCode value={buildQrPayload(ticket)} size={56} color="#000000" backgroundColor="#FFFFFF" />
+          </View>
+        )}
       </View>
       <Ionicons name="chevron-forward" size={18} color={Colors.text} style={styles.chevron} />
     </TouchableOpacity>

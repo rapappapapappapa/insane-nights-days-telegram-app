@@ -280,6 +280,13 @@ require('./routes/registerTicketsAndPayments')(app, {
   eurosToCents,
 });
 
+require('./routes/registerTicketResaleRoutes')(app, {
+  authenticateToken,
+  uuidv4,
+  stripe,
+  stripePublishableKey,
+});
+
 require('./routes/registerFeedRoutes')(app, {
   authenticateToken,
   MEDIA_STORAGE,

@@ -278,6 +278,9 @@ export default function EventDetailPage() {
     unitPriceForPurchase,
     priceBadgeLabel,
     handleBuyTicket,
+    resaleListings,
+    buyingResaleId,
+    handleBuyResale,
   } = purchase;
 
   const groups = useEventDetailGroups({
@@ -342,6 +345,9 @@ export default function EventDetailPage() {
       canProceedPurchaseTier={canProceedPurchaseTier}
       unitPriceForPurchase={unitPriceForPurchase}
       handleBuyTicket={handleBuyTicket}
+      resaleListings={resaleListings}
+      buyingResaleId={buyingResaleId}
+      handleBuyResale={handleBuyResale}
     />
   );
 

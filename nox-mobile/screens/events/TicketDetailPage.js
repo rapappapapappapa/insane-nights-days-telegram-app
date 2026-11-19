@@ -45,13 +45,14 @@ export default function TicketDetailPage() {
   const { user } = useAuth();
   const { showConfirm } = useConfirm();
   const { toast, showError, showSuccess, hideToast } = useToast();
-  const ticket = routeParams?.ticket;
+  const [ticket, setTicket] = useState(routeParams?.ticket);
 
   const [qrFullscreen, setQrFullscreen] = useState(false);
   const [calendarBusy, setCalendarBusy] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
+  const [resaleBusy, setResaleBusy] = useState(false);
 
   if (!ticket) {
     return (
@@ -123,6 +124,60 @@ export default function TicketDetailPage() {
     );
   };
 
+  const onResale = ticket.status === 'on_resale';
+  const resaleEuros = ticket.resale?.priceCents != null
+    ? (ticket.resale.priceCents / 100).toFixed(2).replace('.', ',')
+    : String(ticket.price ?? '');
+
+  const confirmResale = () => {
+    showConfirm(
+      fr ? 'Revendre mon billet' : 'Resell my ticket',
+      fr
+        ? `Ton billet sera proposé à ${resaleEuros} € sur la page de l’événement. Pendant la vente, ton QR code ne fonctionne plus. Dès qu’il est acheté, tu es remboursé de ${resaleEuros} € sur la carte utilisée (5 à 10 jours). Tu peux le retirer tant que personne ne l’a acheté.`
+        : `Your ticket will be offered for €${resaleEuros}. While listed, your QR code is disabled. Once bought, you get €${resaleEuros} refunded to your card (5–10 days).`,
+      [
+        { text: fr ? 'Annuler' : 'Cancel', style: 'cancel' },
+        {
+          text: fr ? 'Mettre en vente' : 'List for resale',
+          onPress: async () => {
+            setResaleBusy(true);
+            try {
+              const response = await api.listTicketForResale(user.token, ticket.id);
+              if (response?.success) {
+                setTicket((prev) => ({ ...prev, status: 'on_resale', resale: response.resale }));
+                showSuccess(fr ? 'Billet mis en vente.' : 'Ticket listed.');
+              } else {
+                showError(response?.message || (fr ? 'Mise en vente impossible.' : 'Could not list ticket.'));
+              }
+            } catch (error) {
+              showError(error.message || (fr ? 'Mise en vente impossible.' : 'Could not list ticket.'));
+            } finally {
+              setResaleBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const cancelResale = async () => {
+    if (resaleBusy) return;
+    setResaleBusy(true);
+    try {
+      const response = await api.cancelTicketResale(user.token, ticket.id);
+      if (response?.success) {
+        // Nouveau QR généré côté serveur : on recharge la liste pour l’obtenir.
+        goBack();
+      } else {
+        showError(response?.message || (fr ? 'Retrait impossible.' : 'Could not cancel.'));
+      }
+    } catch (error) {
+      showError(error.message || (fr ? 'Retrait impossible.' : 'Could not cancel.'));
+    } finally {
+      setResaleBusy(false);
+    }
+  };
+
   const canTransfer =
     !past && ticket.status === 'valid' && !ticket.scannedAt && !(ticket.scannedVenueIds || []).length;
 
@@ -175,6 +230,18 @@ export default function TicketDetailPage() {
       icon: 'calendar-outline',
       label: fr ? 'Ajouter à mon agenda' : 'Add to my calendar',
       onPress: addToCalendar,
+    },
+    !past && onResale && {
+      id: 'cancel-resale',
+      icon: 'close-circle-outline',
+      label: fr ? 'Retirer de la revente' : 'Cancel resale',
+      onPress: cancelResale,
+    },
+    !past && !onResale && ticket.resellable && {
+      id: 'resale',
+      icon: 'pricetag-outline',
+      label: fr ? `Revendre mon billet (${resaleEuros} €)` : `Resell my ticket (€${resaleEuros})`,
+      onPress: confirmResale,
     },
     canTransfer && {
       id: 'transfer',
@@ -230,7 +297,7 @@ export default function TicketDetailPage() {
                 <NoxText style={styles.title} numberOfLines={2}>
                   {ticket.eventTitle}
                 </NoxText>
-                <TicketStatusBadge past={past} fr={fr} />
+                <TicketStatusBadge past={past} fr={fr} onResale={onResale} />
               </View>
               <View style={styles.metaRow}>
                 <Ionicons name="time-outline" size={15} color={Colors.textSecondary} />
@@ -265,7 +332,16 @@ export default function TicketDetailPage() {
 
           <TicketTierBox ticket={ticket} fr={fr} large />
 
-          {!past ? (
+          {!past && onResale ? (
+            <View style={[styles.notice, styles.resaleNotice]}>
+              <Ionicons name="pricetag-outline" size={18} color={Colors.warning} />
+              <NoxText style={styles.noticeText}>
+                {fr
+                  ? `En revente à ${resaleEuros} €. Ton QR code est désactivé pendant la vente. Dès qu’un acheteur paie, le billet lui est transféré et tu es remboursé de ${resaleEuros} € sur ta carte.`
+                  : `Listed for €${resaleEuros}. Your QR code is disabled while listed. Once bought, you get €${resaleEuros} refunded.`}
+              </NoxText>
+            </View>
+          ) : !past ? (
             <View style={styles.qrCard}>
               <View style={styles.qrFrame}>
                 <QRCode value={buildQrPayload(ticket)} size={130} color="#000000" backgroundColor="#FFFFFF" />
@@ -405,6 +481,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderSubtle,
   },
   noticeText: { flex: 1, fontSize: 13, color: Colors.textTertiary },
+  resaleNotice: { borderColor: 'rgba(245,158,11,0.5)', backgroundColor: 'rgba(245,158,11,0.08)' },
   actions: {
     borderRadius: Radius.lg,
     borderWidth: 0.5,

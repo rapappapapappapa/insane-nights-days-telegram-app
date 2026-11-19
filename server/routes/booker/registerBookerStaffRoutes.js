@@ -322,6 +322,9 @@ app.post('/api/events/:eventId/scan-ticket', authenticateToken, async (req, res)
     });
     if (!ticket) return res.json({ success: false, valid: false, message: 'Billet introuvable.' });
     if (ticket.eventId !== eventId) return res.json({ success: false, valid: false, message: 'Ce billet n\'est pas pour cet événement.' });
+    if (ticket.status !== 'valid' && ticket.status !== 'used') {
+      return res.json({ success: false, valid: false, message: 'Billet en revente ou annulé : il ne donne pas accès.' });
+    }
 
     const stops = event.eventVenues || [];
     let stopName = null;

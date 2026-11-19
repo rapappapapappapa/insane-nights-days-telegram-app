@@ -26,6 +26,9 @@ export default function EventCheckoutSection({
   canProceedPurchaseTier,
   unitPriceForPurchase,
   handleBuyTicket,
+  resaleListings = [],
+  buyingResaleId = null,
+  handleBuyResale,
 }) {
   if (isEventUpcoming()) {
     if (user?.isAuthenticated && !hasActiveCommunityProfile()) {
@@ -144,6 +147,33 @@ export default function EventCheckoutSection({
         <NoxText variant="secondary" style={styles.checkoutSecureHint}>
           {fr ? 'Paiement sécurisé via Stripe.' : 'Secure payment via Stripe.'}
         </NoxText>
+
+        {resaleListings.length > 0 && handleBuyResale ? (
+          <View style={styles.tierSection}>
+            <NoxText variant="form" style={styles.tierSectionLabel}>
+              {fr ? `Billets en revente (${resaleListings.length})` : `Resale tickets (${resaleListings.length})`}
+            </NoxText>
+            <NoxText variant="secondary" style={styles.helperTextTier}>
+              {fr
+                ? 'Revendus par des participants au prix d’achat, via NOX. Le billet t’est transféré avec un nouveau QR code.'
+                : 'Resold by attendees at face value through NOX. You get the ticket with a new QR code.'}
+            </NoxText>
+            {resaleListings.slice(0, 5).map((l) => {
+              const euros = (l.priceCents / 100).toFixed(2).replace('.', ',');
+              return (
+                <NoxButton
+                  key={l.id}
+                  variant="secondary"
+                  label={`${l.tierLabel ? `${l.tierLabel} · ` : ''}${fr ? 'Acheter' : 'Buy'} ${euros} €`}
+                  onPress={() => handleBuyResale(l)}
+                  loading={buyingResaleId === l.id}
+                  disabled={!!buyingResaleId || buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
+                  style={styles.buyBtn}
+                />
+              );
+            })}
+          </View>
+        ) : null}
       </View>
     );
   }

@@ -220,6 +220,23 @@ export function createCoreAuthApiMethods({ apiRequest, getMimeType, getFileName,
     );
   },
 
+  // Revente : mettre en vente / retirer son billet
+  listTicketForResale: async (token, ticketId) =>
+    apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_DELETE}/${ticketId}/resale`, { method: 'POST' }, token),
+
+  cancelTicketResale: async (token, ticketId) =>
+    apiRequest(`${API_CONFIG.ENDPOINTS.TICKET_DELETE}/${ticketId}/resale`, { method: 'DELETE' }, token),
+
+  // Revente : annonces d’un événement, réservation + PaymentIntent, confirmation
+  getEventResaleListings: async (token, eventId) =>
+    apiRequest(`/api/events/${eventId}/resale`, { noCache: true }, token),
+
+  createResaleIntent: async (token, resaleId) =>
+    apiRequest(`/api/resale/${resaleId}/intent`, { method: 'POST' }, token),
+
+  confirmResalePurchase: async (token, paymentIntentId) =>
+    apiRequest('/api/resale/confirm', { method: 'POST', body: JSON.stringify({ paymentIntentId }) }, token),
+
   // ✅ Stripe: confirmer le paiement et délivrer les tickets
   confirmTicketPurchase: async (token, paymentIntentId) => {
     if (!token) {

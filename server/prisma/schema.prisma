@@ -147,6 +147,7 @@ model UserCommunity {
   user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookerCommunityFriends BookerCommunityFriend[]
   eventStaff           EventStaff[]
+  collectifMemberships CollectifMembership[]
 
   @@index([userId])
 }
@@ -235,6 +236,12 @@ model UserBooker {
   pseudo                String?
   /// Articles que le booker propose habituellement à la location [{ id?, label, qty }]
   rentalEquipmentInventory Json?
+  /// Collectif : organisation HelloAsso (slug) et adhésion proposée via NOX
+  helloAssoOrganizationSlug String?
+  helloAssoAdhesionEnabled  Boolean              @default(false)
+  helloAssoAdhesionLabel    String?
+  helloAssoAdhesionPriceCents Int?
+  collectifMemberships  CollectifMembership[]
   events                Event[]
   feedPosts             FeedPost[]
   followers             FollowBooker[]
@@ -937,4 +944,24 @@ model TicketResale {
   @@index([eventId, status])
   @@index([ticketId])
   @@index([sellerId])
+}
+
+/// Adhésion d’un profil Communauté à un collectif (booker `Collectif`), payée via HelloAsso.
+model CollectifMembership {
+  id               String        @id @default(uuid())
+  communityId      String
+  bookerId         String
+  /// PENDING | ACTIVE | EXPIRED | CANCELLED
+  status           String        @default("PENDING")
+  amountCents      Int           @default(0)
+  checkoutIntentId String?       @unique
+  helloAssoOrderId String?
+  validUntil       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  community        UserCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  booker           UserBooker    @relation(fields: [bookerId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, bookerId])
+  @@index([bookerId, status])
 }

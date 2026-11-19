@@ -287,6 +287,8 @@ require('./routes/registerTicketResaleRoutes')(app, {
   stripePublishableKey,
 });
 
+require('./routes/registerCollectifRoutes')(app, { authenticateToken });
+
 require('./routes/registerFeedRoutes')(app, {
   authenticateToken,
   MEDIA_STORAGE,

@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 20 novembre 2026
 
+### Ajouté (collectifs — adhésions HelloAsso, préparation)
+- Réglages d’adhésion sur `UserBooker` (slug HelloAsso, nom, prix, ouverture) et table `CollectifMembership` (migration `20261119110000_collectif_membership`). Routes : réglages et adhérents du collectif (`/api/booker/me/collectif-settings`, `/collectif-members`), offre et adhésion (`/api/collectifs/:bookerId/membership`, `/join`), vérification au retour (`/memberships/:id/sync`, `/helloasso/return`), webhook `/api/webhooks/helloasso` et `/api/user/me/collectif-memberships`.
+- Client HelloAsso v5 (`utils/helloAsso.js` : jeton client, checkout, lecture du checkout) inactif tant que `HELLOASSO_ENABLED` et les identifiants ne sont pas fournis (voir `env.example.txt`). Les adhésions gratuites marchent déjà ; les payantes affichent « Adhésions bientôt disponibles ». Le paiement est revérifié auprès de HelloAsso avant activation (webhooks non signés). Adhésion valable un an, notification « Tu es membre de … ».
+- Mobile : bloc « Rejoindre le collectif » (ou « Membre jusqu’au … ») sur le profil public d’un collectif, paiement HelloAsso dans le navigateur intégré, et écran « Adhésions du collectif » (réglages + liste des adhérents) pour l’organisateur.
+
 ### Ajouté (billets — revente via NOX)
 - Nouvelle table `TicketResale` et colonne `Payment.resaleId` (migration `20261119100000_ticket_resale`). Un billet payant, jamais scanné, d’un événement à venir, peut être remis en vente au prix payé par son acheteur d’origine (pas les billets reçus par transfert). Pendant la vente, il passe au statut `on_resale` avec un nouveau QR, refusé au scan.
 - Achat : `GET /api/events/:eventId/resale`, `POST /api/resale/:resaleId/intent` (annonce réservée 15 min), `POST /api/resale/confirm` et branche dédiée du webhook Stripe. Le billet passe à l’acheteur avec un nouveau QR, et le vendeur est remboursé du même montant sur son paiement d’origine (remboursement Stripe partiel, sans Stripe Connect). Si l’annonce a été vendue entre-temps, l’acheteur est remboursé en entier. Notifications « Billet revendu », « Billet confirmé » et « Billet déjà revendu ».

@@ -10,6 +10,7 @@ import { createChatApiMethods } from './methods/chat';
 import { createFeedApiMethods } from './methods/feed';
 import { createAdminApiMethods } from './methods/admin';
 import { createPushApiMethods } from './methods/push';
+import { createCollectifsApiMethods } from './methods/collectifs';
 
 export function createApiMethods(deps) {
   return {
@@ -22,5 +23,6 @@ export function createApiMethods(deps) {
     ...createFeedApiMethods(deps),
     ...createAdminApiMethods(deps),
     ...createPushApiMethods(deps),
+    ...createCollectifsApiMethods(deps),
   };
 }

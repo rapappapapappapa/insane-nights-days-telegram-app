@@ -11,6 +11,7 @@ import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 import { NoxText, NoxButton } from '../../components/nox';
+import CollectifJoinCard from '../../components/collectifs/CollectifJoinCard';
 import ProfileWallStream from '../../components/community/ProfileWallStream';
 import {
   PublicProfileHero,
@@ -236,10 +237,29 @@ export default function BookerProfilePage() {
       ? 'Des lieux, des gens, des sons, une même vision.'
       : 'Places, people, sounds — one vision.');
 
+  const isCollectifProfile = String(booker.bookerType || '').toLowerCase() === 'collectif';
   const extraActions = isOwn ? (
-    <NoxButton
-      label={fr ? 'Modifier mon profil' : 'Edit my profile'}
-      onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
+    <View style={{ gap: Spacing.sm }}>
+      <NoxButton
+        label={fr ? 'Modifier mon profil' : 'Edit my profile'}
+        onPress={() => navigate('bookerDashboard', { openSection: 'profil' })}
+      />
+      {isCollectifProfile ? (
+        <NoxButton
+          variant="secondary"
+          label={fr ? 'Adhésions du collectif' : 'Collective memberships'}
+          onPress={() => navigate('collectifSettings')}
+        />
+      ) : null}
+    </View>
+  ) : isCollectifProfile && user?.token ? (
+    <CollectifJoinCard
+      bookerId={booker.id}
+      collectifName={displayName}
+      token={user.token}
+      fr={fr}
+      showError={showError}
+      showSuccess={showSuccess}
     />
   ) : null;
 

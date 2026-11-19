@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 17 au 20 novembre 2026
 
+### Corrigé (mobile — bouton NOX sur les pages événement)
+- Le bouton rond NOX ne cache plus « Acheter des billets » (détail événement Communauté) ni le bloc « Payer » (page d’achat) : ces pages réservent en bas la hauteur du bouton et la zone sûre de l’écran (`useNoxRadialNavClearance`).
+
 ### Ajouté (billets — Apple Wallet / Google Wallet, préparation)
 - Serveur : `GET /api/tickets/:ticketId/wallet` renvoie les liens disponibles. Apple : `.pkpass` signé (`passkit-generator`) servi par `GET /api/wallet/apple/:ticketId.pkpass` avec un lien signé valable 10 min, ouvert dans Safari. Google : lien « Enregistrer dans Google Wallet » (JWT RS256, événement et billet créés à l’enregistrement). Images du pass dans `server/assets/wallet`.
 - Inactif tant que les certificats Apple (`APPLE_PASS_*`, `APPLE_WWDR_CERT`) ou le compte émetteur Google (`GOOGLE_WALLET_*`) ne sont pas fournis (voir `env.example.txt`). L’identifiant du pass inclut la fin du QR : après un transfert ou une revente, le nouveau détenteur ajoute un nouveau pass, l’ancien n’est plus accepté au scan.

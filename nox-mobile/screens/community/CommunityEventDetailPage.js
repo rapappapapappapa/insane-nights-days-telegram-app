@@ -15,6 +15,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { api, normalizeMediaUrl } from '../../api/config';
 import { NoxText, NoxButton, NoxEntityCard } from '../../components/nox';
+import { useNoxRadialNavClearance } from '../../components/nox/NoxRadialNav';
 import Colors, { primaryAlpha } from '../../constants/colors';
 import { Spacing, Radius } from '../../constants/theme';
 import { openEventPurchase } from '../../utils/noxNavigation';
@@ -50,6 +51,7 @@ export default function CommunityEventDetailPage() {
   const { language } = useLanguage();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const navClearance = useNoxRadialNavClearance();
   const fr = language === 'fr';
 
   const eventId = routeParams?.eventId;
@@ -186,7 +188,7 @@ export default function CommunityEventDetailPage() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: Spacing.xl, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.xl, paddingBottom: navClearance }}
         showsVerticalScrollIndicator={false}
       >
         <NoxText variant="titleSecondary" style={styles.sectionTitle}>

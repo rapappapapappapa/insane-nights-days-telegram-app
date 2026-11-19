@@ -114,6 +114,16 @@ function getNavItemDefs(activeProfileType) {
 /** @deprecated Utiliser RADIAL_NAV_HIDDEN_PAGES depuis noxRoleNavigation.js */
 export { RADIAL_NAV_HIDDEN_PAGES as HIDE_RADIAL_NAV_PAGES } from '../../utils/noxRoleNavigation';
 
+function radialNavBottom(insets) {
+  return Math.max(insets.bottom, Spacing.md) + Spacing.sm;
+}
+
+/** Marge basse à réserver dans un ScrollView pour que le bouton NX ne masque pas le dernier contenu. */
+export function useNoxRadialNavClearance() {
+  const insets = useSafeAreaInsets();
+  return radialNavBottom(insets) + NX_SIZE + Spacing.xl;
+}
+
 function polarOffset(angleDeg, radius) {
   const rad = (angleDeg * Math.PI) / 180;
   return {
@@ -209,7 +219,7 @@ export default function NoxRadialNav({ onOpenMenu, drawerOpen = false }) {
     [navItems, menuAnim],
   );
 
-  const bottom = Math.max(insets.bottom, Spacing.md) + Spacing.sm;
+  const bottom = radialNavBottom(insets);
   /** Zone libre en bas : le backdrop ne capture pas les taps sur NX / l’arc. */
   const navClusterClearance = bottom + ORBIT_RADIUS + NX_SIZE / 2 + 28;
 

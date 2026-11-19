@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../api/config';
 import { NoxText, NoxButton, NoxCard } from '../../components/nox';
 import EventCheckoutSection from '../../components/events/EventCheckoutSection';
+import { useNoxRadialNavClearance } from '../../components/nox/NoxRadialNav';
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../contexts/ConfirmContext';
@@ -88,6 +89,7 @@ export default function EventDetailPage() {
   const { routeParams, navigate, goBack } = useNavigation();
   const { user } = useAuth();
   const { toast, showError, showSuccess, hideToast } = useToast();
+  const navClearance = useNoxRadialNavClearance();
   const { showConfirm } = useConfirm();
   const [userProfiles, setUserProfiles] = useState(null);
   const [imageBroken, setImageBroken] = useState(false);
@@ -388,7 +390,7 @@ export default function EventDetailPage() {
     >
       <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: navClearance }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

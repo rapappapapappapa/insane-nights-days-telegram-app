@@ -179,7 +179,7 @@ Les images sont versionnées dans le dépôt : `docs/mobile/design-figma/`.
 
 ## Communauté — maquettes du 27 octobre 2026
 
-Écrans à reprendre. Les fichiers sont dans `docs/mobile/design-figma/`. L’accueil a été envoyé deux fois : une seule copie est gardée.
+**Intégrées dans l’app** (fin octobre 2026 — voir CHANGELOG). Fichiers dans `docs/mobile/design-figma/` (exports locaux, pas seulement le fichier Figma cloud). L’accueil a été envoyé deux fois : une seule copie est gardée.
 
 ### Accueil et fil
 
@@ -271,22 +271,22 @@ Affiche, date, lieu, genres, tarif, QR, « Voir le QR code en plein écran », a
 
 ## Maquettes manquantes (à demander / à livrer côté design)
 
-**Liste des écrans app sans maquette Figma (à demander au design)** : [MANQUES_APP.md](./MANQUES_APP.md)  
-**Matrice Figma ↔ implémentation** : [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md)
+**Liste des écrans app sans planche HD** : [MANQUES_APP.md](./MANQUES_APP.md)  
+**Matrice maquettes ↔ implémentation** : [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md)
 
-Écrans cités dans Figma ou le wireframe **sans** planche HD dans `docs/mobile/design-figma/` :
-
-| Besoin | Statut code (juil. 2026) |
+| Besoin | Statut code (nov. 2026) |
 |--------|--------------------------|
-| `COMMUNAUTÉ / 04_Tickets` + QR plein écran | Maquettes 17, 20 et 21 (27 oct. 2026), pas encore reprises dans l’app |
-| `COMMUNAUTÉ / 05_Profile` (social) | `CommunityProfileShell` |
-| Hub compte / réglages communauté | `ProfilePage` calqué sur réglages Lieux |
-| Home / dashboard **Artiste (DJ)** | `proHome` + `djDashboard` |
-| Home / dashboard **Organisateur** | `proHome` + `bookerDashboard` |
-| `03_Artist / Venue / Collective_Profile` HD | Profils publics skinnés sans HD |
-| Mur / **repost** | ✅ `ProfileWallStream` + repost DJ/booker (août 2026) |
-| Add to Apple/Google Wallet | Non branché (agenda à la place) |
+| Tickets + QR plein écran (17, 20, 21) | ✅ `TicketsPage` + `TicketDetailPage` |
+| Agenda communauté (16) | ✅ |
+| Fil / scroll (15, 18) | ✅ |
+| Mur / Prévus / repost | ✅ `CommunityProfileShell` |
+| Hub compte / réglages communauté | ➖ `ProfilePage` sans HD |
+| Home / dashboard **Artiste (DJ)** | ➖ pas de planche — `djDashboard` |
+| Home / dashboard **Organisateur** | ➖ pas de planche — `bookerDashboard` |
+| Checkout billet HD | ➖ `eventDetail?checkoutOnly` |
+| Profils publics HD | ➖ shells NOX |
+| Apple / Google Wallet | 🟡 code prêt, certificats manquants |
 
 ---
 
-*Dernière mise à jour : 27 octobre 2026 — maquettes communauté 15 à 21. Voir [ECARTS_FIGMA_VS_APP.md](./ECARTS_FIGMA_VS_APP.md) pour l’inventaire précédent.*
+*Dernière mise à jour : 24 novembre 2026 — pack 15–21 marqué intégré ; docs d’écarts rattrapées.*

@@ -258,20 +258,19 @@ export default function TicketDetailPage() {
     }
   };
 
+  // Ordre maquette 21 : Agenda → Transférer → Revendre (+ Wallet / Voir / Noter hors planche).
   const actionRows = [
-    walletUrl && !onResale && {
-      id: 'wallet',
-      icon: 'wallet-outline',
-      label: Platform.OS === 'ios'
-        ? fr ? 'Ajouter à Apple Wallet' : 'Add to Apple Wallet'
-        : fr ? 'Ajouter à Google Wallet' : 'Add to Google Wallet',
-      onPress: openWallet,
-    },
     canAddToCalendar && {
       id: 'calendar',
       icon: 'calendar-outline',
       label: fr ? 'Ajouter à mon agenda' : 'Add to my calendar',
       onPress: addToCalendar,
+    },
+    canTransfer && {
+      id: 'transfer',
+      icon: 'swap-horizontal-outline',
+      label: fr ? 'Transférer le billet' : 'Transfer ticket',
+      onPress: () => setTransferOpen(true),
     },
     !past && onResale && {
       id: 'cancel-resale',
@@ -281,15 +280,17 @@ export default function TicketDetailPage() {
     },
     !past && !onResale && ticket.resellable && {
       id: 'resale',
-      icon: 'pricetag-outline',
-      label: fr ? `Revendre mon billet (${resaleEuros} €)` : `Resell my ticket (€${resaleEuros})`,
+      icon: 'cash-outline',
+      label: fr ? `Revendre le billet (${resaleEuros} €)` : `Resell ticket (€${resaleEuros})`,
       onPress: confirmResale,
     },
-    canTransfer && {
-      id: 'transfer',
-      icon: 'paper-plane-outline',
-      label: fr ? 'Transférer à un ami' : 'Transfer to a friend',
-      onPress: () => setTransferOpen(true),
+    walletUrl && !onResale && {
+      id: 'wallet',
+      icon: 'wallet-outline',
+      label: Platform.OS === 'ios'
+        ? fr ? 'Ajouter à Apple Wallet' : 'Add to Apple Wallet'
+        : fr ? 'Ajouter à Google Wallet' : 'Add to Google Wallet',
+      onPress: openWallet,
     },
     {
       id: 'event',

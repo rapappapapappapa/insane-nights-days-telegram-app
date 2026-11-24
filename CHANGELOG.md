@@ -4,6 +4,19 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ---
 
+## Semaine du 24 au 27 novembre 2026
+
+### Modifié (docs — écarts maquettes à jour)
+- **`ECARTS_FIGMA_VS_APP.md`**, **`MANQUES_APP.md`**, **`DESIGN_FIGMA_REFERENCE.md`** : rattrapage oct.–nov. (pack local `docs/mobile/design-figma/` 01–21, mur/Prévus/billets/feed lieu/Wallet préparés). Source de vérité code : `nox-mobile/screens/`.
+
+### Modifié (mobile — détail billet, maquette 21)
+- **`TicketDetailPage`** : ordre et libellés des actions alignés sur la planche 21 (Agenda → Transférer le billet → Revendre le billet), icônes mises à jour ; Wallet / Voir l’événement / Noter conservés ensuite.
+
+### Modifié (mobile — checkout)
+- **`EventCheckoutSection`** : titre « Acheter des billets » + phrase d’aide sous le bloc paiement (écran encore sans planche HD dédiée).
+
+---
+
 ## Semaine du 17 au 20 novembre 2026
 
 ### Corrigé (mobile — bouton NOX sur les pages événement)

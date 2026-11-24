@@ -47,7 +47,12 @@ export default function EventCheckoutSection({
     return (
       <View style={styles.purchaseSection}>
         <NoxText variant="titleSecondary" style={styles.checkoutSectionTitle}>
-          {fr ? 'Paiement' : 'Payment'}
+          {fr ? 'Acheter des billets' : 'Buy tickets'}
+        </NoxText>
+        <NoxText variant="secondary" style={styles.helperTextTier}>
+          {fr
+            ? 'Choisis ton tarif, accepte les CGV, puis paie en toute sécurité.'
+            : 'Pick a tier, accept the terms, then pay securely.'}
         </NoxText>
 
         {!canProceedPurchaseTier && hasMultipleTicketTiers ? (

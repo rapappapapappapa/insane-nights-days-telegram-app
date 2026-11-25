@@ -6,6 +6,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Modifié (mobile — hubs DJ et organisateur)
+- Le hub DJ reprend la carte de `Dashboard_DJ_Pro` : followers, événements, note. Les prochains bookings affichent l’affiche de l’événement. Les statistiques tiennent sur une ligne, sans pourcentages inventés.
+- Le hub organisateur aligne le lien « Voir plus » et la même rangée de statistiques sur `Dashboard_Orga_Pro`.
+- `GET /api/user/dj/profile` renvoie `followersCount`. `GET /api/dj/bookings` et `GET /api/venue/bookings` renvoient `eventImage`.
+
 ### Modifié (docs — écarts maquettes à jour)
 - **`ECARTS_FIGMA_VS_APP.md`**, **`MANQUES_APP.md`**, **`DESIGN_FIGMA_REFERENCE.md`** : rattrapage oct.–nov. (pack local `docs/mobile/design-figma/` 01–21, mur/Prévus/billets/feed lieu/Wallet préparés). Source de vérité code : `nox-mobile/screens/`.
 

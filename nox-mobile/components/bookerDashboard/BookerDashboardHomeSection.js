@@ -248,7 +248,7 @@ export default function BookerDashboardHomeSection({
           {fr ? 'Mes outils' : 'My tools'}
         </NoxText>
         <TouchableOpacity onPress={() => onSelectSection('events')} hitSlop={8}>
-          <NoxText style={styles.hubSeeAll}>{fr ? 'Tout voir >' : 'See all >'}</NoxText>
+          <NoxText style={styles.hubSeeAll}>{fr ? 'Voir plus >' : 'See more >'}</NoxText>
         </TouchableOpacity>
       </View>
       <View style={styles.hubGrid}>
@@ -296,7 +296,7 @@ export default function BookerDashboardHomeSection({
           {fr ? 'Mes prochains événements' : 'Upcoming events'}
         </NoxText>
         <TouchableOpacity onPress={() => onSelectSection('events')} hitSlop={8}>
-          <NoxText style={styles.hubSeeAll}>{fr ? 'Tout voir >' : 'See all >'}</NoxText>
+          <NoxText style={styles.hubSeeAll}>{fr ? 'Voir plus >' : 'See more >'}</NoxText>
         </TouchableOpacity>
       </View>
       {upcoming.length === 0 ? (
@@ -401,32 +401,32 @@ export default function BookerDashboardHomeSection({
         </NoxText>
       </View>
       <View style={styles.hubStatsGrid}>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap }]}>
-          <Ionicons name="people-outline" size={18} color={Colors.primaryLight} />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="people-outline" size={16} color={Colors.primaryLight} />
           <NoxText style={styles.hubStatValue}>{formatCompact(ticketsSold)}</NoxText>
-          <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Places vendues' : 'Tickets sold'}
+          <NoxText variant="secondary" style={styles.hubStatLabel} numberOfLines={2}>
+            {fr ? 'Places' : 'Tickets'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth }]}>
-          <Ionicons name="calendar-outline" size={18} color="#34D399" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="calendar-outline" size={16} color="#34D399" />
           <NoxText style={styles.hubStatValue}>{eventsCount}</NoxText>
-          <NoxText variant="secondary" style={styles.hubStatLabel}>
+          <NoxText variant="secondary" style={styles.hubStatLabel} numberOfLines={2}>
             {fr ? 'Événements' : 'Events'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap, marginTop: gap }]}>
-          <Ionicons name="newspaper-outline" size={18} color="#F472B6" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="newspaper-outline" size={16} color="#F472B6" />
           <NoxText style={styles.hubStatValue}>{publishedCount}</NoxText>
-          <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Sur le feed' : 'On the feed'}
+          <NoxText variant="secondary" style={styles.hubStatLabel} numberOfLines={2}>
+            {fr ? 'Feed' : 'Feed'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginTop: gap }]}>
-          <Ionicons name="chatbubbles-outline" size={18} color="#FBBF24" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="chatbubbles-outline" size={16} color="#FBBF24" />
           <NoxText style={styles.hubStatValue}>{unreadCount || '—'}</NoxText>
-          <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Messages non lus' : 'Unread messages'}
+          <NoxText variant="secondary" style={styles.hubStatLabel} numberOfLines={2}>
+            {fr ? 'Non lus' : 'Unread'}
           </NoxText>
         </View>
       </View>

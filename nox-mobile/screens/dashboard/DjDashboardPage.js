@@ -442,6 +442,7 @@ export default function DjDashboardPage() {
           bannerImage={bannerImage}
           profileImage={profileImage}
           averageRating={djProfile?.averageRatingGlobal}
+          followersCount={djProfile?.followersCount}
           bookings={bookings}
           navigate={navigate}
           userId={user?.id}

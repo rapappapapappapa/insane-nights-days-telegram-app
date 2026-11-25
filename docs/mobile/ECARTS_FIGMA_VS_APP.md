@@ -34,8 +34,8 @@ Code écrans : `nox-mobile/screens/` (+ composants `components/`).
 
 | Zone | Impact |
 |------|--------|
-| **Home / dashboard DJ** | `djDashboard` (hub grille) sans pack ARTIST |
-| **Home / dashboard Organisateur** | `bookerDashboard` + wizard `bookerEventDashboard` |
+| **Home / dashboard DJ** | Hub aligné sur `nox-mobile/assets/écrans/Dashboard_DJ_Pro.png` |
+| **Home / dashboard Organisateur** | Hub aligné sur `Dashboard_Orga_Pro.png` ; wizard sans planche HD |
 | **Prestataire** | Hors pack |
 | **Profils publics HD** | DJ / Lieu / Booker / Collectif — shell NOX |
 | **Hub compte communauté** | `ProfilePage` calqué réglages Lieux |

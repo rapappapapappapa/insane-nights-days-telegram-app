@@ -26,7 +26,7 @@ Maquettes locales : [`design-figma/`](design-figma/) · écarts : [`ECARTS_FIGMA
 
 - [ ] **Apple / Google Wallet** : certificats + vars Railway, puis QA bouton.
 - [ ] **Checkout** : planche HD (design) ou polish UI supplémentaire.
-- [ ] **Pro DJ / Orga** : attendre / demander maquettes ARTIST & ORGANIZER.
+- [x] **Pro DJ / Orga** : hubs alignés sur `nox-mobile/assets/écrans/Dashboard_DJ_Pro.png` et `Dashboard_Orga_Pro.png`.
 - [ ] **Stores** : `store:check:node` + [`PUBLICATION_STORES.md`](PUBLICATION_STORES.md).
 
 ### Hors scope immédiat

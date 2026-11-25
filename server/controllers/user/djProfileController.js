@@ -49,6 +49,10 @@ const getCurrentDjProfile = async (req, res) => {
     const djProfile = user.djs[0];
     dlog('[getCurrentDjProfile] Profil DJ trouvé:', djProfile.artistName);
 
+    const followersCount = await prisma.followDj.count({
+      where: { djId: djProfile.id },
+    });
+
     return sendSuccess(res, {
       dj: {
         id: djProfile.id,
@@ -86,6 +90,7 @@ const getCurrentDjProfile = async (req, res) => {
         // Ratings
         averageRatingGlobal: djProfile.averageRatingGlobal,
         totalRatingsGlobal: djProfile.totalRatingsCommunity + djProfile.totalRatingsBooker + djProfile.totalRatingsVenue,
+        followersCount,
       },
     });
   } catch (error) {

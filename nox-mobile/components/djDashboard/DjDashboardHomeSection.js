@@ -53,6 +53,7 @@ export default function DjDashboardHomeSection({
   bannerImage,
   profileImage,
   averageRating,
+  followersCount = 0,
   bookings = [],
   navigate,
   userId,
@@ -216,21 +217,28 @@ export default function DjDashboardHomeSection({
           ) : null}
           <View style={styles.hubProfileStats}>
             <View style={styles.hubProfileStat}>
+              <NoxText style={styles.hubProfileStatValue}>
+                {Number(followersCount) > 0 ? formatCompact(followersCount) : '0'}
+              </NoxText>
+              <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
+                Followers
+              </NoxText>
+            </View>
+            <View style={styles.hubProfileStat}>
               <NoxText style={styles.hubProfileStatValue}>{formatCompact(eventsCount)}</NoxText>
               <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
                 {fr ? 'Événements' : 'Events'}
               </NoxText>
             </View>
             <View style={styles.hubProfileStat}>
-              <NoxText style={styles.hubProfileStatValue}>{ratingLabel}</NoxText>
+              <View style={styles.hubProfileStatValueRow}>
+                <NoxText style={styles.hubProfileStatValue}>{ratingLabel}</NoxText>
+                {ratingLabel !== '—' ? (
+                  <Ionicons name="star" size={12} color="#FCD34D" />
+                ) : null}
+              </View>
               <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
                 {fr ? 'Note moyenne' : 'Avg rating'}
-              </NoxText>
-            </View>
-            <View style={styles.hubProfileStat}>
-              <NoxText style={styles.hubProfileStatValue}>{pendingCount || '—'}</NoxText>
-              <NoxText variant="secondary" style={styles.hubProfileStatLabel}>
-                {fr ? 'Demandes' : 'Requests'}
               </NoxText>
             </View>
           </View>
@@ -287,7 +295,7 @@ export default function DjDashboardHomeSection({
           {fr ? 'Prochains événements' : 'Upcoming events'}
         </NoxText>
         <TouchableOpacity onPress={() => onSelectSection('bookings')} hitSlop={8}>
-          <NoxText style={styles.hubSeeAll}>{fr ? 'Tout voir >' : 'See all >'}</NoxText>
+          <NoxText style={styles.hubSeeAll}>{fr ? 'Voir plus >' : 'See more >'}</NoxText>
         </TouchableOpacity>
       </View>
       {upcoming.length === 0 ? (
@@ -310,6 +318,7 @@ export default function DjDashboardHomeSection({
               booking.venue?.name ||
               booking.eventLocation ||
               (fr ? 'Lieu à confirmer' : 'Venue TBD');
+            const imageUri = booking.eventImage ? normalizeMediaUrl(booking.eventImage) : null;
             return (
               <TouchableOpacity
                 key={booking.id}
@@ -317,9 +326,13 @@ export default function DjDashboardHomeSection({
                 onPress={() => openEvent(booking)}
                 activeOpacity={0.9}
               >
-                <View style={styles.hubEventImageFallback}>
-                  <Ionicons name="calendar-outline" size={28} color={Colors.primary} />
-                </View>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={styles.hubEventImage} />
+                ) : (
+                  <View style={styles.hubEventImageFallback}>
+                    <Ionicons name="calendar-outline" size={28} color={Colors.primary} />
+                  </View>
+                )}
                 <View style={styles.hubEventOverlay} />
                 {badge ? (
                   <View style={styles.hubEventBadge}>
@@ -358,32 +371,32 @@ export default function DjDashboardHomeSection({
         </NoxText>
       </View>
       <View style={styles.hubStatsGrid}>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap }]}>
-          <Ionicons name="calendar-outline" size={18} color={Colors.primaryLight} />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="calendar-outline" size={16} color={Colors.primaryLight} />
           <NoxText style={styles.hubStatValue}>{pendingCount}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Demandes de booking' : 'Booking requests'}
+            {fr ? 'Demandes' : 'Requests'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth }]}>
-          <Ionicons name="checkmark-done-outline" size={18} color="#34D399" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="checkmark-done-outline" size={16} color="#34D399" />
           <NoxText style={styles.hubStatValue}>{eventsCount}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Bookings acceptés' : 'Accepted bookings'}
+            {fr ? 'Acceptés' : 'Accepted'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginRight: gap, marginTop: gap }]}>
-          <Ionicons name="star" size={18} color="#FCD34D" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="star" size={16} color="#FCD34D" />
           <NoxText style={styles.hubStatValue}>{ratingLabel}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Note moyenne' : 'Avg rating'}
+            {fr ? 'Note' : 'Rating'}
           </NoxText>
         </View>
-        <View style={[styles.hubStatCard, { width: toolWidth, marginTop: gap }]}>
-          <Ionicons name="chatbubbles-outline" size={18} color="#F472B6" />
+        <View style={styles.hubStatCard}>
+          <Ionicons name="chatbubbles-outline" size={16} color="#F472B6" />
           <NoxText style={styles.hubStatValue}>{unreadCount || '—'}</NoxText>
           <NoxText variant="secondary" style={styles.hubStatLabel}>
-            {fr ? 'Messages non lus' : 'Unread messages'}
+            {fr ? 'Non lus' : 'Unread'}
           </NoxText>
         </View>
       </View>

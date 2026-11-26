@@ -23,6 +23,23 @@ function eventDay(date) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+/**
+ * Jour choisi par l’organisateur → minuit UTC de ce jour (convention de stockage de `date`).
+ * « YYYY-MM-DD » est pris tel quel ; un instant ISO est ramené au jour qu’il représente à Paris.
+ * @returns {Date|null}
+ */
+function normalizeEventDate(input) {
+  const raw = String(input ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(`${raw}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const instant = new Date(raw);
+  if (!raw || Number.isNaN(instant.getTime())) return null;
+  const ymd = instant.toLocaleDateString('sv-SE', { timeZone: TIME_ZONE });
+  return new Date(`${ymd}T00:00:00.000Z`);
+}
+
 /** Heure murale de Paris (jour YYYY-MM-DD + HH:mm) → Date UTC. */
 function parisWallTime(ymd, hhmm) {
   const guess = new Date(`${ymd}T${hhmm}:00Z`);
@@ -53,6 +70,7 @@ function eventStatusAt(event, now = new Date()) {
 module.exports = {
   parseEventTime,
   eventDay,
+  normalizeEventDate,
   parisWallTime,
   eventWindow,
   eventStatusAt,

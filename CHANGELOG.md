@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Corrigé (événements — jour enregistré à la création)
+- `POST` création d’événement : la date reçue (instant ISO avec l’heure où le sélecteur a été ouvert) est ramenée au **jour choisi à Paris**, stocké à minuit UTC (`normalizeEventDate`). Un événement créé vers minuit ne glisse plus au jour précédent. Corrige aussi les téléphones sans la dernière OTA.
+
 ### Modifié (outillage — OTA locale plus légère)
 - `metro.config.js` : variable `METRO_MAX_WORKERS` (ex. `1`) pour limiter les processus Metro pendant `eas update` et éviter de saturer la RAM d’un PC modeste. Sans la variable, rien ne change.
 

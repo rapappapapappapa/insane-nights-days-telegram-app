@@ -9,6 +9,7 @@ const { normalizeEquipmentRentalForStorage } = require('../../utils/rentalEquipm
 const { normalizeTicketTiersInput, minTierPriceEUR } = require('../../utils/ticketTiers');
 const { validateVenueItinerary } = require('../../utils/djSlotWindow');
 const { notifyEventUpdated, notifyEventCancelled, eventAudienceIds } = require('../../utils/appNotifications');
+const { normalizeEventDate } = require('../../utils/eventSchedule');
 const {
   INACTIVE_VENUE_STATUSES,
   itineraryInclude,
@@ -478,12 +479,20 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
     // ✅ Le prix DJ n'est plus auto-calculé: il sera défini via contrat Booker ↔ DJ.
     const calculatedPrice = price ? parseFloat(price) : 0;
 
+    const eventDate = normalizeEventDate(date);
+    if (!eventDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date invalide.',
+      });
+    }
+
     let ticketTiersStored = null;
     let priceForEvent = calculatedPrice;
     if (ticketTiersBody != null && ticketTiersBody !== '') {
       try {
         ticketTiersStored = normalizeTicketTiersInput(ticketTiersBody);
-        const eventDayMs = new Date(date).getTime();
+        const eventDayMs = eventDate.getTime();
         for (const tier of ticketTiersStored || []) {
           // Marge de 36 h : la date arrive en ISO UTC, le jour local de l'événement peut finir plus tard.
           if (Number.isFinite(eventDayMs) && tier.saleEnd && new Date(tier.saleEnd).getTime() > eventDayMs + 36 * 3600 * 1000) {
@@ -505,16 +514,6 @@ app.post('/api/booker/events', authenticateToken, async (req, res) => {
           message: e?.message || 'ticketTiers invalide.',
         });
       }
-    }
-
-    // Vérifier les conflits de date/lieu
-    // Convertir la date en DateTime
-    const eventDate = new Date(date);
-    if (isNaN(eventDate.getTime())) {
-      return res.status(400).json({
-        success: false,
-        message: 'Date invalide.',
-      });
     }
 
     // Vérifier que la date n'est pas dans le passé (on compare uniquement la date, pas l'heure)

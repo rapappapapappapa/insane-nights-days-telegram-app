@@ -1,6 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseEventTime, eventWindow, eventStatusAt } = require('../utils/eventSchedule');
+const { parseEventTime, eventWindow, eventStatusAt, normalizeEventDate } = require('../utils/eventSchedule');
+
+test('normalizeEventDate ramène le jour choisi à Paris à minuit UTC', () => {
+  assert.strictEqual(normalizeEventDate('2026-11-29').toISOString(), '2026-11-29T00:00:00.000Z');
+  // Sélecteur ouvert à 00 h 30 heure de Paris le 29 → instant ISO encore le 28 en UTC.
+  assert.strictEqual(normalizeEventDate('2026-11-28T23:30:00.000Z').toISOString(), '2026-11-29T00:00:00.000Z');
+  // Sélecteur ouvert l’après-midi.
+  assert.strictEqual(normalizeEventDate('2026-07-14T14:05:00.000Z').toISOString(), '2026-07-14T00:00:00.000Z');
+  assert.strictEqual(normalizeEventDate('pas une date'), null);
+  assert.strictEqual(normalizeEventDate(''), null);
+});
 
 test('parseEventTime accepte les formats saisis par les organisateurs', () => {
   assert.strictEqual(parseEventTime('19:30'), '19:30');

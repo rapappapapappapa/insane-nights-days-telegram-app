@@ -9,6 +9,10 @@ const { notifyUsers } = require('./appNotifications');
 const RESERVATION_MS = 15 * 60 * 1000;
 const OPEN_STATUSES = ['ACTIVE', 'RESERVED'];
 
+function makeTicketQrCode(uuidv4) {
+  return `TICKET_${uuidv4().replace(/-/g, '').slice(0, 24).toUpperCase()}`;
+}
+
 /** Annonces achetables : actives, ou réservées dont la réservation a expiré. */
 function availableListingWhere(now = new Date()) {
   return {
@@ -150,10 +154,51 @@ async function fulfilResalePayment({ stripe, paymentIntentId, makeQrCode }) {
   return { status: outcome.status, ticketId: outcome.ticketId };
 }
 
+/**
+ * Soirée commencée : les annonces sans acheteur sont retirées et le billet redevient valable
+ * (sinon le vendeur serait refusé au scan). Une annonce réservée attend la fin de sa réservation.
+ */
+async function closeResalesForStartedEvents({ makeQrCode }) {
+  try {
+    const listings = await prisma.ticketResale.findMany({
+      where: { ...availableListingWhere(), event: { status: { not: 'UPCOMING' } } },
+      select: { id: true, ticketId: true, sellerId: true, eventId: true, event: { select: { title: true, image: true } } },
+    });
+    for (const listing of listings) {
+      const closed = await prisma.$transaction(async (tx) => {
+        const cancelled = await tx.ticketResale.updateMany({
+          where: { id: listing.id, ...availableListingWhere() },
+          data: { status: 'CANCELLED', reservedUntil: null },
+        });
+        if (cancelled.count === 0) return false;
+        await tx.ticket.updateMany({
+          where: { id: listing.ticketId, userId: listing.sellerId, status: 'on_resale' },
+          data: { status: 'valid', qrCode: makeQrCode() },
+        });
+        return true;
+      });
+      if (!closed) continue;
+      notifyUsers([listing.sellerId], {
+        category: 'events',
+        type: 'resale_closed',
+        title: 'Revente clôturée',
+        body: `${listing.event?.title || 'La soirée'} a commencé sans acheteur : ton billet est de nouveau valable, ton QR code est dans Billets.`,
+        eventId: listing.eventId,
+        imageUrl: listing.event?.image,
+        dedupeKey: `resale-closed:${listing.id}`,
+      });
+    }
+  } catch (error) {
+    console.error('[ticketResale] clôture des reventes', error?.message || error);
+  }
+}
+
 module.exports = {
   RESERVATION_MS,
   OPEN_STATUSES,
   availableListingWhere,
   resaleEligibility,
   fulfilResalePayment,
+  closeResalesForStartedEvents,
+  makeTicketQrCode,
 };

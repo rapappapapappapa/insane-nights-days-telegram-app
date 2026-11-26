@@ -99,7 +99,7 @@ async function notifyTicketsIssued({ userId, eventId, quantity = 1, dedupeKey })
   });
 }
 
-async function ticketHolderIds(eventId, statuses = ['valid', 'used']) {
+async function ticketHolderIds(eventId, statuses = ['valid', 'used', 'on_resale']) {
   const rows = await prisma.ticket.findMany({
     where: { eventId, status: { in: statuses } },
     select: { userId: true },
@@ -116,7 +116,7 @@ async function interestedUserIds(eventId) {
 /** Infos pratiques modifiées par l’organisateur (horaire, lieu…). */
 async function notifyEventUpdated(event, changes) {
   if (!changes.length) return;
-  const holders = await ticketHolderIds(event.id, ['valid']);
+  const holders = await ticketHolderIds(event.id, ['valid', 'on_resale']);
   await notifyUsers(holders, {
     category: 'events',
     type: 'event_updated',
@@ -168,7 +168,7 @@ async function runEventReminders() {
           imageUrl: event.image,
           dedupeKey: `reminder:${event.id}`,
         });
-        const holderSet = new Set(holders);
+        const holderSet = new Set([...holders, ...(await ticketHolderIds(event.id, ['on_resale']))]);
         const interested = (await interestedUserIds(event.id)).filter((id) => !holderSet.has(id));
         await notifyUsers(interested, {
           category: 'events',

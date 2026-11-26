@@ -9,11 +9,8 @@ const {
   availableListingWhere,
   resaleEligibility,
   fulfilResalePayment,
+  makeTicketQrCode,
 } = require('../utils/ticketResale');
-
-function makeTicketQrCode(uuidv4) {
-  return `TICKET_${uuidv4().replace(/-/g, '').slice(0, 24).toUpperCase()}`;
-}
 
 module.exports = function registerTicketResaleRoutes(app, deps) {
   const { authenticateToken, uuidv4, stripe, stripePublishableKey } = deps;

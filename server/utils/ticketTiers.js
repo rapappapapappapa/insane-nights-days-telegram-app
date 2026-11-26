@@ -165,7 +165,7 @@ function enrichTiersWithSold(eventId, prismaOrTx, tiers) {
   return Promise.all(
     tiers.map(async (t) => {
       const sold = await prismaOrTx.ticket.count({
-        where: { eventId, tierId: t.id, status: 'valid' },
+        where: { eventId, tierId: t.id, status: { in: ['valid', 'used', 'on_resale'] } },
       });
       const maxSold = t.maxSold != null && Number.isFinite(Number(t.maxSold)) ? Number(t.maxSold) : null;
       return {

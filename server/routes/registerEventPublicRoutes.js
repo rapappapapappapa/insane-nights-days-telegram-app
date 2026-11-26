@@ -6,6 +6,7 @@ const { parseTicketTiersFromDb, enrichTiersWithSold, minTierPriceEUR } = require
 const { publishedOnFeedEventWhere, canViewEvent } = require('../utils/publicEventDiscovery');
 const { attachUserIfAuthenticated } = require('../middleware/auth');
 const { itineraryInclude, serializeItinerary } = require('../utils/eventItinerary');
+const { eventStatusAt } = require('../utils/eventSchedule');
 
 module.exports = function registerEventPublicRoutes(app, deps) {
   const { authenticateToken, userController } = deps;
@@ -14,35 +15,25 @@ module.exports = function registerEventPublicRoutes(app, deps) {
 const updateEventStatuses = async function updateEventStatuses() {
   try {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-
-    // Mettre à jour les événements terminés
-    await prisma.event.updateMany({
+    // Les événements terminés depuis plus de 3 jours ne bougent plus ; les plus récents peuvent
+    // revenir à venir si l’organisateur a changé la date ou l’heure.
+    const events = await prisma.event.findMany({
       where: {
-        date: { lt: oneHourAgo },
-        status: { not: 'FINISHED' },
+        OR: [
+          { status: { not: 'FINISHED' } },
+          { date: { gte: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) } },
+        ],
       },
-      data: { status: 'FINISHED' },
+      select: { id: true, date: true, time: true, durationHours: true, status: true },
     });
-
-    // Mettre à jour les événements en cours
-    await prisma.event.updateMany({
-      where: {
-        date: { gte: oneHourAgo, lte: oneHourLater },
-        status: { not: 'ONGOING' },
-      },
-      data: { status: 'ONGOING' },
-    });
-
-    // Mettre à jour les événements à venir
-    await prisma.event.updateMany({
-      where: {
-        date: { gt: oneHourLater },
-        status: { not: 'UPCOMING' },
-      },
-      data: { status: 'UPCOMING' },
-    });
+    const idsByStatus = { UPCOMING: [], ONGOING: [], FINISHED: [] };
+    for (const event of events) {
+      const status = eventStatusAt(event, now);
+      if (status && status !== event.status) idsByStatus[status].push(event.id);
+    }
+    for (const [status, ids] of Object.entries(idsByStatus)) {
+      if (ids.length) await prisma.event.updateMany({ where: { id: { in: ids } }, data: { status } });
+    }
   } catch (error) {
     console.error('Erreur mise à jour statuts événements:', error);
   }
@@ -184,7 +175,7 @@ app.get('/api/user/me/agenda', authenticateToken, async (req, res) => {
     };
     const [tickets, interests] = await Promise.all([
       prisma.ticket.findMany({
-        where: { userId, status: { in: ['valid', 'used'] } },
+        where: { userId, status: { in: ['valid', 'used', 'on_resale'] } },
         select: { eventId: true, event: { select: eventSelect } },
       }),
       prisma.eventInterest.findMany({

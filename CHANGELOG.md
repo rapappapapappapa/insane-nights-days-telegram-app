@@ -6,6 +6,15 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Corrigé (serveur — statut des événements le jour J)
+- Le cron calculait « En cours » / « Terminé » à ±1 h du champ `date`, qui porte en fait l’heure où l’organisateur a ouvert le sélecteur de date : une soirée pouvait passer « Terminé » l’après-midi même (vente fermée, revente fermée, disparition de « Prévus », note ouverte trop tôt). Le créneau est maintenant le jour de l’événement + `time` (« 19:30 », « 19h30 », « 23h ») à l’heure de Paris, pendant `durationHours` (6 h par défaut) : à venir jusqu’au début, en cours pendant la soirée, terminé ensuite (`utils/eventSchedule.js`, tests `eventSchedule.test.js`).
+- Le Wallet lit aussi les heures au format « 19h30 » pour la date du pass.
+
+### Corrigé (billets — revente)
+- Soirée commencée sans acheteur : l’annonce est retirée automatiquement, le billet redevient valable (nouveau QR) et le vendeur reçoit « Revente clôturée ». Avant, il restait bloqué « en revente » et refusé au scan.
+- Les vendeurs d’un billet en revente reçoivent les annulations et changements d’horaire, gardent la soirée dans leur agenda, et ne reçoivent plus « Prends ta place » la veille.
+- Le nombre de places restantes affiché compte aussi les billets scannés et en revente (comme le contrôle à l’achat).
+
 ### Modifié (mobile — hubs DJ et organisateur)
 - Le hub DJ reprend la carte de `Dashboard_DJ_Pro` : followers, événements, note. Les prochains bookings affichent l’affiche de l’événement. Les statistiques tiennent sur une ligne, sans pourcentages inventés.
 - Le hub organisateur aligne le lien « Voir plus » et la même rangée de statistiques sur `Dashboard_Orga_Pro`.

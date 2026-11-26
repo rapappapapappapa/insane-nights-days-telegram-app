@@ -8,11 +8,10 @@
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const { parseEventTime, parisWallTime } = require('./eventSchedule');
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'wallet');
 const PASS_IMAGES = ['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png'];
-const TIME_ZONE = 'Europe/Paris';
-
 /** Accepte un PEM brut (avec `\n` échappés) ou son encodage base64. */
 function pemFromEnv(value) {
   if (!value) return null;
@@ -41,11 +40,8 @@ function isGoogleWalletConfigured() {
 
 /** Début de l’événement (jour YYYY-MM-DD + heure HH:mm à Paris) en ISO UTC. */
 function eventStartIso(ymd, time) {
-  const hhmm = /^\d{1,2}:\d{2}$/.test(String(time || '').trim()) ? String(time).trim().padStart(5, '0') : '20:00';
-  const guess = new Date(`${ymd}T${hhmm}:00Z`);
-  if (Number.isNaN(guess.getTime())) return null;
-  const parisWall = new Date(`${guess.toLocaleString('sv-SE', { timeZone: TIME_ZONE }).replace(' ', 'T')}Z`);
-  return new Date(guess.getTime() - (parisWall.getTime() - guess.getTime())).toISOString();
+  const start = parisWallTime(ymd, parseEventTime(time) || '20:00');
+  return start ? start.toISOString() : null;
 }
 
 function passSuffix(ticket) {

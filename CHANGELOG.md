@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Ajouté (revente — relance des remboursements vendeur)
+- `retryFailedResaleRefunds` (cron, au plus toutes les 30 min) : reprend les ventes dont le remboursement du vendeur a échoué, ou est resté « pending » plus de 15 min après un arrêt du serveur. Vérifie d’abord chez Stripe qu’aucun remboursement n’existe déjà pour l’annonce (pas de double remboursement), sinon retente avec une nouvelle clé d’idempotence. En cas de réussite, le vendeur reçoit « Remboursement effectué ».
+- Après 48 h d’échec : `refundStatus = manual` et email d’alerte (`ADMIN_ALERT_EMAIL`, défaut `support@nox.world`) avec l’annonce, le vendeur, le paiement Stripe et le montant à rembourser à la main.
+
 ### Ajouté (communauté — écran « Mes adhésions »)
 - Nouvel écran **`MyMembershipsPage`** (route `myMemberships`), ouvert depuis le bouton « Mes adhésions aux collectifs » de l’Aperçu du profil Communauté : collectifs dont on est membre, « Membre jusqu’au … » ou « Expirée le … », ouverture du profil du collectif au toucher, lien vers Découvrir › Collectifs si aucune adhésion. S’appuie sur `GET /api/user/me/collectif-memberships`.
 

@@ -345,7 +345,7 @@ require('./routes/registerMiscRoutes')(app, { authenticateToken });
 require('./routes/registerYousignWebhook')(app);
 
 const { runEventReminders } = require('./utils/appNotifications');
-const { closeResalesForStartedEvents, makeTicketQrCode } = require('./utils/ticketResale');
+const { closeResalesForStartedEvents, retryFailedResaleRefunds, makeTicketQrCode } = require('./utils/ticketResale');
 
 // Mettre à jour les statuts au démarrage (désactivable en prod)
 const ENABLE_EVENT_STATUS_CRON = (process.env.ENABLE_EVENT_STATUS_CRON ?? 'true').toLowerCase() === 'true';
@@ -353,10 +353,11 @@ if (ENABLE_EVENT_STATUS_CRON) {
   const runEventCron = async () => {
     await updateEventStatuses();
     await closeResalesForStartedEvents({ makeQrCode: () => makeTicketQrCode(uuidv4) });
+    await retryFailedResaleRefunds({ stripe });
     await runEventReminders();
   };
   runEventCron();
-  // Statuts, clôture des reventes, rappels (veille de soirée, note après coup) toutes les 5 minutes
+  // Statuts, reventes (clôture, relance des remboursements), rappels — toutes les 5 minutes
   setInterval(runEventCron, 5 * 60 * 1000);
 } else {
   console.log('⏸️  Cron status événements désactivé (ENABLE_EVENT_STATUS_CRON=false)');

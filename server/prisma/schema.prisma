@@ -932,7 +932,7 @@ model TicketResale {
   reservedUntil         DateTime?
   sellerPaymentIntentId String
   sellerRefundId        String?
-  /// pending | succeeded | failed
+  /// pending | succeeded | failed (relancé toutes les 30 min) | manual (échec > 48 h, à rembourser à la main)
   refundStatus          String?
   soldAt                DateTime?
   createdAt             DateTime  @default(now())

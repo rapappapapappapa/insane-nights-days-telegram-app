@@ -164,6 +164,105 @@ async function fulfilResalePayment({ stripe, paymentIntentId, makeQrCode }) {
   return { status: outcome.status, ticketId: outcome.ticketId };
 }
 
+const REFUND_RETRY_EVERY_MS = 30 * 60 * 1000;
+const REFUND_STUCK_PENDING_MS = 15 * 60 * 1000;
+const REFUND_GIVE_UP_AFTER_MS = 48 * 60 * 60 * 1000;
+let lastRefundRetryAt = 0;
+
+/** Remboursement vendeur déjà créé chez Stripe pour cette annonce (évite un double remboursement). */
+async function findSellerRefund(stripe, listing) {
+  const refunds = await stripe.refunds.list({ payment_intent: listing.sellerPaymentIntentId, limit: 100 });
+  return refunds.data.find((r) => r.metadata?.resaleId === listing.id && !['failed', 'canceled'].includes(r.status)) || null;
+}
+
+async function alertManualRefund(listing, reason) {
+  console.error('[ticketResale] remboursement vendeur à traiter à la main', listing.id, reason);
+  const { sendMail, isConfigured } = require('./mailer');
+  const to = process.env.ADMIN_ALERT_EMAIL || 'support@nox.world';
+  if (!isConfigured()) return;
+  try {
+    await sendMail({
+      to,
+      subject: `[NOX] Remboursement de revente à traiter — ${(listing.priceCents / 100).toFixed(2)} €`,
+      html: `<p>Le remboursement automatique du vendeur a échoué pendant 48 h.</p>
+<ul>
+  <li>Annonce : ${listing.id}</li>
+  <li>Vendeur (userId) : ${listing.sellerId}</li>
+  <li>Paiement Stripe à rembourser : ${listing.sellerPaymentIntentId}</li>
+  <li>Montant : ${(listing.priceCents / 100).toFixed(2)} €</li>
+  <li>Dernière erreur : ${String(reason || '—').replace(/</g, '&lt;')}</li>
+</ul>
+<p>À rembourser depuis le dashboard Stripe (métadonnée resaleId = ${listing.id}), puis passer <code>refundStatus</code> à <code>succeeded</code>.</p>`,
+    });
+  } catch (error) {
+    console.error('[ticketResale] alerte remboursement non envoyée', error?.message || error);
+  }
+}
+
+/**
+ * Relance les remboursements vendeur en échec (ou bloqués « pending » après un arrêt du serveur),
+ * au plus toutes les 30 min. Au-delà de 48 h : statut `manual` et alerte par email.
+ */
+async function retryFailedResaleRefunds({ stripe, force = false }) {
+  if (!stripe) return;
+  const now = Date.now();
+  if (!force && now - lastRefundRetryAt < REFUND_RETRY_EVERY_MS) return;
+  lastRefundRetryAt = now;
+  try {
+    const listings = await prisma.ticketResale.findMany({
+      where: {
+        status: 'SOLD',
+        OR: [
+          { refundStatus: 'failed' },
+          { refundStatus: 'pending', soldAt: { lt: new Date(now - REFUND_STUCK_PENDING_MS) } },
+        ],
+      },
+      include: { event: { select: { title: true, image: true } } },
+      take: 50,
+    });
+    for (const listing of listings) {
+      try {
+        let refund = await findSellerRefund(stripe, listing);
+        if (!refund) {
+          if (listing.soldAt && now - new Date(listing.soldAt).getTime() > REFUND_GIVE_UP_AFTER_MS) {
+            await prisma.ticketResale.update({ where: { id: listing.id }, data: { refundStatus: 'manual' } });
+            await alertManualRefund(listing, 'aucun remboursement abouti après 48 h');
+            continue;
+          }
+          refund = await stripe.refunds.create(
+            {
+              payment_intent: listing.sellerPaymentIntentId,
+              amount: listing.priceCents,
+              metadata: { type: 'ticket_resale', resaleId: listing.id },
+            },
+            { idempotencyKey: `ticket-resale-refund-${listing.id}-retry-${Math.floor(now / REFUND_RETRY_EVERY_MS)}` },
+          );
+        }
+        if (refund.status === 'failed') throw new Error('Stripe a refusé le remboursement');
+        await prisma.ticketResale.update({
+          where: { id: listing.id },
+          data: { sellerRefundId: refund.id, refundStatus: 'succeeded' },
+        });
+        const euros = (listing.priceCents / 100).toFixed(2).replace('.', ',');
+        notifyUsers([listing.sellerId], {
+          category: 'events',
+          type: 'resale_refunded',
+          title: 'Remboursement effectué',
+          body: `${euros} € remboursés sur ta carte pour ton billet revendu${listing.event?.title ? ` (${listing.event.title})` : ''}. Compte 5 à 10 jours.`,
+          eventId: listing.eventId,
+          imageUrl: listing.event?.image,
+          dedupeKey: `resale-refunded:${listing.id}`,
+        });
+      } catch (error) {
+        console.error('[ticketResale] relance remboursement vendeur échouée', listing.id, error?.message || error);
+        await prisma.ticketResale.update({ where: { id: listing.id }, data: { refundStatus: 'failed' } });
+      }
+    }
+  } catch (error) {
+    console.error('[ticketResale] relance des remboursements', error?.message || error);
+  }
+}
+
 /**
  * Soirée commencée : les annonces sans acheteur sont retirées et le billet redevient valable
  * (sinon le vendeur serait refusé au scan). Une annonce réservée attend la fin de sa réservation.
@@ -210,5 +309,6 @@ module.exports = {
   resaleEligibility,
   fulfilResalePayment,
   closeResalesForStartedEvents,
+  retryFailedResaleRefunds,
   makeTicketQrCode,
 };

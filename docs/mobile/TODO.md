@@ -19,7 +19,7 @@ Maquettes locales : [`design-figma/`](design-figma/) · écarts : [`ECARTS_FIGMA
 ### QA & correctifs
 
 - [x] **QA code features nov.** : statut des événements recalculé sur l'heure réelle, clôture auto des reventes, notifs vendeurs en revente (26 nov.).
-- [ ] **QA sur téléphone** : transfert, revente, notifs Événements/Système, Prévus, feed lieu, nouvel écran d'achat.
+- [ ] **QA sur téléphone** : suivre [`PARCOURS_TEST_NOV.md`](PARCOURS_TEST_NOV.md) (transfert, revente, jour J, notifs, Prévus, achat, collectifs).
 - [ ] **Parcours test V1** : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 - [ ] **Resend** : `RESEND_API_KEY` + `RESEND_FROM` sur Railway — nécessaire pour les emails de billet (code prêt) et de contrat.
 

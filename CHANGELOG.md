@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Ajouté (docs — parcours de test nov.)
+- **`docs/mobile/PARCOURS_TEST_NOV.md`** : parcours sur téléphone des nouveautés oct.–nov. (bouton NOX, Prévus, page d’achat, détail billet, transfert, revente, jour J, notifications, adhésions, hubs pro) avec comptes et événements de test à préparer et format de remontée des bugs.
+
 ### Ajouté (billets — email de confirmation avec QR code)
 - Email « Billet confirmé » (`utils/ticketEmail.js`) : soirée, date et heure, lieu, nombre de billets, montant payé (ou « Gratuit ») et QR code de chaque billet intégré au mail (10 max par mail). Envoyé à l’achat (gratuit ou Stripe), à l’achat en revente, et au destinataire d’un transfert (« Billet reçu », sans montant).
 - Un seul email par paiement : il part avec la première création de la notification « Billet confirmé » (webhook Stripe et confirmation app ne doublonnent pas).

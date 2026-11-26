@@ -6,6 +6,10 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Corrigé (organisateurs — type « Collectif »)
+- Le profil organisateur (tableau de bord → Profil) ne proposait que Indépendant / Agence / Lieu : un organisateur déjà inscrit ne pouvait pas devenir « Collectif ». Résultat : aucune « Suggestion collectifs » sur l’accueil Communauté ni dans Découvrir, et adhésions impossibles. Option **Collectif** ajoutée.
+- `GET /api/bookers/public?bookerType=` ignore la casse.
+
 ### Ajouté (docs — parcours de test nov.)
 - **`docs/mobile/PARCOURS_TEST_NOV.md`** : parcours sur téléphone des nouveautés oct.–nov. (bouton NOX, Prévus, page d’achat, détail billet, transfert, revente, jour J, notifications, adhésions, hubs pro) avec comptes et événements de test à préparer et format de remontée des bugs.
 

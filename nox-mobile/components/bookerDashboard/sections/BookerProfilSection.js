@@ -153,7 +153,7 @@ export default function BookerProfilSection(props) {
     
                       <Text style={styles.inputLabel}>{language === 'fr' ? 'Type d\'organisateur' : 'Organizer Type'}</Text>
                       <View style={styles.bookerTypeContainer}>
-                        {['INDEPENDENT', 'AGENCY', 'VENUE'].map((type) => (
+                        {['INDEPENDENT', 'AGENCY', 'Collectif', 'VENUE'].map((type) => (
                           <TouchableOpacity
                             key={type}
                             style={[
@@ -176,6 +176,10 @@ export default function BookerProfilSection(props) {
                                 ? language === 'fr'
                                   ? 'Agence'
                                   : 'Agency'
+                                : type === 'Collectif'
+                                ? language === 'fr'
+                                  ? 'Collectif'
+                                  : 'Collective'
                                 : language === 'fr'
                                 ? 'Lieu'
                                 : 'Venue'}

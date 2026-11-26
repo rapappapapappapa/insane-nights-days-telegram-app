@@ -124,7 +124,7 @@ app.get('/api/bookers/public', async (req, res) => {
       return url;
     };
 
-    const where = bookerType ? { bookerType: String(bookerType) } : {};
+    const where = bookerType ? { bookerType: { equals: String(bookerType), mode: 'insensitive' } } : {};
     const bookers = await prisma.userBooker.findMany({
       where,
       orderBy: { pseudo: 'asc' },

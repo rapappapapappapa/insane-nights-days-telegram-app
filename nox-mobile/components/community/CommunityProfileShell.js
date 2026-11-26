@@ -168,11 +168,19 @@ export default function CommunityProfileShell({
       ) : null}
 
       {isOwnProfile ? (
-        <NoxButton
-          label={fr ? 'Modifier mon profil' : 'Edit profile'}
-          onPress={onEdit}
-          style={{ marginTop: Spacing.lg }}
-        />
+        <>
+          <NoxButton
+            label={fr ? 'Modifier mon profil' : 'Edit profile'}
+            onPress={onEdit}
+            style={{ marginTop: Spacing.lg }}
+          />
+          <NoxButton
+            label={fr ? 'Mes adhésions aux collectifs' : 'My collective memberships'}
+            variant="secondary"
+            onPress={() => navigate('myMemberships')}
+            style={{ marginTop: Spacing.sm }}
+          />
+        </>
       ) : null}
     </View>
   );

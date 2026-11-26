@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Ajouté (communauté — écran « Mes adhésions »)
+- Nouvel écran **`MyMembershipsPage`** (route `myMemberships`), ouvert depuis le bouton « Mes adhésions aux collectifs » de l’Aperçu du profil Communauté : collectifs dont on est membre, « Membre jusqu’au … » ou « Expirée le … », ouverture du profil du collectif au toucher, lien vers Découvrir › Collectifs si aucune adhésion. S’appuie sur `GET /api/user/me/collectif-memberships`.
+
 ### Corrigé (événements — jour enregistré à la création)
 - `POST` création d’événement : la date reçue (instant ISO avec l’heure où le sélecteur a été ouvert) est ramenée au **jour choisi à Paris**, stocké à minuit UTC (`normalizeEventDate`). Un événement créé vers minuit ne glisse plus au jour précédent. Corrige aussi les téléphones sans la dernière OTA.
 

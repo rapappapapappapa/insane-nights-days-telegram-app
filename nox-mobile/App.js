@@ -108,6 +108,7 @@ import CommunityMyProfilePage from './screens/community/CommunityMyProfilePage';
 import CommunityPushOptInPage from './screens/community/CommunityPushOptInPage';
 import CommunityEventDetailPage from './screens/community/CommunityEventDetailPage';
 import CollectifSettingsPage from './screens/profiles/CollectifSettingsPage';
+import MyMembershipsPage from './screens/community/MyMembershipsPage';
 import CommunityAgendaPage from './screens/community/CommunityAgendaPage';
 import CommunityDiscoverPage from './screens/community/CommunityDiscoverPage';
 
@@ -188,6 +189,7 @@ const SCREENS = {
   communityEventDetail: CommunityEventDetailPage,
   communityAgenda: CommunityAgendaPage,
   collectifSettings: CollectifSettingsPage,
+  myMemberships: MyMembershipsPage,
   communityDiscover: CommunityDiscoverPage,
 };
 

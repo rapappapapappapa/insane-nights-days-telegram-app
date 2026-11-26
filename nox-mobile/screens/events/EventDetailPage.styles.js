@@ -300,13 +300,22 @@ export const styles = StyleSheet.create({
   checkoutSecureHint: {
     textAlign: 'center',
     fontSize: 12,
+  },
+  checkoutIntro: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  secureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: Spacing.xs,
   },
-  checkoutCard: {
-    marginTop: Spacing.lg,
+  tierRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.md,
-  },
-  tierChip: {
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.md,
@@ -314,18 +323,73 @@ export const styles = StyleSheet.create({
     borderColor: Colors.borderSubtle,
     backgroundColor: Colors.backgroundElevated,
   },
-  tierChipSelected: {
+  tierRowSelected: {
     borderColor: Colors.primary,
-    backgroundColor: primaryAlpha(0.18),
+    backgroundColor: primaryAlpha(0.14),
+  },
+  tierRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tierRadioSelected: {
+    borderColor: Colors.primary,
+  },
+  tierRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
+  tierRowText: {
+    flex: 1,
+    gap: 2,
+  },
+  tierRowHint: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+  },
+  tierPrice: {
+    fontFamily: FontFamily.bold,
+    fontSize: 16,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+  },
+  totalValue: {
+    fontFamily: FontFamily.bold,
+    fontSize: 20,
+  },
+  resaleSection: {
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+    gap: Spacing.sm,
+  },
+  resaleBuyBtn: {
+    minHeight: 40,
+    paddingHorizontal: Spacing.lg,
+  },
+  checkoutCard: {
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
   },
   tierChipDisabled: {
     opacity: 0.45,
   },
   tierChipLabel: {
     fontFamily: FontFamily.medium,
-  },
-  tierChipLabelSelected: {
-    color: Colors.text,
   },
   tierChipLabelDisabled: {
     color: Colors.textTertiary,

@@ -1,11 +1,19 @@
 import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NoxText, NoxButton } from '../nox';
+import Colors from '../../constants/colors';
 import { isTicketTierSelectable } from '../../utils/eventDetailPageUtils';
 import { tierSaleWindowHint } from '../../utils/ticketPricingUtils';
 
+function formatEuros(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return `${Number.isInteger(n) ? n : n.toFixed(2).replace('.', ',')} €`;
+}
+
 /**
- * Section achat billet (tiers, CGV, CTA Stripe) — réutilisable en mode checkout.
+ * Section achat billet (tarifs, CGV, paiement Stripe, revente) — réutilisable en mode checkout.
  */
 export default function EventCheckoutSection({
   fr = true,
@@ -44,83 +52,108 @@ export default function EventCheckoutSection({
       );
     }
 
+    const singleTier = ticketTiersForPurchase?.length === 1;
+    const canBuy = canProceedPurchaseTier && !(user?.isAuthenticated && !hasActiveCommunityProfile());
+
+    const renderTier = (t) => {
+      const ok = isTicketTierSelectable(t);
+      const sel = ok && (singleTier || t.id === selectedTierId);
+      const soldOut = t.maxSold != null && t.maxSold !== '' && t.remaining != null && Number(t.remaining) <= 0;
+      const hints = [
+        soldOut
+          ? fr
+            ? 'Complet'
+            : 'Sold out'
+          : t.remaining != null && t.maxSold != null && t.maxSold !== ''
+            ? fr
+              ? `${t.remaining} restant${Number(t.remaining) > 1 ? 's' : ''}`
+              : `${t.remaining} left`
+            : null,
+        tierSaleWindowHint(t, fr ? 'fr' : 'en') || null,
+        event?.venues?.length > 1
+          ? Array.isArray(t.venueIds) && t.venueIds.length > 0
+            ? `${event.venues
+                .filter((s) => t.venueIds.includes(s.venueId))
+                .map((s) => s.name)
+                .join(' + ')} ${fr ? 'uniquement' : 'only'}`
+            : fr
+              ? 'Tous les lieux'
+              : 'All venues'
+          : null,
+      ].filter(Boolean);
+
+      return (
+        <TouchableOpacity
+          key={t.id}
+          style={[styles.tierRow, sel && styles.tierRowSelected, !ok && styles.tierChipDisabled]}
+          onPress={() => ok && setSelectedTierId(t.id)}
+          disabled={!ok || singleTier}
+          activeOpacity={0.8}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: sel, disabled: !ok }}
+        >
+          <View style={[styles.tierRadio, sel && styles.tierRadioSelected]}>
+            {sel ? <View style={styles.tierRadioDot} /> : null}
+          </View>
+          <View style={styles.tierRowText}>
+            <NoxText variant="form" style={[styles.tierChipLabel, !ok && styles.tierChipLabelDisabled]}>
+              {t.label}
+            </NoxText>
+            {hints.length ? (
+              <NoxText variant="secondary" style={styles.tierRowHint}>
+                {hints.join(' · ')}
+              </NoxText>
+            ) : null}
+          </View>
+          <NoxText variant="form" style={[styles.tierPrice, !ok && styles.tierChipLabelDisabled]}>
+            {formatEuros(t.price)}
+          </NoxText>
+        </TouchableOpacity>
+      );
+    };
+
     return (
       <View style={styles.purchaseSection}>
         <NoxText variant="titleSecondary" style={styles.checkoutSectionTitle}>
           {fr ? 'Acheter des billets' : 'Buy tickets'}
         </NoxText>
-        <NoxText variant="secondary" style={styles.helperTextTier}>
-          {fr
-            ? 'Choisis ton tarif, accepte les CGV, puis paie en toute sécurité.'
-            : 'Pick a tier, accept the terms, then pay securely.'}
+        <NoxText variant="secondary" style={styles.checkoutIntro}>
+          {hasMultipleTicketTiers
+            ? fr
+              ? 'Choisis ton tarif, accepte les CGV puis paie. Ton billet et son QR code arrivent aussitôt dans Billets.'
+              : 'Pick a tier, accept the terms, then pay. Your ticket and QR code land in Tickets right away.'
+            : fr
+              ? 'Accepte les CGV puis paie. Ton billet et son QR code arrivent aussitôt dans Billets.'
+              : 'Accept the terms, then pay. Your ticket and QR code land in Tickets right away.'}
         </NoxText>
 
-        {!canProceedPurchaseTier && hasMultipleTicketTiers ? (
+        {ticketTiersForPurchase?.length ? (
+          <View style={styles.tierSection} accessibilityRole="radiogroup">
+            {ticketTiersForPurchase.map(renderTier)}
+          </View>
+        ) : null}
+
+        {!canProceedPurchaseTier ? (
           <NoxText variant="secondary" style={styles.helperTextTier}>
             {fr
-              ? 'Aucun tarif disponible pour le moment (quotas épuisés ou vente non ouverte).'
-              : 'No tiers available right now (sold out or sale not open).'}
+              ? 'Aucun tarif disponible pour le moment (complet ou vente pas encore ouverte).'
+              : 'No tiers available right now (sold out or sale not open yet).'}
           </NoxText>
         ) : null}
 
-        {hasMultipleTicketTiers && ticketTiersForPurchase?.length ? (
-          <View style={styles.tierSection}>
-            <NoxText variant="form" style={styles.tierSectionLabel}>
-              {fr ? 'Choix du tarif' : 'Ticket type'}
-            </NoxText>
-            {ticketTiersForPurchase.map((t) => {
-              const sel = t.id === selectedTierId;
-              const ok = isTicketTierSelectable(t);
-              const soldHint =
-                t.maxSold != null && t.maxSold !== '' && t.remaining != null
-                  ? fr
-                    ? ` (${t.remaining} restant(s))`
-                    : ` (${t.remaining} left)`
-                  : '';
-              const windowHint = tierSaleWindowHint(t, fr ? 'fr' : 'en');
-              const accessHint =
-                event?.venues?.length > 1
-                  ? Array.isArray(t.venueIds) && t.venueIds.length > 0
-                    ? `${event.venues
-                        .filter((s) => t.venueIds.includes(s.venueId))
-                        .map((s) => s.name)
-                        .join(' + ')} ${fr ? 'uniquement' : 'only'}`
-                    : fr
-                      ? 'Tous les lieux'
-                      : 'All venues'
-                  : '';
-              return (
-                <TouchableOpacity
-                  key={t.id}
-                  style={[styles.tierChip, sel && styles.tierChipSelected, !ok && styles.tierChipDisabled]}
-                  onPress={() => ok && setSelectedTierId(t.id)}
-                  disabled={!ok}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: sel, disabled: !ok }}
-                >
-                  <NoxText
-                    variant="form"
-                    style={[
-                      styles.tierChipLabel,
-                      sel && styles.tierChipLabelSelected,
-                      !ok && styles.tierChipLabelDisabled,
-                    ]}
-                  >
-                    {t.label} · {t.price}€{soldHint}
-                    {windowHint ? ` · ${windowHint}` : ''}
-                    {accessHint ? `\n${accessHint}` : ''}
-                  </NoxText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
+        <View style={styles.totalRow}>
+          <NoxText variant="secondary">{fr ? 'Total · 1 billet' : 'Total · 1 ticket'}</NoxText>
+          <NoxText variant="form" style={styles.totalValue}>
+            {formatEuros(unitPriceForPurchase)}
+          </NoxText>
+        </View>
 
         <View style={styles.cgvRow}>
           <TouchableOpacity
             style={[styles.cgvCheckbox, acceptedCgv && styles.cgvCheckboxChecked]}
             onPress={() => setAcceptedCgv(!acceptedCgv)}
             activeOpacity={0.7}
+            hitSlop={10}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: acceptedCgv }}
           >
@@ -138,45 +171,57 @@ export default function EventCheckoutSection({
         </View>
 
         <NoxButton
-          label={fr ? `Payer ${unitPriceForPurchase}€` : `Pay ${unitPriceForPurchase}€`}
+          label={fr ? `Payer ${formatEuros(unitPriceForPurchase)}` : `Pay ${formatEuros(unitPriceForPurchase)}`}
           onPress={handleBuyTicket}
           loading={buyingTicket}
-          disabled={
-            buyingTicket ||
-            !acceptedCgv ||
-            !canProceedPurchaseTier ||
-            (user?.isAuthenticated && !hasActiveCommunityProfile())
-          }
+          disabled={buyingTicket || !acceptedCgv || !canBuy}
           style={styles.buyBtn}
         />
-        <NoxText variant="secondary" style={styles.checkoutSecureHint}>
-          {fr ? 'Paiement sécurisé via Stripe.' : 'Secure payment via Stripe.'}
-        </NoxText>
+        <View style={styles.secureRow}>
+          <Ionicons name="lock-closed-outline" size={13} color={Colors.textSecondary} />
+          <NoxText variant="secondary" style={styles.checkoutSecureHint}>
+            {canBuy && !acceptedCgv
+              ? fr
+                ? 'Coche les CGV pour activer le paiement.'
+                : 'Tick the terms to enable payment.'
+              : fr
+                ? 'Paiement sécurisé via Stripe.'
+                : 'Secure payment via Stripe.'}
+          </NoxText>
+        </View>
 
         {resaleListings.length > 0 && handleBuyResale ? (
-          <View style={styles.tierSection}>
+          <View style={styles.resaleSection}>
             <NoxText variant="form" style={styles.tierSectionLabel}>
               {fr ? `Billets en revente (${resaleListings.length})` : `Resale tickets (${resaleListings.length})`}
             </NoxText>
-            <NoxText variant="secondary" style={styles.helperTextTier}>
+            <NoxText variant="secondary" style={styles.tierRowHint}>
               {fr
                 ? 'Revendus par des participants au prix d’achat, via NOX. Le billet t’est transféré avec un nouveau QR code.'
                 : 'Resold by attendees at face value through NOX. You get the ticket with a new QR code.'}
             </NoxText>
-            {resaleListings.slice(0, 5).map((l) => {
-              const euros = (l.priceCents / 100).toFixed(2).replace('.', ',');
-              return (
+            {resaleListings.slice(0, 5).map((l) => (
+              <View key={l.id} style={styles.tierRow}>
+                <Ionicons name="swap-horizontal-outline" size={18} color={Colors.primaryLight} />
+                <View style={styles.tierRowText}>
+                  <NoxText variant="form" style={styles.tierChipLabel}>
+                    {l.tierLabel || (fr ? 'Billet' : 'Ticket')}
+                  </NoxText>
+                  <NoxText variant="secondary" style={styles.tierRowHint}>
+                    {formatEuros(l.priceCents / 100)}
+                  </NoxText>
+                </View>
                 <NoxButton
-                  key={l.id}
                   variant="secondary"
-                  label={`${l.tierLabel ? `${l.tierLabel} · ` : ''}${fr ? 'Acheter' : 'Buy'} ${euros} €`}
+                  label={fr ? 'Acheter' : 'Buy'}
                   onPress={() => handleBuyResale(l)}
                   loading={buyingResaleId === l.id}
                   disabled={!!buyingResaleId || buyingTicket || !acceptedCgv || (user?.isAuthenticated && !hasActiveCommunityProfile())}
-                  style={styles.buyBtn}
+                  fullWidth={false}
+                  style={styles.resaleBuyBtn}
                 />
-              );
-            })}
+              </View>
+            ))}
           </View>
         ) : null}
       </View>

@@ -10,6 +10,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Le cron calculait « En cours » / « Terminé » à ±1 h du champ `date`, qui porte en fait l’heure où l’organisateur a ouvert le sélecteur de date : une soirée pouvait passer « Terminé » l’après-midi même (vente fermée, revente fermée, disparition de « Prévus », note ouverte trop tôt). Le créneau est maintenant le jour de l’événement + `time` (« 19:30 », « 19h30 », « 23h ») à l’heure de Paris, pendant `durationHours` (6 h par défaut) : à venir jusqu’au début, en cours pendant la soirée, terminé ensuite (`utils/eventSchedule.js`, tests `eventSchedule.test.js`).
 - Le Wallet lit aussi les heures au format « 19h30 » pour la date du pass.
 
+### Modifié (mobile — écran d’achat)
+- **`EventCheckoutSection`** : tarifs en lignes à bouton radio (nom, places restantes ou « Complet », fenêtre de vente, lieux couverts, prix à droite), y compris quand il n’y a qu’un tarif ; ligne « Total · 1 billet » ; phrase d’aide neutre (plus en orange façon alerte) adaptée au nombre de tarifs ; sous le bouton, « Coche les CGV pour activer le paiement » tant que la case n’est pas cochée ; annonces de revente au même format avec un bouton « Acheter ».
+
 ### Corrigé (billets — revente)
 - Soirée commencée sans acheteur : l’annonce est retirée automatiquement, le billet redevient valable (nouveau QR) et le vendeur reçoit « Revente clôturée ». Avant, il restait bloqué « en revente » et refusé au scan.
 - Les vendeurs d’un billet en revente reçoivent les annulations et changements d’horaire, gardent la soirée dans leur agenda, et ne reçoivent plus « Prends ta place » la veille.

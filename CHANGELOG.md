@@ -6,6 +6,9 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Modifié (outillage — OTA locale plus légère)
+- `metro.config.js` : variable `METRO_MAX_WORKERS` (ex. `1`) pour limiter les processus Metro pendant `eas update` et éviter de saturer la RAM d’un PC modeste. Sans la variable, rien ne change.
+
 ### Corrigé (organisateurs — type « Collectif »)
 - Le profil organisateur (tableau de bord → Profil) ne proposait que Indépendant / Agence / Lieu : un organisateur déjà inscrit ne pouvait pas devenir « Collectif ». Résultat : aucune « Suggestion collectifs » sur l’accueil Communauté ni dans Découvrir, et adhésions impossibles. Option **Collectif** ajoutée.
 - `GET /api/bookers/public?bookerType=` ignore la casse.

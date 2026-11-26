@@ -18,16 +18,18 @@ Maquettes locales : [`design-figma/`](design-figma/) · écarts : [`ECARTS_FIGMA
 
 ### QA & correctifs
 
-- [ ] **QA features nov.** : transfert, revente, notifs Événements/Système, Prévus, feed lieu.
+- [x] **QA code features nov.** : statut des événements recalculé sur l'heure réelle, clôture auto des reventes, notifs vendeurs en revente (26 nov.).
+- [ ] **QA sur téléphone** : transfert, revente, notifs Événements/Système, Prévus, feed lieu, nouvel écran d'achat.
 - [ ] **Parcours test V1** : [`PARCOURS_TEST_V1.md`](PARCOURS_TEST_V1.md).
 - [ ] **Resend** : `RESEND_API_KEY` + `RESEND_FROM` sur Railway.
 
 ### Suite produit *(hors HelloAsso)*
 
 - [ ] **Apple / Google Wallet** : certificats + vars Railway, puis QA bouton.
-- [ ] **Checkout** : planche HD (design) ou polish UI supplémentaire.
+- [x] **Checkout** : tarifs en lignes radio, total, aide CGV, revente harmonisée (planche HD toujours absente).
 - [x] **Pro DJ / Orga** : hubs alignés sur `nox-mobile/assets/écrans/Dashboard_DJ_Pro.png` et `Dashboard_Orga_Pro.png`.
-- [ ] **Stores** : `store:check:node` + [`PUBLICATION_STORES.md`](PUBLICATION_STORES.md).
+- [x] **Stores (dépôt)** : `store:check:node` OK, CGV avec transfert et revente, fiches store à jour.
+- [ ] **Stores (éditeur)** : raison sociale, siège, directeur de publication (`legalConfig.js` + `mentions.html`), passage au bundle `com.nox.mobile`, captures d'écran, fiches App Store Connect / Play Console — voir [`PUBLICATION_STORES.md`](PUBLICATION_STORES.md).
 
 ### Hors scope immédiat
 

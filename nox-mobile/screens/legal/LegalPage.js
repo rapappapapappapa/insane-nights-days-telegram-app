@@ -115,17 +115,17 @@ For any questions: [email to be completed]`,
     titleEn: 'Terms of Sale',
     contentFr: `# Conditions Générales de Vente
 
-**Dernière mise à jour :** [À compléter]
+**Dernière mise à jour :** 26 novembre 2026
 
 ## 1. Objet
 
-Les présentes CGV s'appliquent aux achats de tickets d'événements effectués via NOX. En cochant la case d'acceptation avant chaque achat, vous acceptez sans réserve ces CGV.
+Les présentes CGV s'appliquent aux achats de tickets d'événements effectués via NOX, y compris les tickets achetés en revente. En cochant la case d'acceptation avant chaque achat, vous acceptez sans réserve ces CGV.
 
 ## 2. Prix et paiement
 
 - Les prix sont indiqués en euros (€) TTC.
 - Le paiement est sécurisé via Stripe.
-- Les tickets sont envoyés par email après confirmation du paiement.
+- Après confirmation du paiement, les tickets et leur QR code sont disponibles dans l'onglet Billets de l'application.
 
 ## 3. Remboursement
 
@@ -136,24 +136,40 @@ Les présentes CGV s'appliquent aux achats de tickets d'événements effectués 
 ## 4. Utilisation des tickets
 
 - Chaque ticket est nominatif et lié à votre compte.
-- La présentation du QR code à l'entrée est requise.
+- La présentation du QR code à l'entrée est requise. Un ticket ne peut être scanné qu'une fois.
 
-## 5. Contact
+## 5. Transfert à un autre membre
+
+- Un ticket valide, non scanné, peut être transféré gratuitement à un autre membre NOX depuis l'application.
+- Le ticket est alors rattaché au compte du destinataire avec un nouveau QR code ; l'ancien QR code n'est plus accepté à l'entrée.
+- Un transfert est définitif.
+
+## 6. Revente via NOX
+
+- Seul l'acheteur d'origine d'un ticket payant, jamais scanné, peut le remettre en vente, jusqu'au début de l'événement.
+- Le prix de revente est le prix payé à l'achat : aucune majoration n'est possible.
+- Pendant la mise en vente, le QR code du ticket n'est plus accepté à l'entrée. Le vendeur peut retirer son ticket de la vente tant qu'aucun acheteur n'est en train de payer.
+- Lorsqu'un acheteur paie, le ticket lui est transféré avec un nouveau QR code et le vendeur est remboursé du prix du ticket sur son moyen de paiement d'origine (délai bancaire habituel de 5 à 10 jours). Les éventuels frais de paiement initiaux ne sont pas restitués.
+- Si le ticket n'a pas trouvé preneur au début de l'événement, il est retiré de la vente et redevient valable pour le vendeur.
+- Si un ticket n'est plus disponible au moment où le paiement de l'acheteur aboutit, ce paiement est intégralement remboursé.
+- NOX ne garantit pas les tickets cédés en dehors de l'application.
+
+## 7. Contact
 
 [email à compléter]`,
     contentEn: `# Terms of Sale
 
-**Last updated:** [To be completed]
+**Last updated:** 26 November 2026
 
 ## 1. Purpose
 
-These Terms of Sale apply to event ticket purchases made through NOX. By checking the acceptance box before each purchase, you accept these terms without reservation.
+These Terms of Sale apply to event ticket purchases made through NOX, including resale tickets. By checking the acceptance box before each purchase, you accept these terms without reservation.
 
 ## 2. Price and payment
 
 - Prices are displayed in euros (€) including tax.
 - Payment is secured via Stripe.
-- Tickets are sent by email after payment confirmation.
+- Once payment is confirmed, tickets and their QR code are available in the app's Tickets tab.
 
 ## 3. Refunds
 
@@ -164,9 +180,25 @@ These Terms of Sale apply to event ticket purchases made through NOX. By checkin
 ## 4. Ticket use
 
 - Each ticket is nominative and linked to your account.
-- QR code presentation at entry is required.
+- QR code presentation at entry is required. A ticket can only be scanned once.
 
-## 5. Contact
+## 5. Transfer to another member
+
+- A valid, unscanned ticket can be transferred for free to another NOX member from the app.
+- The ticket then belongs to the recipient's account with a new QR code; the previous QR code is no longer accepted at entry.
+- A transfer is final.
+
+## 6. Resale through NOX
+
+- Only the original buyer of a paid, never-scanned ticket can put it up for resale, until the event starts.
+- The resale price is the price paid at purchase: no markup is possible.
+- While listed, the ticket's QR code is not accepted at entry. The seller can withdraw the ticket as long as no buyer is currently paying.
+- When a buyer pays, the ticket is transferred to them with a new QR code and the seller is refunded the ticket price on their original payment method (usual bank delay of 5 to 10 days). Any initial payment fees are not returned.
+- If the ticket has not sold when the event starts, it is withdrawn from sale and becomes valid again for the seller.
+- If a ticket is no longer available when the buyer's payment succeeds, that payment is fully refunded.
+- NOX does not guarantee tickets passed on outside the app.
+
+## 7. Contact
 
 [email to be completed]`,
   },

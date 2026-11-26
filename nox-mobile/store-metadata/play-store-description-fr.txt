@@ -7,6 +7,8 @@ Nox (NOX) connecte la communauté, les DJs, les organisateurs et les lieux autou
 • Découvre et suis des événements
 • Achète des billets en ligne (paiement Stripe sécurisé)
 • Présente ton QR code à l'entrée
+• Transfère un billet à un ami ou revends-le au prix d'achat, sans quitter l'app
+• Marque les soirées « Intéressé » et reçois un rappel la veille
 • Gère ton profil pro ou communauté
 • Échange avec les acteurs de la scène
 

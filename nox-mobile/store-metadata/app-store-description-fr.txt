@@ -5,9 +5,11 @@ Découvre des événements, achète tes billets en toute sécurité, connecte-to
 FONCTIONNALITÉS
 • Fil d'actualité et événements à venir
 • Billetterie sécurisée (Stripe) avec QR code à l'entrée
-• Profils DJ, organisateur, lieu et communauté
+• Transfert gratuit d'un billet à un ami, revente au prix d'achat directement dans l'app
+• Agenda perso : marque les soirées « Intéressé » et retrouve-les dans tes Prévus
+• Profils DJ, organisateur, lieu et communauté, adhésion aux collectifs
 • Messagerie et contrats entre professionnels
-• Notifications et gestion de tes billets
+• Notifications : billets, rappels la veille, changements d'horaire, annulations
 
 Nox est réservé aux utilisateurs majeurs (18+).
 

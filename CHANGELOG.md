@@ -10,6 +10,11 @@ Toutes les modifications notables du projet sont documentées par semaine.
 - Le cron calculait « En cours » / « Terminé » à ±1 h du champ `date`, qui porte en fait l’heure où l’organisateur a ouvert le sélecteur de date : une soirée pouvait passer « Terminé » l’après-midi même (vente fermée, revente fermée, disparition de « Prévus », note ouverte trop tôt). Le créneau est maintenant le jour de l’événement + `time` (« 19:30 », « 19h30 », « 23h ») à l’heure de Paris, pendant `durationHours` (6 h par défaut) : à venir jusqu’au début, en cours pendant la soirée, terminé ensuite (`utils/eventSchedule.js`, tests `eventSchedule.test.js`).
 - Le Wallet lit aussi les heures au format « 19h30 » pour la date du pass.
 
+### Modifié (légal & stores — CGV transfert et revente)
+- **CGV** (app `LegalPage` + `server/public/legal/cgv.html`) : nouvelles sections « Transfert à un autre membre » et « Revente via NOX » (acheteur d’origine seulement, prix d’achat sans majoration, QR désactivé pendant la vente, remboursement du vendeur, retrait automatique au début de la soirée, remboursement intégral en cas de conflit). Les billets arrivent dans l’onglet Billets (et non par email). Mise à jour datée du 26 novembre 2026.
+- **`store-metadata/`** : descriptions App Store / Play Store et notes de version mentionnent transfert, revente, Prévus et notifications.
+- `npm run store:check:node` : tout est OK, seul reste l’avertissement sur le bundle `com.insanenightsdays.mobile` à passer en `com.nox.mobile` avant la sortie publique.
+
 ### Modifié (mobile — écran d’achat)
 - **`EventCheckoutSection`** : tarifs en lignes à bouton radio (nom, places restantes ou « Complet », fenêtre de vente, lieux couverts, prix à droite), y compris quand il n’y a qu’un tarif ; ligne « Total · 1 billet » ; phrase d’aide neutre (plus en orange façon alerte) adaptée au nombre de tarifs ; sous le bouton, « Coche les CGV pour activer le paiement » tant que la case n’est pas cochée ; annonces de revente au même format avec un bouton « Acheter ».
 

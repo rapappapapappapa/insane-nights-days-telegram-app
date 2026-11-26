@@ -43,6 +43,7 @@ async function sendViaResend({ to, subject, text, html, attachments }) {
     payload.attachments = attachments.map((a) => ({
       filename: a.filename,
       content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+      ...(a.contentId ? { contentId: a.contentId } : {}),
     }));
   }
 
@@ -84,6 +85,7 @@ async function sendViaSmtp({ to, subject, text, html, attachments }) {
     mailOptions.attachments = attachments.map((a) => ({
       filename: a.filename,
       content: Buffer.isBuffer(a.content) ? a.content : Buffer.from(a.content),
+      ...(a.contentId ? { cid: a.contentId } : {}),
     }));
   }
 
@@ -94,6 +96,7 @@ async function sendViaSmtp({ to, subject, text, html, attachments }) {
 // ============================================================================
 // Fonction principale sendMail
 // ============================================================================
+/** `attachments[].contentId` : image intégrée au HTML via `<img src="cid:…">`. */
 async function sendMail({ to, subject, text, html, attachments }) {
   if (!to) throw new Error('Missing email recipient');
   if (!subject) throw new Error('Missing email subject');

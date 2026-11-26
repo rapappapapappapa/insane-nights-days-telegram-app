@@ -4,6 +4,7 @@ const { tierLabelForTicket } = require('../utils/ticketTierDisplay');
  */
 const prisma = require('../lib/prisma');
 const { notifyTicketsIssued, notifyUsers } = require('../utils/appNotifications');
+const { sendTicketEmail } = require('../utils/ticketEmail');
 const { fulfilResalePayment, resaleEligibility } = require('../utils/ticketResale');
 const {
   parseTicketTiersFromDb,
@@ -104,6 +105,7 @@ app.post('/api/tickets/:ticketId/transfer', authenticateToken, async (req, res) 
       eventId: ticket.event.id,
       imageUrl: ticket.event.image,
     });
+    sendTicketEmail({ userId: recipient.userId, ticketIds: [ticketId], kind: 'transfer', fromName: senderName });
     notifyUsers([userId], {
       category: 'events',
       type: 'ticket_transferred',
@@ -283,7 +285,13 @@ app.post('/api/tickets/buy', authenticateToken, async (req, res) => {
       return { newTickets, newScore, newLevel };
     });
 
-    notifyTicketsIssued({ userId, eventId, quantity, dedupeKey: `ticket:${result.newTickets[0]?.id}` });
+    notifyTicketsIssued({
+      userId,
+      eventId,
+      quantity,
+      dedupeKey: `ticket:${result.newTickets[0]?.id}`,
+      ticketIds: result.newTickets.map((t) => t.id),
+    });
 
     res.json({
       success: true,
@@ -484,6 +492,7 @@ app.post('/api/webhooks/stripe', async (req, res) => {
           eventId: delivered.eventId,
           quantity: delivered.quantity,
           dedupeKey: `ticket:${paymentIntentId}`,
+          paymentIntentId,
         });
       }
     } else if (stripeEvent.type === 'payment_intent.payment_failed' || stripeEvent.type === 'payment_intent.canceled') {
@@ -825,6 +834,7 @@ app.post('/api/payments/confirm-ticket-purchase', authenticateToken, async (req,
         eventId: result.payment.eventId,
         quantity: result.payment.quantity,
         dedupeKey: `ticket:${paymentIntentId}`,
+        paymentIntentId,
       });
     }
 

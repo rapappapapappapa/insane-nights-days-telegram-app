@@ -5,6 +5,7 @@
  */
 const prisma = require('../lib/prisma');
 const { notifyUsers } = require('./appNotifications');
+const { sendTicketEmail } = require('./ticketEmail');
 
 const RESERVATION_MS = 15 * 60 * 1000;
 const OPEN_STATUSES = ['ACTIVE', 'RESERVED'];
@@ -137,6 +138,15 @@ async function fulfilResalePayment({ stripe, paymentIntentId, makeQrCode }) {
       eventId: listing.eventId,
       imageUrl: event?.image,
       dedupeKey: `ticket:${paymentIntentId}`,
+    }).then((created) => {
+      if (created > 0) {
+        sendTicketEmail({
+          userId: payment.userId,
+          ticketIds: [listing.ticketId],
+          kind: 'resale',
+          amountPaid: listing.priceCents / 100,
+        });
+      }
     });
     notifyUsers([listing.sellerId], {
       category: 'events',

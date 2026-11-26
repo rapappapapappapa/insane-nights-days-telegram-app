@@ -125,7 +125,7 @@ Les présentes CGV s'appliquent aux achats de tickets d'événements effectués 
 
 - Les prix sont indiqués en euros (€) TTC.
 - Le paiement est sécurisé via Stripe.
-- Après confirmation du paiement, les tickets et leur QR code sont disponibles dans l'onglet Billets de l'application.
+- Après confirmation du paiement, les tickets et leur QR code sont disponibles dans l'onglet Billets de l'application et envoyés par email. Après un transfert ou une revente, seul le QR code affiché dans l'application fait foi.
 
 ## 3. Remboursement
 
@@ -169,7 +169,7 @@ These Terms of Sale apply to event ticket purchases made through NOX, including 
 
 - Prices are displayed in euros (€) including tax.
 - Payment is secured via Stripe.
-- Once payment is confirmed, tickets and their QR code are available in the app's Tickets tab.
+- Once payment is confirmed, tickets and their QR code are available in the app's Tickets tab and sent by email. After a transfer or resale, only the QR code shown in the app is valid.
 
 ## 3. Refunds
 

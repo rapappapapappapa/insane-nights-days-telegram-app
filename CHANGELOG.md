@@ -6,6 +6,13 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Ajouté (billets — email de confirmation avec QR code)
+- Email « Billet confirmé » (`utils/ticketEmail.js`) : soirée, date et heure, lieu, nombre de billets, montant payé (ou « Gratuit ») et QR code de chaque billet intégré au mail (10 max par mail). Envoyé à l’achat (gratuit ou Stripe), à l’achat en revente, et au destinataire d’un transfert (« Billet reçu », sans montant).
+- Un seul email par paiement : il part avec la première création de la notification « Billet confirmé » (webhook Stripe et confirmation app ne doublonnent pas).
+- Le mail rappelle que le code n’est plus valable après un transfert ou une revente ; le code à jour reste dans l’app. CGV mises à jour en conséquence.
+- `mailer.js` : prise en charge des images intégrées (`contentId`, Resend et SMTP).
+- **Inactif tant que `RESEND_API_KEY` et `RESEND_FROM` (ou `SMTP_*`) ne sont pas définis sur Railway.**
+
 ### Corrigé (serveur — statut des événements le jour J)
 - Le cron calculait « En cours » / « Terminé » à ±1 h du champ `date`, qui porte en fait l’heure où l’organisateur a ouvert le sélecteur de date : une soirée pouvait passer « Terminé » l’après-midi même (vente fermée, revente fermée, disparition de « Prévus », note ouverte trop tôt). Le créneau est maintenant le jour de l’événement + `time` (« 19:30 », « 19h30 », « 23h ») à l’heure de Paris, pendant `durationHours` (6 h par défaut) : à venir jusqu’au début, en cours pendant la soirée, terminé ensuite (`utils/eventSchedule.js`, tests `eventSchedule.test.js`).
 - Le Wallet lit aussi les heures au format « 19h30 » pour la date du pass.

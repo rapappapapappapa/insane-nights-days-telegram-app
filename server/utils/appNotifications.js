@@ -4,6 +4,7 @@
  */
 const prisma = require('../lib/prisma');
 const { sendExpoPushToTokens } = require('./expoPush');
+const { sendTicketEmail } = require('./ticketEmail');
 
 const TIME_ZONE = 'Europe/Paris';
 
@@ -84,11 +85,11 @@ async function eventSummary(eventId) {
   });
 }
 
-/** Billet(s) obtenu(s) : un seul message par paiement (ou par lot gratuit). */
-async function notifyTicketsIssued({ userId, eventId, quantity = 1, dedupeKey }) {
+/** Billet(s) obtenu(s) : un seul message (et un seul email) par paiement ou par lot gratuit. */
+async function notifyTicketsIssued({ userId, eventId, quantity = 1, dedupeKey, ticketIds, paymentIntentId }) {
   const event = await eventSummary(eventId);
   if (!event) return;
-  await notifyUsers([userId], {
+  const created = await notifyUsers([userId], {
     category: 'events',
     type: 'ticket_purchased',
     title: quantity > 1 ? `${quantity} billets confirmés` : 'Billet confirmé',
@@ -97,6 +98,7 @@ async function notifyTicketsIssued({ userId, eventId, quantity = 1, dedupeKey })
     imageUrl: event.image,
     dedupeKey,
   });
+  if (created > 0) await sendTicketEmail({ userId, ticketIds, paymentIntentId, kind: 'purchase' });
 }
 
 async function ticketHolderIds(eventId, statuses = ['valid', 'used', 'on_resale']) {

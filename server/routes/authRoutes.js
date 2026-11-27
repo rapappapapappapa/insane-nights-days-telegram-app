@@ -20,5 +20,31 @@ router.post('/register', authController.register);
  */
 router.post('/login', authController.login);
 
+/**
+ * @route POST /api/auth/google
+ * @desc Connexion / inscription OAuth Google (corps JSON : idToken + champs inscription si nouveau compte)
+ */
+router.post('/google', authController.googleAuth);
+
+/**
+ * @route POST /api/auth/apple
+ * @desc Connexion / inscription Sign in with Apple (corps : identityToken + champs inscription si nouveau compte)
+ */
+router.post('/apple', authController.appleAuth);
+
+/**
+ * @route POST /api/auth/forgot-password
+ * @desc Envoie un code de réinitialisation par email
+ * @access Public
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route POST /api/auth/reset-password
+ * @desc Réinitialise le mot de passe avec code
+ * @access Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router;
 

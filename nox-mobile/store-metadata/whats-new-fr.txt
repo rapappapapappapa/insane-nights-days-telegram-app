@@ -1,0 +1,1 @@
+Première version publique de Nox : billetterie avec transfert et revente au prix d'achat, agenda « Prévus », notifications de soirée, profils pro, fil et contrats.

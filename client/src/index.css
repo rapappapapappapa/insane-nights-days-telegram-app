@@ -14,19 +14,19 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-insane-orange hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
+    @apply bg-nox-primary hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105;
   }
   
   .btn-secondary {
-    @apply bg-insane-gray hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg border border-insane-orange transition-all duration-300;
+    @apply bg-nox-gray hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg border border-nox-primary transition-all duration-300;
   }
   
   .card {
-    @apply bg-insane-gray border border-insane-orange rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300;
+    @apply bg-nox-gray border border-nox-primary rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300;
   }
   
   .input-field {
-    @apply bg-insane-gray border border-insane-orange text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-insane-orange focus:border-transparent;
+    @apply bg-nox-gray border border-nox-primary text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-nox-primary focus:border-transparent;
   }
 }
 

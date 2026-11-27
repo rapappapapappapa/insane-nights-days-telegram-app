@@ -17,7 +17,7 @@ async function createDjsForEvents() {
         phone: '+33611111111',
         birthDate: '1988-03-20',
         styles: 'Electro • House • Progressive',
-        bio: 'DJ parisien spécialisé dans l\'électro et la house progressive. Résident du Club Insane.',
+        bio: 'DJ parisien spécialisé dans l\'électro et la house progressive. Résident du Club Nox.',
       },
       {
         email: 'bassstorm@dj.com',
@@ -145,7 +145,7 @@ async function createDjsForEvents() {
     // Associer les DJs aux événements selon leur genre
     const eventDjAssignments = [
       {
-        eventTitle: 'Insane Night - Soirée Electro',
+        eventTitle: 'Nox Night - Soirée Electro',
         djNames: ['DJ NEON', 'MIXMASTER NOVA'],
       },
       {

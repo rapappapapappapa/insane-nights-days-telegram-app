@@ -16,6 +16,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { openEventPreview } from '../../utils/noxNavigation';
 import { api, normalizeMediaUrl } from '../../api/config';
+import { organizerTypeLabel, suggestedOrganizers } from '../../utils/organizerTypes';
 import { useDebounce } from '../../hooks/useDebounce';
 import { NoxText, NoxSearchBar, NoxCard } from '../../components/nox';
 import Colors, { primaryAlpha } from '../../constants/colors';
@@ -59,13 +60,11 @@ export default function CommunityDiscoverPage() {
       const [eventsRes, djsRes, collectifsRes] = await Promise.all([
         api.getEvents(),
         api.getDjs(),
-        api.getPublicBookers('Collectif'),
+        api.getPublicBookers(),
       ]);
       setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
       setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
-      setCollectifs(
-        collectifsRes?.success && Array.isArray(collectifsRes.bookers) ? collectifsRes.bookers : [],
-      );
+      setCollectifs(suggestedOrganizers(collectifsRes?.success ? collectifsRes.bookers : []));
     } catch {
       setEvents([]);
       setDjs([]);
@@ -176,7 +175,7 @@ export default function CommunityDiscoverPage() {
               variant="buttonSecondary"
               style={[styles.segmentText, mode === 'collectifs' && styles.segmentTextActive]}
             >
-              {fr ? 'Collectifs' : 'Collectives'}
+              {fr ? 'Orgas' : 'Organizers'}
             </NoxText>
           </TouchableOpacity>
         </View>
@@ -245,7 +244,7 @@ export default function CommunityDiscoverPage() {
         ) : mode === 'collectifs' ? (
           filteredCollectifs.length === 0 ? (
             <NoxText variant="secondary" style={styles.empty}>
-              {fr ? 'Aucun collectif trouvé.' : 'No collectives found.'}
+              {fr ? 'Aucun organisateur trouvé.' : 'No organizers found.'}
             </NoxText>
           ) : (
             filteredCollectifs.map((b) => (
@@ -260,7 +259,7 @@ export default function CommunityDiscoverPage() {
                     <NoxText variant="form" style={styles.itemName}>
                       {b.name || b.pseudo}
                     </NoxText>
-                    <NoxText variant="secondary">{b.bookerType || (fr ? 'Collectif' : 'Collective')}</NoxText>
+                    <NoxText variant="secondary">{organizerTypeLabel(b.bookerType, fr)}</NoxText>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
                 </NoxCard>

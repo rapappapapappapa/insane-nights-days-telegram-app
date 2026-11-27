@@ -7,7 +7,21 @@ Document de cadrage produit (à garder de côté).
 
 ## En une phrase
 
-Chaque **collectif** enregistre son **HelloAsso** et le **prix de son adhésion** ; les profils **Communauté** peuvent **rejoindre** un collectif depuis l’app NOX, avec paiement HelloAsso au tarif défini par ce collectif.
+Chaque **collectif** crée ses **formules d’adhésion sur HelloAsso** (tarifs, durée, réductions) ; NOX **lit** ce formulaire, **affiche** les formules sur le profil du collectif et envoie les membres **payer sur HelloAsso**. Rien ne se configure dans NOX à part le lien du formulaire.
+
+## Fonctionnement actuel (27 novembre 2026)
+
+1. Le collectif colle dans NOX (tableau de bord › Adhésions du collectif) le lien de sa page d’adhésion, ex. `https://www.helloasso.com/associations/mon-collectif/adhesions/adhesion-2026`, et active « Adhésions ouvertes via NOX ».
+2. NOX lit le formulaire public (`GET /organizations/{slug}/forms/Membership/{formSlug}/public`) : titre et formules avec leur prix, mis en cache 10 min.
+3. Sur le profil du collectif, le membre voit les formules et touche « Adhérer sur HelloAsso » : la page HelloAsso s’ouvre, il choisit sa formule et paie.
+4. Au retour (ou avec « J’ai déjà adhéré · vérifier »), NOX cherche dans les commandes du formulaire (`GET .../forms/Membership/{formSlug}/orders`) une adhésion payée avec **l’email du compte NOX** et active le badge « Membre » (formule, date de fin selon la validité du formulaire : un an glissant, date fixe ou illimitée).
+5. Webhook `POST /api/webhooks/helloasso` (notification « Order ») : déclenche la même vérification sans attendre que le membre revienne dans l’app.
+
+Prérequis côté serveur : `HELLOASSO_ENABLED=true`, `HELLOASSO_CLIENT_ID`, `HELLOASSO_CLIENT_SECRET`. Lire les commandes d’une association demande qu’elle ait autorisé NOX (accès partenaire). Sans ces accès, le profil affiche seulement un bouton vers la page HelloAsso, sans formules ni badge « Membre ».
+
+Limite : si le membre paie avec un autre email que celui de son compte NOX, l’adhésion n’est pas retrouvée automatiquement.
+
+*Les sections ci-dessous sont le cadrage initial (prix saisi dans NOX, checkout HelloAsso) : remplacé par le fonctionnement ci-dessus.*
 
 ---   
 

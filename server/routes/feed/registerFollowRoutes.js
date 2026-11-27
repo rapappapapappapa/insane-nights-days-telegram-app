@@ -95,6 +95,7 @@ app.get('/api/booker/:bookerId/public', async (req, res) => {
         name: booker.pseudo?.trim() || `${booker.nom} ${booker.prenom}`,
         bookerType: booker.bookerType,
         profileImage: normalizeImageUrl(booker.profileImage),
+        bannerImage: normalizeImageUrl(booker.bannerImage),
         eventsCount: booker._count.events,
         postsCount: booker._count.feedPosts,
       },

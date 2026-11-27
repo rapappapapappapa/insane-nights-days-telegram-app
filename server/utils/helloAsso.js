@@ -1,5 +1,5 @@
 /**
- * Client HelloAsso API v5 (adhésions collectifs).
+ * Client HelloAsso API v5 (adhésions collectifs : formulaire public et commandes).
  * Inactif tant que HELLOASSO_ENABLED=true et les identifiants ne sont pas fournis.
  *
  * Variables : HELLOASSO_ENABLED, HELLOASSO_CLIENT_ID, HELLOASSO_CLIENT_SECRET,
@@ -60,34 +60,108 @@ async function helloAssoRequest(method, path, body) {
   return json;
 }
 
-/**
- * Paiement d’adhésion (checkout HelloAsso du collectif). Les URLs doivent être en https.
- * @returns {Promise<{ id: number, redirectUrl: string }>}
- */
-async function createCheckoutIntent(organizationSlug, { amountCents, itemName, backUrl, errorUrl, returnUrl, payer, metadata }) {
-  return helloAssoRequest('POST', `/organizations/${encodeURIComponent(organizationSlug)}/checkout-intents`, {
-    totalAmount: amountCents,
-    initialAmount: amountCents,
-    itemName: String(itemName).slice(0, 250),
-    backUrl,
-    errorUrl,
-    returnUrl,
-    containsDonation: false,
-    ...(payer ? { payer } : {}),
-    metadata,
-  });
+/** Site public HelloAsso correspondant à l’API utilisée (sandbox ou production). */
+function webBase() {
+  return apiBase().includes('sandbox') ? 'https://www.helloasso-sandbox.com' : 'https://www.helloasso.com';
 }
 
-/** Le checkout contient une commande (`order`) une fois payé. */
-async function getCheckoutIntent(organizationSlug, checkoutIntentId) {
-  return helloAssoRequest(
+function membershipFormUrl(organizationSlug, formSlug) {
+  return `${webBase()}/associations/${encodeURIComponent(organizationSlug)}/adhesions/${encodeURIComponent(formSlug)}`;
+}
+
+/** « https://www.helloasso.com/associations/mon-asso/adhesions/adhesion-2026 » → slugs. */
+function parseMembershipFormUrl(input) {
+  const match = String(input || '').match(/\/associations\/([^/?#]+)\/adhesions\/([^/?#]+)/i);
+  if (!match) return null;
+  return { organizationSlug: decodeURIComponent(match[1]).toLowerCase(), formSlug: decodeURIComponent(match[2]).toLowerCase() };
+}
+
+const FORM_CACHE_MS = 10 * 60 * 1000;
+const formCache = new Map();
+
+/**
+ * Formulaire d’adhésion public : titre, adresse et formules (tarifs) définies sur HelloAsso.
+ * Mis en cache 10 min.
+ */
+async function getMembershipForm(organizationSlug, formSlug, { fresh = false } = {}) {
+  const key = `${organizationSlug}/${formSlug}`;
+  const cached = formCache.get(key);
+  if (!fresh && cached && cached.expiresAt > Date.now()) return cached.value;
+  const raw = await helloAssoRequest(
     'GET',
-    `/organizations/${encodeURIComponent(organizationSlug)}/checkout-intents/${encodeURIComponent(checkoutIntentId)}`,
+    `/organizations/${encodeURIComponent(organizationSlug)}/forms/Membership/${encodeURIComponent(formSlug)}/public`,
   );
+  const value = formatMembershipForm(raw, organizationSlug, formSlug);
+  formCache.set(key, { value, expiresAt: Date.now() + FORM_CACHE_MS });
+  return value;
+}
+
+function formatMembershipForm(raw, organizationSlug, formSlug) {
+  const tiers = (Array.isArray(raw?.tiers) ? raw.tiers : [])
+    .filter((t) => !t.tierType || t.tierType === 'Membership')
+    .map((t) => ({
+      id: t.id,
+      label: t.label || 'Adhésion',
+      description: t.description || null,
+      priceCents: Number.isFinite(t.price) ? t.price : null,
+    }));
+  return {
+    title: raw?.title || 'Adhésion',
+    description: raw?.description || null,
+    url: raw?.url || membershipFormUrl(organizationSlug, formSlug),
+    validityType: raw?.validityType || null,
+    endDate: raw?.endDate || null,
+    tiers,
+  };
+}
+
+/** Commandes du formulaire d’adhésion (nécessite que l’association ait autorisé NOX). */
+async function listMembershipOrders(organizationSlug, formSlug, { from } = {}) {
+  const params = new URLSearchParams({ withDetails: 'true', pageSize: '100', sortOrder: 'Desc' });
+  if (from) params.set('from', new Date(from).toISOString());
+  const res = await helloAssoRequest(
+    'GET',
+    `/organizations/${encodeURIComponent(organizationSlug)}/forms/Membership/${encodeURIComponent(formSlug)}/orders?${params}`,
+  );
+  return Array.isArray(res?.data) ? res.data : [];
+}
+
+const INVALID_ITEM_STATES = new Set(['Canceled', 'Refunded', 'Contested', 'Abandoned']);
+
+/** Dernière adhésion valable payée avec cette adresse email, ou null. */
+function findOrderForEmail(orders, email) {
+  const target = String(email || '').trim().toLowerCase();
+  if (!target) return null;
+  for (const order of orders) {
+    if (String(order?.payer?.email || '').trim().toLowerCase() !== target) continue;
+    const items = (order.items || []).filter((i) => (!i.type || i.type === 'Membership') && !INVALID_ITEM_STATES.has(i.state));
+    if (items.length === 0) continue;
+    return {
+      orderId: String(order.id),
+      date: order.date ? new Date(order.date) : new Date(),
+      amountCents: Number(order.amount?.total ?? items[0].amount ?? 0) || 0,
+      tierLabel: items[0].name || null,
+    };
+  }
+  return null;
+}
+
+/** Fin de validité : date fixe du formulaire, illimitée (null) ou un an glissant. */
+function membershipValidUntil(form, orderDate) {
+  if (form?.validityType === 'Illimited') return null;
+  if (form?.validityType === 'Custom' && form.endDate) return new Date(form.endDate);
+  const until = new Date(orderDate);
+  until.setFullYear(until.getFullYear() + 1);
+  return until;
 }
 
 module.exports = {
   isHelloAssoConfigured,
-  createCheckoutIntent,
-  getCheckoutIntent,
+  membershipFormUrl,
+  parseMembershipFormUrl,
+  getMembershipForm,
+  formatMembershipForm,
+  listMembershipOrders,
+  findOrderForEmail,
+  membershipValidUntil,
 };

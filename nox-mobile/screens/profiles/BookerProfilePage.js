@@ -12,6 +12,7 @@ import { useToast } from '../../hooks/useToast';
 import { Ionicons } from '@expo/vector-icons';
 import { NoxText, NoxButton } from '../../components/nox';
 import CollectifJoinCard from '../../components/collectifs/CollectifJoinCard';
+import { organizerTypeLabel } from '../../utils/organizerTypes';
 import ProfileWallStream from '../../components/community/ProfileWallStream';
 import {
   PublicProfileHero,
@@ -23,15 +24,8 @@ import {
 } from '../../components/publicProfile';
 
 function bookerTypeLabel(type, fr) {
-  const map = {
-    INDEPENDENT: fr ? 'Indépendant' : 'Independent',
-    Indépendant: fr ? 'Indépendant' : 'Independent',
-    Agence: fr ? 'Agence' : 'Agency',
-    Collectif: fr ? 'Collectif' : 'Collective',
-    Label: 'Label',
-    Promoteur: fr ? 'Promoteur' : 'Promoter',
-  };
-  return map[type] || type || (fr ? 'Organisateur' : 'Organizer');
+  if (type === 'Promoteur') return fr ? 'Promoteur' : 'Promoter';
+  return organizerTypeLabel(type, fr);
 }
 
 function formatEventBadge(iso, language) {

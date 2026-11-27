@@ -718,6 +718,40 @@ export const styles = StyleSheet.create({
   profileSection: {
     padding: 20,
   },
+  coverPicker: {
+    height: 150,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  coverPickerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverPickerEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  coverPickerHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+  },
+  coverPickerBadge: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   profileImageContainer: {
     alignItems: 'center',
     marginBottom: 24,

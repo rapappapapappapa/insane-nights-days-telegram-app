@@ -6,6 +6,18 @@ Toutes les modifications notables du projet sont documentées par semaine.
 
 ## Semaine du 24 au 27 novembre 2026
 
+### Modifié (collectifs — adhésions gérées sur HelloAsso)
+- Le collectif ne saisit plus de nom ni de prix d’adhésion dans NOX : il colle le **lien de son formulaire d’adhésion HelloAsso**. NOX lit les formules (libellé, prix, description) et les affiche sur le profil public, avec un aperçu dans les réglages.
+- « Adhérer sur HelloAsso » ouvre la page HelloAsso du collectif. Au retour, ou avec « J’ai déjà adhéré · vérifier », NOX retrouve l’adhésion payée avec l’email du compte et active le badge « Membre » (formule, date de fin selon la validité du formulaire). Le webhook HelloAsso déclenche la même vérification.
+- Suppression de l’ancien paiement par checkout HelloAsso à prix fixé dans NOX et de l’adhésion gratuite activée directement par NOX.
+- Migration `20261127100000_collectif_helloasso_form_banner` : `UserBooker.helloAssoAdhesionFormSlug`, `CollectifMembership.tierLabel`.
+
+### Ajouté (organisateurs — photo de couverture)
+- Tableau de bord organisateur › Profil : choix d’une **photo de couverture** (format 16:9), affichée en haut du profil public. `POST /api/booker/profile/upload-image?type=banner`, colonne `UserBooker.bannerImage`, renvoyée par `GET /api/booker/:id/public`.
+
+### Modifié (communauté — suggestions d’organisateurs)
+- Accueil Communauté : « Suggestions collectifs & orgas » affiche les collectifs, agences et indépendants (collectifs en premier), avec leur type en clair. L’onglet Découvrir correspondant devient « Orgas ». Le profil public affiche « Agence » / « Indépendant » au lieu de `AGENCY` / `INDEPENDENT`.
+
 ### Ajouté (revente — relance des remboursements vendeur)
 - `retryFailedResaleRefunds` (cron, au plus toutes les 30 min) : reprend les ventes dont le remboursement du vendeur a échoué, ou est resté « pending » plus de 15 min après un arrêt du serveur. Vérifie d’abord chez Stripe qu’aucun remboursement n’existe déjà pour l’annonce (pas de double remboursement), sinon retente avec une nouvelle clé d’idempotence. En cas de réussite, le vendeur reçoit « Remboursement effectué ».
 - Après 48 h d’échec : `refundStatus = manual` et email d’alerte (`ADMIN_ALERT_EMAIL`, défaut `support@nox.world`) avec l’annonce, le vendeur, le paiement Stripe et le montant à rembourser à la main.

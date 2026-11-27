@@ -16,6 +16,7 @@ import { useNavigation } from '../../contexts/NavigationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { api, normalizeMediaUrl } from '../../api/config';
+import { organizerTypeLabel, suggestedOrganizers } from '../../utils/organizerTypes';
 import { useFeedNotifications } from '../../hooks/useFeedNotifications';
 import CommunityFeedStream from '../../components/community/CommunityFeedStream';
 import { NoxText, NoxSearchBar, NoxTabs } from '../../components/nox';
@@ -196,7 +197,7 @@ export default function CommunityHomePage() {
       setDiscoveryError(null);
 
       try {
-        const tasks = [api.getEvents(), api.getDjs(), api.getPublicVenues(), api.getPublicBookers('Collectif')];
+        const tasks = [api.getEvents(), api.getDjs(), api.getPublicVenues(), api.getPublicBookers()];
         if (user?.token) {
           tasks.push(api.getCommunityProfile(user.token).catch(() => null));
         }
@@ -215,9 +216,7 @@ export default function CommunityHomePage() {
         setEvents(eventsRes?.success && Array.isArray(eventsRes.events) ? eventsRes.events : []);
         setDjs(djsRes?.success && Array.isArray(djsRes.djs) ? djsRes.djs : []);
         setVenues(venuesRes?.success && Array.isArray(venuesRes.venues) ? venuesRes.venues : []);
-        setCollectifs(
-          collectifsRes?.success && Array.isArray(collectifsRes.bookers) ? collectifsRes.bookers : [],
-        );
+        setCollectifs(suggestedOrganizers(collectifsRes?.success ? collectifsRes.bookers : []));
         if (profileRes?.success && profileRes.profile) {
           setProfile(profileRes.profile);
         }
@@ -613,16 +612,16 @@ export default function CommunityHomePage() {
       })}
 
       {renderAvatarSuggestions({
-        title: fr ? 'Suggestions collectifs' : 'Suggested collectives',
+        title: fr ? 'Suggestions collectifs & orgas' : 'Suggested collectives & organizers',
         seeMoreLabel: fr ? 'Voir plus' : 'See more',
         onSeeMore: () => openDiscover(navigate, user?.activeProfileType, { tab: 'collectifs' }),
         items: suggestedCollectifs,
-        emptyText: fr ? 'Aucun collectif pour le moment.' : 'No collectives yet.',
+        emptyText: fr ? 'Aucun organisateur pour le moment.' : 'No organizers yet.',
         getKey: (b) => `collectif-${b.id}`,
         getImageUri: (b) => b.profileImage,
         fallbackIcon: 'people',
         getTitle: (b) => b.name || b.pseudo,
-        getSubtitle: (b) => b.bookerType || (fr ? 'Collectif' : 'Collective'),
+        getSubtitle: (b) => organizerTypeLabel(b.bookerType, fr),
         onPressItem: openCollectif,
       })}
 

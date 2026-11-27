@@ -233,13 +233,18 @@ model UserBooker {
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   profileImage          String?
+  /// Photo de couverture du profil public
+  bannerImage           String?
   pseudo                String?
   /// Articles que le booker propose habituellement à la location [{ id?, label, qty }]
   rentalEquipmentInventory Json?
-  /// Collectif : organisation HelloAsso (slug) et adhésion proposée via NOX
+  /// Collectif : formulaire d’adhésion HelloAsso (les formules et tarifs sont lus sur HelloAsso)
   helloAssoOrganizationSlug String?
+  helloAssoAdhesionFormSlug String?
   helloAssoAdhesionEnabled  Boolean              @default(false)
+  /// Ancien réglage saisi dans NOX, plus utilisé
   helloAssoAdhesionLabel    String?
+  /// Ancien réglage saisi dans NOX, plus utilisé
   helloAssoAdhesionPriceCents Int?
   collectifMemberships  CollectifMembership[]
   events                Event[]
@@ -954,6 +959,8 @@ model CollectifMembership {
   /// PENDING | ACTIVE | EXPIRED | CANCELLED
   status           String        @default("PENDING")
   amountCents      Int           @default(0)
+  /// Formule HelloAsso choisie (libellé du tarif)
+  tierLabel        String?
   checkoutIntentId String?       @unique
   helloAssoOrderId String?
   validUntil       DateTime?

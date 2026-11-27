@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,7 +24,11 @@ import { NoxButton, NoxInput, NoxScreenHeader, NoxText } from '../../components/
 import Toast from '../../components/Toast';
 import { useToast } from '../../hooks/useToast';
 
-/** Réglages d’adhésion d’un collectif (HelloAsso) et liste des adhérents. */
+function formatEuros(cents) {
+  return `${(cents / 100).toFixed(2).replace('.', ',').replace(',00', '')} €`;
+}
+
+/** Adhésions d’un collectif : lien vers le formulaire HelloAsso (formules et tarifs gérés là-bas) et adhérents. */
 export default function CollectifSettingsPage() {
   const { language } = useLanguage();
   const fr = language === 'fr';
@@ -35,9 +40,7 @@ export default function CollectifSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState(null);
   const [members, setMembers] = useState([]);
-  const [slug, setSlug] = useState('');
-  const [label, setLabel] = useState('');
-  const [price, setPrice] = useState('0');
+  const [formUrl, setFormUrl] = useState('');
   const [enabled, setEnabled] = useState(false);
 
   const load = useCallback(async () => {
@@ -49,9 +52,7 @@ export default function CollectifSettingsPage() {
       ]);
       if (settingsRes?.success) {
         setData(settingsRes);
-        setSlug(settingsRes.settings.organizationSlug || '');
-        setLabel(settingsRes.settings.label || '');
-        setPrice(String((settingsRes.settings.priceCents || 0) / 100).replace('.', ','));
+        setFormUrl(settingsRes.settings.formUrl || '');
         setEnabled(!!settingsRes.settings.enabled);
       }
       setMembers(Array.isArray(membersRes?.members) ? membersRes.members : []);
@@ -69,12 +70,7 @@ export default function CollectifSettingsPage() {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await api.updateCollectifSettings(user.token, {
-        organizationSlug: slug,
-        label,
-        priceEuros: price,
-        enabled,
-      });
+      const res = await api.updateCollectifSettings(user.token, { formUrl, enabled });
       if (res?.success) {
         showSuccess(res.message || (fr ? 'Réglages enregistrés.' : 'Saved.'));
         load();
@@ -88,8 +84,7 @@ export default function CollectifSettingsPage() {
     }
   };
 
-  const priceNumber = Number(String(price).replace(',', '.')) || 0;
-  const paidWithoutHelloAsso = enabled && priceNumber > 0 && data && !data.helloAssoConfigured;
+  const tiers = data?.form?.tiers || [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -116,7 +111,7 @@ export default function CollectifSettingsPage() {
                   <NoxText style={styles.cardTitle}>{fr ? 'Adhésions ouvertes via NOX' : 'Open memberships on NOX'}</NoxText>
                   <NoxText style={styles.cardSub}>
                     {fr
-                      ? 'Affiche un bouton « Rejoindre le collectif » sur ton profil public.'
+                      ? 'Affiche tes formules HelloAsso et un bouton « Adhérer » sur ton profil public.'
                       : 'Shows a “Join the collective” button on your public profile.'}
                   </NoxText>
                 </View>
@@ -129,41 +124,61 @@ export default function CollectifSettingsPage() {
             </View>
 
             <NoxInput
-              label={fr ? 'Nom de l’adhésion' : 'Membership name'}
-              value={label}
-              onChangeText={setLabel}
-              placeholder={fr ? 'Adhésion annuelle' : 'Annual membership'}
-              maxLength={80}
-            />
-            <NoxInput
-              label={fr ? 'Prix (€ / an, 0 = gratuite)' : 'Price (€ / year, 0 = free)'}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-            />
-            <NoxInput
-              label={fr ? 'Slug de ton organisation HelloAsso' : 'Your HelloAsso organization slug'}
-              value={slug}
-              onChangeText={(v) => setSlug(v.trim().toLowerCase())}
-              placeholder="mon-collectif"
+              label={fr ? 'Lien de ton formulaire d’adhésion HelloAsso' : 'Your HelloAsso membership form link'}
+              value={formUrl}
+              onChangeText={(v) => setFormUrl(v.trim())}
+              placeholder="https://www.helloasso.com/associations/mon-collectif/adhesions/adhesion-2026"
               autoCapitalize="none"
               autoCorrect={false}
+              keyboardType="url"
             />
             <NoxText style={styles.help}>
               {fr
-                ? 'C’est la fin de l’adresse de ta page : helloasso.com/associations/mon-collectif. Le paiement est encaissé par HelloAsso, directement sur le compte du collectif.'
-                : 'It’s the end of your page address: helloasso.com/associations/my-collective.'}
+                ? 'Crée tes formules (tarifs, durée, réductions…) directement sur HelloAsso, puis colle ici l’adresse de la page d’adhésion. NOX affiche les formules et envoie tes membres payer sur HelloAsso, directement sur le compte du collectif.'
+                : 'Create your tiers on HelloAsso, then paste the membership page address here. NOX shows them and sends members to pay on HelloAsso.'}
             </NoxText>
 
-            {paidWithoutHelloAsso ? (
+            {data.form ? (
+              <View style={styles.preview}>
+                <NoxText style={styles.previewTitle}>
+                  {fr ? `Formules lues sur HelloAsso · ${data.form.title}` : `Tiers from HelloAsso · ${data.form.title}`}
+                </NoxText>
+                {tiers.length === 0 ? (
+                  <NoxText style={styles.cardSub}>{fr ? 'Aucune formule dans ce formulaire.' : 'No tiers in this form.'}</NoxText>
+                ) : (
+                  tiers.map((t) => (
+                    <View key={t.id} style={styles.tierRow}>
+                      <NoxText style={styles.tierLabel} numberOfLines={1}>
+                        {t.label}
+                      </NoxText>
+                      <NoxText style={styles.tierPrice}>
+                        {t.priceCents == null ? (fr ? 'Prix libre' : 'Pay what you want') : t.priceCents === 0 ? (fr ? 'Gratuit' : 'Free') : formatEuros(t.priceCents)}
+                      </NoxText>
+                    </View>
+                  ))
+                )}
+              </View>
+            ) : formUrl && data.settings.formUrl ? (
               <View style={styles.notice}>
                 <Ionicons name="time-outline" size={18} color={Colors.warning} />
                 <NoxText style={styles.noticeText}>
-                  {fr
-                    ? 'Le paiement HelloAsso n’est pas encore activé sur NOX : ton bouton affichera « Adhésions bientôt disponibles ». Les adhésions gratuites fonctionnent déjà.'
-                    : 'HelloAsso payments are not live on NOX yet. Free memberships already work.'}
+                  {data.helloAssoConfigured
+                    ? fr
+                      ? 'NOX n’arrive pas à lire ce formulaire pour le moment. Vérifie le lien et que le formulaire est publié.'
+                      : 'NOX can’t read this form right now. Check the link and that the form is published.'
+                    : fr
+                      ? 'La connexion HelloAsso n’est pas encore activée sur NOX : ton profil affiche un bouton vers ta page HelloAsso, sans le détail des formules ni le badge « Membre ».'
+                      : 'HelloAsso is not connected on NOX yet: your profile links to your HelloAsso page, without tiers or member badge.'}
                 </NoxText>
               </View>
+            ) : null}
+
+            {data.settings.formUrl ? (
+              <NoxButton
+                variant="secondary"
+                label={fr ? 'Ouvrir ma page HelloAsso' : 'Open my HelloAsso page'}
+                onPress={() => Linking.openURL(data.form?.url || data.settings.formUrl)}
+              />
             ) : null}
 
             <NoxButton label={fr ? 'Enregistrer' : 'Save'} onPress={save} loading={saving} disabled={saving} />
@@ -186,6 +201,11 @@ export default function CollectifSettingsPage() {
                   <NoxText style={styles.memberName} numberOfLines={1}>
                     {m.pseudo}
                   </NoxText>
+                  {m.tierLabel ? (
+                    <NoxText style={styles.memberUntil} numberOfLines={1}>
+                      {m.tierLabel}
+                    </NoxText>
+                  ) : null}
                   {m.validUntil ? (
                     <NoxText style={styles.memberUntil}>
                       {new Date(m.validUntil).toLocaleDateString(fr ? 'fr-FR' : 'en-US', { month: 'short', year: 'numeric' })}
@@ -229,6 +249,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   noticeText: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+  preview: {
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 0.5,
+    borderColor: Colors.borderSubtle,
+    backgroundColor: Colors.backgroundCard,
+    marginBottom: Spacing.md,
+    gap: Spacing.xs,
+  },
+  previewTitle: { fontFamily: FontFamily.bold, fontSize: 14, color: Colors.text, marginBottom: Spacing.xs },
+  tierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.md, paddingVertical: 4 },
+  tierLabel: { flex: 1, fontSize: 14, color: Colors.textSecondary },
+  tierPrice: { fontFamily: FontFamily.bold, fontSize: 14, color: Colors.text },
   sectionTitle: { fontFamily: FontFamily.bold, fontSize: 17, color: Colors.text, marginTop: Spacing.xl },
   memberRow: {
     flexDirection: 'row',

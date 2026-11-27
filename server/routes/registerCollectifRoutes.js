@@ -1,14 +1,22 @@
 /**
- * Collectifs : réglages d’adhésion (booker `Collectif`), adhésion des profils Communauté via HelloAsso.
- * Les adhésions gratuites s’activent directement ; les payantes exigent HelloAsso configuré côté serveur.
+ * Collectifs : adhésions gérées sur HelloAsso (booker `Collectif`).
+ * Le collectif crée ses formules et tarifs sur HelloAsso ; NOX lit le formulaire, l’affiche,
+ * ouvre la page HelloAsso pour payer, puis retrouve l’adhésion par l’email du membre.
  */
 const prisma = require('../lib/prisma');
-const { isHelloAssoConfigured, createCheckoutIntent, getCheckoutIntent } = require('../utils/helloAsso');
+const {
+  isHelloAssoConfigured,
+  membershipFormUrl,
+  parseMembershipFormUrl,
+  getMembershipForm,
+  listMembershipOrders,
+  findOrderForEmail,
+  membershipValidUntil,
+} = require('../utils/helloAsso');
 const { notifyUsers } = require('../utils/appNotifications');
 
-const MEMBERSHIP_DAYS = 365;
-const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,99}$/;
-const APP_SCHEME = process.env.APP_URL_SCHEME || 'com.insanenightsdays.mobile';
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,149}$/;
+const ORDERS_LOOKBACK_MS = 400 * 24 * 60 * 60 * 1000;
 
 function isCollectif(booker) {
   return String(booker?.bookerType || '').toLowerCase() === 'collectif';
@@ -18,6 +26,12 @@ function collectifName(booker) {
   return booker.companyName || booker.pseudo || `${booker.prenom || ''} ${booker.nom || ''}`.trim() || 'Collectif';
 }
 
+/** Adhésion en cours de validité (sans date de fin = illimitée). */
+const activeMembershipWhere = () => ({
+  status: 'ACTIVE',
+  OR: [{ validUntil: null }, { validUntil: { gt: new Date() } }],
+});
+
 /** Statut effectif : une adhésion active dont la date est passée est expirée. */
 function effectiveMembership(m) {
   if (!m) return null;
@@ -26,30 +40,43 @@ function effectiveMembership(m) {
     id: m.id,
     status: expired ? 'EXPIRED' : m.status,
     amountCents: m.amountCents,
+    tierLabel: m.tierLabel || null,
     validUntil: m.validUntil,
   };
 }
 
+/**
+ * `enabled` : le collectif a ouvert ses adhésions sur NOX.
+ * `tracked` : NOX peut lire les commandes HelloAsso et afficher le badge « Membre ».
+ */
 function adhesionInfo(booker) {
-  const priceCents = booker.helloAssoAdhesionPriceCents ?? 0;
-  const enabled = isCollectif(booker) && booker.helloAssoAdhesionEnabled;
-  const payable = priceCents === 0 || (!!booker.helloAssoOrganizationSlug && isHelloAssoConfigured());
+  const hasForm = !!booker.helloAssoOrganizationSlug && !!booker.helloAssoAdhesionFormSlug;
+  const enabled = isCollectif(booker) && !!booker.helloAssoAdhesionEnabled && hasForm;
   return {
     enabled,
-    available: enabled && payable,
-    label: booker.helloAssoAdhesionLabel || 'Adhésion annuelle',
-    priceCents,
+    tracked: enabled && isHelloAssoConfigured(),
+    url: hasForm ? membershipFormUrl(booker.helloAssoOrganizationSlug, booker.helloAssoAdhesionFormSlug) : null,
   };
 }
 
-async function activateMembership(membership, booker, { orderId = null } = {}) {
+/** Formules lues sur HelloAsso ; liste vide si l’API n’est pas disponible. */
+async function loadForm(booker, options) {
+  if (!isHelloAssoConfigured() || !booker.helloAssoOrganizationSlug || !booker.helloAssoAdhesionFormSlug) return null;
+  try {
+    return await getMembershipForm(booker.helloAssoOrganizationSlug, booker.helloAssoAdhesionFormSlug, options);
+  } catch (error) {
+    console.error('[HelloAsso] formulaire illisible', booker.id, error?.message || error);
+    return null;
+  }
+}
+
+async function activateMembership(membership, booker, { orderId, amountCents, tierLabel, validUntil }) {
   const activated = await prisma.collectifMembership.updateMany({
-    where: { id: membership.id, status: { not: 'ACTIVE' } },
-    data: {
-      status: 'ACTIVE',
-      helloAssoOrderId: orderId,
-      validUntil: new Date(Date.now() + MEMBERSHIP_DAYS * 24 * 60 * 60 * 1000),
+    where: {
+      id: membership.id,
+      OR: [{ status: { not: 'ACTIVE' } }, { helloAssoOrderId: null }, { helloAssoOrderId: { not: orderId } }],
     },
+    data: { status: 'ACTIVE', helloAssoOrderId: orderId, amountCents, tierLabel, validUntil },
   });
   if (activated.count > 0) {
     const community = await prisma.userCommunity.findUnique({
@@ -60,32 +87,42 @@ async function activateMembership(membership, booker, { orderId = null } = {}) {
       category: 'system',
       type: 'collectif_joined',
       title: `Tu es membre de ${collectifName(booker)}`,
-      body: 'Ton adhésion est active pour un an.',
+      body: tierLabel ? `Ton adhésion « ${tierLabel} » est active.` : 'Ton adhésion est active.',
       imageUrl: booker.profileImage,
-      dedupeKey: `collectif-joined:${membership.id}:${new Date().getFullYear()}`,
+      dedupeKey: `collectif-joined:${membership.id}:${orderId}`,
     });
   }
 }
 
-/** Vérifie auprès de HelloAsso qu’un checkout est payé (les webhooks HA ne sont pas signés). */
-async function syncMembership(membershipId) {
-  const membership = await prisma.collectifMembership.findUnique({
-    where: { id: membershipId },
-    include: { booker: true },
+/**
+ * Cherche sur HelloAsso une adhésion payée avec l’email du compte NOX et l’enregistre.
+ * @returns {Promise<object|null>} l’adhésion NOX à jour
+ */
+async function syncMembershipFromHelloAsso({ booker, communityId, email }) {
+  if (!isHelloAssoConfigured() || !booker.helloAssoOrganizationSlug || !booker.helloAssoAdhesionFormSlug) return null;
+  const orders = await listMembershipOrders(booker.helloAssoOrganizationSlug, booker.helloAssoAdhesionFormSlug, {
+    from: Date.now() - ORDERS_LOOKBACK_MS,
   });
-  if (!membership || membership.status === 'ACTIVE' || !membership.checkoutIntentId) return membership;
-  if (!isHelloAssoConfigured() || !membership.booker.helloAssoOrganizationSlug) return membership;
-  const intent = await getCheckoutIntent(membership.booker.helloAssoOrganizationSlug, membership.checkoutIntentId);
-  if (intent?.order?.id) {
-    await activateMembership(membership, membership.booker, { orderId: String(intent.order.id) });
-  }
-  return prisma.collectifMembership.findUnique({ where: { id: membershipId } });
+  const found = findOrderForEmail(orders, email);
+  const where = { communityId_bookerId: { communityId, bookerId: booker.id } };
+  if (!found) return prisma.collectifMembership.findUnique({ where });
+  const form = await loadForm(booker);
+  const membership = await prisma.collectifMembership.upsert({
+    where,
+    create: { communityId, bookerId: booker.id, amountCents: found.amountCents },
+    update: {},
+  });
+  await activateMembership(membership, booker, {
+    orderId: found.orderId,
+    amountCents: found.amountCents,
+    tierLabel: found.tierLabel,
+    validUntil: membershipValidUntil(form, found.date),
+  });
+  return prisma.collectifMembership.findUnique({ where });
 }
 
 module.exports = function registerCollectifRoutes(app, deps) {
   const { authenticateToken } = deps;
-
-  const publicBase = () => (process.env.PUBLIC_URL || '').replace(/\/$/, '');
 
   /** @route GET /api/booker/me/collectif-settings */
   app.get('/api/booker/me/collectif-settings', authenticateToken, async (req, res) => {
@@ -93,18 +130,20 @@ module.exports = function registerCollectifRoutes(app, deps) {
       const booker = await prisma.userBooker.findFirst({ where: { userId: req.user.id } });
       if (!booker) return res.status(404).json({ success: false, message: 'Profil organisateur introuvable.' });
       const membersCount = await prisma.collectifMembership.count({
-        where: { bookerId: booker.id, status: 'ACTIVE', validUntil: { gt: new Date() } },
+        where: { bookerId: booker.id, ...activeMembershipWhere() },
       });
+      const form = await loadForm(booker, { fresh: true });
       return res.json({
         success: true,
         isCollectif: isCollectif(booker),
         helloAssoConfigured: isHelloAssoConfigured(),
         settings: {
           organizationSlug: booker.helloAssoOrganizationSlug || '',
+          formSlug: booker.helloAssoAdhesionFormSlug || '',
+          formUrl: adhesionInfo(booker).url || '',
           enabled: booker.helloAssoAdhesionEnabled,
-          label: booker.helloAssoAdhesionLabel || '',
-          priceCents: booker.helloAssoAdhesionPriceCents ?? 0,
         },
+        form,
         membersCount,
       });
     } catch (error) {
@@ -113,7 +152,7 @@ module.exports = function registerCollectifRoutes(app, deps) {
     }
   });
 
-  /** @route PUT /api/booker/me/collectif-settings body: { organizationSlug, enabled, label, priceEuros } */
+  /** @route PUT /api/booker/me/collectif-settings body: { formUrl, enabled } */
   app.put('/api/booker/me/collectif-settings', authenticateToken, async (req, res) => {
     try {
       const booker = await prisma.userBooker.findFirst({ where: { userId: req.user.id } });
@@ -121,32 +160,35 @@ module.exports = function registerCollectifRoutes(app, deps) {
       if (!isCollectif(booker)) {
         return res.status(403).json({ success: false, message: 'Réservé aux organisateurs de type Collectif.' });
       }
-      const { organizationSlug, enabled, label, priceEuros } = req.body ?? {};
-      const slug = String(organizationSlug || '').trim().toLowerCase();
-      if (slug && !SLUG_RE.test(slug)) {
+      const { formUrl, enabled } = req.body ?? {};
+      const raw = String(formUrl || '').trim();
+      const parsed = raw ? parseMembershipFormUrl(raw) : null;
+      if (raw && (!parsed || !SLUG_RE.test(parsed.organizationSlug) || !SLUG_RE.test(parsed.formSlug))) {
         return res.status(400).json({
           success: false,
-          message: 'Slug HelloAsso invalide (minuscules, chiffres et tirets, comme dans l’adresse de ta page HelloAsso).',
+          message:
+            'Lien invalide. Copie l’adresse de ta page d’adhésion HelloAsso, du type helloasso.com/associations/mon-collectif/adhesions/adhesion-2026.',
         });
       }
-      const price = Number(String(priceEuros ?? 0).replace(',', '.'));
-      if (!Number.isFinite(price) || price < 0 || price > 1000) {
-        return res.status(400).json({ success: false, message: 'Prix d’adhésion invalide (0 à 1000 €).' });
+      if (enabled && !parsed) {
+        return res.status(400).json({ success: false, message: 'Colle le lien de ton formulaire d’adhésion HelloAsso.' });
       }
-      const priceCents = Math.round(price * 100);
-      if (priceCents > 0 && priceCents < 50) {
-        return res.status(400).json({ success: false, message: 'Adhésion payante : 0,50 € minimum (ou 0 € pour gratuite).' });
-      }
-      if (enabled && priceCents > 0 && !slug) {
-        return res.status(400).json({ success: false, message: 'Renseigne le slug HelloAsso pour une adhésion payante.' });
+      if (parsed && isHelloAssoConfigured()) {
+        try {
+          await getMembershipForm(parsed.organizationSlug, parsed.formSlug, { fresh: true });
+        } catch (error) {
+          if (error?.status === 404) {
+            return res.status(400).json({ success: false, message: 'Formulaire introuvable sur HelloAsso. Vérifie le lien.' });
+          }
+          console.error('[HelloAsso] vérification formulaire', error?.message || error);
+        }
       }
       await prisma.userBooker.update({
         where: { id: booker.id },
         data: {
-          helloAssoOrganizationSlug: slug || null,
+          helloAssoOrganizationSlug: parsed?.organizationSlug || null,
+          helloAssoAdhesionFormSlug: parsed?.formSlug || null,
           helloAssoAdhesionEnabled: !!enabled,
-          helloAssoAdhesionLabel: String(label || '').trim().slice(0, 80) || null,
-          helloAssoAdhesionPriceCents: priceCents,
         },
       });
       return res.json({ success: true, message: 'Réglages enregistrés.' });
@@ -162,7 +204,7 @@ module.exports = function registerCollectifRoutes(app, deps) {
       const booker = await prisma.userBooker.findFirst({ where: { userId: req.user.id }, select: { id: true } });
       if (!booker) return res.status(404).json({ success: false, message: 'Profil organisateur introuvable.' });
       const rows = await prisma.collectifMembership.findMany({
-        where: { bookerId: booker.id, status: 'ACTIVE', validUntil: { gt: new Date() } },
+        where: { bookerId: booker.id, ...activeMembershipWhere() },
         orderBy: { updatedAt: 'desc' },
         take: 200,
         include: { community: { select: { id: true, pseudo: true, profileImage: true } } },
@@ -174,6 +216,7 @@ module.exports = function registerCollectifRoutes(app, deps) {
           communityId: m.community.id,
           pseudo: m.community.pseudo || 'Membre',
           profileImage: m.community.profileImage,
+          tierLabel: m.tierLabel || null,
           validUntil: m.validUntil,
         })),
       });
@@ -183,18 +226,29 @@ module.exports = function registerCollectifRoutes(app, deps) {
     }
   });
 
-  /** Offre d’adhésion d’un collectif + mon adhésion. @route GET /api/collectifs/:bookerId/membership */
+  /** Formules HelloAsso d’un collectif + mon adhésion. @route GET /api/collectifs/:bookerId/membership */
   app.get('/api/collectifs/:bookerId/membership', authenticateToken, async (req, res) => {
     try {
       const booker = await prisma.userBooker.findUnique({ where: { id: req.params.bookerId } });
       if (!booker) return res.status(404).json({ success: false, message: 'Collectif introuvable.' });
+      const adhesion = adhesionInfo(booker);
+      const form = adhesion.enabled ? await loadForm(booker) : null;
       const community = await prisma.userCommunity.findFirst({ where: { userId: req.user.id }, select: { id: true } });
       const membership = community
         ? await prisma.collectifMembership.findUnique({
             where: { communityId_bookerId: { communityId: community.id, bookerId: booker.id } },
           })
         : null;
-      return res.json({ success: true, adhesion: adhesionInfo(booker), membership: effectiveMembership(membership) });
+      return res.json({
+        success: true,
+        adhesion: {
+          ...adhesion,
+          title: form?.title || 'Adhésion',
+          url: form?.url || adhesion.url,
+          tiers: form?.tiers || [],
+        },
+        membership: effectiveMembership(membership),
+      });
     } catch (error) {
       console.error('Erreur adhésion collectif:', error);
       return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -202,120 +256,61 @@ module.exports = function registerCollectifRoutes(app, deps) {
   });
 
   /**
-   * Rejoindre un collectif. Gratuit → actif tout de suite. Payant → `redirectUrl` HelloAsso.
-   * @route POST /api/collectifs/:bookerId/join
+   * Vérifie sur HelloAsso si le membre connecté a adhéré (email du compte NOX).
+   * @route POST /api/collectifs/:bookerId/membership/sync
    */
-  app.post('/api/collectifs/:bookerId/join', authenticateToken, async (req, res) => {
+  app.post('/api/collectifs/:bookerId/membership/sync', authenticateToken, async (req, res) => {
     try {
       const booker = await prisma.userBooker.findUnique({ where: { id: req.params.bookerId } });
-      if (!booker) return res.status(404).json({ success: false, message: 'Collectif introuvable.' });
-      const adhesion = adhesionInfo(booker);
-      if (!adhesion.enabled) {
-        return res.status(400).json({ success: false, message: 'Ce collectif ne propose pas d’adhésion via NOX.' });
-      }
-      if (!adhesion.available) {
-        return res.status(503).json({
-          success: false,
-          code: 'HELLOASSO_NOT_READY',
-          message: 'Les adhésions payantes arrivent bientôt sur NOX.',
-        });
+      if (!booker || !adhesionInfo(booker).enabled) {
+        return res.status(404).json({ success: false, message: 'Collectif introuvable.' });
       }
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
-        select: { email: true, communities: { select: { id: true, prenom: true, nom: true }, take: 1 } },
+        select: { email: true, communities: { select: { id: true }, take: 1 } },
       });
-      const community = user?.communities?.[0];
-      if (!community) {
+      const communityId = user?.communities?.[0]?.id;
+      if (!communityId) {
         return res.status(403).json({ success: false, message: 'Crée ton profil Communauté pour rejoindre un collectif.' });
       }
-
-      const existing = await prisma.collectifMembership.findUnique({
-        where: { communityId_bookerId: { communityId: community.id, bookerId: booker.id } },
-      });
-      if (effectiveMembership(existing)?.status === 'ACTIVE') {
-        return res.status(400).json({ success: false, message: 'Tu es déjà membre de ce collectif.' });
+      if (!isHelloAssoConfigured()) {
+        return res.json({ success: true, tracked: false, membership: null });
       }
-      const membership = await prisma.collectifMembership.upsert({
-        where: { communityId_bookerId: { communityId: community.id, bookerId: booker.id } },
-        create: { communityId: community.id, bookerId: booker.id, amountCents: adhesion.priceCents },
-        update: { status: 'PENDING', amountCents: adhesion.priceCents, checkoutIntentId: null, helloAssoOrderId: null },
-      });
-
-      if (adhesion.priceCents === 0) {
-        await activateMembership(membership, booker);
-        return res.json({ success: true, status: 'ACTIVE', message: `Bienvenue chez ${collectifName(booker)} !` });
-      }
-
-      if (!publicBase()) {
-        return res.status(500).json({ success: false, message: 'PUBLIC_URL manquante côté serveur.' });
-      }
-      const back = `${publicBase()}/api/collectifs/helloasso/return?membershipId=${membership.id}`;
-      const intent = await createCheckoutIntent(booker.helloAssoOrganizationSlug, {
-        amountCents: adhesion.priceCents,
-        itemName: `${adhesion.label} — ${collectifName(booker)}`,
-        backUrl: `${back}&result=back`,
-        errorUrl: `${back}&result=error`,
-        returnUrl: `${back}&result=return`,
-        payer: { firstName: community.prenom, lastName: community.nom, email: user.email },
-        metadata: { membershipId: membership.id, source: 'nox' },
-      });
-      await prisma.collectifMembership.update({
-        where: { id: membership.id },
-        data: { checkoutIntentId: String(intent.id) },
-      });
-      return res.json({
-        success: true,
-        status: 'PENDING',
-        membershipId: membership.id,
-        redirectUrl: intent.redirectUrl,
-        returnUrlPrefix: `${APP_SCHEME}://collectif-return`,
-      });
+      const membership = await syncMembershipFromHelloAsso({ booker, communityId, email: user.email });
+      return res.json({ success: true, tracked: true, membership: effectiveMembership(membership) });
     } catch (error) {
-      console.error('Erreur adhésion collectif (join):', error?.message || error, error?.details || '');
-      return res.status(500).json({ success: false, message: 'Impossible de démarrer l’adhésion.' });
+      console.error('Erreur sync adhésion:', error?.message || error, error?.details || '');
+      return res.status(500).json({ success: false, message: 'Vérification HelloAsso impossible pour le moment.' });
     }
   });
 
-  /** Vérifie le paiement au retour dans l’app. @route POST /api/collectifs/memberships/:membershipId/sync */
-  app.post('/api/collectifs/memberships/:membershipId/sync', authenticateToken, async (req, res) => {
-    try {
-      const community = await prisma.userCommunity.findFirst({ where: { userId: req.user.id }, select: { id: true } });
-      const membership = await prisma.collectifMembership.findUnique({ where: { id: req.params.membershipId } });
-      if (!membership || membership.communityId !== community?.id) {
-        return res.status(404).json({ success: false, message: 'Adhésion introuvable.' });
-      }
-      const synced = await syncMembership(membership.id);
-      return res.json({ success: true, membership: effectiveMembership(synced) });
-    } catch (error) {
-      console.error('Erreur sync adhésion:', error?.message || error);
-      return res.status(500).json({ success: false, message: 'Erreur serveur' });
-    }
-  });
-
-  /** Retour navigateur HelloAsso → vérification puis redirection vers l’app. */
-  app.get('/api/collectifs/helloasso/return', async (req, res) => {
-    const membershipId = String(req.query.membershipId || '');
-    let status = 'PENDING';
-    try {
-      if (membershipId) status = (await syncMembership(membershipId))?.status || 'PENDING';
-    } catch (error) {
-      console.error('Erreur retour HelloAsso:', error?.message || error);
-    }
-    res.redirect(
-      302,
-      `${APP_SCHEME}://collectif-return?membershipId=${encodeURIComponent(membershipId)}&status=${status}&result=${encodeURIComponent(String(req.query.result || ''))}`,
-    );
-  });
-
-  /** Notifications HelloAsso (Order / Payment). Le statut est revérifié via l’API avant activation. */
+  /**
+   * Notifications HelloAsso (Order). Le contenu n’est pas signé : on ne s’en sert que pour savoir
+   * quel collectif et quel email revérifier via l’API.
+   */
   app.post('/api/webhooks/helloasso', async (req, res) => {
+    res.json({ received: true });
     try {
-      const membershipId = req.body?.metadata?.membershipId || req.body?.data?.meta?.membershipId;
-      if (membershipId) await syncMembership(String(membershipId));
+      const data = req.body?.data || {};
+      if (req.body?.eventType !== 'Order' || data.formType !== 'Membership') return;
+      const organizationSlug = String(data.organizationSlug || '').toLowerCase();
+      const formSlug = String(data.formSlug || '').toLowerCase();
+      const email = String(data.payer?.email || '').trim();
+      if (!organizationSlug || !formSlug || !email) return;
+      const booker = await prisma.userBooker.findFirst({
+        where: { helloAssoOrganizationSlug: organizationSlug, helloAssoAdhesionFormSlug: formSlug },
+      });
+      if (!booker) return;
+      const user = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        select: { email: true, communities: { select: { id: true }, take: 1 } },
+      });
+      const communityId = user?.communities?.[0]?.id;
+      if (!communityId) return;
+      await syncMembershipFromHelloAsso({ booker, communityId, email: user.email });
     } catch (error) {
       console.error('[HELLOASSO WEBHOOK]', error?.message || error);
     }
-    res.json({ received: true });
   });
 
   /** Mes adhésions (profil Communauté). @route GET /api/user/me/collectif-memberships */

@@ -101,7 +101,8 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
   },
 
   // ✅ AJOUT: Uploader la photo de profil d'un Booker
-  uploadBookerProfileImage: async (token, imageUri) => {
+  /** `type` : 'profile' (photo) ou 'banner' (couverture du profil public). */
+  uploadBookerProfileImage: async (token, imageUri, type = 'profile') => {
     if (!token) {
       throw new Error('Token d\'authentification requis.');
     }
@@ -109,10 +110,10 @@ export function createProfilesApiMethods({ apiRequest, getMimeType, getFileName,
     formData.append('image', {
       uri: imageUri,
       type: 'image/jpeg',
-      name: 'profile.jpg',
+      name: type === 'banner' ? 'banner.jpg' : 'profile.jpg',
     });
 
-    const uploadUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKER_PROFILE}/upload-image`;
+    const uploadUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKER_PROFILE}/upload-image${type === 'banner' ? '?type=banner' : ''}`;
     return fetch(uploadUrl, {
       method: 'POST',
       headers: {

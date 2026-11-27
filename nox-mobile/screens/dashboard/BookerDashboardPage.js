@@ -138,6 +138,9 @@ export default function BookerDashboardPage() {
     profileImage,
     uploadingProfileImage,
     pickProfileImage,
+    bannerImage,
+    uploadingBannerImage,
+    pickBannerImage,
     saveBookerProfile,
     loadBookerProfile,
   } = profile;
@@ -475,6 +478,9 @@ export default function BookerDashboardPage() {
               setProfileForm={setProfileForm}
               uploadingProfileImage={uploadingProfileImage}
               pickProfileImage={pickProfileImage}
+              bannerImage={bannerImage}
+              uploadingBannerImage={uploadingBannerImage}
+              pickBannerImage={pickBannerImage}
               savingProfile={savingProfile}
               saveBookerProfile={saveBookerProfile}
             />

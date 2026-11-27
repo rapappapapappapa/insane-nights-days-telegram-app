@@ -476,7 +476,7 @@ app.put('/api/booker/profile', authenticateToken, async (req, res) => {
 });
 
 /**
- * ✅ AJOUT: Uploader la photo de profil d'un Booker
+ * Photo de profil (ou de couverture avec ?type=banner) d'un Booker
  * @route POST /api/booker/profile/upload-image
  */
 app.post(
@@ -487,6 +487,8 @@ app.post(
   async (req, res) => {
     try {
       const userId = req.user.id;
+      const isBanner = req.query.type === 'banner';
+      const field = isBanner ? 'bannerImage' : 'profileImage';
 
       if (!req.file) {
         return res.status(400).json({
@@ -521,7 +523,7 @@ app.post(
       let imageUrl = null;
       if (MEDIA_STORAGE === 'r2') {
         try {
-          const key = makeObjectKey('booker-profile', req.file.originalname);
+          const key = makeObjectKey(isBanner ? 'booker-banner' : 'booker-profile', req.file.originalname);
           const uploaded = await uploadToR2({ buffer: req.file.buffer, contentType: req.file.mimetype, key });
           imageUrl = uploaded.url;
         } catch (r2Error) {
@@ -543,19 +545,20 @@ app.post(
       }
 
       // Supprimer l'ancienne photo de profil si elle existe (R2)
-      if (bookerProfile.profileImage && MEDIA_STORAGE === 'r2') {
+      const previousImage = bookerProfile[field];
+      if (previousImage && MEDIA_STORAGE === 'r2') {
         try {
           const { keyFromPublicUrl } = require('./utils/mediaStorage');
-          const oldKey = keyFromPublicUrl(bookerProfile.profileImage);
+          const oldKey = keyFromPublicUrl(previousImage);
           if (oldKey) {
-            await deleteFromR2({ key: oldKey, url: bookerProfile.profileImage });
+            await deleteFromR2({ key: oldKey, url: previousImage });
           }
         } catch (e) {
           // best-effort
         }
-      } else if (bookerProfile.profileImage && bookerProfile.profileImage.includes('/uploads/media/')) {
+      } else if (previousImage && previousImage.includes('/uploads/media/')) {
         // Supprimer l'ancienne photo (local)
-        const oldFilePath = path.join(SERVER_ROOT, 'uploads', 'media', path.basename(bookerProfile.profileImage));
+        const oldFilePath = path.join(SERVER_ROOT, 'uploads', 'media', path.basename(previousImage));
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
         }
@@ -564,13 +567,13 @@ app.post(
       // Mettre à jour le profil avec la nouvelle photo
       const updatedBooker = await prisma.userBooker.update({
         where: { id: bookerProfile.id },
-        data: { profileImage: imageUrl },
+        data: { [field]: imageUrl },
       });
 
       res.json({
         success: true,
-        message: 'Photo de profil mise à jour avec succès.',
-        profileImage: imageUrl,
+        message: isBanner ? 'Photo de couverture mise à jour.' : 'Photo de profil mise à jour avec succès.',
+        [field]: imageUrl,
       });
     } catch (error) {
       console.error('Erreur upload photo de profil Booker:', error);

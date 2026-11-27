@@ -23,6 +23,9 @@ export default function BookerProfilSection(props) {
     setProfileForm,
     uploadingProfileImage,
     pickProfileImage,
+    bannerImage,
+    uploadingBannerImage,
+    pickBannerImage,
     savingProfile,
     saveBookerProfile,
   } = props;
@@ -46,6 +49,34 @@ export default function BookerProfilSection(props) {
                       </View>
                     )}
                     
+                    <Text style={styles.inputLabel}>
+                      {language === 'fr' ? 'Photo de couverture (profil public)' : 'Cover photo (public profile)'}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.coverPicker}
+                      onPress={pickBannerImage}
+                      disabled={uploadingBannerImage}
+                      activeOpacity={0.85}
+                    >
+                      {bannerImage ? (
+                        <Image source={{ uri: normalizeMediaUrl(bannerImage) }} style={styles.coverPickerImage} />
+                      ) : (
+                        <View style={styles.coverPickerEmpty}>
+                          <Ionicons name="image-outline" size={28} color="rgba(255,255,255,0.5)" />
+                          <Text style={styles.coverPickerHint}>
+                            {language === 'fr' ? 'Ajouter une photo de couverture' : 'Add a cover photo'}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.coverPickerBadge}>
+                        {uploadingBannerImage ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="camera" size={18} color="#fff" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+
                     {/* Photo de profil */}
                     <View style={styles.profileImageContainer}>
                       {profileImage ? (

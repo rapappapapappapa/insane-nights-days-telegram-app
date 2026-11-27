@@ -21,6 +21,8 @@ export function useBookerProfile({ user, language, showError, showSuccess }) {
     });
     const [profileImage, setProfileImage] = useState(null);
     const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+    const [bannerImage, setBannerImage] = useState(null);
+    const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
   
     const loadBookerProfile = async () => {
       if (!user?.token) return;
@@ -43,6 +45,7 @@ export function useBookerProfile({ user, language, showError, showSuccess }) {
             siret: response.profile.siret || '',
           });
           setProfileImage(response.profile.profileImage || null);
+          setBannerImage(response.profile.bannerImage || null);
         }
       } catch (error) {
         console.error('Erreur chargement profil booker:', error);
@@ -130,6 +133,37 @@ export function useBookerProfile({ user, language, showError, showSuccess }) {
       }
     };
 
+    const pickBannerImage = async () => {
+      if (!user?.token) return;
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showError(language === 'fr' ? 'Permission d\'accès à la galerie requise' : 'Gallery access permission required');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      setUploadingBannerImage(true);
+      try {
+        const response = await api.uploadBookerProfileImage(user.token, result.assets[0].uri, 'banner');
+        if (response?.success) {
+          setBannerImage(response.bannerImage);
+          showSuccess(language === 'fr' ? 'Photo de couverture mise à jour' : 'Cover photo updated');
+        } else {
+          showError(response?.message || (language === 'fr' ? 'Erreur lors de l\'upload.' : 'Upload failed.'));
+        }
+      } catch (error) {
+        console.error('Erreur upload couverture:', error);
+        showError(language === 'fr' ? 'Erreur lors de l\'upload.' : 'Upload failed.');
+      } finally {
+        setUploadingBannerImage(false);
+      }
+    };
+
   useEffect(() => {
     if (!user?.token) return;
     loadBookerProfile();
@@ -144,6 +178,9 @@ export function useBookerProfile({ user, language, showError, showSuccess }) {
     profileImage,
     uploadingProfileImage,
     pickProfileImage,
+    bannerImage,
+    uploadingBannerImage,
+    pickBannerImage,
     saveBookerProfile,
     loadBookerProfile,
   };
